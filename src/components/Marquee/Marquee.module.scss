@@ -1,0 +1,30 @@
+@keyframes marqueeSlide {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.marquee {
+  background: var(--accent);
+  color: var(--fg);
+  overflow: hidden;
+  border-top: 1px solid rgba(0,0,0,0.2);
+  border-bottom: 1px solid rgba(0,0,0,0.2);
+}
+
+.track {
+  display: flex;
+  gap: 60px;
+  padding: 14px 0;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  animation: marqueeSlide 30s linear infinite;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 60px;
+  }
+}

@@ -1,0 +1,89 @@
+@use '../../styles/mixins';
+
+.people {
+  background: var(--bg);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  max-width: 1500px;
+  margin: 0 auto;
+
+  @include mixins.tablet { grid-template-columns: repeat(3, 1fr); }
+
+  @media (max-width: 700px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.person {
+  position: relative;
+}
+
+.photo {
+  aspect-ratio: 3/4;
+  background: var(--bg-3);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 16px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(10,9,8,0.5) 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .person:hover &::after { opacity: 1; }
+}
+
+.photoInner {
+  position: absolute;
+  inset: 0;
+  transition: filter 0.5s ease, transform 0.6s ease;
+  filter: grayscale(0.3) contrast(1.05);
+
+  .person:hover & {
+    filter: grayscale(0) contrast(1.1);
+    transform: scale(1.04);
+  }
+}
+
+.initials {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 72px;
+  font-style: italic;
+  color: rgba(245, 241, 234, 0.14);
+}
+
+.num {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  @include mixins.mono(10px, 0.18em);
+  color: var(--fg);
+  z-index: 2;
+  background: rgba(10, 9, 8, 0.6);
+  padding: 4px 8px;
+  backdrop-filter: blur(4px);
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.role {
+  @include mixins.mono(11px, 0.14em);
+  color: var(--fg-mute);
+  text-transform: uppercase;
+  margin-top: 6px;
+}

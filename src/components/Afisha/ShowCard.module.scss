@@ -1,0 +1,147 @@
+@use '../../styles/mixins';
+
+.card {
+  position: relative;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  transition: all 0.4s ease;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    border-color: var(--accent-bright);
+    transform: translateY(-4px);
+  }
+}
+
+.poster {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--bg-3);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 40%, rgba(10,9,8,0.85) 100%);
+    pointer-events: none;
+  }
+
+  :global(.placeholder) {
+    transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .card:hover :global(.placeholder) {
+    transform: scale(1.04);
+  }
+}
+
+.ticker {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  @include mixins.mono(10px, 0.18em);
+  color: var(--fg);
+  text-transform: uppercase;
+  z-index: 2;
+}
+
+.age {
+  background: var(--accent);
+  color: var(--fg);
+  padding: 4px 8px;
+  font-weight: 600;
+}
+
+.price {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  @include mixins.mono(11px, 0.1em);
+  color: var(--fg);
+  z-index: 2;
+}
+
+.body {
+  padding: 28px 28px 32px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.date {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  @include mixins.mono(12px, 0.1em);
+  color: var(--accent-glow);
+}
+
+.day {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.month {
+  color: var(--fg-dim);
+  text-transform: uppercase;
+}
+
+.time {
+  color: var(--fg-mute);
+  margin-left: auto;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.author {
+  @include mixins.mono(11px, 0.16em);
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.desc {
+  font-size: 14px;
+  color: var(--fg-dim);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+
+  a {
+    @include mixins.mono(11px, 0.2em);
+    text-transform: uppercase;
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.25s ease;
+
+    &:hover { color: var(--accent-glow); }
+  }
+}
+
+.duration {
+  @include mixins.mono(10px, 0.12em);
+  color: var(--fg-mute);
+}

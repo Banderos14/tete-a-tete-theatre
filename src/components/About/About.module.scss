@@ -1,0 +1,133 @@
+@use '../../styles/mixins';
+
+.about {
+  background: var(--bg);
+  position: relative;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 80px;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: start;
+
+  @include mixins.mobile {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+}
+
+.quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.25;
+  font-weight: 400;
+  color: var(--fg);
+  position: relative;
+  padding-left: 36px;
+  margin-bottom: 40px;
+
+  &::before {
+    content: '«';
+    position: absolute;
+    left: -8px;
+    top: -16px;
+    font-size: 100px;
+    color: var(--accent);
+    line-height: 1;
+    font-style: normal;
+  }
+}
+
+.quoteAttr {
+  @include mixins.mono(11px, 0.2em);
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  margin-top: 24px;
+  padding-left: 36px;
+}
+
+.text {
+  font-size: 16px;
+  color: var(--fg-dim);
+  line-height: 1.7;
+  margin-top: 48px;
+  margin-bottom: 32px;
+
+  p + p { margin-top: 18px; }
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  padding-top: 36px;
+  border-top: 1px solid var(--line);
+}
+
+.statNum {
+  font-family: var(--font-display);
+  font-size: 56px;
+  line-height: 1;
+  color: var(--accent-glow);
+  font-weight: 500;
+}
+
+.it {
+  font-style: italic;
+}
+
+.statLabel {
+  @include mixins.mono(11px, 0.16em);
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  margin-top: 8px;
+}
+
+.imagery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 200px 200px 200px;
+  gap: 12px;
+}
+
+.img {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.6) 100%);
+  }
+}
+
+.tall { grid-row: span 2; }
+.wide { grid-column: span 2; }
+
+.imgGlyph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 80px;
+  color: rgba(245, 241, 234, 0.14);
+}
+
+.caption {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  @include mixins.mono(9px, 0.16em);
+  text-transform: uppercase;
+  color: var(--fg);
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+}
