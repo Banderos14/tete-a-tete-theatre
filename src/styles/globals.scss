@@ -1,0 +1,141 @@
+@use 'variables';
+@use 'mixins';
+
+// ── Reset ──────────────────────────────────────────────────────────────────────
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+img { display: block; max-width: 100%; }
+a   { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+
+::selection { background: var(--accent); color: var(--fg); }
+
+// ── Scroll reveal ──────────────────────────────────────────────────────────────
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ── Shared section chrome ──────────────────────────────────────────────────────
+.section-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: end;
+  gap: 40px;
+  margin-bottom: 80px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+
+  .num {
+    @include mixins.mono(12px, 0.2em);
+    color: var(--accent-glow);
+  }
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(40px, 6vw, 88px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+
+    .it { font-style: italic; color: var(--fg-dim); }
+  }
+
+  .meta {
+    @include mixins.mono(11px, 0.18em);
+    color: var(--fg-mute);
+    text-transform: uppercase;
+    text-align: right;
+  }
+
+  @include mixins.mobile {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 48px;
+
+    .meta { text-align: left; }
+  }
+}
+
+// ── Shared section wrapper ─────────────────────────────────────────────────────
+section {
+  position: relative;
+  padding: 140px 40px;
+  border-top: 1px solid var(--line);
+
+  @include mixins.mobile { padding: 80px 20px; }
+}
+
+// ── Grain overlay ──────────────────────────────────────────────────────────────
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: overlay;
+  @include mixins.grain-overlay;
+}
+
+// ── Shared button ──────────────────────────────────────────────────────────────
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 500;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
+
+  &.btn-primary {
+    background: var(--accent);
+    color: var(--fg);
+    border-color: var(--accent);
+
+    &:hover {
+      background: var(--accent-bright);
+      border-color: var(--accent-bright);
+      color: var(--fg);
+      box-shadow: 0 8px 24px rgba(200, 16, 46, 0.3);
+    }
+  }
+
+  &.btn-ghost {
+    background: transparent;
+    border-color: var(--line-strong);
+  }
+
+  .arrow { transition: transform 0.3s ease; display: inline-block; }
+  &:hover .arrow { transform: translateX(4px); }
+}

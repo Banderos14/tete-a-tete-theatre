@@ -1,0 +1,1 @@
+export { PosterPlaceholder } from './PosterPlaceholder';

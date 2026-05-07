@@ -1,0 +1,16 @@
+@use '../../styles/mixins';
+
+.afisha {
+  background: var(--bg);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  @include mixins.tablet { grid-template-columns: repeat(2, 1fr); }
+  @include mixins.tinyXS { grid-template-columns: 1fr; }
+}

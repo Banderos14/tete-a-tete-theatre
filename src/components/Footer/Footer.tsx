@@ -1,0 +1,30 @@
+import { useLang } from '../../i18n/LangContext';
+import styles from './Footer.module.scss';
+
+export function Footer() {
+  const { t } = useLang();
+
+  return (
+    <footer className={styles.footer}>
+      <div className={styles.inner}>
+        <a href="#top" className={styles.mark}>
+          <img src="/assets/logo.png" alt="ТЕТ-А-ТЕТ" />
+          <span>
+            ТЕТ <span className={styles.dot}>·</span> А <span className={styles.dot}>·</span> ТЕТ
+          </span>
+        </a>
+
+        <div className={styles.meta}>
+          {t.footer.copyright}
+        </div>
+
+        <button
+          className={styles.backTop}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          {t.footer.backTop} <span className="arrow">↑</span>
+        </button>
+      </div>
+    </footer>
+  );
+}
