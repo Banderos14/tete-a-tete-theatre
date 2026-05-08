@@ -81,6 +81,12 @@
 
 .title {
   font-size: clamp(60px, 13vw, 200px);
+  font-family: var(--font-display);
+
+  @media (min-width: 1200px) {
+    white-space: nowrap;
+    width: max-content;
+  }
 }
 
 .it {
