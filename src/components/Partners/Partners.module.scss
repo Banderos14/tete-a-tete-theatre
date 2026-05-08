@@ -13,8 +13,13 @@
   background: var(--line);
   border: 1px solid var(--line);
 
-  @media (max-width: 900px) { grid-template-columns: repeat(3, 1fr); }
-  @include mixins.tiny     { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 900px) { 
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @include mixins.tiny     {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .partner {
