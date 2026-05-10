@@ -1,13 +1,32 @@
+import { useEffect } from 'react';
 import { LINKS } from '../../constants/links';
 import { useLang } from '../../i18n/LangContext';
+import { StageLight } from './StageLight';
 import styles from './Hero.module.scss';
+
+const RIG_POSITIONS = [13, 25, 38, 50, 62, 75, 87];
 
 export function Hero() {
   const { t } = useLang();
 
+  useEffect(() => {
+    const stage = new StageLight('stage-canvas', 'top');
+    stage.start();
+    return () => stage.stop();
+  }, []);
+
   return (
     <section className={styles.hero} id="top">
-      <div className={styles.spotlight} />
+      <canvas id="stage-canvas" className={styles.canvas} />
+
+      <div className={styles.rigBar}>
+        {RIG_POSITIONS.map((pct, i) => (
+          <div key={i} className={styles.lamp} style={{ left: `${pct}%` }}>
+            <div className={`${styles.lampDot} ${i % 2 === 0 ? styles.lampRed : styles.lampWhite}`} />
+          </div>
+        ))}
+      </div>
+
       <div className={styles.floor} />
 
       <div className={styles.content}>
@@ -17,7 +36,13 @@ export function Hero() {
         </div>
 
         <h1 className={`${styles.title} display`}>
-          ТЕТ <span className={styles.it}>·</span> А <span className={styles.it}>·</span> ТЕТ
+          <span>{t.hero.title.before}</span>
+          <span className={styles.accentGroup}>
+            <span className={styles.accentDot} />
+            <span className={styles.accentLetter}>{t.hero.title.letter}</span>
+            <span className={styles.accentDot} />
+          </span>
+          <span>{t.hero.title.after}</span>
         </h1>
 
         <div className={styles.sub}>{t.hero.sub}</div>

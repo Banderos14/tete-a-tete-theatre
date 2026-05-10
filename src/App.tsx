@@ -20,11 +20,11 @@ import { Footer }       from './components/Footer';
 type Theme = 'dark' | 'light';
 type IntroState = 'closed' | 'opening' | 'done';
 
-const INTRO_SPEED = 1.4;
+const INTRO_SPEED = 1.6;
 
 export default function App() {
-  const [theme, setTheme]           = useState<Theme>('dark');
-  const [lang,  setLang]            = useState<Lang>('RU');
+  const [theme, setTheme] = useState<Theme>('dark');
+  const [lang,  setLang] = useState<Lang>('RU');
   const [introState, setIntroState] = useState<IntroState>('closed');
 
   // Apply CSS tokens on theme change

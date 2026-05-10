@@ -1,6 +1,11 @@
 @use 'variables';
 @use 'mixins';
 
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1);   opacity: 0.55; }
+  50%       { transform: scale(1.8); opacity: 1; }
+}
+
 // ── Reset ──────────────────────────────────────────────────────────────────────
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
