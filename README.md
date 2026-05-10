@@ -7,7 +7,7 @@ Built with **Vite + React 19 + TypeScript + SCSS Modules**.
 
 ## What this project is
 
-This is a single-page website for the theatre. It shows the upcoming shows (afisha), the full repertoire, information about the team, partners, and how to find the theatre. The site supports two languages — Russian and French — and the user can switch between them in the header.
+A single-page website for the theatre. It shows upcoming shows, the full repertoire, team, partners, and contacts. The site supports two languages — Russian and French — switchable from the header.
 
 ---
 
@@ -15,11 +15,10 @@ This is a single-page website for the theatre. It shows the upcoming shows (afis
 
 | Tool | Why |
 |---|---|
-| **Vite 8** | Fast development server and build tool |
+| **Vite 8** | Fast dev server and build |
 | **React 19** | UI components |
-| **TypeScript 6** | Type safety across all files |
-| **SCSS Modules** | Scoped styles per component, no conflicts |
-| **Google Fonts** | Cormorant Garamond (display) + Inter (body) |
+| **TypeScript 6** | Types across all files |
+| **SCSS Modules** | Scoped styles per component |
 
 No UI libraries. No state management libraries. Everything is written from scratch.
 
@@ -29,82 +28,107 @@ No UI libraries. No state management libraries. Everything is written from scrat
 
 ```
 src/
-├── components/          # One folder per component
-│   ├── Header/          #   Header.tsx + Header.module.scss + index.ts
+├── components/
 │   ├── Hero/
-│   ├── Afisha/          #   ShowCard.tsx lives here too
+│   │   ├── Hero.tsx               # Hero section
+│   │   ├── Hero.module.scss       # Styles + dark/light theme overrides
+│   │   └── StageLight.ts          # Canvas spotlight animation
+│   ├── Afisha/
+│   │   ├── Afisha.tsx             # Afisha section wrapper
+│   │   ├── AfishaSlider.tsx       # Fullscreen auto-scroll cards
+│   │   └── AfishaSlider.module.scss
+│   ├── CurtainIntro/              # Opening curtain animation
+│   ├── Header/
+│   ├── Marquee/
 │   ├── Repertoire/
 │   ├── About/
 │   ├── Socials/
 │   ├── Team/
 │   ├── Partners/
 │   ├── Contacts/
-│   ├── Footer/
-│   ├── Marquee/
-│   ├── CurtainIntro/    #   Opening curtain animation
-│   └── ui/
-│       └── PosterPlaceholder/
-├── data/                # Static data (shows, team, partners)
-├── types/               # TypeScript interfaces (Show, TeamMember, Partner)
-├── constants/           # Links, addresses
-├── i18n/                # Language system
-│   ├── translations.ts  #   All text in RU and FR
-│   └── LangContext.tsx  #   React Context + useLang() hook
-└── styles/              # Global styles, CSS variables, mixins
+│   └── Footer/
+├── data/                          # Static data — edit shows, team, partners here
+├── types/                         # TypeScript interfaces
+├── constants/                     # Links, addresses
+├── i18n/
+│   ├── translations.ts            # All text in RU and FR
+│   └── LangContext.tsx            # useLang() hook
+└── styles/                        # Global CSS, variables, mixins
 ```
 
 ---
 
 ## Language system (i18n)
 
-The site has a built-in translation system using **React Context**. There are no third-party i18n libraries.
-
-**How it works:**
-
-1. All text lives in `src/i18n/translations.ts` as a plain object with two keys — `RU` and `FR`.
-2. `App.tsx` holds the current language in state and wraps everything in `<LangContext.Provider>`.
-3. Every component calls `const { t, lang } = useLang()` to get the translations for the current language.
-
-```ts
-// translations.ts (simplified)
-export type Lang = 'RU' | 'FR';
-
-export const translations: Record<Lang, T> = {
-  RU: { hero: { sub: 'Русский театр в Ницце', ... }, ... },
-  FR: { hero: { sub: 'Théâtre russe à Nice', ... }, ... },
-};
-```
+All text is in `src/i18n/translations.ts` as one object with `RU` and `FR` keys. No external libraries.
 
 ```tsx
-// Inside any component
 const { t } = useLang();
 return <h1>{t.hero.sub}</h1>;
 ```
 
-Show descriptions are bilingual too — the `Show` type has both `desc` (Russian) and `descFR` (French) fields.
+The hero title is stored as `{ before, letter, after }` — easy to edit per language without touching any component files.
+
+---
+
+## Adding or changing shows
+
+Open `src/data/shows.ts`. Each show looks like this:
+
+```ts
+{
+  id: 'shutka',
+  title: '«И в шутку, и всерьёз»',
+  author: 'А. П. Чехов · Две комедии',
+  date: '22.05', day: '22', month: 'Май', time: '20:00', year: '2026',
+  age: '12+', price: 'от 15 €', duration: '1 ч 10 мин',
+  desc: '...',
+  descFR: '...',
+  href: 'https://...',
+  palette: 'linear-gradient(...)',    // background color when there is no photo
+  glyph: '❦',                         // decorative symbol on the card
+  image: '/images/shows/shutka.jpg',  // optional photo
+}
+```
+
+**To add a show photo:** put the file in `public/images/shows/` and set `image: '/images/shows/filename.jpg'`. If there is no image, the gradient shows instead — nothing breaks.
+
+The afisha slider picks up all shows automatically. No other files to change.
+
+---
+
+## Hero section
+
+The hero has a **canvas spotlight animation** (`StageLight.ts`). It draws 7 volumetric theatrical lights with red and warm-white beams, floor light pools, and floating dust particles.
+
+The title accent letter **А / à** is styled with CSS classes — color, pulsing dots, and animation are all in `Hero.module.scss`. To change the letter style, edit that file.
+
+**Light theme:** the canvas is hidden, a subtle red glow replaces it, and all colors adapt automatically via `[data-theme='light']` overrides in `Hero.module.scss`.
+
+---
+
+## Afisha slider
+
+The afisha section shows a fullscreen auto-scrolling slider. Each card is `100vw` wide — one card fills the whole screen. Scroll speed scales with the number of shows (10 seconds per show), so adding or removing a show adjusts the speed automatically.
 
 ---
 
 ## Design system
 
-Colors and fonts are defined as CSS custom properties in `src/styles/variables.scss`.
+Colors and fonts are in `src/styles/variables.scss`.
 
-**Main accent color:** `#B80000` (deep red)
+- **Accent:** `#B80000` (deep red)
+- **Display font:** Cormorant Garamond (headings, italic style)
+- **Body font:** Inter
+- **Mono font:** system `ui-monospace`
 
-**Font stack:**
-- Display headings — `Cormorant Garamond` (serif, italic style)
-- Body text / UI — `Inter` (sans-serif)
-- Code / mono fallback — system `ui-monospace`
-
-The site uses a **dark theme by default** with a light theme that activates when the user's OS is set to light mode (`prefers-color-scheme: light`).
+Dark theme is the default. Light theme variables are in the same file under `[data-theme='light']`.
 
 ---
 
-## Animations
+## Curtain intro
 
-**Curtain intro** — on first load, a curtain opens like a stage reveal. It is controlled by React state: `'closed' → 'opening' → 'done'`. When done, it unmounts from the DOM completely.
-
-**Scroll reveal** — elements get a `.reveal` class in JSX. An `IntersectionObserver` in `App.tsx` watches for them and adds `.visible` when they enter the viewport. CSS handles the fade-in transition.
+On first load a curtain opens from the center — two panels slide left and right. Speed is controlled by `INTRO_SPEED` in `App.tsx` (in seconds). The curtain component unmounts completely after the animation finishes.
 
 ---
 
@@ -117,23 +141,19 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-**Build for production:**
-
 ```bash
-npm run build
+npm run build   # production build → dist/
 ```
-
-Output goes to `dist/`. The build runs TypeScript type-checking first (`tsc -b`), then Vite bundles everything.
 
 ---
 
-## Key files to know
+## Key files
 
-| File | What it does |
+| File | What to edit |
 |---|---|
-| [src/i18n/translations.ts](src/i18n/translations.ts) | All site text in RU and FR |
-| [src/data/shows.ts](src/data/shows.ts) | Upcoming shows and full repertoire |
-| [src/data/team.ts](src/data/team.ts) | Team members |
-| [src/styles/variables.scss](src/styles/variables.scss) | Colors, fonts, spacing tokens |
-| [src/App.tsx](src/App.tsx) | Root component, language state, scroll reveal |
-| [index.html](index.html) | Google Fonts, meta tags, favicon |
+| `src/i18n/translations.ts` | All site text in RU and FR |
+| `src/data/shows.ts` | Upcoming shows — add, remove, update |
+| `src/data/team.ts` | Team members |
+| `src/styles/variables.scss` | Colors, fonts |
+| `src/App.tsx` | Theme state, language state, curtain speed |
+| `public/images/shows/` | Show poster photos |

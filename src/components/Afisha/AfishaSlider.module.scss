@@ -1,0 +1,243 @@
+@use '../../styles/mixins';
+
+// Используем calc с vw — явные единицы, не зависящие от ширины flex-контейнера
+@keyframes slideLeft {
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(var(--slide-count) * -100vw)); }
+}
+
+// ── Full-bleed wrapper ────────────────────────────────────────────────────────
+.outer {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  overflow: hidden;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 80px;
+    z-index: 20;
+    pointer-events: none;
+  }
+  &::before {
+    left: 0;
+    background: linear-gradient(to right, var(--bg), transparent);
+  }
+  &::after {
+    right: 0;
+    background: linear-gradient(to left, var(--bg), transparent);
+  }
+}
+
+// ── Scrolling track ───────────────────────────────────────────────────────────
+.track {
+  display: flex;
+  animation: slideLeft calc(var(--slide-count) * 10s) linear infinite;
+  will-change: transform;
+}
+
+// ── Карточка = 100vw × высокая ────────────────────────────────────────────────
+.card {
+  flex-shrink: 0;
+  width: 100vw;
+  height: min(88vh, 820px);
+  position: relative;
+  overflow: hidden;
+  display: block;
+
+  @include mixins.mobile  { height: min(70vh, 600px); }
+  @include mixins.small   { height: min(80vh, 560px); }
+}
+
+// ── Фото-постер — ложится поверх градиента ───────────────────────────────────
+.poster {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center top;
+  opacity: 0.55;
+}
+
+// ── Декоративный глиф ────────────────────────────────────────────────────────
+.glyph {
+  position: absolute;
+  right: -4vw;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: clamp(260px, 40vw, 560px);
+  opacity: 0.05;
+  line-height: 1;
+  color: #fff;
+  pointer-events: none;
+  user-select: none;
+
+  @include mixins.mobile {
+    font-size: clamp(160px, 50vw, 320px);
+    right: -8vw;
+  }
+}
+
+// ── Overlay ───────────────────────────────────────────────────────────────────
+.overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right,  rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.30) 55%, rgba(0,0,0,0.55) 100%),
+    linear-gradient(to bottom, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.60) 100%);
+}
+
+// ── Вертикальная красная линия справа ────────────────────────────────────────
+.sideLine {
+  position: absolute;
+  top: 12%; bottom: 12%; right: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(184,0,0,0.45), transparent);
+}
+
+// ── Контент карточки ─────────────────────────────────────────────────────────
+.body {
+  position: absolute;
+  inset: 0;
+  padding: clamp(28px, 5vw, 72px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 2;
+
+  @include mixins.mobile { padding: 28px 24px; }
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.counter {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: rgba(255,255,255,0.28);
+  text-transform: uppercase;
+}
+
+.age {
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 4px 10px;
+  letter-spacing: 0.08em;
+}
+
+.middle {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: min(700px, 65vw);
+
+  @include mixins.mobile { max-width: 100%; }
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 6.5vw, 96px);
+  color: #f5f1ea;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.05;
+}
+
+.author {
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 0.9vw, 11px);
+  letter-spacing: 0.18em;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+}
+
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.dateBlock {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.day {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 9vw, 140px);
+  color: rgba(255,255,255,0.90);
+  font-weight: 300;
+  line-height: 1;
+}
+
+.monthYear {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.month {
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 0.85vw, 11px);
+  letter-spacing: 0.16em;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+}
+
+.time {
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 0.85vw, 11px);
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.22);
+}
+
+// ── Кнопка: split-дизайн — текст + красный блок со стрелкой ──────────────────
+.bookBtn {
+  display: inline-flex;
+  align-items: stretch;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btnText {
+  padding: clamp(11px, 1.4vw, 15px) clamp(16px, 2vw, 26px);
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 0.85vw, 11px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.80);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-right: none;
+  transition: background 0.25s ease, color 0.25s ease;
+
+  .bookBtn:hover & {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+  }
+}
+
+.btnArrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 clamp(14px, 1.8vw, 22px);
+  background: var(--accent);
+  color: #fff;
+  font-size: clamp(14px, 1.4vw, 18px);
+  transition: background 0.25s ease, transform 0.25s ease;
+
+  .bookBtn:hover & {
+    background: #a00000;
+  }
+}

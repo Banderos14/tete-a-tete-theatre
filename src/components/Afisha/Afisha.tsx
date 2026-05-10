@@ -1,6 +1,5 @@
-import { SHOWS } from '../../data/shows';
 import { useLang } from '../../i18n/LangContext';
-import { ShowCard } from './ShowCard';
+import { AfishaSlider } from './AfishaSlider';
 import styles from './Afisha.module.scss';
 
 export function Afisha() {
@@ -14,11 +13,8 @@ export function Afisha() {
         <h2>{t.afisha.title} <span className="it">{t.afisha.titleIt}</span></h2>
         <div className="meta">{metaLine1}<br />{metaLine2}</div>
       </div>
-      <div className={styles.grid}>
-        {SHOWS.map((show, i) => (
-          <ShowCard key={show.id} show={show} index={i} total={SHOWS.length} />
-        ))}
-      </div>
+
+      <AfishaSlider />
     </section>
   );
 }

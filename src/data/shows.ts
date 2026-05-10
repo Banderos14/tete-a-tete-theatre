@@ -12,6 +12,7 @@ export const SHOWS: Show[] = [
     href: 'https://constellation.events/event/volsebnyi-sekret-kolobka',
     palette: 'linear-gradient(135deg, #6b1a1a 0%, #2a0608 60%, #1a0a08 100%)',
     glyph: '✦',
+    image: '/images/shows/kolobok.jpg',
   },
   {
     id: 'shutka',
@@ -24,6 +25,7 @@ export const SHOWS: Show[] = [
     href: 'https://constellation.events/event/i-v-sutku-i-vserez-12-copy',
     palette: 'linear-gradient(135deg, #2a1014 0%, #1a0a08 50%, #0a0605 100%)',
     glyph: '❦',
+    image: '/images/shows/shutka.jpg',
   },
   {
     id: 'nulin',
@@ -36,6 +38,7 @@ export const SHOWS: Show[] = [
     href: 'https://constellation.events/event/graf-nulin-12',
     palette: 'linear-gradient(135deg, #401418 0%, #1a0608 60%, #0a0605 100%)',
     glyph: '❧',
+    image: '/images/shows/nulin.jpg',
   },
 ];
 

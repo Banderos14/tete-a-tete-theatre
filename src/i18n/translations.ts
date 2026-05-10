@@ -20,6 +20,7 @@ export interface T {
   };
   hero: {
     eyebrow: string;
+    title: { before: string; letter: string; after: string };
     sub: string;
     ctaAfisha: string;
     ctaRep: string;
@@ -117,7 +118,8 @@ export const translations: Record<Lang, T> = {
     },
     hero: {
       eyebrow:     'Сезон 2025 / 2026 · Nice, Côte d\'Azur',
-      sub:         'Русский театр в Ницце',
+      title:       { before: 'тет', letter: 'а', after: 'тет' },
+      sub:         'Русскоязычный театр в Ницце',
       ctaAfisha:   'Смотреть афишу',
       ctaRep:      'Репертуар',
       ctaInstagram:'Instagram',
@@ -240,6 +242,7 @@ export const translations: Record<Lang, T> = {
     },
     hero: {
       eyebrow:     'Saison 2025 / 2026 · Nice, Côte d\'Azur',
+      title:       { before: 'tête', letter: 'à', after: 'tête' },
       sub:         'Théâtre russe à Nice',
       ctaAfisha:   'Voir l\'affiche',
       ctaRep:      'Répertoire',
