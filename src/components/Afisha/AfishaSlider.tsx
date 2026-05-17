@@ -2,19 +2,21 @@ import { useLang } from '../../i18n/LangContext';
 import { SHOWS } from '../../data/shows';
 import styles from './AfishaSlider.module.scss';
 
-// Дублируем для бесшовного цикла: анимация едет на -50% = ровно один полный набор
-const CARDS = [...SHOWS, ...SHOWS];
+// 4 копии: трек шире любого вьюпорта, -50% всегда покрыто контентом
+const COPIES = 4;
+const CARDS = Array.from({ length: COPIES }, () => SHOWS).flat();
 
 export function AfishaSlider() {
   const { t } = useLang();
   const total = SHOWS.length;
 
   return (
-    // --slide-count управляет скоростью: 6с на каждый спектакль
+    // -50% анимирует 2 набора, поэтому slide-count = total * 2 чтобы скорость осталась прежней
     <div
-      className={styles.outer}
-      style={{ '--slide-count': total } as React.CSSProperties}
+      className={`${styles.outer} reveal`}
+      style={{ '--slide-count': total * (COPIES / 2) } as React.CSSProperties}
     >
+      <div className={styles.clipper}>
       <div className={styles.track}>
         {CARDS.map((show, i) => {
           const cardIndex = (i % total) + 1;
@@ -34,18 +36,13 @@ export function AfishaSlider() {
               <div className={styles.sideLine} />
 
               <div className={styles.body}>
+                
                 {/* Верх */}
                 <div className={styles.top}>
                   <span className={styles.counter}>
                     {String(cardIndex).padStart(2, '0')} / {String(total).padStart(2, '0')}
                   </span>
                   <span className={styles.age}>{show.age}</span>
-                </div>
-
-                {/* Центр: название */}
-                <div className={styles.middle}>
-                  <div className={styles.title}>{show.title}</div>
-                  <div className={styles.author}>{show.author}</div>
                 </div>
 
                 {/* Низ: дата + кнопка */}
@@ -72,6 +69,7 @@ export function AfishaSlider() {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

@@ -1,24 +1,26 @@
 @use '../../styles/mixins';
 
-// Используем calc с vw — явные единицы, не зависящие от ширины flex-контейнера
 @keyframes slideLeft {
   from { transform: translateX(0); }
-  to   { transform: translateX(calc(var(--slide-count) * -100vw)); }
+  to   { transform: translateX(-50%); }
 }
 
-// ── Full-bleed wrapper ────────────────────────────────────────────────────────
+// ── Внешняя обёртка на full-screen ────────────────────────────────────────────────────────
 .outer {
+  --card-w: clamp(240px, 28vw, 340px);
+
+  transition-delay: 0.25s;
   position: relative;
   width: 100vw;
   margin-left: calc(-50vw + 50%);
-  overflow: hidden;
+  overflow: visible;
 
   &::before,
   &::after {
     content: '';
     position: absolute;
     top: 0; bottom: 0;
-    width: 80px;
+    width: 60px;
     z-index: 20;
     pointer-events: none;
   }
@@ -30,29 +32,50 @@
     right: 0;
     background: linear-gradient(to left, var(--bg), transparent);
   }
+
+  @include mixins.mobile {
+    --card-w: clamp(200px, 72vw, 260px);
+  }
+}
+
+// ── Clipper: прячет горизонтальный overflow, но не режет вертикальный scale ──
+.clipper {
+  overflow: hidden;
+  padding: 60px 0;
+  margin: -60px 0;
 }
 
 // ── Scrolling track ───────────────────────────────────────────────────────────
 .track {
   display: flex;
-  animation: slideLeft calc(var(--slide-count) * 10s) linear infinite;
+  width: max-content;
+  animation: slideLeft calc(var(--slide-count) * 8s) linear infinite;
   will-change: transform;
+
+  .outer:hover & {
+    animation-play-state: paused;
+  }
 }
 
-// ── Карточка = 100vw × высокая ────────────────────────────────────────────────
+// ── Карточка — портретный формат ─────────────────────────────────────────────
 .card {
   flex-shrink: 0;
-  width: 100vw;
-  height: min(88vh, 820px);
+  width: var(--card-w);
+  height: clamp(400px, 58vh, 540px);
   position: relative;
   overflow: hidden;
-  display: block;
+  cursor: pointer;
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.45s ease;
 
-  @include mixins.mobile  { height: min(70vh, 600px); }
-  @include mixins.small   { height: min(80vh, 560px); }
+  &:hover {
+    transform: scale(1.06);
+    z-index: 10;
+  }
+
+  @include mixins.mobile { height: clamp(300px, 55vh, 380px); }
 }
 
-// ── Фото-постер — ложится поверх градиента ───────────────────────────────────
+// ── Фото-постер ───────────────────────────────────────────────────────────────
 .poster {
   position: absolute;
   inset: 0;
@@ -61,23 +84,18 @@
   opacity: 0.55;
 }
 
-// ── Декоративный глиф ────────────────────────────────────────────────────────
+// ── Декоративный глиф(для того если будет undefined на блоке катрочки афиши) ────────────────────────────────────────────────────────
 .glyph {
   position: absolute;
-  right: -4vw;
+  right: -8%;
   top: 50%;
   transform: translateY(-50%);
-  font-size: clamp(260px, 40vw, 560px);
-  opacity: 0.05;
+  font-size: clamp(100px, 16vw, 200px);
+  opacity: 0.06;
   line-height: 1;
   color: #fff;
   pointer-events: none;
   user-select: none;
-
-  @include mixins.mobile {
-    font-size: clamp(160px, 50vw, 320px);
-    right: -8vw;
-  }
 }
 
 // ── Overlay ───────────────────────────────────────────────────────────────────
@@ -101,13 +119,11 @@
 .body {
   position: absolute;
   inset: 0;
-  padding: clamp(28px, 5vw, 72px);
+  padding: clamp(16px, 1.8vw, 22px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   z-index: 2;
-
-  @include mixins.mobile { padding: 28px 24px; }
 }
 
 .top {
@@ -118,7 +134,7 @@
 
 .counter {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 9px;
   letter-spacing: 0.22em;
   color: rgba(255,255,255,0.28);
   text-transform: uppercase;
@@ -128,33 +144,30 @@
   background: var(--accent);
   color: #fff;
   font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 4px 10px;
+  font-size: 8px;
+  padding: 3px 8px;
   letter-spacing: 0.08em;
 }
 
 .middle {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  max-width: min(700px, 65vw);
-
-  @include mixins.mobile { max-width: 100%; }
+  gap: 8px;
 }
 
 .title {
   font-family: var(--font-display);
-  font-size: clamp(36px, 6.5vw, 96px);
+  font-size: clamp(17px, 2vw, 22px);
   color: #f5f1ea;
   font-weight: 400;
   font-style: italic;
-  line-height: 1.05;
+  line-height: 1.1;
 }
 
 .author {
   font-family: var(--font-mono);
-  font-size: clamp(9px, 0.9vw, 11px);
-  letter-spacing: 0.18em;
+  font-size: 8px;
+  letter-spacing: 0.16em;
   color: rgba(255,255,255,0.35);
   text-transform: uppercase;
 }
@@ -163,19 +176,18 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 20px;
-  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .dateBlock {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 8px;
 }
 
 .day {
   font-family: var(--font-display);
-  font-size: clamp(56px, 9vw, 140px);
+  font-size: clamp(32px, 4.5vw, 52px);
   color: rgba(255,255,255,0.90);
   font-weight: 300;
   line-height: 1;
@@ -184,12 +196,13 @@
 .monthYear {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-self: center;
+  gap: 2px;
 }
 
 .month {
   font-family: var(--font-mono);
-  font-size: clamp(9px, 0.85vw, 11px);
+  font-size: 8px;
   letter-spacing: 0.16em;
   color: rgba(255,255,255,0.35);
   text-transform: uppercase;
@@ -197,12 +210,12 @@
 
 .time {
   font-family: var(--font-mono);
-  font-size: clamp(9px, 0.85vw, 11px);
+  font-size: 8px;
   letter-spacing: 0.12em;
   color: rgba(255,255,255,0.22);
 }
 
-// ── Кнопка: split-дизайн — текст + красный блок со стрелкой ──────────────────
+// ── Кнопка ────────────────────────────────────────────────────────────────────
 .bookBtn {
   display: inline-flex;
   align-items: stretch;
@@ -211,10 +224,10 @@
 }
 
 .btnText {
-  padding: clamp(11px, 1.4vw, 15px) clamp(16px, 2vw, 26px);
+  padding: 9px 12px;
   font-family: var(--font-mono);
-  font-size: clamp(9px, 0.85vw, 11px);
-  letter-spacing: 0.16em;
+  font-size: 8px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(255,255,255,0.80);
   border: 1px solid rgba(255,255,255,0.22);
@@ -231,11 +244,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 clamp(14px, 1.8vw, 22px);
+  padding: 0 12px;
   background: var(--accent);
   color: #fff;
-  font-size: clamp(14px, 1.4vw, 18px);
-  transition: background 0.25s ease, transform 0.25s ease;
+  font-size: 12px;
+  transition: background 0.25s ease;
 
   .bookBtn:hover & {
     background: #a00000;
