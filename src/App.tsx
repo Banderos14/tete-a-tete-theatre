@@ -88,6 +88,7 @@ export default function App() {
       <Hero />
       <Marquee />
       <Afisha />
+      <Marquee />
       <Socials />
       <About />
       <Repertoire />

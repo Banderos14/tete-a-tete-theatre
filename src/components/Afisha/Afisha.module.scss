@@ -3,7 +3,8 @@
 .afisha {
   background: var(--bg);
   border-top: none;
-  padding: 120px 0 80px;
+  padding: 0;
+  isolation: isolate;
 }
 
 .grid {

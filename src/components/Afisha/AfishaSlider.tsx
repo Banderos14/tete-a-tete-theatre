@@ -16,7 +16,6 @@ export function AfishaSlider() {
       className={`${styles.outer} reveal`}
       style={{ '--slide-count': total * (COPIES / 2) } as React.CSSProperties}
     >
-      <div className={styles.clipper}>
       <div className={styles.track}>
         {CARDS.map((show, i) => {
           const cardIndex = (i % total) + 1;
@@ -31,7 +30,7 @@ export function AfishaSlider() {
                   style={{ backgroundImage: `url(${show.image})` }}
                 />
               )}
-              <div className={styles.glyph}>{show.glyph}</div>
+              {!show.image && <div className={styles.glyph}>{show.glyph}</div>}
               <div className={styles.overlay} />
               <div className={styles.sideLine} />
 
@@ -69,7 +68,6 @@ export function AfishaSlider() {
             </div>
           );
         })}
-      </div>
       </div>
     </div>
   );

@@ -45,10 +45,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   grid-template-columns: auto 1fr auto;
   align-items: end;
   gap: 40px;
-  margin-bottom: 80px;
   max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 80px auto;
 
   .num {
     @include mixins.mono(12px, 0.2em);
