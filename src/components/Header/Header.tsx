@@ -29,7 +29,6 @@ export function Header({ theme, lang, onThemeChange, onLangChange }: Props) {
     { label: t.nav.repertoire, href: '#repertoire' },
     { label: t.nav.about,      href: '#about' },
     { label: t.nav.people,     href: '#people' },
-    { label: t.nav.partners,   href: '#partners' },
   ];
 
   return (

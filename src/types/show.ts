@@ -16,6 +16,7 @@ export interface Show {
   palette: string;
   glyph: string;
   image?: string;
+  photos?: string[];
 }
 
 export interface RepertoireItem {

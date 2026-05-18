@@ -49,16 +49,17 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   margin: 80px auto;
 
   .num {
-    @include mixins.mono(12px, 0.2em);
+    @include mixins.mono(11px, 0.26em);
     color: var(--accent-glow);
+    font-weight: 600;
   }
 
   h2 {
     font-family: var(--font-display);
-    font-size: clamp(40px, 6vw, 88px);
+    font-size: clamp(52px, 7.5vw, 108px);
     font-weight: 500;
-    line-height: 1;
-    letter-spacing: -0.02em;
+    line-height: 0.96;
+    letter-spacing: -0.03em;
 
     .it { font-style: italic; color: var(--fg-dim); }
   }
@@ -112,25 +113,43 @@ section {
   font-weight: 500;
   border: 1px solid var(--line-strong);
   border-radius: 2px;
-  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: color 0.4s ease, border-color 0.4s ease;
   cursor: pointer;
 
-  &:hover {
+  // Slide-fill background — wipes in from left on hover
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
     background: var(--fg);
+    transform: translateX(-101%);
+    transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: -1;
+  }
+
+  &:hover {
     color: var(--bg);
     border-color: var(--fg);
+
+    &::before { transform: translateX(0); }
   }
 
   &.btn-primary {
     background: var(--accent);
     color: var(--fg);
     border-color: var(--accent);
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+
+    &::before { display: none; }
 
     &:hover {
       background: var(--accent-bright);
       border-color: var(--accent-bright);
       color: var(--fg);
-      box-shadow: 0 8px 24px rgba(200, 16, 46, 0.3);
+      box-shadow: 0 6px 28px rgba(200, 16, 46, 0.4);
     }
   }
 
@@ -139,6 +158,6 @@ section {
     border-color: var(--line-strong);
   }
 
-  .arrow { transition: transform 0.3s ease; display: inline-block; }
-  &:hover .arrow { transform: translateX(4px); }
+  .arrow { transition: transform 0.35s ease; display: inline-block; }
+  &:hover .arrow { transform: translateX(5px); }
 }

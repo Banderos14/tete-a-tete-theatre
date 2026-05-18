@@ -16,7 +16,6 @@ export interface T {
     repertoire: string;
     about: string;
     people: string;
-    partners: string;
   };
   hero: {
     eyebrow: string;
@@ -72,13 +71,6 @@ export interface T {
     metaLine2: string;
     roles: Record<string, string>;
   };
-  partners: {
-    num: string;
-    title: string;
-    titleIt: string;
-    metaLine1: string;
-    metaLine2: string;
-  };
   contacts: {
     num: string;
     title: string;
@@ -100,6 +92,13 @@ export interface T {
     copyright: string;
     backTop: string;
   };
+  showModal: {
+    labelDate: string;
+    labelTime: string;
+    labelDuration: string;
+    labelPrice: string;
+    book: string;
+  };
   showTags: Record<string, string>;
   months: Record<string, string>;
 }
@@ -114,7 +113,6 @@ export const translations: Record<Lang, T> = {
       repertoire: 'Репертуар',
       about:      'О театре',
       people:     'Люди',
-      partners:   'Партнёры',
     },
     hero: {
       eyebrow:     'Сезон 2025 / 2026 · Nice, Côte d\'Azur',
@@ -186,13 +184,6 @@ export const translations: Record<Lang, T> = {
         'Звукорежиссёр':               'Звукорежиссёр',
       },
     },
-    partners: {
-      num:      '06 / Партнёры',
-      title:    'Кто',
-      titleIt:  'с нами',
-      metaLine1:'Организации · Медиа',
-      metaLine2:'Институции',
-    },
     contacts: {
       num:          '07 / Контакты',
       title:        'Найти',
@@ -213,6 +204,13 @@ export const translations: Record<Lang, T> = {
     footer: {
       copyright: '© 2026 ТЕТ-А-ТЕТ · Русский театр в Ницце',
       backTop:   'Наверх',
+    },
+    showModal: {
+      labelDate:     'Дата',
+      labelTime:     'Начало',
+      labelDuration: 'Длительность',
+      labelPrice:    'Стоимость',
+      book:          'Купить билет',
     },
     showTags: {
       'Поэма':    'Поэма',
@@ -238,7 +236,6 @@ export const translations: Record<Lang, T> = {
       repertoire: 'Répertoire',
       about:      'À propos',
       people:     'Équipe',
-      partners:   'Partenaires',
     },
     hero: {
       eyebrow:     'Saison 2025 / 2026 · Nice, Côte d\'Azur',
@@ -310,13 +307,6 @@ export const translations: Record<Lang, T> = {
         'Звукорежиссёр':               'Ingénieur du son',
       },
     },
-    partners: {
-      num:      '06 / Partenaires',
-      title:    'Avec',
-      titleIt:  'nous',
-      metaLine1:'Organisations · Médias',
-      metaLine2:'Institutions',
-    },
     contacts: {
       num:          '07 / Contacts',
       title:        'Trouver',
@@ -337,6 +327,13 @@ export const translations: Record<Lang, T> = {
     footer: {
       copyright: '© 2026 TÊT-À-TÊT · Théâtre russe à Nice',
       backTop:   'Haut de page',
+    },
+    showModal: {
+      labelDate:     'Date',
+      labelTime:     'Heure',
+      labelDuration: 'Durée',
+      labelPrice:    'Tarif',
+      book:          'Acheter un billet',
     },
     showTags: {
       'Поэма':    'Poème',

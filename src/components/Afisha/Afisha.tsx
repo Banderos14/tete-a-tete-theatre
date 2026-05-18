@@ -1,10 +1,17 @@
+import { useState, useCallback } from 'react';
 import { useLang } from '../../i18n/LangContext';
 import { AfishaSlider } from './AfishaSlider';
+import { ShowModal } from '../ui/ShowModal';
+import type { Show } from '../../types';
 import styles from './Afisha.module.scss';
 
 export function Afisha() {
   const { t } = useLang();
   const [metaLine1, metaLine2] = t.afisha.meta.split('\n');
+  const [activeShow, setActiveShow] = useState<Show | null>(null);
+
+  const handleCardClick = useCallback((show: Show) => setActiveShow(show), []);
+  const handleClose     = useCallback(() => setActiveShow(null), []);
 
   return (
     <section className={styles.afisha} id="afisha">
@@ -14,7 +21,8 @@ export function Afisha() {
         <div className="meta">{metaLine1}<br />{metaLine2}</div>
       </div>
 
-      <AfishaSlider />
+      <AfishaSlider onCardClick={handleCardClick} />
+      <ShowModal show={activeShow} onClose={handleClose} />
     </section>
   );
 }

@@ -12,7 +12,6 @@ import { Socials }      from './components/Socials';
 import { About }        from './components/About';
 import { Repertoire }   from './components/Repertoire';
 import { Team }         from './components/Team';
-import { Partners }     from './components/Partners';
 import { Contacts }     from './components/Contacts';
 import { Footer }       from './components/Footer';
 
@@ -79,7 +78,6 @@ export default function App() {
       <About />
       <Repertoire />
       <Team />
-      <Partners />
       <Contacts />
       <Footer />
     </LangContext.Provider>

@@ -1,12 +1,17 @@
 import { useLang } from '../../i18n/LangContext';
 import { SHOWS } from '../../data/shows';
+import type { Show } from '../../types';
 import styles from './AfishaSlider.module.scss';
 
 // 4 копии: трек шире любого вьюпорта, -50% всегда покрыто контентом
 const COPIES = 4;
 const CARDS = Array.from({ length: COPIES }, () => SHOWS).flat();
 
-export function AfishaSlider() {
+interface Props {
+  onCardClick: (show: Show) => void;
+}
+
+export function AfishaSlider({ onCardClick }: Props) {
   const { t } = useLang();
   const total = SHOWS.length;
 
@@ -22,8 +27,12 @@ export function AfishaSlider() {
           const month = t.months[show.month] ?? show.month;
 
           return (
-            <div key={i} className={styles.card} style={{ background: show.palette }}>
-              {/* Фото поверх градиента — если нет файла, виден градиент */}
+            <div
+              key={i}
+              className={styles.card}
+              style={{ background: show.palette }}
+              onClick={() => onCardClick(show)}
+            >
               {show.image && (
                 <div
                   className={styles.poster}
@@ -35,8 +44,6 @@ export function AfishaSlider() {
               <div className={styles.sideLine} />
 
               <div className={styles.body}>
-                
-                {/* Верх */}
                 <div className={styles.top}>
                   <span className={styles.counter}>
                     {String(cardIndex).padStart(2, '0')} / {String(total).padStart(2, '0')}
@@ -44,7 +51,6 @@ export function AfishaSlider() {
                   <span className={styles.age}>{show.age}</span>
                 </div>
 
-                {/* Низ: дата + кнопка */}
                 <div className={styles.bottom}>
                   <div className={styles.dateBlock}>
                     <span className={styles.day}>{show.day}</span>
@@ -59,6 +65,7 @@ export function AfishaSlider() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.bookBtn}
+                    onClick={e => e.stopPropagation()}
                   >
                     <span className={styles.btnText}>{t.afisha.book}</span>
                     <span className={styles.btnArrow}>→</span>
