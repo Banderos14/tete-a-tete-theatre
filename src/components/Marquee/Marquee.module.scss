@@ -4,6 +4,8 @@
 }
 
 .marquee {
+  position: relative;
+  z-index: 1;
   background: var(--accent);
   color: var(--fg);
   overflow: hidden;

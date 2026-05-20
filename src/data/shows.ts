@@ -13,6 +13,9 @@ export const SHOWS: Show[] = [
     palette: 'linear-gradient(135deg, #6b1a1a 0%, #2a0608 60%, #1a0a08 100%)',
     glyph: '✦',
     image: '/images/shows/kolobok.jpg',
+
+    // добавить реальные фото для модалки
+    photos: ['/images/shows/kolobok.jpg', '/images/shows/shutka.jpg', '/images/shows/kolobok.jpg']
   },
   {
     id: 'shutka',

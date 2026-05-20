@@ -1,19 +1,25 @@
 import { useLang } from '../../i18n/LangContext';
 import { SHOWS } from '../../data/shows';
+import type { Show } from '../../types';
 import styles from './AfishaSlider.module.scss';
 
-// Дублируем для бесшовного цикла: анимация едет на -50% = ровно один полный набор
-const CARDS = [...SHOWS, ...SHOWS];
+// 4 копии: трек шире любого вьюпорта, -50% всегда покрыто контентом
+const COPIES = 4;
+const CARDS = Array.from({ length: COPIES }, () => SHOWS).flat();
 
-export function AfishaSlider() {
+interface Props {
+  onCardClick: (show: Show) => void;
+}
+
+export function AfishaSlider({ onCardClick }: Props) {
   const { t } = useLang();
   const total = SHOWS.length;
 
   return (
-    // --slide-count управляет скоростью: 6с на каждый спектакль
+    // -50% анимирует 2 набора, поэтому slide-count = total * 2 чтобы скорость осталась прежней
     <div
-      className={styles.outer}
-      style={{ '--slide-count': total } as React.CSSProperties}
+      className={`${styles.outer} reveal`}
+      style={{ '--slide-count': total * (COPIES / 2) } as React.CSSProperties}
     >
       <div className={styles.track}>
         {CARDS.map((show, i) => {
@@ -21,20 +27,23 @@ export function AfishaSlider() {
           const month = t.months[show.month] ?? show.month;
 
           return (
-            <div key={i} className={styles.card} style={{ background: show.palette }}>
-              {/* Фото поверх градиента — если нет файла, виден градиент */}
+            <div
+              key={i}
+              className={styles.card}
+              style={{ background: show.palette }}
+              onClick={() => onCardClick(show)}
+            >
               {show.image && (
                 <div
                   className={styles.poster}
                   style={{ backgroundImage: `url(${show.image})` }}
                 />
               )}
-              <div className={styles.glyph}>{show.glyph}</div>
+              {!show.image && <div className={styles.glyph}>{show.glyph}</div>}
               <div className={styles.overlay} />
               <div className={styles.sideLine} />
 
               <div className={styles.body}>
-                {/* Верх */}
                 <div className={styles.top}>
                   <span className={styles.counter}>
                     {String(cardIndex).padStart(2, '0')} / {String(total).padStart(2, '0')}
@@ -42,13 +51,6 @@ export function AfishaSlider() {
                   <span className={styles.age}>{show.age}</span>
                 </div>
 
-                {/* Центр: название */}
-                <div className={styles.middle}>
-                  <div className={styles.title}>{show.title}</div>
-                  <div className={styles.author}>{show.author}</div>
-                </div>
-
-                {/* Низ: дата + кнопка */}
                 <div className={styles.bottom}>
                   <div className={styles.dateBlock}>
                     <span className={styles.day}>{show.day}</span>
@@ -63,6 +65,7 @@ export function AfishaSlider() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.bookBtn}
+                    onClick={e => e.stopPropagation()}
                   >
                     <span className={styles.btnText}>{t.afisha.book}</span>
                     <span className={styles.btnArrow}>→</span>

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { BG_TONES, FONT_PAIRS } from './constants/fonts';
 import { LangContext } from './i18n/LangContext';
 import { translations } from './i18n/translations';
 import type { Lang } from './i18n/translations';
@@ -13,7 +12,6 @@ import { Socials }      from './components/Socials';
 import { About }        from './components/About';
 import { Repertoire }   from './components/Repertoire';
 import { Team }         from './components/Team';
-import { Partners }     from './components/Partners';
 import { Contacts }     from './components/Contacts';
 import { Footer }       from './components/Footer';
 
@@ -27,22 +25,9 @@ export default function App() {
   const [lang,  setLang] = useState<Lang>('RU');
   const [introState, setIntroState] = useState<IntroState>('closed');
 
-  // Apply CSS tokens on theme change
+  // Apply theme attribute — цвета и шрифты управляются через variables.scss
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    const tone = BG_TONES['warm-black'];
-    if (theme === 'dark') {
-      document.documentElement.style.setProperty('--bg',   tone.bg);
-      document.documentElement.style.setProperty('--bg-2', tone.bg2);
-      document.documentElement.style.setProperty('--bg-3', tone.bg3);
-    } else {
-      document.documentElement.style.removeProperty('--bg');
-      document.documentElement.style.removeProperty('--bg-2');
-      document.documentElement.style.removeProperty('--bg-3');
-    }
-    const f = FONT_PAIRS['cormorant'];
-    document.documentElement.style.setProperty('--font-display', f.display);
-    document.documentElement.style.setProperty('--font-body',    f.body);
   }, [theme]);
 
   // Curtain intro sequence
@@ -88,11 +73,11 @@ export default function App() {
       <Hero />
       <Marquee />
       <Afisha />
+      <Marquee />
       <Socials />
       <About />
       <Repertoire />
       <Team />
-      <Partners />
       <Contacts />
       <Footer />
     </LangContext.Provider>
