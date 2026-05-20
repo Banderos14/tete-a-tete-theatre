@@ -19,12 +19,15 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
+export type UserRole = 'user' | 'admin';
+
 export interface UserProfile {
   displayName: string;
   email: string;
   phone: string;
   socialLink: string;
   notifications: boolean;
+  role: UserRole;
 }
 
 interface AuthContextType {
@@ -53,6 +56,7 @@ async function createProfile(uid: string, data: Partial<UserProfile>) {
     phone: '',
     socialLink: '',
     notifications: true,
+    role: 'user',
     createdAt: serverTimestamp(),
     ...data,
   });
@@ -83,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!existing) {
       const profile = { displayName: u.displayName ?? '', email: u.email ?? '' };
       await createProfile(u.uid, profile);
-      setUserProfile({ phone: '', socialLink: '', notifications: true, ...profile });
+      setUserProfile({ phone: '', socialLink: '', notifications: true, role: 'user', ...profile });
     } else {
       setUserProfile(existing);
     }
@@ -100,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseUpdateProfile(result.user, { displayName: name });
     const profile = { displayName: name, email };
     await createProfile(result.user.uid, profile);
-    setUserProfile({ phone: '', socialLink: '', notifications: true, ...profile });
+    setUserProfile({ phone: '', socialLink: '', notifications: true, role: 'user', ...profile });
   }
 
   async function logout() {

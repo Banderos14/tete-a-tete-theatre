@@ -9,6 +9,10 @@
 // ── Reset ──────────────────────────────────────────────────────────────────────
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html {
+  scroll-behavior: auto; // we handle scroll via JS, avoid double-smooth
+}
+
 html, body {
   background: var(--bg);
   color: var(--fg);
@@ -24,14 +28,17 @@ img { display: block; max-width: 100%; }
 a   { color: inherit; text-decoration: none; }
 button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 
-::selection { background: var(--accent); color: var(--fg); }
+::selection { background: var(--accent); color: #fff; }
 
 // ── Scroll reveal ──────────────────────────────────────────────────────────────
+// All elements with class "reveal" start hidden and fade+slide up into view
+// IntersectionObserver in App.tsx adds ".visible" when element enters viewport
 .reveal {
   opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(32px);
+  transition:
+    opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
 
   &.visible {
     opacity: 1;
@@ -50,7 +57,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
   .num {
     @include mixins.mono(11px, 0.26em);
-    color: var(--accent-glow);
+    color: var(--accent);
     font-weight: 600;
   }
 
@@ -61,7 +68,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     line-height: 0.96;
     letter-spacing: -0.03em;
 
-    .it { font-style: italic; color: var(--fg-dim); }
+    .it { font-style: italic; color: var(--fg-mute); }
   }
 
   .meta {
@@ -96,7 +103,7 @@ section {
   pointer-events: none;
   z-index: 200;
   opacity: var(--grain-opacity);
-  mix-blend-mode: overlay;
+  mix-blend-mode: multiply;
   @include mixins.grain-overlay;
 }
 
@@ -139,7 +146,7 @@ section {
 
   &.btn-primary {
     background: var(--accent);
-    color: var(--fg);
+    color: #fff;
     border-color: var(--accent);
     transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 
@@ -148,8 +155,8 @@ section {
     &:hover {
       background: var(--accent-bright);
       border-color: var(--accent-bright);
-      color: var(--fg);
-      box-shadow: 0 6px 28px rgba(200, 16, 46, 0.4);
+      color: #fff;
+      box-shadow: 0 6px 28px rgba(184, 0, 0, 0.35);
     }
   }
 

@@ -3,7 +3,7 @@ import { SHOWS } from '../../data/shows';
 import type { Show } from '../../types';
 import styles from './AfishaSlider.module.scss';
 
-// 4 копии: трек шире любого вьюпорта, -50% всегда покрыто контентом
+// 4 copies: track wider than any viewport, -50% always covered by content
 const COPIES = 4;
 const CARDS = Array.from({ length: COPIES }, () => SHOWS).flat();
 
@@ -16,7 +16,6 @@ export function AfishaSlider({ onCardClick }: Props) {
   const total = SHOWS.length;
 
   return (
-    // -50% анимирует 2 набора, поэтому slide-count = total * 2 чтобы скорость осталась прежней
     <div
       className={`${styles.outer} reveal`}
       style={{ '--slide-count': total * (COPIES / 2) } as React.CSSProperties}
@@ -32,6 +31,10 @@ export function AfishaSlider({ onCardClick }: Props) {
               className={styles.card}
               style={{ background: show.palette }}
               onClick={() => onCardClick(show)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => e.key === 'Enter' && onCardClick(show)}
+              aria-label={show.title}
             >
               {show.image && (
                 <div
@@ -41,7 +44,6 @@ export function AfishaSlider({ onCardClick }: Props) {
               )}
               {!show.image && <div className={styles.glyph}>{show.glyph}</div>}
               <div className={styles.overlay} />
-              <div className={styles.sideLine} />
 
               <div className={styles.body}>
                 <div className={styles.top}>
@@ -49,6 +51,11 @@ export function AfishaSlider({ onCardClick }: Props) {
                     {String(cardIndex).padStart(2, '0')} / {String(total).padStart(2, '0')}
                   </span>
                   <span className={styles.age}>{show.age}</span>
+                </div>
+
+                <div className={styles.middle}>
+                  <div className={styles.showTitle}>{show.title}</div>
+                  <div className={styles.showAuthor}>{show.author}</div>
                 </div>
 
                 <div className={styles.bottom}>
@@ -60,16 +67,10 @@ export function AfishaSlider({ onCardClick }: Props) {
                     </div>
                   </div>
 
-                  <a
-                    href={show.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.bookBtn}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <span className={styles.btnText}>{t.afisha.book}</span>
-                    <span className={styles.btnArrow}>→</span>
-                  </a>
+                  <div className={styles.openHint}>
+                    <span className={styles.hintText}>Подробнее</span>
+                    <span className={styles.hintArrow}>→</span>
+                  </div>
                 </div>
               </div>
             </div>

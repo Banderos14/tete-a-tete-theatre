@@ -6,7 +6,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
+  grid-template-columns: 1fr 1.3fr;
   gap: 60px;
   max-width: 1400px;
   margin: 0 auto;
@@ -32,24 +32,25 @@
   line-height: 1.2;
   letter-spacing: -0.01em;
 
-  a:hover { color: var(--accent-glow); }
+  a { transition: color 0.25s ease; }
+  a:hover { color: var(--accent); }
 }
 
 .secondary {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--fg-dim);
-  margin-top: 4px;
+  margin-top: 5px;
 }
 
 .socials {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   margin-top: 24px;
 }
 
 .socialIcon {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border: 1px solid var(--line-strong);
   border-radius: 50%;
   display: grid;
@@ -59,37 +60,51 @@
   &:hover {
     background: var(--accent);
     border-color: var(--accent);
+    color: #fff;
   }
 
   svg { width: 16px; height: 16px; }
 }
 
-.mapFrame {
-  position: relative;
+// ── Map ───────────────────────────────────────────────────────────────────────
+.mapWrapper {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line);
-  background: var(--bg-3);
+  border-radius: 4px;
   overflow: hidden;
   min-height: 480px;
-  display: grid;
-  grid-template-rows: 1fr auto;
+
+  @include mixins.mobile { min-height: 320px; }
+}
+
+.mapFrame {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
 
   iframe {
     width: 100%;
     height: 100%;
+    min-height: 380px;
     border: 0;
-    filter: invert(0.9) hue-rotate(180deg) saturate(0.4) brightness(0.95);
+    // In dark mode, invert map to match the dark aesthetic; in light mode, use native map
+    filter: invert(0.88) hue-rotate(180deg) saturate(0.45) brightness(0.96);
 
-    [data-theme='light'] & { filter: none; }
+    [data-theme='light'] & {
+      filter: saturate(0.8) brightness(1.02);
+    }
   }
 }
 
 .mapOverlay {
   background: var(--bg-2);
-  padding: 20px 24px;
+  padding: 18px 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-top: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 .mapAddr {
@@ -107,5 +122,5 @@
   gap: 8px;
   transition: color 0.25s ease;
 
-  &:hover { color: var(--accent-glow); }
+  &:hover { color: var(--accent); }
 }

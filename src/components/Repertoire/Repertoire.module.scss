@@ -27,18 +27,18 @@
   overflow: hidden;
   cursor: pointer;
   min-height: 360px;
+  text-align: left;
   transition: background 0.4s ease;
 
   &:hover {
     background: var(--bg-3);
 
     .poster :global(.placeholder) {
-      transform: scale(1.06);
+      transform: scale(1.05);
     }
 
     .arrow {
-      color: var(--accent-glow);
-
+      color: var(--accent);
       :global(.arrow) { transform: translateX(4px); }
     }
   }
@@ -74,6 +74,7 @@
   font-size: 22px;
   font-weight: 500;
   line-height: 1.1;
+  color: var(--fg);
 }
 
 .author {
@@ -94,4 +95,139 @@
   padding-top: 16px;
   border-top: 1px solid var(--line);
   transition: color 0.25s ease;
+}
+
+// ── Repertoire modal ─────────────────────────────────────────────────────────
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.modalPanel {
+  position: relative;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 0;
+
+  @include mixins.mobile {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+  }
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
+}
+
+.modalClose {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 16px;
+  color: var(--fg-mute);
+  z-index: 2;
+  transition: color 0.2s ease;
+  line-height: 1;
+
+  &:hover { color: var(--fg); }
+}
+
+.modalPoster {
+  position: relative;
+  overflow: hidden;
+  min-height: 240px;
+  border-radius: 6px 0 0 6px;
+
+  :global(.placeholder) {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+  }
+
+  @include mixins.mobile {
+    min-height: 160px;
+    border-radius: 6px 6px 0 0;
+  }
+}
+
+.modalInfo {
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modalMeta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.modalTag {
+  @include mixins.mono(10px, 0.14em);
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  background: var(--bg-3);
+  padding: 4px 8px;
+  border-radius: 2px;
+}
+
+.modalAge {
+  @include mixins.mono(10px, 0.1em);
+  color: #fff;
+  background: var(--accent);
+  padding: 4px 8px;
+  border-radius: 2px;
+}
+
+.modalTitle {
+  font-family: var(--font-display);
+  font-size: clamp(18px, 2.5vw, 26px);
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--fg);
+  margin-top: 4px;
+}
+
+.modalAuthor {
+  @include mixins.mono(11px, 0.14em);
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.modalDuration {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--fg-dim);
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.modalDurationLabel {
+  @include mixins.mono(10px, 0.12em);
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.modalDesc {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--fg-dim);
+  padding-top: 8px;
 }

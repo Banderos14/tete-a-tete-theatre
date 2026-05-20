@@ -6,21 +6,15 @@
 }
 
 @keyframes scrollLine {
-  0%   { 
-    transform: scaleY(0);
-    transform-origin: top;
-  }
-  50%  {
-    transform: scaleY(1);
-    transform-origin: top;
-  }
-  51%  {
-    transform-origin: bottom;
-  }
-  100% {
-    transform: scaleY(0);
-    transform-origin: bottom;
-  }
+  0%   { transform: scaleY(0); transform-origin: top; }
+  50%  { transform: scaleY(1); transform-origin: top; }
+  51%  { transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1);   opacity: 0.55; }
+  50%       { transform: scale(1.8); opacity: 1; }
 }
 
 .hero {
@@ -131,11 +125,6 @@
   gap: 22px;
 }
 
-@keyframes pulseDot {
-  0%, 100% { transform: scale(1);   opacity: 0.55; }
-  50%       { transform: scale(1.8); opacity: 1; }
-}
-
 .accentDot {
   width: 9px;
   height: 9px;
@@ -216,14 +205,15 @@
   }
 
   .hero {
-    // Тонкий красный блик сверху — намёк на театральный свет
+    // Multiple soft spotlights — warm theatrical feel on cream background
     background:
-      radial-gradient(ellipse 70% 50% at 50% -5%, rgba(184, 0, 0, 0.07) 0%, transparent 65%),
+      radial-gradient(ellipse 55% 40% at 20% 0%,  rgba(255, 220, 150, 0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 45% at 80% 0%,  rgba(255, 200, 120, 0.14) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 35% at 50% -5%, rgba(184,  0,   0,  0.06) 0%, transparent 65%),
       var(--bg);
   }
 
   .floor {
-    // Fade к фону, а не к чёрному
     background: linear-gradient(180deg, transparent 0%, var(--bg) 100%);
   }
 
@@ -231,26 +221,28 @@
     background: linear-gradient(
       to right,
       transparent 4%,
-      rgba(26, 23, 21, 0.1) 12%,
-      rgba(26, 23, 21, 0.1) 88%,
+      rgba(26, 23, 21, 0.08) 12%,
+      rgba(26, 23, 21, 0.08) 88%,
       transparent 96%
     );
   }
 
-  .lamp {
-    background: rgba(26, 23, 21, 0.1);
-  }
-
-  .lampRed   { background: rgba(184, 0, 0, 0.55); }
-  .lampWhite { background: rgba(26, 23, 21, 0.18); }
+  .lamp { background: rgba(26, 23, 21, 0.10); }
+  .lampRed   { background: rgba(184, 0, 0, 0.45); }
+  .lampWhite { background: rgba(26, 23, 21, 0.15); }
 
   .accentDot {
     background: #B80000;
-    box-shadow: 0 0 12px rgba(128, 0, 32, 0.6);
+    box-shadow: 0 0 10px rgba(184, 0, 0, 0.5);
   }
 
   .accentLetter {
     color: #B80000;
-    text-shadow: 0 0 40px rgba(204, 0, 0, 0.45);
+    text-shadow: 0 0 30px rgba(184, 0, 0, 0.25);
+  }
+
+  .dot {
+    background: var(--accent);
+    box-shadow: 0 0 10px rgba(184, 0, 0, 0.4);
   }
 }

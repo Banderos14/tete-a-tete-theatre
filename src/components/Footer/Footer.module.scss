@@ -3,7 +3,7 @@
 .footer {
   background: var(--bg);
   border-top: 1px solid var(--line);
-  padding: 60px 40px 32px;
+  padding: 56px 40px 28px;
 
   @include mixins.mobile { padding: 40px 20px 24px; }
 }
@@ -25,6 +25,7 @@
   font-family: var(--font-display);
   font-size: 22px;
   letter-spacing: 0.1em;
+  text-decoration: none;
 
   img {
     height: 44px;
@@ -35,13 +36,33 @@
 }
 
 .dot {
-  color: var(--accent-glow);
+  color: var(--accent);
+}
+
+// ── Center block: copyright + credit ─────────────────────────────────────────
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+
+  @include mixins.mobile { align-items: flex-start; }
 }
 
 .meta {
   @include mixins.mono(10px, 0.18em);
   color: var(--fg-mute);
   text-transform: uppercase;
+}
+
+.credit {
+  font-size: 11px;
+  color: var(--fg-mute);
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  font-family: var(--font-body);
 }
 
 .backTop {
@@ -54,5 +75,5 @@
   cursor: pointer;
   transition: color 0.25s ease;
 
-  &:hover { color: var(--accent-glow); }
+  &:hover { color: var(--accent); }
 }

@@ -3,6 +3,28 @@ import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import styles from './ProfileDrawer.module.scss';
 
+function formatPhone(raw: string): string {
+  const hasPlus = raw.startsWith('+');
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return hasPlus ? '+' : '';
+  if (hasPlus && digits.startsWith('33')) {
+    const local = digits.slice(2);
+    let out = '+33';
+    if (!local) return out;
+    out += ' ' + local[0];
+    for (let i = 1; i < local.length; i += 2) out += ' ' + local.slice(i, i + 2);
+    return out;
+  }
+  if (hasPlus) {
+    const country = digits.slice(0, 2);
+    const rest = digits.slice(2);
+    let out = '+' + country;
+    for (let i = 0; i < rest.length; i += 2) out += ' ' + rest.slice(i, i + 2);
+    return out;
+  }
+  return digits;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -99,8 +121,9 @@ export function ProfileDrawer({ open, onClose }: Props) {
               <input
                 id="pd-phone"
                 type="tel"
+                inputMode="tel"
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
+                onChange={e => setPhone(formatPhone(e.target.value))}
                 placeholder="+33 6 00 00 00 00"
                 autoComplete="tel"
               />

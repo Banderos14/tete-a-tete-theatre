@@ -7,11 +7,12 @@ import styles from './ShowModal.module.scss';
 interface Props {
   show: Show | null;
   onClose: () => void;
+  onBook: (show: Show) => void;
 }
 
 const VISIBLE_THUMBS = 3;
 
-export function ShowModal({ show, onClose }: Props) {
+export function ShowModal({ show, onClose, onBook }: Props) {
   const { lang, t } = useLang();
   const [closing,    setClosing]    = useState(false);
   const [activeIdx,  setActiveIdx]  = useState(0);
@@ -199,14 +200,12 @@ export function ShowModal({ show, onClose }: Props) {
 
           <p className={styles.desc}>{desc}</p>
 
-          <a
-            href={show.href}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
             className={`btn btn-primary ${styles.bookBtn}`}
+            onClick={() => { handleClose(); onBook(show); }}
           >
             {t.showModal.book} →
-          </a>
+          </button>
         </div>
       </div>
     </div>,

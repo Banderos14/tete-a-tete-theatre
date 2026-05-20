@@ -47,6 +47,63 @@ export interface T {
     notifications: string;
     logout: string;
   };
+  booking: {
+    title: string;
+    loginRequired: string;
+    loginBtn: string;
+    ticketType: string;
+    seatsLeft: string;
+    tickets: string;
+    paymentMethod: string;
+    payOnSite: string;
+    payOnSiteDesc: string;
+    payTransfer: string;
+    payTransferDesc: string;
+    comment: string;
+    commentPlaceholder: string;
+    submit: string;
+    successTitle: string;
+    successText: string;
+    successOnSite: string;
+    successTransfer: string;
+    successEmailHint: string;
+    successAmount: string;
+    transferDetailsLabel: string;
+    transferRef: string;
+    close: string;
+    total: string;
+    phone: string;
+  };
+  admin: {
+    title: string;
+    accessDenied: string;
+    allShows: string;
+    bookings: string;
+    totalTickets: string;
+    totalRevenue: string;
+    noBookings: string;
+    name: string;
+    email: string;
+    phone: string;
+    tickets: string;
+    ticketType: string;
+    ticketStandard: string;
+    ticketStudent: string;
+    amount: string;
+    date: string;
+    payment: string;
+    paymentStatus: string;
+    status: string;
+    comment: string;
+    statusConfirmed: string;
+    statusCancelled: string;
+    payOnSite: string;
+    payTransfer: string;
+    backToSite: string;
+    filterAll: string;
+    markConfirmed: string;
+    markCancelled: string;
+  };
   nav: {
     afisha: string;
     repertoire: string;
@@ -277,6 +334,63 @@ export const translations: Record<Lang, T> = {
       notifications:         'Уведомления о новых спектаклях',
       logout:                'Выйти',
     },
+    booking: {
+      title:               'Бронирование',
+      loginRequired:       'Чтобы забронировать билет, войдите в аккаунт',
+      loginBtn:            'Войти или зарегистрироваться',
+      ticketType:          'Тип билета',
+      seatsLeft:           'Осталось мест',
+      tickets:             'Количество билетов',
+      paymentMethod:       'Способ оплаты',
+      payOnSite:           'Оплата на месте',
+      payOnSiteDesc:       'Оплатите наличными в кассе театра',
+      payTransfer:         'Банковский перевод',
+      payTransferDesc:     'Реквизиты придут после бронирования',
+      comment:             'Комментарий',
+      commentPlaceholder:  'Особые пожелания, вопросы...',
+      submit:              'Подтвердить бронирование',
+      successTitle:        'Бронирование принято!',
+      successText:         'Мы свяжемся с вами для подтверждения деталей. Проверьте email.',
+      successOnSite:       'Ваше бронирование принято. Пожалуйста, подтвердите присутствие — мы напишем на ваш email. Оплата принимается на месте перед спектаклем.',
+      successTransfer:     'Ваше бронирование принято. Переведите указанную сумму по реквизитам ниже. Бронирование будет подтверждено после получения оплаты.',
+      successEmailHint:    'Детали отправлены на:',
+      successAmount:       'Сумма к оплате',
+      transferDetailsLabel:'Реквизиты для перевода',
+      transferRef:         'Назначение платежа',
+      close:               'Закрыть',
+      total:               'Итого',
+      phone:               'Контактный телефон',
+    },
+    admin: {
+      title:           'Панель администратора',
+      accessDenied:    'Доступ запрещён',
+      allShows:        'Все спектакли',
+      bookings:        'бронирований',
+      totalTickets:    'билетов',
+      totalRevenue:    'оплачено',
+      noBookings:      'Бронирований пока нет',
+      name:            'Имя',
+      email:           'Email',
+      phone:           'Телефон',
+      tickets:         'Билеты',
+      ticketType:      'Тип',
+      ticketStandard:  'Стандарт',
+      ticketStudent:   'Студент',
+      amount:          'Сумма',
+      date:            'Дата брони',
+      payment:         'Оплата',
+      paymentStatus:   'Статус оплаты',
+      status:          'Статус брони',
+      comment:         'Комментарий',
+      statusConfirmed: 'Подтверждено',
+      statusCancelled: 'Отменено',
+      payOnSite:       'На месте',
+      payTransfer:     'Перевод',
+      backToSite:      '← На сайт',
+      filterAll:       'Все спектакли',
+      markConfirmed:   'Подтвердить',
+      markCancelled:   'Отменить',
+    },
     showModal: {
       labelDate:     'Дата',
       labelTime:     'Начало',
@@ -435,6 +549,63 @@ export const translations: Record<Lang, T> = {
       noHistory:             'Aucune visite pour l\'instant',
       notifications:         'Notifications pour les nouveaux spectacles',
       logout:                'Se déconnecter',
+    },
+    booking: {
+      title:               'Réservation',
+      loginRequired:       'Pour réserver, veuillez vous connecter',
+      loginBtn:            'Se connecter ou s\'inscrire',
+      ticketType:          'Type de billet',
+      seatsLeft:           'Places restantes',
+      tickets:             'Nombre de billets',
+      paymentMethod:       'Mode de paiement',
+      payOnSite:           'Paiement sur place',
+      payOnSiteDesc:       'Payez en espèces à la caisse du théâtre',
+      payTransfer:         'Virement bancaire',
+      payTransferDesc:     'Les coordonnées bancaires seront envoyées après la réservation',
+      comment:             'Commentaire',
+      commentPlaceholder:  'Demandes spéciales, questions...',
+      submit:              'Confirmer la réservation',
+      successTitle:        'Réservation acceptée !',
+      successText:         'Nous vous contacterons pour confirmer les détails. Vérifiez vos e-mails.',
+      successOnSite:       'Votre réservation est acceptée. Veuillez confirmer votre présence — nous vous enverrons un e-mail. Le paiement s\'effectue sur place avant le spectacle.',
+      successTransfer:     'Votre réservation est acceptée. Veuillez effectuer le virement selon les coordonnées ci-dessous. La réservation sera confirmée à réception du paiement.',
+      successEmailHint:    'Détails envoyés à :',
+      successAmount:       'Montant à payer',
+      transferDetailsLabel:'Coordonnées bancaires',
+      transferRef:         'Référence du virement',
+      close:               'Fermer',
+      total:               'Total',
+      phone:               'Téléphone de contact',
+    },
+    admin: {
+      title:           'Panneau d\'administration',
+      accessDenied:    'Accès refusé',
+      allShows:        'Tous les spectacles',
+      bookings:        'réservations',
+      totalTickets:    'billets',
+      totalRevenue:    'payé',
+      noBookings:      'Aucune réservation pour l\'instant',
+      name:            'Nom',
+      email:           'E-mail',
+      phone:           'Téléphone',
+      tickets:         'Billets',
+      ticketType:      'Type',
+      ticketStandard:  'Standard',
+      ticketStudent:   'Étudiant',
+      amount:          'Montant',
+      date:            'Date de réservation',
+      payment:         'Paiement',
+      paymentStatus:   'Statut paiement',
+      status:          'Statut réservation',
+      comment:         'Commentaire',
+      statusConfirmed: 'Confirmé',
+      statusCancelled: 'Annulé',
+      payOnSite:       'Sur place',
+      payTransfer:     'Virement',
+      backToSite:      '← Retour au site',
+      filterAll:       'Tous les spectacles',
+      markConfirmed:   'Confirmer',
+      markCancelled:   'Annuler',
     },
     showModal: {
       labelDate:     'Date',
