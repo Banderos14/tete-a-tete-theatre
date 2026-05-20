@@ -8,7 +8,7 @@ export function Footer() {
     <footer className={styles.footer}>
       <div className={styles.inner}>
         <a href="#top" className={styles.mark}>
-          <img src="/assets/logo.png" alt="ТЕТ-А-ТЕТ" />
+          <img src="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" alt="ТЕТ-А-ТЕТ" />
           <span>
             ТЕТ <span className={styles.dot}>·</span> А <span className={styles.dot}>·</span> ТЕТ
           </span>
