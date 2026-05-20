@@ -11,6 +11,42 @@ export interface T {
   curtain: {
     sub: string;
   };
+  auth: {
+    headerBtn: string;
+    signIn: string;
+    signUp: string;
+    googleBtn: string;
+    emailLabel: string;
+    passwordLabel: string;
+    nameLabel: string;
+    forgotPassword: string;
+    orDivider: string;
+    noAccount: string;
+    hasAccount: string;
+    register: string;
+    resetSent: string;
+    errors: {
+      invalidEmail: string;
+      wrongPassword: string;
+      emailInUse: string;
+      weakPassword: string;
+      userNotFound: string;
+      tooManyRequests: string;
+      generic: string;
+    };
+  };
+  profile: {
+    title: string;
+    phone: string;
+    socialLink: string;
+    socialLinkPlaceholder: string;
+    save: string;
+    saved: string;
+    history: string;
+    noHistory: string;
+    notifications: string;
+    logout: string;
+  };
   nav: {
     afisha: string;
     repertoire: string;
@@ -205,6 +241,42 @@ export const translations: Record<Lang, T> = {
       copyright: '© 2026 ТЕТ-А-ТЕТ · Русский театр в Ницце',
       backTop:   'Наверх',
     },
+    auth: {
+      headerBtn:       'Войти',
+      signIn:          'Вход',
+      signUp:          'Регистрация',
+      googleBtn:       'Продолжить через Google',
+      emailLabel:      'Email',
+      passwordLabel:   'Пароль',
+      nameLabel:       'Ваше имя',
+      forgotPassword:  'Забыли пароль?',
+      orDivider:       'или',
+      noAccount:       'Нет аккаунта?',
+      hasAccount:      'Уже есть аккаунт?',
+      register:        'Зарегистрироваться',
+      resetSent:       'Ссылка для сброса пароля отправлена на почту',
+      errors: {
+        invalidEmail:     'Неверный формат email',
+        wrongPassword:    'Неверный пароль',
+        emailInUse:       'Этот email уже используется',
+        weakPassword:     'Пароль должен содержать минимум 6 символов',
+        userNotFound:     'Пользователь с таким email не найден',
+        tooManyRequests:  'Слишком много попыток — попробуйте позже',
+        generic:          'Произошла ошибка, попробуйте снова',
+      },
+    },
+    profile: {
+      title:                 'Мой кабинет',
+      phone:                 'Телефон',
+      socialLink:            'Ссылка на соцсеть',
+      socialLinkPlaceholder: 'https://instagram.com/...',
+      save:                  'Сохранить',
+      saved:                 'Сохранено',
+      history:               'История посещений',
+      noHistory:             'Посещений пока нет',
+      notifications:         'Уведомления о новых спектаклях',
+      logout:                'Выйти',
+    },
     showModal: {
       labelDate:     'Дата',
       labelTime:     'Начало',
@@ -327,6 +399,42 @@ export const translations: Record<Lang, T> = {
     footer: {
       copyright: '© 2026 TÊT-À-TÊT · Théâtre russe à Nice',
       backTop:   'Haut de page',
+    },
+    auth: {
+      headerBtn:       'Connexion',
+      signIn:          'Connexion',
+      signUp:          'Inscription',
+      googleBtn:       'Continuer avec Google',
+      emailLabel:      'E-mail',
+      passwordLabel:   'Mot de passe',
+      nameLabel:       'Votre prénom',
+      forgotPassword:  'Mot de passe oublié ?',
+      orDivider:       'ou',
+      noAccount:       'Pas encore de compte ?',
+      hasAccount:      'Déjà un compte ?',
+      register:        "S'inscrire",
+      resetSent:       'Un lien de réinitialisation a été envoyé à votre e-mail',
+      errors: {
+        invalidEmail:    'Format d\'e-mail invalide',
+        wrongPassword:   'Mot de passe incorrect',
+        emailInUse:      'Cet e-mail est déjà utilisé',
+        weakPassword:    'Le mot de passe doit contenir au moins 6 caractères',
+        userNotFound:    'Aucun compte trouvé pour cet e-mail',
+        tooManyRequests: 'Trop de tentatives — réessayez plus tard',
+        generic:         'Une erreur est survenue, veuillez réessayer',
+      },
+    },
+    profile: {
+      title:                 'Mon espace',
+      phone:                 'Téléphone',
+      socialLink:            'Lien réseau social',
+      socialLinkPlaceholder: 'https://instagram.com/...',
+      save:                  'Enregistrer',
+      saved:                 'Enregistré',
+      history:               'Historique des visites',
+      noHistory:             'Aucune visite pour l\'instant',
+      notifications:         'Notifications pour les nouveaux spectacles',
+      logout:                'Se déconnecter',
     },
     showModal: {
       labelDate:     'Date',

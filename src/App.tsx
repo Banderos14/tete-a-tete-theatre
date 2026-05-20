@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { LangContext } from './i18n/LangContext';
 import { translations } from './i18n/translations';
 import type { Lang } from './i18n/translations';
+import { AuthProvider } from './context/AuthContext';
 
 import { CurtainIntro } from './components/CurtainIntro';
 import { Header }       from './components/Header';
@@ -14,6 +15,8 @@ import { Repertoire }   from './components/Repertoire';
 import { Team }         from './components/Team';
 import { Contacts }     from './components/Contacts';
 import { Footer }       from './components/Footer';
+import { AuthModal }    from './components/ui/AuthModal';
+import { ProfileDrawer } from './components/ui/ProfileDrawer';
 
 type Theme = 'dark' | 'light';
 type IntroState = 'closed' | 'opening' | 'done';
@@ -24,6 +27,8 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>('dark');
   const [lang,  setLang] = useState<Lang>('RU');
   const [introState, setIntroState] = useState<IntroState>('closed');
+  const [authOpen,    setAuthOpen]    = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // Apply theme attribute — цвета и шрифты управляются через variables.scss
   useEffect(() => {
@@ -61,25 +66,32 @@ export default function App() {
   );
 
   return (
-    <LangContext.Provider value={langCtx}>
-      <div className="grain" />
-      <CurtainIntro state={introState} speed={INTRO_SPEED} />
-      <Header
-        theme={theme}
-        lang={lang}
-        onThemeChange={handleThemeChange}
-        onLangChange={handleLangChange}
-      />
-      <Hero />
-      <Marquee />
-      <Afisha />
-      <Marquee />
-      <Socials />
-      <About />
-      <Repertoire />
-      <Team />
-      <Contacts />
-      <Footer />
-    </LangContext.Provider>
+    <AuthProvider>
+      <LangContext.Provider value={langCtx}>
+        <div className="grain" />
+        <CurtainIntro state={introState} speed={INTRO_SPEED} />
+        <Header
+          theme={theme}
+          lang={lang}
+          onThemeChange={handleThemeChange}
+          onLangChange={handleLangChange}
+          onAuthOpen={() => setAuthOpen(true)}
+          onProfileOpen={() => setProfileOpen(true)}
+        />
+        <Hero />
+        <Marquee />
+        <Afisha />
+        <Marquee />
+        <Socials />
+        <About />
+        <Repertoire />
+        <Team />
+        <Contacts />
+        <Footer />
+
+        <AuthModal    open={authOpen}    onClose={() => setAuthOpen(false)} />
+        <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
+      </LangContext.Provider>
+    </AuthProvider>
   );
 }
