@@ -1,5 +1,7 @@
 import type { Show, RepertoireItem } from '../types';
 
+const showImage = (fileName: string) => `${import.meta.env.BASE_URL}images/shows/${fileName}`;
+
 export const SHOWS: Show[] = [
   {
     id: 'kolobok',
@@ -12,8 +14,8 @@ export const SHOWS: Show[] = [
     href: 'https://constellation.events/event/volsebnyi-sekret-kolobka',
     palette: 'linear-gradient(135deg, #6b1a1a 0%, #2a0608 60%, #1a0a08 100%)',
     glyph: '✦',
-    image: 'public/images/shows/kolobok.jpg',
-    photos: ['public/images/shows/kolobok.jpg', 'public/images/shows/shutka.jpg', 'public/images/shows/kolobok.jpg'],
+    image: showImage('kolobok.jpg'),
+    photos: [showImage('kolobok.jpg'), showImage('shutka.jpg'), showImage('kolobok.jpg')],
     totalSeats: 100,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 15, available: 40 },
@@ -30,7 +32,7 @@ export const SHOWS: Show[] = [
     href: 'https://constellation.events/event/i-v-sutku-i-vserez-12-copy',
     palette: 'linear-gradient(135deg, #2a1014 0%, #1a0a08 50%, #0a0605 100%)',
     glyph: '❦',
-    image: 'public/images/shows/shutka.jpg',
+    image: showImage('shutka.jpg'),
     totalSeats: 100,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 15, available: 38 },
@@ -48,7 +50,7 @@ export const SHOWS: Show[] = [
     href: 'https://constellation.events/event/graf-nulin-12',
     palette: 'linear-gradient(135deg, #401418 0%, #1a0608 60%, #0a0605 100%)',
     glyph: '❧',
-    image: 'public/images/shows/nulin.jpg',
+    image: showImage('nulin.jpg'),
     totalSeats: 100,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 30, available: 45 },
