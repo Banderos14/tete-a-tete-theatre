@@ -5,7 +5,11 @@ import { ShowModal } from '../ui/ShowModal';
 import type { Show } from '../../types';
 import styles from './Afisha.module.scss';
 
-export function Afisha() {
+interface Props {
+  onBook: (show: Show) => void;
+}
+
+export function Afisha({ onBook }: Props) {
   const { t } = useLang();
   const [metaLine1, metaLine2] = t.afisha.meta.split('\n');
   const [activeShow, setActiveShow] = useState<Show | null>(null);
@@ -22,7 +26,7 @@ export function Afisha() {
       </div>
 
       <AfishaSlider onCardClick={handleCardClick} />
-      <ShowModal show={activeShow} onClose={handleClose} />
+      <ShowModal show={activeShow} onClose={handleClose} onBook={onBook} />
     </section>
   );
 }

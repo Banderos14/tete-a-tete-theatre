@@ -1,33 +1,49 @@
+@font-face {
+  font-family: 'Ekaterina Velikaya Two';
+  src: url('/fonts/ekaterinavelikayatwo.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 // ── Colour tokens ─────────────────────────────────────────────────────────────
 :root {
-  --bg:           #000000;   /* было #0a0908 */
-  --bg-2:         #0a0a0a;   /* было #14100e */
-  --bg-3:         #111111;   /* было #1c1714 */
+  --bg:           #0a0908;
+  --bg-2:         #14100e;
+  --bg-3:         #1c1714;
   --fg:           #f5f1ea;
   --fg-dim:       #b8b0a4;
   --fg-mute:      #6b6359;
-  --accent:       #B80000;   /* было #B80000 */
+  --accent:       #B80000;
   --accent-bright:#a01818;
   --accent-glow:  #c8102e;
-  --line:         rgba(245, 241, 234, 0.12);
-  --line-strong:  rgba(245, 241, 234, 0.24);
-  --grain-opacity:0.08;
+  --line:         rgba(245, 241, 234, 0.10);
+  --line-strong:  rgba(245, 241, 234, 0.22);
+  --grain-opacity:0.06;
 
-  // --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
-  // --font-display: "Poppins", sans-serif;
   --font-display: "Bad Russian";
-  --font-body:    'Inter', -apple-system, system-ui, sans-serif;
-  --font-mono:    ui-monospace, 'Courier New', monospace;
+  --font-title: "Forum", sans-serif;
+  --font-title-blocks: "Dela Gothic One", sans-serif;
+  // --font-sub: "Great Vibes", cursive;
+  --font-sub: "Ekaterina Velikaya Two", serif;
+  --font-display-spacing: 0.08em;
+  --font-body: 'Inter', -apple-system, system-ui, sans-serif;
+  // --font-mono: ui-monospace, 'Courier New', monospace;
+  --font-mono: "Dela Gothic One", sans-serif;
 }
 
 [data-theme='light'] {
-  --bg:          #f3eee5;
-  --bg-2:        #e8e0d2;
-  --bg-3:        #ddd2bf;
-  --fg:          #1a1715;
-  --fg-dim:      #4a4540;
-  --fg-mute:     #8a8278;
-  --line:        rgba(26, 23, 21, 0.14);
-  --line-strong: rgba(26, 23, 21, 0.28);
-  --grain-opacity:0.04;
+  // Warm editorial cream — contemporary theatre, clean luxury
+  --bg:           #f7f3ec;
+  --bg-2:         #ede6d8;
+  --bg-3:         #e2d8c6;
+  --fg:           #1a1715;
+  --fg-dim:       #3d3830;
+  --fg-mute:      #7a7268;
+  --accent:       #B80000;
+  --accent-bright:#930000;
+  --accent-glow:  #d40000;
+  --line:         rgba(26, 23, 21, 0.10);
+  --line-strong:  rgba(26, 23, 21, 0.22);
+  --grain-opacity:0.03;
 }

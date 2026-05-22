@@ -5,11 +5,10 @@
   to   { transform: translateX(-50%); }
 }
 
-// ── Внешняя обёртка на full-screen ────────────────────────────────────────────────────────
+// ── Outer wrapper — full-screen width ─────────────────────────────────────────
 .outer {
   --card-w: clamp(240px, 28vw, 340px);
 
-  transition-delay: 0.25s;
   position: relative;
   width: 100vw;
   margin-left: calc(-50vw + 50%);
@@ -21,7 +20,7 @@
     content: '';
     position: absolute;
     top: 0; bottom: 0;
-    width: 60px;
+    width: 80px;
     z-index: 20;
     pointer-events: none;
   }
@@ -50,7 +49,7 @@
   }
 }
 
-// ── Карточка — портретный формат ─────────────────────────────────────────────
+// ── Card — portrait format ────────────────────────────────────────────────────
 .card {
   flex-shrink: 0;
   width: var(--card-w);
@@ -58,57 +57,62 @@
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.45s ease;
+  transition:
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.5s ease;
 
   &:hover {
-    transform: scale(1.06);
+    transform: scale(1.05) translateY(-4px);
     z-index: 10;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+
+    .poster { opacity: 0.75; transform: scale(1.04); }
+    .overlay { opacity: 0.85; }
+    .openHint { opacity: 1; transform: translateY(0); }
   }
 
   @include mixins.mobile { height: clamp(300px, 55vh, 380px); }
 }
 
-// ── Фото-постер ───────────────────────────────────────────────────────────────
+// ── Poster image ──────────────────────────────────────────────────────────────
 .poster {
   position: absolute;
   inset: 0;
   background-size: cover;
   background-position: center top;
-  opacity: 0.55;
+  opacity: 0.65;
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
-// ── Декоративный глиф(для того если будет undefined на блоке катрочки афиши) ────────────────────────────────────────────────────────
+// ── Decorative glyph (when no image) ─────────────────────────────────────────
 .glyph {
   position: absolute;
   right: -8%;
   top: 50%;
   transform: translateY(-50%);
   font-size: clamp(100px, 16vw, 200px);
-  opacity: 0.06;
+  opacity: 0.08;
   line-height: 1;
   color: #fff;
   pointer-events: none;
   user-select: none;
 }
 
-// ── Overlay ───────────────────────────────────────────────────────────────────
+// ── Overlay — bottom-fade only, much lighter than before ─────────────────────
 .overlay {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(to right,  rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.30) 55%, rgba(0,0,0,0.55) 100%),
-    linear-gradient(to bottom, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.60) 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.10) 0%,
+    rgba(0, 0, 0, 0.30) 40%,
+    rgba(0, 0, 0, 0.72) 100%
+  );
+  opacity: 0.9;
+  transition: opacity 0.5s ease;
 }
 
-// ── Вертикальная красная линия справа ────────────────────────────────────────
-.sideLine {
-  position: absolute;
-  top: 12%; bottom: 12%; right: 0;
-  width: 1px;
-  background: linear-gradient(to bottom, transparent, rgba(184,0,0,0.45), transparent);
-}
-
-// ── Контент карточки ─────────────────────────────────────────────────────────
+// ── Card content ──────────────────────────────────────────────────────────────
 .body {
   position: absolute;
   inset: 0;
@@ -129,7 +133,7 @@
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.22em;
-  color: rgba(255,255,255,0.28);
+  color: rgba(255, 255, 255, 0.35);
   text-transform: uppercase;
 }
 
@@ -142,29 +146,33 @@
   letter-spacing: 0.08em;
 }
 
+// ── Show title in card center ─────────────────────────────────────────────────
 .middle {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  margin-top: auto;
+  margin-bottom: 12px;
 }
 
-.title {
+.showTitle {
   font-family: var(--font-display);
-  font-size: clamp(17px, 2vw, 22px);
-  color: #f5f1ea;
+  font-size: clamp(16px, 1.8vw, 20px);
+  color: rgba(255, 255, 255, 0.92);
   font-weight: 400;
   font-style: italic;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
-.author {
+.showAuthor {
   font-family: var(--font-mono);
   font-size: 8px;
-  letter-spacing: 0.16em;
-  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.40);
   text-transform: uppercase;
 }
 
+// ── Bottom row: date + open hint ──────────────────────────────────────────────
 .bottom {
   display: flex;
   justify-content: space-between;
@@ -180,8 +188,8 @@
 
 .day {
   font-family: var(--font-display);
-  font-size: clamp(32px, 4.5vw, 52px);
-  color: rgba(255,255,255,0.90);
+  font-size: clamp(28px, 4vw, 46px);
+  color: rgba(255, 255, 255, 0.88);
   font-weight: 300;
   line-height: 1;
 }
@@ -197,7 +205,7 @@
   font-family: var(--font-mono);
   font-size: 8px;
   letter-spacing: 0.16em;
-  color: rgba(255,255,255,0.35);
+  color: rgba(255, 255, 255, 0.40);
   text-transform: uppercase;
 }
 
@@ -205,45 +213,36 @@
   font-family: var(--font-mono);
   font-size: 8px;
   letter-spacing: 0.12em;
-  color: rgba(255,255,255,0.22);
+  color: rgba(255, 255, 255, 0.28);
 }
 
-// ── Кнопка ────────────────────────────────────────────────────────────────────
-.bookBtn {
+// ── "Open" hint instead of external link ─────────────────────────────────────
+.openHint {
   display: inline-flex;
-  align-items: stretch;
-  text-decoration: none;
-  white-space: nowrap;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
-.btnText {
-  padding: 9px 12px;
+.hintText {
   font-family: var(--font-mono);
   font-size: 8px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.80);
-  border: 1px solid rgba(255,255,255,0.22);
-  border-right: none;
-  transition: background 0.25s ease, color 0.25s ease;
-
-  .bookBtn:hover & {
-    background: rgba(255,255,255,0.08);
-    color: #fff;
-  }
+  color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 7px 10px;
 }
 
-.btnArrow {
+.hintArrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 12px;
+  width: 28px;
+  height: 28px;
   background: var(--accent);
   color: #fff;
-  font-size: 12px;
-  transition: background 0.25s ease;
-
-  .bookBtn:hover & {
-    background: #a00000;
-  }
+  font-size: 11px;
 }

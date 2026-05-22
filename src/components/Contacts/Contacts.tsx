@@ -2,8 +2,18 @@ import { LINKS, ADDRESS } from '../../constants/links';
 import { useLang } from '../../i18n/LangContext';
 import styles from './Contacts.module.scss';
 
-const MAP_URL =
-  'https://www.openstreetmap.org/export/embed.html?bbox=7.2620%2C43.6970%2C7.2700%2C43.7020&layer=mapnik&marker=43.6995%2C7.2660';
+// ── Map — correct coordinates for 24 Rue Rossini, 06000 Nice ─────────────────
+// To change: update LAT / LNG below. Source: Google Maps link in constants/links.ts
+const LAT = 43.7006;
+const LNG = 7.2607;
+const ZOOM_DELTA = 0.004; // half-width/height of bounding box
+
+const MAP_URL = [
+  'https://www.openstreetmap.org/export/embed.html',
+  `?bbox=${LNG - ZOOM_DELTA}%2C${LAT - ZOOM_DELTA * 0.6}%2C${LNG + ZOOM_DELTA}%2C${LAT + ZOOM_DELTA * 0.6}`,
+  `&layer=mapnik`,
+  `&marker=${LAT}%2C${LNG}`,
+].join('');
 
 export function Contacts() {
   const { t } = useLang();
@@ -17,6 +27,7 @@ export function Contacts() {
       </div>
 
       <div className={styles.grid}>
+        {/* ── Info column ── */}
         <div className="reveal">
           <div className={styles.block}>
             <div className={styles.label}>{t.contacts.labelAddress}</div>
@@ -82,13 +93,16 @@ export function Contacts() {
           </div>
         </div>
 
-        <div className={`${styles.mapFrame} reveal`}>
-          <iframe
-            src={MAP_URL}
-            title="Карта театра ТЕТ-А-ТЕТ"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
+        {/* ── Map column ── */}
+        <div className={`${styles.mapWrapper} reveal`}>
+          <div className={styles.mapFrame}>
+            <iframe
+              src={MAP_URL}
+              title="Карта театра ТЕТ-А-ТЕТ"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
           <div className={styles.mapOverlay}>
             <div className={styles.mapAddr}>{t.contacts.mapAddr}</div>
             <a

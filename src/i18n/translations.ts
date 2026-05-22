@@ -11,6 +11,99 @@ export interface T {
   curtain: {
     sub: string;
   };
+  auth: {
+    headerBtn: string;
+    signIn: string;
+    signUp: string;
+    googleBtn: string;
+    emailLabel: string;
+    passwordLabel: string;
+    nameLabel: string;
+    forgotPassword: string;
+    orDivider: string;
+    noAccount: string;
+    hasAccount: string;
+    register: string;
+    resetSent: string;
+    errors: {
+      invalidEmail: string;
+      wrongPassword: string;
+      emailInUse: string;
+      weakPassword: string;
+      userNotFound: string;
+      tooManyRequests: string;
+      generic: string;
+    };
+  };
+  profile: {
+    title: string;
+    phone: string;
+    socialLink: string;
+    socialLinkPlaceholder: string;
+    save: string;
+    saved: string;
+    history: string;
+    noHistory: string;
+    notifications: string;
+    logout: string;
+  };
+  booking: {
+    title: string;
+    loginRequired: string;
+    loginBtn: string;
+    ticketType: string;
+    seatsLeft: string;
+    tickets: string;
+    paymentMethod: string;
+    payOnSite: string;
+    payOnSiteDesc: string;
+    payTransfer: string;
+    payTransferDesc: string;
+    comment: string;
+    commentPlaceholder: string;
+    submit: string;
+    successTitle: string;
+    successText: string;
+    successOnSite: string;
+    successTransfer: string;
+    successEmailHint: string;
+    successAmount: string;
+    transferDetailsLabel: string;
+    transferRef: string;
+    close: string;
+    total: string;
+    phone: string;
+  };
+  admin: {
+    title: string;
+    accessDenied: string;
+    allShows: string;
+    bookings: string;
+    totalTickets: string;
+    totalRevenue: string;
+    noBookings: string;
+    name: string;
+    email: string;
+    phone: string;
+    tickets: string;
+    ticketType: string;
+    ticketStandard: string;
+    ticketStudent: string;
+    amount: string;
+    date: string;
+    payment: string;
+    paymentStatus: string;
+    status: string;
+    comment: string;
+    statusConfirmed: string;
+    statusCancelled: string;
+    payOnSite: string;
+    payTransfer: string;
+    backToSite: string;
+    filterAll: string;
+    markConfirmed: string;
+    markCancelled: string;
+  };
   nav: {
     afisha: string;
     repertoire: string;
@@ -20,7 +113,7 @@ export interface T {
   hero: {
     eyebrow: string;
     title: { before: string; letter: string; after: string };
-    sub: string;
+    sub: { accent: string; rest: string };
     ctaAfisha: string;
     ctaRep: string;
     ctaInstagram: string;
@@ -115,9 +208,9 @@ export const translations: Record<Lang, T> = {
       people:     'Люди',
     },
     hero: {
-      eyebrow:     'Сезон 2025 / 2026 · Nice, Côte d\'Azur',
+      eyebrow:     'Сезон 2025 / 2026 · Nice, France',
       title:       { before: 'тет', letter: 'а', after: 'тет' },
-      sub:         'Русскоязычный театр в Ницце',
+      sub:         { accent: 'Русскоязычный', rest: 'театр' },
       ctaAfisha:   'Смотреть афишу',
       ctaRep:      'Репертуар',
       ctaInstagram:'Instagram',
@@ -205,6 +298,99 @@ export const translations: Record<Lang, T> = {
       copyright: '© 2026 ТЕТ-А-ТЕТ · Русский театр в Ницце',
       backTop:   'Наверх',
     },
+    auth: {
+      headerBtn:       'Войти',
+      signIn:          'Вход',
+      signUp:          'Регистрация',
+      googleBtn:       'Продолжить через Google',
+      emailLabel:      'Email',
+      passwordLabel:   'Пароль',
+      nameLabel:       'Ваше имя',
+      forgotPassword:  'Забыли пароль?',
+      orDivider:       'или',
+      noAccount:       'Нет аккаунта?',
+      hasAccount:      'Уже есть аккаунт?',
+      register:        'Зарегистрироваться',
+      resetSent:       'Ссылка для сброса пароля отправлена на почту',
+      errors: {
+        invalidEmail:     'Неверный формат email',
+        wrongPassword:    'Неверный пароль',
+        emailInUse:       'Этот email уже используется',
+        weakPassword:     'Пароль должен содержать минимум 6 символов',
+        userNotFound:     'Пользователь с таким email не найден',
+        tooManyRequests:  'Слишком много попыток — попробуйте позже',
+        generic:          'Произошла ошибка, попробуйте снова',
+      },
+    },
+    profile: {
+      title:                 'Мой кабинет',
+      phone:                 'Телефон',
+      socialLink:            'Ссылка на соцсеть',
+      socialLinkPlaceholder: 'https://instagram.com/...',
+      save:                  'Сохранить',
+      saved:                 'Сохранено',
+      history:               'История посещений',
+      noHistory:             'Посещений пока нет',
+      notifications:         'Уведомления о новых спектаклях',
+      logout:                'Выйти',
+    },
+    booking: {
+      title:               'Бронирование',
+      loginRequired:       'Чтобы забронировать билет, войдите в аккаунт',
+      loginBtn:            'Войти или зарегистрироваться',
+      ticketType:          'Тип билета',
+      seatsLeft:           'Осталось мест',
+      tickets:             'Количество билетов',
+      paymentMethod:       'Способ оплаты',
+      payOnSite:           'Оплата на месте',
+      payOnSiteDesc:       'Оплатите наличными в кассе театра',
+      payTransfer:         'Банковский перевод',
+      payTransferDesc:     'Реквизиты придут после бронирования',
+      comment:             'Комментарий',
+      commentPlaceholder:  'Особые пожелания, вопросы...',
+      submit:              'Подтвердить бронирование',
+      successTitle:        'Бронирование принято',
+      successText:         'Детали будут отправлены на ваш e-mail.',
+      successOnSite:       'Ваше бронирование принято. Детали придут на ваш e-mail. Оплата — на месте, перед спектаклем.',
+      successTransfer:     'Ваше бронирование принято. Переведите указанную сумму по реквизитам ниже. Детали придут на ваш e-mail.',
+      successEmailHint:    'Детали отправлены на:',
+      successAmount:       'Сумма к оплате',
+      transferDetailsLabel:'Реквизиты для перевода',
+      transferRef:         'Назначение платежа',
+      close:               'Закрыть',
+      total:               'Итого',
+      phone:               'Контактный телефон',
+    },
+    admin: {
+      title:           'Панель администратора',
+      accessDenied:    'Доступ запрещён',
+      allShows:        'Все спектакли',
+      bookings:        'бронирований',
+      totalTickets:    'билетов',
+      totalRevenue:    'оплачено',
+      noBookings:      'Бронирований пока нет',
+      name:            'Имя',
+      email:           'Email',
+      phone:           'Телефон',
+      tickets:         'Билеты',
+      ticketType:      'Тип',
+      ticketStandard:  'Стандарт',
+      ticketStudent:   'Студент',
+      amount:          'Сумма',
+      date:            'Дата брони',
+      payment:         'Оплата',
+      paymentStatus:   'Статус оплаты',
+      status:          'Статус брони',
+      comment:         'Комментарий',
+      statusConfirmed: 'Подтверждено',
+      statusCancelled: 'Отменено',
+      payOnSite:       'На месте',
+      payTransfer:     'Перевод',
+      backToSite:      '← На сайт',
+      filterAll:       'Все спектакли',
+      markConfirmed:   'Подтвердить',
+      markCancelled:   'Отменить',
+    },
     showModal: {
       labelDate:     'Дата',
       labelTime:     'Начало',
@@ -240,7 +426,7 @@ export const translations: Record<Lang, T> = {
     hero: {
       eyebrow:     'Saison 2025 / 2026 · Nice, Côte d\'Azur',
       title:       { before: 'tête', letter: 'à', after: 'tête' },
-      sub:         'Théâtre russe à Nice',
+      sub:         { accent: 'Théâtre', rest: 'russe' },
       ctaAfisha:   'Voir l\'affiche',
       ctaRep:      'Répertoire',
       ctaInstagram:'Instagram',
@@ -327,6 +513,99 @@ export const translations: Record<Lang, T> = {
     footer: {
       copyright: '© 2026 TÊT-À-TÊT · Théâtre russe à Nice',
       backTop:   'Haut de page',
+    },
+    auth: {
+      headerBtn:       'Connexion',
+      signIn:          'Connexion',
+      signUp:          'Inscription',
+      googleBtn:       'Continuer avec Google',
+      emailLabel:      'E-mail',
+      passwordLabel:   'Mot de passe',
+      nameLabel:       'Votre prénom',
+      forgotPassword:  'Mot de passe oublié ?',
+      orDivider:       'ou',
+      noAccount:       'Pas encore de compte ?',
+      hasAccount:      'Déjà un compte ?',
+      register:        "S'inscrire",
+      resetSent:       'Un lien de réinitialisation a été envoyé à votre e-mail',
+      errors: {
+        invalidEmail:    'Format d\'e-mail invalide',
+        wrongPassword:   'Mot de passe incorrect',
+        emailInUse:      'Cet e-mail est déjà utilisé',
+        weakPassword:    'Le mot de passe doit contenir au moins 6 caractères',
+        userNotFound:    'Aucun compte trouvé pour cet e-mail',
+        tooManyRequests: 'Trop de tentatives — réessayez plus tard',
+        generic:         'Une erreur est survenue, veuillez réessayer',
+      },
+    },
+    profile: {
+      title:                 'Mon espace',
+      phone:                 'Téléphone',
+      socialLink:            'Lien réseau social',
+      socialLinkPlaceholder: 'https://instagram.com/...',
+      save:                  'Enregistrer',
+      saved:                 'Enregistré',
+      history:               'Historique des visites',
+      noHistory:             'Aucune visite pour l\'instant',
+      notifications:         'Notifications pour les nouveaux spectacles',
+      logout:                'Se déconnecter',
+    },
+    booking: {
+      title:               'Réservation',
+      loginRequired:       'Pour réserver, veuillez vous connecter',
+      loginBtn:            'Se connecter ou s\'inscrire',
+      ticketType:          'Type de billet',
+      seatsLeft:           'Places restantes',
+      tickets:             'Nombre de billets',
+      paymentMethod:       'Mode de paiement',
+      payOnSite:           'Paiement sur place',
+      payOnSiteDesc:       'Payez en espèces à la caisse du théâtre',
+      payTransfer:         'Virement bancaire',
+      payTransferDesc:     'Les coordonnées bancaires seront envoyées après la réservation',
+      comment:             'Commentaire',
+      commentPlaceholder:  'Demandes spéciales, questions...',
+      submit:              'Confirmer la réservation',
+      successTitle:        'Réservation acceptée',
+      successText:         'Les détails seront envoyés à votre adresse e-mail.',
+      successOnSite:       'Votre réservation est acceptée. Les détails seront envoyés par e-mail. Le paiement s\'effectue sur place avant le spectacle.',
+      successTransfer:     'Votre réservation est acceptée. Veuillez effectuer le virement selon les coordonnées ci-dessous. Les détails seront envoyés par e-mail.',
+      successEmailHint:    'Détails envoyés à :',
+      successAmount:       'Montant à payer',
+      transferDetailsLabel:'Coordonnées bancaires',
+      transferRef:         'Référence du virement',
+      close:               'Fermer',
+      total:               'Total',
+      phone:               'Téléphone de contact',
+    },
+    admin: {
+      title:           'Panneau d\'administration',
+      accessDenied:    'Accès refusé',
+      allShows:        'Tous les spectacles',
+      bookings:        'réservations',
+      totalTickets:    'billets',
+      totalRevenue:    'payé',
+      noBookings:      'Aucune réservation pour l\'instant',
+      name:            'Nom',
+      email:           'E-mail',
+      phone:           'Téléphone',
+      tickets:         'Billets',
+      ticketType:      'Type',
+      ticketStandard:  'Standard',
+      ticketStudent:   'Étudiant',
+      amount:          'Montant',
+      date:            'Date de réservation',
+      payment:         'Paiement',
+      paymentStatus:   'Statut paiement',
+      status:          'Statut réservation',
+      comment:         'Commentaire',
+      statusConfirmed: 'Confirmé',
+      statusCancelled: 'Annulé',
+      payOnSite:       'Sur place',
+      payTransfer:     'Virement',
+      backToSite:      '← Retour au site',
+      filterAll:       'Tous les spectacles',
+      markConfirmed:   'Confirmer',
+      markCancelled:   'Annuler',
     },
     showModal: {
       labelDate:     'Date',

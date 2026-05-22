@@ -1,3 +1,10 @@
+export interface TicketType {
+  id: 'standard' | 'student';
+  label: string;
+  price: number; // EUR
+  available: number; // remaining seats
+}
+
 export interface Show {
   id: string;
   title: string;
@@ -8,7 +15,7 @@ export interface Show {
   time: string;
   year: string;
   age: string;
-  price: string;
+  price: string; // display string, kept for ShowModal compat
   duration: string;
   desc: string;
   descFR: string;
@@ -17,6 +24,8 @@ export interface Show {
   glyph: string;
   image?: string;
   photos?: string[];
+  ticketTypes: TicketType[];
+  totalSeats: number;
 }
 
 export interface RepertoireItem {
@@ -26,4 +35,7 @@ export interface RepertoireItem {
   age: string;
   glyph: string;
   palette: string;
+  description?: string;
+  descriptionFR?: string;
+  duration?: string;
 }

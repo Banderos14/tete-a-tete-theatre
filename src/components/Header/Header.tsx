@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
+import { useAuth } from '../../context/AuthContext';
 import type { Lang } from '../../i18n/translations';
 import styles from './Header.module.scss';
 
@@ -10,12 +11,20 @@ interface Props {
   lang: Lang;
   onThemeChange: (t: Theme) => void;
   onLangChange: (l: Lang) => void;
+  onAuthOpen: () => void;
+  onProfileOpen: () => void;
 }
 
 const LANGS: Lang[] = ['RU', 'FR'];
 
-export function Header({ theme, lang, onThemeChange, onLangChange }: Props) {
+function getInitials(name: string | null | undefined): string {
+  if (!name) return '?';
+  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+}
+
+export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, onProfileOpen }: Props) {
   const { t } = useLang();
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -71,6 +80,24 @@ export function Header({ theme, lang, onThemeChange, onLangChange }: Props) {
             </svg>
           )}
         </button>
+
+        {user ? (
+          <button
+            className={styles.avatarBtn}
+            onClick={onProfileOpen}
+            aria-label="Личный кабинет"
+            title={user.displayName ?? user.email ?? ''}
+          >
+            {user.photoURL
+              ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" />
+              : <span>{getInitials(user.displayName)}</span>
+            }
+          </button>
+        ) : (
+          <button className={styles.signInBtn} onClick={onAuthOpen}>
+            {t.auth.headerBtn}
+          </button>
+        )}
       </div>
     </header>
   );

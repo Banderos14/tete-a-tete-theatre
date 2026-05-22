@@ -7,11 +7,12 @@ import styles from './ShowModal.module.scss';
 interface Props {
   show: Show | null;
   onClose: () => void;
+  onBook: (show: Show) => void;
 }
 
 const VISIBLE_THUMBS = 3;
 
-export function ShowModal({ show, onClose }: Props) {
+export function ShowModal({ show, onClose, onBook }: Props) {
   const { lang, t } = useLang();
   const [closing,    setClosing]    = useState(false);
   const [activeIdx,  setActiveIdx]  = useState(0);
@@ -85,7 +86,11 @@ export function ShowModal({ show, onClose }: Props) {
         className={`${styles.panel} ${closing ? styles.panelOut : ''}`}
         onClick={e => e.stopPropagation()}
       >
-        <button className={styles.close} onClick={handleClose} aria-label="Закрыть">✕</button>
+        <button className={styles.close} onClick={handleClose} aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
 
         {/* ── Gallery ─────────────────────────────────────────────────────── */}
         <div className={styles.gallery}>
@@ -123,31 +128,20 @@ export function ShowModal({ show, onClose }: Props) {
 
           {/* Thumbnail strip */}
           <div className={styles.thumbRow}>
-            {/* Left nav — always in layout, hidden when not needed */}
-            <button
-              className={styles.thumbNav}
-              style={{ visibility: hasMoreLeft ? 'visible' : 'hidden' }}
-              onClick={() => setThumbStart(s => Math.max(0, s - 1))}
-              aria-label="Назад"
-            >‹</button>
+            {hasMoreLeft && (
+              <button
+                className={styles.thumbNav}
+                onClick={() => setThumbStart(s => Math.max(0, s - 1))}
+                aria-label="Назад"
+              >‹</button>
+            )}
 
             {Array.from({ length: VISIBLE_THUMBS }).map((_, relIdx) => {
               const idx   = thumbStart + relIdx;
               const photo = allPhotos[idx];
+              if (!photo) return null;
               const isActive = idx === activeIdx;
               const showMore = relIdx === VISIBLE_THUMBS - 1 && hasMoreRight;
-
-              if (!photo) {
-                return (
-                  <div
-                    key={`ph-${relIdx}`}
-                    className={styles.thumbPlaceholder}
-                    style={{ background: show.palette }}
-                  >
-                    <span className={styles.glyphSm}>{show.glyph}</span>
-                  </div>
-                );
-              }
 
               return (
                 <div
@@ -163,13 +157,13 @@ export function ShowModal({ show, onClose }: Props) {
               );
             })}
 
-            {/* Right nav — always in layout, hidden when not needed */}
-            <button
-              className={styles.thumbNav}
-              style={{ visibility: hasMoreRight ? 'visible' : 'hidden' }}
-              onClick={() => setThumbStart(s => Math.min(s + 1, allPhotos.length - VISIBLE_THUMBS))}
-              aria-label="Вперёд"
-            >›</button>
+            {hasMoreRight && (
+              <button
+                className={styles.thumbNav}
+                onClick={() => setThumbStart(s => Math.min(s + 1, allPhotos.length - VISIBLE_THUMBS))}
+                aria-label="Вперёд"
+              >›</button>
+            )}
           </div>
         </div>
 
@@ -199,14 +193,12 @@ export function ShowModal({ show, onClose }: Props) {
 
           <p className={styles.desc}>{desc}</p>
 
-          <a
-            href={show.href}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
             className={`btn btn-primary ${styles.bookBtn}`}
+            onClick={() => { handleClose(); onBook(show); }}
           >
             {t.showModal.book} →
-          </a>
+          </button>
         </div>
       </div>
     </div>,
