@@ -113,7 +113,7 @@ export interface T {
   hero: {
     eyebrow: string;
     title: { before: string; letter: string; after: string };
-    sub: string;
+    sub: { accent: string; rest: string };
     ctaAfisha: string;
     ctaRep: string;
     ctaInstagram: string;
@@ -208,9 +208,9 @@ export const translations: Record<Lang, T> = {
       people:     'Люди',
     },
     hero: {
-      eyebrow:     'Сезон 2025 / 2026 · Nice, Côte d\'Azur',
+      eyebrow:     'Сезон 2025 / 2026 · Nice, France',
       title:       { before: 'тет', letter: 'а', after: 'тет' },
-      sub:         'Русскоязычный театр в Ницце',
+      sub:         { accent: 'Русскоязычный', rest: 'театр' },
       ctaAfisha:   'Смотреть афишу',
       ctaRep:      'Репертуар',
       ctaInstagram:'Instagram',
@@ -349,10 +349,10 @@ export const translations: Record<Lang, T> = {
       comment:             'Комментарий',
       commentPlaceholder:  'Особые пожелания, вопросы...',
       submit:              'Подтвердить бронирование',
-      successTitle:        'Бронирование принято!',
-      successText:         'Мы свяжемся с вами для подтверждения деталей. Проверьте email.',
-      successOnSite:       'Ваше бронирование принято. Пожалуйста, подтвердите присутствие — мы напишем на ваш email. Оплата принимается на месте перед спектаклем.',
-      successTransfer:     'Ваше бронирование принято. Переведите указанную сумму по реквизитам ниже. Бронирование будет подтверждено после получения оплаты.',
+      successTitle:        'Бронирование принято',
+      successText:         'Детали будут отправлены на ваш e-mail.',
+      successOnSite:       'Ваше бронирование принято. Детали придут на ваш e-mail. Оплата — на месте, перед спектаклем.',
+      successTransfer:     'Ваше бронирование принято. Переведите указанную сумму по реквизитам ниже. Детали придут на ваш e-mail.',
       successEmailHint:    'Детали отправлены на:',
       successAmount:       'Сумма к оплате',
       transferDetailsLabel:'Реквизиты для перевода',
@@ -426,7 +426,7 @@ export const translations: Record<Lang, T> = {
     hero: {
       eyebrow:     'Saison 2025 / 2026 · Nice, Côte d\'Azur',
       title:       { before: 'tête', letter: 'à', after: 'tête' },
-      sub:         'Théâtre russe à Nice',
+      sub:         { accent: 'Théâtre', rest: 'russe' },
       ctaAfisha:   'Voir l\'affiche',
       ctaRep:      'Répertoire',
       ctaInstagram:'Instagram',
@@ -565,10 +565,10 @@ export const translations: Record<Lang, T> = {
       comment:             'Commentaire',
       commentPlaceholder:  'Demandes spéciales, questions...',
       submit:              'Confirmer la réservation',
-      successTitle:        'Réservation acceptée !',
-      successText:         'Nous vous contacterons pour confirmer les détails. Vérifiez vos e-mails.',
-      successOnSite:       'Votre réservation est acceptée. Veuillez confirmer votre présence — nous vous enverrons un e-mail. Le paiement s\'effectue sur place avant le spectacle.',
-      successTransfer:     'Votre réservation est acceptée. Veuillez effectuer le virement selon les coordonnées ci-dessous. La réservation sera confirmée à réception du paiement.',
+      successTitle:        'Réservation acceptée',
+      successText:         'Les détails seront envoyés à votre adresse e-mail.',
+      successOnSite:       'Votre réservation est acceptée. Les détails seront envoyés par e-mail. Le paiement s\'effectue sur place avant le spectacle.',
+      successTransfer:     'Votre réservation est acceptée. Veuillez effectuer le virement selon les coordonnées ci-dessous. Les détails seront envoyés par e-mail.',
       successEmailHint:    'Détails envoyés à :',
       successAmount:       'Montant à payer',
       transferDetailsLabel:'Coordonnées bancaires',

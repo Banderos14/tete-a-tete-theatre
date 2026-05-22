@@ -68,7 +68,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     line-height: 0.96;
     letter-spacing: -0.03em;
 
-    .it { font-style: italic; color: var(--fg-mute); }
+    .it {
+      text-transform: uppercase;
+      font-family: var(--font-title-blocks);
+      font-style: italic;
+      color: var(--fg-mute);
+    }
   }
 
   .meta {

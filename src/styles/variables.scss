@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Ekaterina Velikaya Two';
+  src: url('/fonts/ekaterinavelikayatwo.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 // ── Colour tokens ─────────────────────────────────────────────────────────────
 :root {
   --bg:           #0a0908;
@@ -14,8 +22,14 @@
   --grain-opacity:0.06;
 
   --font-display: "Bad Russian";
-  --font-body:    'Inter', -apple-system, system-ui, sans-serif;
-  --font-mono:    ui-monospace, 'Courier New', monospace;
+  --font-title: "Forum", sans-serif;
+  --font-title-blocks: "Dela Gothic One", sans-serif;
+  // --font-sub: "Great Vibes", cursive;
+  --font-sub: "Ekaterina Velikaya Two", serif;
+  --font-display-spacing: 0.08em;
+  --font-body: 'Inter', -apple-system, system-ui, sans-serif;
+  // --font-mono: ui-monospace, 'Courier New', monospace;
+  --font-mono: "Dela Gothic One", sans-serif;
 }
 
 [data-theme='light'] {

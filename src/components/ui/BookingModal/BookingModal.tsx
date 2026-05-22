@@ -50,7 +50,7 @@ function mapFirebaseError(code: string): string {
 }
 
 export function BookingModal({ show, onClose }: Props) {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const { user, userProfile, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
 
   const initialStep = (): Step => (user ? 'form' : 'auth');
@@ -81,13 +81,16 @@ export function BookingModal({ show, onClose }: Props) {
   const maxTickets   = activeTicket?.available ?? 10;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user && step === 'auth') setStep('form');
   }, [user, step]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (userProfile?.phone) setPhone(userProfile.phone);
   }, [userProfile]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!show) return;
     setStep(user ? 'form' : 'auth');
@@ -95,6 +98,7 @@ export function BookingModal({ show, onClose }: Props) {
     setComment(''); setSubmitError('');
     setAuthEmail(''); setAuthPassword(''); setAuthName(''); setAuthError('');
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (show) document.body.style.overflow = 'hidden';
@@ -187,6 +191,9 @@ export function BookingModal({ show, onClose }: Props) {
             </div>
 
             <div className={styles.authBody}>
+              <h3 className={styles.authTitle}>
+                {lang === 'FR' ? 'Connectez-vous pour\nréserver un billet' : 'Войдите, чтобы\nзабронировать билет'}
+              </h3>
               <p className={styles.authHint}>{t.booking.loginRequired}</p>
 
               <button className={styles.googleBtn} onClick={handleGoogle} disabled={authLoading}>
@@ -310,6 +317,14 @@ export function BookingModal({ show, onClose }: Props) {
 
             {/* RIGHT: contact + payment + submit */}
             <div className={styles.formRight}>
+              {/* Header */}
+              <div className={styles.formRightHeader}>
+                <div className={styles.formRightLabel}>
+                  {lang === 'FR' ? 'RÉSERVATION' : 'БРОНИРОВАНИЕ'}
+                </div>
+                <p className={styles.formRightShowTitle}>{show.title}</p>
+              </div>
+
               {/* Phone */}
               <div className={styles.section}>
                 <label className={styles.sectionLabel} htmlFor="bk-phone">{t.booking.phone}</label>
@@ -386,6 +401,21 @@ export function BookingModal({ show, onClose }: Props) {
 
             <div className={styles.successRight}>
               <h3 className={styles.successTitle}>{t.booking.successTitle}</h3>
+
+              {/* Booking summary table */}
+              <div className={styles.infoBox}>
+                {([
+                  [lang === 'FR' ? 'Spectacle' : 'Спектакль', show.title],
+                  [lang === 'FR' ? 'Date' : 'Дата', `${show.day} ${show.month} ${show.year} · ${show.time}`],
+                  [lang === 'FR' ? 'Billets' : 'Билеты', `${tickets} × ${activeTicket?.label ?? ''}`],
+                  [lang === 'FR' ? 'Montant' : 'Сумма', `${totalAmount} €`],
+                ] as [string, string][]).map(([label, value]) => (
+                  <div key={label} className={styles.infoBoxRow}>
+                    <span>{label}</span>
+                    <span>{value}</span>
+                  </div>
+                ))}
+              </div>
 
               {payment === 'on_site' ? (
                 <p className={styles.successText}>{t.booking.successOnSite}</p>

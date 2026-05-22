@@ -13,18 +13,18 @@
   padding: 20px;
 }
 
-// ── Modal container — wide rectangle, no scroll ───────────────────────────────
+// ── Modal ─────────────────────────────────────────────────────────────────────
 .modal {
   position: relative;
-  background: var(--bg-2);
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  background: #1F1D1B;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
   width: 100%;
   max-width: 820px;
   overflow: hidden;
 }
 
-// ── Close button ─────────────────────────────────────────────────────────────
+// ── Close button ──────────────────────────────────────────────────────────────
 .closeBtn {
   position: absolute;
   top: 14px;
@@ -36,102 +36,103 @@
   border-radius: 50%;
   color: var(--fg-mute);
   z-index: 10;
-  transition: color 0.2s ease;
+  transition: color 0.2s;
 
   &:hover { color: var(--fg); }
   svg { width: 16px; height: 16px; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// AUTH STEP — centered single-column inside the wide modal
+// AUTH STEP — 280px left strip + flex-1 right form
 // ═══════════════════════════════════════════════════════════════════════════════
 .authWrap {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  min-height: 460px;
+  grid-template-columns: 280px 1fr;
+  min-height: 480px;
 
-  @include mixins.mobile {
-    grid-template-columns: 1fr;
-  }
+  @include mixins.mobile { grid-template-columns: 1fr; min-height: 0; }
 }
 
+// Left amber strip
 .authShowStrip {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 14px;
   padding: 40px 24px;
   text-align: center;
 }
 
 .authGlyph {
-  font-size: 52px;
-  opacity: 0.7;
+  font-size: 56px;
+  opacity: 0.35;
   line-height: 1;
+  color: #fff;
 }
 
 .authShowTitle {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 20px;
   color: #fff;
   font-style: italic;
-  line-height: 1.2;
+  line-height: 1.3;
+  opacity: 0.9;
 }
 
 .authShowMeta {
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: rgba(255,255,255,0.55);
-  letter-spacing: 0.1em;
-  margin-top: 4px;
+  font-size: 9px;
+  color: rgba(255,255,255,0.40);
+  letter-spacing: 0.10em;
   text-transform: uppercase;
 }
 
+// Right form area
 .authBody {
-  padding: 36px 36px 28px;
+  padding: 40px 48px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  border-left: 1px solid var(--line);
+  gap: 14px;
+  border-left: 1px solid rgba(255,255,255,0.08);
+  overflow-y: auto;
 
-  @include mixins.mobile { border-left: none; border-top: 1px solid var(--line); }
+  @include mixins.mobile { border-left: none; border-top: 1px solid rgba(255,255,255,0.08); padding: 28px 24px; }
+}
+
+.authTitle {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-style: italic;
+  color: var(--fg);
+  line-height: 1.25;
+  margin-bottom: -4px;
 }
 
 .authHint {
   font-size: 13px;
   color: var(--fg-dim);
-  margin-bottom: 20px;
   line-height: 1.5;
+  margin-top: -4px;
 }
 
-.authForm {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-// ── Google button ─────────────────────────────────────────────────────────────
+// Google button
 .googleBtn {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 11px 16px;
   background: #fff;
   color: #3c4043;
   border: 1px solid #dadce0;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
-  margin-bottom: 0;
+  transition: background 0.2s, box-shadow 0.2s;
 
-  &:hover:not(:disabled) {
-    background: #f8f9fa;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.2);
-  }
+  &:hover:not(:disabled) { background: #f8f9fa; box-shadow: 0 1px 6px rgba(0,0,0,0.18); }
   &:disabled { opacity: 0.6; }
 }
 
@@ -139,31 +140,31 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 14px 0;
   color: var(--fg-mute);
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-family: var(--font-mono);
+  margin: -4px 0;
 
   &::before, &::after {
     content: '';
     flex: 1;
     height: 1px;
-    background: var(--line);
+    background: rgba(255,255,255,0.08);
   }
 }
 
 .authTabs {
   display: flex;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: -6px;
 
   button {
     flex: 1;
     padding: 7px 0;
     font-size: 11px;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.10em;
     text-transform: uppercase;
     color: var(--fg-mute);
     border-bottom: 2px solid transparent;
@@ -179,78 +180,84 @@
   border-bottom-color: var(--accent) !important;
 }
 
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// FORM STEP — two-column, no scroll
+// FORM STEP — 310px left + flex-1 right
 // ═══════════════════════════════════════════════════════════════════════════════
 .formLayout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 480px;
+  grid-template-columns: 310px 1fr;
 
-  @include mixins.mobile {
-    grid-template-columns: 1fr;
-  }
+  @include mixins.mobile { grid-template-columns: 1fr; }
 }
 
-// ── Left column: show info + ticket selection ─────────────────────────────────
+// ── Left column ───────────────────────────────────────────────────────────────
 .formLeft {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--line);
+  border-right: 1px solid rgba(255,255,255,0.08);
 
-  @include mixins.mobile { border-right: none; border-bottom: 1px solid var(--line); }
+  @include mixins.mobile { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
 }
 
+// Show header strip (uses show.palette as inline bg)
 .showHeader {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 22px 24px;
+  padding: 28px 28px 24px;
   flex-shrink: 0;
 }
 
 .showGlyph {
-  font-size: 30px;
-  opacity: 0.75;
+  font-size: 42px;
+  opacity: 0.70;
   flex-shrink: 0;
   line-height: 1;
+  color: #fff;
 }
 
 .showTitle {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   color: #fff;
   font-style: italic;
-  line-height: 1.2;
+  line-height: 1.25;
+  opacity: 0.95;
 }
 
 .showMeta {
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: rgba(255,255,255,0.55);
-  letter-spacing: 0.08em;
-  margin-top: 3px;
+  font-size: 9px;
+  color: rgba(255,255,255,0.40);
+  letter-spacing: 0.10em;
+  margin-top: 4px;
   text-transform: uppercase;
 }
 
-// ── Section block ─────────────────────────────────────────────────────────────
+// Section block
 .section {
   padding: 18px 24px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid rgba(255,255,255,0.08);
   flex-shrink: 0;
 }
 
 .sectionLabel {
   display: block;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--fg-mute);
   margin-bottom: 10px;
 }
 
-// ── Ticket type selector ──────────────────────────────────────────────────────
+// Ticket type cards
 .ticketTypes {
   display: flex;
   flex-direction: column;
@@ -260,28 +267,29 @@
 .ticketTypeBtn {
   display: flex;
   align-items: stretch;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  background: var(--bg-3);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 7px;
+  background: #272422;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
   text-align: left;
   overflow: hidden;
 
-  &:hover { border-color: var(--fg-dim); }
+  &:hover { border-color: rgba(255,255,255,0.25); }
 }
 
 .ticketTypeActive {
   border-color: var(--accent) !important;
-  background: var(--bg) !important;
+  border-width: 1.5px !important;
+  background: #1A1715 !important;
 }
 
 .ttLeft {
   flex: 1;
-  padding: 10px 14px;
+  padding: 11px 14px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .ttName {
@@ -299,68 +307,70 @@
 
 .ttDivider {
   width: 1px;
-  background: var(--line-strong);
+  background: rgba(255,255,255,0.10);
   align-self: stretch;
   flex-shrink: 0;
 }
 
 .ttPrice {
-  padding: 10px 14px;
+  padding: 11px 14px;
   font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 500;
+  font-size: 22px;
+  font-style: italic;
   color: var(--fg);
   white-space: nowrap;
   display: flex;
   align-items: center;
 }
 
-// ── Quantity + total ──────────────────────────────────────────────────────────
+// Quantity counter + total
 .qtyRow {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
 }
 
 .counter {
   display: flex;
   align-items: stretch;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 7px;
   overflow: hidden;
-  height: 38px;
+  height: 36px;
+  background: #272422;
 
   button {
     width: 36px;
     font-size: 18px;
-    color: var(--fg-dim);
-    background: var(--bg-3);
+    color: var(--fg-mute);
+    background: transparent;
     transition: background 0.15s, color 0.15s;
     display: flex;
     align-items: center;
     justify-content: center;
 
-    &:hover:not(:disabled) { background: var(--bg); color: var(--fg); }
-    &:disabled { opacity: 0.3; cursor: not-allowed; }
+    &:hover:not(:disabled) { background: rgba(255,255,255,0.06); color: var(--fg); }
+    &:disabled { opacity: 0.30; cursor: not-allowed; }
   }
 
   span {
     min-width: 40px;
     text-align: center;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 500;
     color: var(--fg);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-left: 1px solid var(--line-strong);
-    border-right: 1px solid var(--line-strong);
+    border-left: 1px solid rgba(255,255,255,0.10);
+    border-right: 1px solid rgba(255,255,255,0.10);
   }
 }
 
 .totalBox {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 1px;
 }
 
@@ -374,8 +384,8 @@
 
 .totalAmount {
   font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 500;
+  font-size: 32px;
+  font-style: italic;
   color: var(--fg);
   line-height: 1;
 }
@@ -388,36 +398,69 @@
   margin-top: 8px;
 }
 
-// ── Right column: contact + payment + submit ──────────────────────────────────
+// ── Right column ──────────────────────────────────────────────────────────────
 .formRight {
   display: flex;
   flex-direction: column;
-  padding: 0;
 
-  .section:first-child {
-    border-top: none;
-    padding-top: 22px;
+  // All sections inside formRight get 32px horizontal padding
+  .section {
+    padding-left: 32px;
+    padding-right: 32px;
   }
 
-  // Push submit to bottom
+  // First section after header: no top border
+  .formRightHeader + .section {
+    border-top: none;
+    padding-top: 18px;
+  }
+
   .submitBtn {
     margin-top: auto;
   }
 }
 
-// ── Shared form elements ──────────────────────────────────────────────────────
+// Right column header
+.formRightHeader {
+  padding: 28px 32px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.formRightLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  margin-bottom: 5px;
+}
+
+.formRightShowTitle {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-style: italic;
+  color: var(--fg);
+  opacity: 0.65;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Shared inputs
 .input {
   width: 100%;
-  background: var(--bg-3);
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  background: #272422;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 6px;
   padding: 10px 12px;
   font-size: 14px;
   color: var(--fg);
   outline: none;
   transition: border-color 0.2s;
 
-  &::placeholder { color: var(--fg-mute); }
+  &::placeholder { color: rgba(148,138,131,0.50); }
   &:focus { border-color: var(--accent); }
   &:disabled { opacity: 0.5; }
 }
@@ -425,7 +468,7 @@
 .textarea {
   @extend .input;
   resize: none;
-  height: 72px;
+  height: 66px;
   line-height: 1.5;
   font-family: var(--font-body);
 }
@@ -433,94 +476,94 @@
 .error {
   font-size: 12px;
   color: var(--accent-glow);
-  margin: 0 24px 10px;
+  padding: 0 32px;
   line-height: 1.4;
 }
 
-// ── Payment method cards ──────────────────────────────────────────────────────
+// Payment cards — side by side
 .paymentCards {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  gap: 8px;
+
+  @include mixins.mobile { flex-direction: column; }
 }
 
 .paymentCard {
+  flex: 1;
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  background: var(--bg-3);
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 6px;
+  background: #272422;
   cursor: pointer;
   text-align: left;
   transition: border-color 0.2s, background 0.2s;
 
-  &:hover { border-color: var(--fg-dim); }
+  &:hover { border-color: rgba(255,255,255,0.25); }
 }
 
 .paymentCardActive {
   border-color: var(--accent) !important;
-  background: var(--bg) !important;
+  border-width: 1.5px !important;
+  background: #1A1715 !important;
 }
 
-.paymentIcon { font-size: 18px; flex-shrink: 0; line-height: 1.3; }
+.paymentIcon { font-size: 15px; flex-shrink: 0; line-height: 1.3; margin-top: 1px; }
 
 .paymentName {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--fg);
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .paymentDesc {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--fg-mute);
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
-// ── Submit button ─────────────────────────────────────────────────────────────
+// Submit button
 .submitBtn {
-  width: calc(100% - 48px);
-  margin: 0 24px 24px;
+  width: calc(100% - 64px);
+  margin: 0 32px 28px;
   padding: 14px 20px;
   background: var(--accent);
   color: #fff;
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: 7px;
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  justify-content: space-between;
   transition: background 0.25s, box-shadow 0.25s;
 
   &:hover:not(:disabled) {
     background: var(--accent-bright);
-    box-shadow: 0 4px 20px rgba(184, 0, 0, 0.35);
+    box-shadow: 0 4px 20px rgba(184,0,0,0.35);
   }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .submitArrow {
   font-size: 14px;
-  transition: transform 0.3s ease;
-  .submitBtn:hover & { transform: translateX(4px); }
+  opacity: 0.75;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SUCCESS STEP — two-column
+// SUCCESS STEP — 240px left + flex-1 right
 // ═══════════════════════════════════════════════════════════════════════════════
 .successWrap {
   display: grid;
-  grid-template-columns: 220px 1fr;
-  min-height: 380px;
+  grid-template-columns: 240px 1fr;
+  min-height: 420px;
 
-  @include mixins.mobile {
-    grid-template-columns: 1fr;
-  }
+  @include mixins.mobile { grid-template-columns: 1fr; min-height: 0; }
 }
 
 .successLeft {
@@ -534,8 +577,9 @@
 
 .successGlyph {
   font-size: 52px;
-  opacity: 0.55;
+  opacity: 0.40;
   line-height: 1;
+  color: #fff;
 }
 
 .successCheckWrap {
@@ -547,7 +591,7 @@
   width: 52px;
   height: 52px;
   background: rgba(255,255,255,0.15);
-  border: 2px solid rgba(255,255,255,0.4);
+  border: 1.5px solid rgba(255,255,255,0.40);
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -556,20 +600,20 @@
 }
 
 .successRight {
-  padding: 36px 32px;
+  padding: 44px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  border-left: 1px solid var(--line);
+  border-left: 1px solid rgba(255,255,255,0.08);
 
-  @include mixins.mobile { border-left: none; border-top: 1px solid var(--line); }
+  @include mixins.mobile { border-left: none; border-top: 1px solid rgba(255,255,255,0.08); padding: 28px 24px; }
 }
 
 .successTitle {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 28px;
+  font-style: italic;
   color: var(--fg);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   line-height: 1.1;
 }
 
@@ -577,24 +621,48 @@
   font-size: 14px;
   color: var(--fg-dim);
   line-height: 1.65;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .successEmail {
   font-size: 12px;
   color: var(--fg-mute);
-  margin-bottom: 20px;
+  margin-bottom: 0;
 
   strong { color: var(--fg-dim); }
 }
 
-// ── Transfer details ──────────────────────────────────────────────────────────
+// Booking info summary table
+.infoBox {
+  background: #272422;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.infoBoxRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 9px 14px;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  gap: 12px;
+
+  &:last-child { border-bottom: none; }
+
+  span:first-child { color: var(--fg-mute); flex-shrink: 0; }
+  span:last-child  { color: var(--fg-dim); font-weight: 500; text-align: right; }
+}
+
+// Transfer details
 .transferBox {
-  background: var(--bg-3);
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  background: #272422;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 7px;
   padding: 12px 14px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .transferRow {
@@ -605,7 +673,7 @@
   color: var(--fg-dim);
   margin-bottom: 10px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 
   strong {
     font-family: var(--font-display);
@@ -633,14 +701,16 @@
 
 .closeSuccessBtn {
   align-self: flex-start;
-  padding: 10px 22px;
-  border: 1px solid var(--line-strong);
-  border-radius: 3px;
+  padding: 11px 22px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
   color: var(--fg-dim);
   transition: color 0.2s, border-color 0.2s;
 
-  &:hover { color: var(--fg); border-color: var(--fg); }
+  &:hover { color: var(--fg); border-color: rgba(255,255,255,0.35); }
 }

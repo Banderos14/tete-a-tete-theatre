@@ -90,6 +90,9 @@
 }
 
 .eyebrow {
+  font-family: var(--font-display);
+  letter-spacing: clamp(0.1em, 1.6vw, 0.5em);
+  // letter-spacing: 1.15em;
   display: inline-flex;
   align-items: center;
   gap: 14px;
@@ -105,24 +108,46 @@
   animation: pulse 2s ease-in-out infinite;
 }
 
-.title {
-  display: flex;
+.headline {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  column-gap: clamp(16px, 5vw, 100px);
+  row-gap: clamp(8px, 1.4vw, 20px);
   justify-content: center;
   align-items: center;
-  gap: clamp(16px, 5vw, 100px);
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.title {
+  display: contents;
   font-size: clamp(60px, 13vw, 200px);
-  font-family: var(--font-display);
+  font-family: var(--font-title);
+  letter-spacing: var(--font-display-spacing);
+  font-style: normal;
   white-space: nowrap;
   text-transform: uppercase;
-  width: 100%;
+  font-weight: 200;
   line-height: 1;
 }
 
+.titleBefore {
+  grid-column: 1;
+  grid-row: 1;
+}
+
 .accentGroup {
+  grid-column: 2;
+  grid-row: 1;
   display: inline-flex;
   flex-direction: row;
   align-items: center;
   gap: 22px;
+}
+
+.titleAfter {
+  grid-column: 3;
+  grid-row: 1;
 }
 
 .accentDot {
@@ -139,18 +164,40 @@
 }
 
 .accentLetter {
-  font-style: italic;
-  color: #B80000;
+  display: inline-block;
+  font-family: var(--font-sub);
+  color: var(--accent);
+  text-transform: uppercase;
+  font-size: clamp(42px, 5.4vw, 84px);
+  line-height: 0.85;
+  margin-top: 30px;
   text-shadow: 0 0 40px rgba(204, 0, 0, 0.45);
 }
 
 .sub {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: clamp(0.6em, 1.4vw, 1.4em);
+  min-width: 0;
   font-family: var(--font-display);
-  font-style: italic;
+  letter-spacing: var(--font-display-spacing);
+  // font-style: italic;
   font-size: clamp(22px, 2.6vw, 34px);
   color: var(--fg-dim);
-  margin-top: 24px;
-  font-weight: 400;
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+.subAccent {
+  font-family: var(--font-sub);
+  letter-spacing: 0.08em;
+  font-style: italic;
+  font-size: clamp(38px, 5vw, 72px);
+  line-height: 0.85;
+  color: var(--accent);
 }
 
 .meta {

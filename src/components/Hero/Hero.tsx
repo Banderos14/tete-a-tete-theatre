@@ -45,17 +45,22 @@ export function Hero() {
           <span>{t.hero.eyebrow}</span>
         </div>
 
-        <h1 className={`${styles.title} display`}>
-          <span>{t.hero.title.before}</span>
-          <span className={styles.accentGroup}>
-            <span className={styles.accentDot} />
-            <span className={styles.accentLetter}>{t.hero.title.letter}</span>
-            <span className={styles.accentDot} />
-          </span>
-          <span>{t.hero.title.after}</span>
-        </h1>
+        <div className={styles.headline}>
+          <h1 className={`${styles.title} display`}>
+            <span className={styles.titleBefore}>{t.hero.title.before}</span>
+            <span className={styles.accentGroup}>
+              {/* <span className={styles.accentDot} /> */}
+              <span className={styles.accentLetter}>{t.hero.title.letter}</span>
+              {/* <span className={styles.accentDot} /> */}
+            </span>
+            <span className={styles.titleAfter}>{t.hero.title.after}</span>
+          </h1>
 
-        <div className={styles.sub}>{t.hero.sub}</div>
+          <div className={styles.sub}>
+            <span className={styles.subAccent}>{t.hero.sub.accent}</span>
+            <span>{t.hero.sub.rest}</span>
+          </div>
+        </div>
 
         <div className={styles.meta}>
           <span>24 RUE ROSSINI</span>
