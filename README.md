@@ -1,26 +1,28 @@
-# Тет-а-тет театр
+# Tete-a-Tete Theatre
 
-Сайт для небольшого русского театра в Ницце. Начинали с простой витрины — афиша, репертуар, команда, контакты. Потом добавили бронирование, личный кабинет и админку. Два языка — русский и французский.
+A website for a small Russian-language theatre in Nice. It started as a simple showcase with events, repertoire, team, and contact sections, then grew into a booking platform with user profiles and an admin dashboard. The site supports Russian and French.
 
-## Что есть на сайте
+## Features
 
-- Афиша с ближайшими спектаклями и кнопкой бронирования билетов
-- Репертуар — карточки с описанием постановок
-- Информация о театре и команде
-- Форма бронирования: выбор типа билета (стандарт / студент), оплата на месте или банковским переводом
-- Личный кабинет — вход через Google или email, сохранение телефона
-- Админ-панель — список броней, статусы оплаты, выручка
-- Тёмная тема по умолчанию, есть светлая
+- Upcoming performances with ticket booking
+- Repertoire cards with show descriptions
+- Theatre and team information
+- Booking form with ticket type selection, on-site payment, and bank transfer options
+- User profile with Google/email sign-in and saved phone number
+- Admin dashboard with bookings, payment statuses, and revenue overview
+- Dark theme by default, with a light theme available
 
-## Стек
+## Tech Stack
 
-Vite + React + TypeScript, Firebase Auth + Firestore, SCSS Modules. Без UI-библиотек.
+Vite + React + TypeScript, Firebase Auth + Firestore, and SCSS Modules. No UI component libraries.
 
-## Запуск
+## Running Locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-Деплой на GitHub Pages: `npm run build && npm run deploy`
+## Deployment
+
+GitHub Pages deployment runs automatically through GitHub Actions after changes are merged into `main`.
