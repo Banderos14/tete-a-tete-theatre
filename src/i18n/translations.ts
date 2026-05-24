@@ -37,11 +37,29 @@ export interface T {
   };
   profile: {
     title: string;
+    sectionPersonal: string;
+    sectionContacts: string;
+    sectionSocials: string;
+    sectionNotifications: string;
+    displayName: string;
+    birthday: string;
     phone: string;
+    messengerLabel: string;
+    messengerWhatsapp: string;
+    messengerTelegram: string;
+    phoneVerify: string;
+    phoneEnterCode: string;
+    phoneVerifyConfirm: string;
+    phoneVerified: string;
     socialLink: string;
     socialLinkPlaceholder: string;
+    connectFacebook: string;
+    facebookConnected: string;
+    notifyShows: string;
+    notifyBirthday: string;
     save: string;
     saved: string;
+    unsavedWarning: string;
     history: string;
     noHistory: string;
     notifications: string;
@@ -324,13 +342,31 @@ export const translations: Record<Lang, T> = {
     },
     profile: {
       title:                 'Мой кабинет',
+      sectionPersonal:       'Личные данные',
+      sectionContacts:       'Контакты',
+      sectionSocials:        'Социальные сети',
+      sectionNotifications:  'Уведомления',
+      displayName:           'Имя',
+      birthday:              'Дата рождения',
       phone:                 'Телефон',
-      socialLink:            'Ссылка на соцсеть',
+      messengerLabel:        'Связь через',
+      messengerWhatsapp:     'WhatsApp',
+      messengerTelegram:     'Telegram',
+      phoneVerify:           'Подтвердить',
+      phoneEnterCode:        'Код из SMS',
+      phoneVerifyConfirm:    'Подтвердить код',
+      phoneVerified:         '✓ Подтверждён',
+      socialLink:            'Или вставьте ссылку',
       socialLinkPlaceholder: 'https://instagram.com/...',
+      connectFacebook:       'Подключить Facebook',
+      facebookConnected:     '✓ Facebook подключён',
+      notifyShows:           'Новые спектакли и акции',
+      notifyBirthday:        'Поздравление с днём рождения',
       save:                  'Сохранить',
       saved:                 'Сохранено',
-      history:               'История посещений',
-      noHistory:             'Посещений пока нет',
+      unsavedWarning:        'Сохраните изменения',
+      history:               'Мои билеты',
+      noHistory:             'Билетов пока нет',
       notifications:         'Уведомления о новых спектаклях',
       logout:                'Выйти',
     },
@@ -540,13 +576,31 @@ export const translations: Record<Lang, T> = {
     },
     profile: {
       title:                 'Mon espace',
+      sectionPersonal:       'Données personnelles',
+      sectionContacts:       'Contacts',
+      sectionSocials:        'Réseaux sociaux',
+      sectionNotifications:  'Notifications',
+      displayName:           'Nom',
+      birthday:              'Date de naissance',
       phone:                 'Téléphone',
-      socialLink:            'Lien réseau social',
+      messengerLabel:        'Contacter via',
+      messengerWhatsapp:     'WhatsApp',
+      messengerTelegram:     'Telegram',
+      phoneVerify:           'Vérifier',
+      phoneEnterCode:        'Code SMS',
+      phoneVerifyConfirm:    'Confirmer le code',
+      phoneVerified:         '✓ Vérifié',
+      socialLink:            'Ou collez un lien',
       socialLinkPlaceholder: 'https://instagram.com/...',
+      connectFacebook:       'Connecter Facebook',
+      facebookConnected:     '✓ Facebook connecté',
+      notifyShows:           'Nouveaux spectacles et offres',
+      notifyBirthday:        'Souhait d\'anniversaire',
       save:                  'Enregistrer',
       saved:                 'Enregistré',
-      history:               'Historique des visites',
-      noHistory:             'Aucune visite pour l\'instant',
+      unsavedWarning:        'Enregistrez les modifications',
+      history:               'Mes billets',
+      noHistory:             'Aucun billet pour l\'instant',
       notifications:         'Notifications pour les nouveaux spectacles',
       logout:                'Se déconnecter',
     },

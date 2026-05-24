@@ -128,7 +128,7 @@
   line-height: 1;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
-  padding-bottom: 1px; // optical vertical centering for ‹›
+  padding-bottom: 4px;
 
   &:hover {
     background: rgba(0, 0, 0, 0.82);
