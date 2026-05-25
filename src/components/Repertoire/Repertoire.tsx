@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { REPERTOIRE } from '../../data/shows';
+import { REPERTOIRE, SHOWS } from '../../data/shows';
 import { useLang } from '../../i18n/LangContext';
 import { PosterPlaceholder } from '../ui/PosterPlaceholder';
-import type { RepertoireItem } from '../../types';
+import type { RepertoireItem, Show } from '../../types';
 import styles from './Repertoire.module.scss';
 
 // ── Repertoire item modal ─────────────────────────────────────────────────────
@@ -11,20 +11,23 @@ import styles from './Repertoire.module.scss';
 interface ModalProps {
   item: RepertoireItem;
   onClose: () => void;
+  onBook: (show: Show) => void;
 }
 
-function RepertoireModal({ item, onClose }: ModalProps) {
+function RepertoireModal({ item, onClose, onBook }: ModalProps) {
   const { lang, t } = useLang();
   const desc = lang === 'FR' ? (item.descriptionFR ?? item.description) : item.description;
 
-  // ESC key to close
+  const linkedShow = item.status === 'active'
+    ? SHOWS.find(s => s.id === item.id) ?? null
+    : null;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // Lock scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -59,6 +62,17 @@ function RepertoireModal({ item, onClose }: ModalProps) {
           )}
 
           {desc && <p className={styles.modalDesc}>{desc}</p>}
+
+          {linkedShow && (
+            <button
+              className={styles.modalBuyBtn}
+              onClick={() => { onClose(); onBook(linkedShow); }}
+              type="button"
+            >
+              <span>{lang === 'FR' ? 'Acheter un billet' : 'Купить билет'}</span>
+              <span>→</span>
+            </button>
+          )}
         </div>
       </div>
     </div>,
@@ -68,11 +82,42 @@ function RepertoireModal({ item, onClose }: ModalProps) {
 
 // ── Repertoire section ────────────────────────────────────────────────────────
 
-export function Repertoire() {
+interface Props {
+  onBook: (show: Show) => void;
+}
+
+export function Repertoire({ onBook }: Props) {
   const { t } = useLang();
-  const [selected, setSelected] = useState<RepertoireItem | null>(null);
+  const [selected,      setSelected]      = useState<RepertoireItem | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [allForceVisible, setAllForceVisible] = useState(false);
+  const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   const handleClose = useCallback(() => setSelected(null), []);
+
+  // Scroll to and highlight the show from ?show= URL param.
+  useEffect(() => {
+    const slug = new URLSearchParams(window.location.search).get('show');
+    if (!slug || !REPERTOIRE.find(item => item.id === slug)) return;
+
+    const doScroll = () => {
+      const el = cardRefs.current.get(slug);
+      if (!el) return;
+
+      // Force ALL cards visible via React state so className never loses 'visible'
+      setAllForceVisible(true);
+      setHighlightedId(slug);
+      setTimeout(() => setHighlightedId(null), 2000);
+
+      // Small rAF delay so React commits the visible state before we scroll
+      requestAnimationFrame(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      });
+    };
+
+    window.addEventListener('theatre:intro-done', doScroll);
+    return () => window.removeEventListener('theatre:intro-done', doScroll);
+  }, []);
 
   return (
     <section className={styles.repertoire} id="repertoire">
@@ -83,11 +128,19 @@ export function Repertoire() {
       </div>
 
       <div className={styles.grid}>
-        {REPERTOIRE.map((item, i) => (
+        {REPERTOIRE.map((item) => (
           <button
-            key={i}
-            className={`${styles.item} reveal`}
-            style={{ transitionDelay: `${(i % 4) * 60}ms` }}
+            key={item.id}
+            ref={el => {
+              if (el) cardRefs.current.set(item.id, el);
+              else cardRefs.current.delete(item.id);
+            }}
+            className={[
+              styles.item,
+              'reveal',
+              allForceVisible ? 'visible' : '',
+              highlightedId === item.id ? styles.highlighted : '',
+            ].filter(Boolean).join(' ')}
             onClick={() => setSelected(item)}
             type="button"
           >
@@ -100,6 +153,13 @@ export function Repertoire() {
             </div>
             <div className={styles.title}>{item.title}</div>
             <div className={styles.author}>{item.author}</div>
+
+            {item.status === 'active' ? (
+              <div className={styles.activeBadge}>{t.repertoire.statusActive}</div>
+            ) : (
+              <div className={styles.pastBadge}>{t.repertoire.statusPast}</div>
+            )}
+
             <div className={styles.arrow}>
               {t.repertoire.more} <span className="arrow">→</span>
             </div>
@@ -107,7 +167,9 @@ export function Repertoire() {
         ))}
       </div>
 
-      {selected && <RepertoireModal item={selected} onClose={handleClose} />}
+      {selected && (
+        <RepertoireModal item={selected} onClose={handleClose} onBook={onBook} />
+      )}
     </section>
   );
 }

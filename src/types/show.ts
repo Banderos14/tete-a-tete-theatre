@@ -29,6 +29,8 @@ export interface Show {
 }
 
 export interface RepertoireItem {
+  id: string;
+  status: 'active' | 'past';
   title: string;
   author: string;
   tag: string;

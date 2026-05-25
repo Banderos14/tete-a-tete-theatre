@@ -60,25 +60,9 @@ export const SHOWS: Show[] = [
 ];
 
 export const REPERTOIRE: RepertoireItem[] = [
+  // ── Активные (есть в расписании) ──
   {
-    title: '«Граф Нулин»',
-    author: 'А. С. Пушкин',
-    tag: 'Поэма', age: '12+', glyph: '❧',
-    palette: 'linear-gradient(135deg, #401418 0%, #1a0608 100%)',
-    description: 'Лёгкая и остроумная поэма в театральном прочтении. Смешное и лирическое переплетаются так же легко, как строки Пушкина. Вечер для тех, кто любит слово.',
-    descriptionFR: 'Un poème léger et plein d\'esprit. Le comique et le lyrique s\'entrelacent comme les vers de Pouchkine. Une soirée pour ceux qui aiment les mots.',
-    duration: '1 ч 10 мин',
-  },
-  {
-    title: '«И в шутку, и всерьёз»',
-    author: 'А. П. Чехов',
-    tag: 'Комедия', age: '12+', glyph: '❦',
-    palette: 'linear-gradient(135deg, #2a1014 0%, #1a0a08 100%)',
-    description: 'Две одноактные комедии Чехова — «Юбилей» и «Предложение». О спорах, нервах, любви и о том, как смешно мы выглядим, когда серьёзны.',
-    descriptionFR: 'Deux comédies en un acte de Tchekhov. Sur les disputes, les nerfs, l\'amour et notre comique involontaire.',
-    duration: '1 ч 10 мин',
-  },
-  {
+    id: 'kolobok', status: 'active',
     title: '«Волшебный Секрет Колобка»',
     author: 'Artland',
     tag: 'Сказка', age: '0+', glyph: '✦',
@@ -88,6 +72,28 @@ export const REPERTOIRE: RepertoireItem[] = [
     duration: '50 мин',
   },
   {
+    id: 'shutka', status: 'active',
+    title: '«И в шутку, и всерьёз»',
+    author: 'А. П. Чехов',
+    tag: 'Комедия', age: '12+', glyph: '❦',
+    palette: 'linear-gradient(135deg, #2a1014 0%, #1a0a08 100%)',
+    description: 'Две одноактные комедии Чехова — «Юбилей» и «Предложение». О спорах, нервах, любви и о том, как смешно мы выглядим, когда серьёзны.',
+    descriptionFR: 'Deux comédies en un acte de Tchekhov. Sur les disputes, les nerfs, l\'amour et notre comique involontaire.',
+    duration: '1 ч 10 мин',
+  },
+  {
+    id: 'nulin', status: 'active',
+    title: '«Граф Нулин»',
+    author: 'А. С. Пушкин',
+    tag: 'Поэма', age: '12+', glyph: '❧',
+    palette: 'linear-gradient(135deg, #401418 0%, #1a0608 100%)',
+    description: 'Лёгкая и остроумная поэма в театральном прочтении. Смешное и лирическое переплетаются так же легко, как строки Пушкина. Вечер для тех, кто любит слово.',
+    descriptionFR: 'Un poème léger et plein d\'esprit. Le comique et le lyrique s\'entrelacent comme les vers de Pouchkine. Une soirée pour ceux qui aiment les mots.',
+    duration: '1 ч 10 мин',
+  },
+  // ── Прошедшие ──
+  {
+    id: 'chaika', status: 'past',
     title: '«Чайка»',
     author: 'А. П. Чехов',
     tag: 'Драма', age: '16+', glyph: '✸',
@@ -97,6 +103,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     duration: '2 ч',
   },
   {
+    id: 'malye-tragedii', status: 'past',
     title: '«Маленькие трагедии»',
     author: 'А. С. Пушкин',
     tag: 'Цикл', age: '14+', glyph: '✺',
@@ -106,6 +113,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     duration: '1 ч 40 мин',
   },
   {
+    id: 'dyadya-vanya', status: 'past',
     title: '«Дядя Ваня»',
     author: 'А. П. Чехов',
     tag: 'Драма', age: '14+', glyph: '✻',
@@ -115,6 +123,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     duration: '2 ч 10 мин',
   },
   {
+    id: 'anna-karenina', status: 'past',
     title: '«Анна Каренина»',
     author: 'Л. Н. Толстой',
     tag: 'Спектакль', age: '16+', glyph: '❋',
@@ -124,6 +133,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     duration: '2 ч 30 мин',
   },
   {
+    id: 'bespridannitsa', status: 'past',
     title: '«Бесприданница»',
     author: 'А. Н. Островский',
     tag: 'Драма', age: '14+', glyph: '❃',

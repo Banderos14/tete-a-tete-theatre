@@ -173,6 +173,8 @@ export interface T {
     metaShows: (n: number) => string;
     metaSeason: string;
     more: string;
+    statusActive: string;
+    statusPast: string;
   };
   team: {
     num: string;
@@ -272,12 +274,14 @@ export const translations: Record<Lang, T> = {
       ],
     },
     repertoire: {
-      num:        '04 / Репертуар',
-      title:      'Постоянная',
-      titleIt:    'сцена',
-      metaShows:  (n) => `${n} спектаклей`,
-      metaSeason: 'сезон 2025/26',
-      more:       'Подробнее',
+      num:          '04 / Репертуар',
+      title:        'Постоянная',
+      titleIt:      'сцена',
+      metaShows:    (n) => `${n} спектаклей`,
+      metaSeason:   'сезон 2025/26',
+      more:         'Подробнее',
+      statusActive: 'В репертуаре',
+      statusPast:   'Прошедший',
     },
     team: {
       num:      '05 / Труппа',
@@ -506,12 +510,14 @@ export const translations: Record<Lang, T> = {
       ],
     },
     repertoire: {
-      num:        '04 / Répertoire',
-      title:      'La scène',
-      titleIt:    'permanente',
-      metaShows:  (n) => `${n} spectacles`,
-      metaSeason: 'saison 2025/26',
-      more:       'En savoir plus',
+      num:          '04 / Répertoire',
+      title:        'La scène',
+      titleIt:      'permanente',
+      metaShows:    (n) => `${n} spectacles`,
+      metaSeason:   'saison 2025/26',
+      more:         'En savoir plus',
+      statusActive: 'Au répertoire',
+      statusPast:   'Passé',
     },
     team: {
       num:      '05 / Troupe',

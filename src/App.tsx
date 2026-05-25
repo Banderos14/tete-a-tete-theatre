@@ -58,7 +58,7 @@ function LandingPage({
       <Marquee />
       <Socials />
       <About />
-      <Repertoire />
+      <Repertoire onBook={onBook} />
       <Team />
       <Contacts />
       <Footer />
@@ -86,6 +86,7 @@ export default function App() {
     const t2 = setTimeout(() => {
       setIntroState('done');
       document.body.style.overflow = '';
+      window.dispatchEvent(new CustomEvent('theatre:intro-done'));
     }, 500 + INTRO_SPEED * 1000 + 200);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
