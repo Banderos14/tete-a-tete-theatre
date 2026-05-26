@@ -4,6 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 import type { Lang } from '../../i18n/translations';
 import styles from './Header.module.scss';
 
+function scrollToSection(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const top = el.getBoundingClientRect().top + window.scrollY - 80;
+  window.scrollTo({ top, behavior: 'smooth' });
+}
+
 type Theme = 'dark' | 'light';
 
 interface Props {
@@ -34,21 +41,32 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
   }, []);
 
   const navLinks = [
-    { label: t.nav.afisha,     href: '#afisha' },
-    { label: t.nav.repertoire, href: '#repertoire' },
-    { label: t.nav.about,      href: '#about' },
-    { label: t.nav.people,     href: '#people' },
+    { label: t.nav.afisha,     id: 'afisha' },
+    { label: t.nav.repertoire, id: 'repertoire' },
+    { label: t.nav.about,      id: 'about' },
+    { label: t.nav.people,     id: 'people' },
   ];
 
   return (
     <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}>
       <ul className={`${styles.nav} ${styles.left}`}>
-        {navLinks.map(({ label, href }) => (
-          <li key={href}><a href={href}>{label}</a></li>
+        {navLinks.map(({ label, id }) => (
+          <li key={id}>
+            <a
+              href={`#${id}`}
+              onClick={e => { e.preventDefault(); scrollToSection(id); }}
+            >
+              {label}
+            </a>
+          </li>
         ))}
       </ul>
 
-      <a href="#top" className={styles.logo}>
+      <a
+        href="#top"
+        className={styles.logo}
+        onClick={e => { e.preventDefault(); scrollToSection('top'); }}
+      >
         <img src="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" alt="ТЕТ-А-ТЕТ" />
       </a>
 

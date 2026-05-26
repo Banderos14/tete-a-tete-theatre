@@ -75,7 +75,12 @@ export function ShowModal({ show, onClose, onBook }: Props) {
   const hasMoreLeft  = thumbStart > 0;
   const hiddenRight  = Math.max(0, allPhotos.length - thumbStart - VISIBLE_THUMBS);
   const currentPhoto = allPhotos[activeIdx];
-  const desc         = lang === 'FR' ? show.descFR : show.desc;
+  const desc         = lang === 'FR' ? show.descFR           : show.desc;
+  const title        = lang === 'FR' ? (show.titleFR    ?? show.title)    : show.title;
+  const author       = lang === 'FR' ? (show.authorFR   ?? show.author)   : show.author;
+  const duration     = lang === 'FR' ? (show.durationFR ?? show.duration) : show.duration;
+  const price        = lang === 'FR' ? (show.priceFR    ?? show.price)    : show.price;
+  const monthLabel   = t.months[show.month] ?? show.month;
 
   return createPortal(
     <div
@@ -173,16 +178,16 @@ export function ShowModal({ show, onClose, onBook }: Props) {
             <span className={styles.age}>{show.age}</span>
           </div>
 
-          <div className={styles.author}>{show.author}</div>
-          <h2 className={styles.title}>{show.title}</h2>
+          <div className={styles.author}>{author}</div>
+          <h2 className={styles.title}>{title}</h2>
           <div className={styles.divider} />
 
           <div className={styles.metaTable}>
             {([
-              [t.showModal.labelDate,     `${show.day} ${t.months[show.month] ?? show.month} ${show.year}`],
+              [t.showModal.labelDate,     `${show.day} ${monthLabel} ${show.year}`],
               [t.showModal.labelTime,     show.time],
-              [t.showModal.labelDuration, show.duration],
-              [t.showModal.labelPrice,    show.price],
+              [t.showModal.labelDuration, duration],
+              [t.showModal.labelPrice,    price],
             ] as [string, string][]).map(([label, value]) => (
               <div key={label} className={styles.metaRow}>
                 <span className={styles.metaLabel}>{label}</span>

@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function AfishaSlider({ onCardClick }: Props) {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const total = SHOWS.length;
 
   return (
@@ -23,7 +23,9 @@ export function AfishaSlider({ onCardClick }: Props) {
       <div className={styles.track}>
         {CARDS.map((show, i) => {
           const cardIndex = (i % total) + 1;
-          const month = t.months[show.month] ?? show.month;
+          const month     = t.months[show.month] ?? show.month;
+          const title     = lang === 'FR' ? (show.titleFR  ?? show.title)  : show.title;
+          const author    = lang === 'FR' ? (show.authorFR ?? show.author) : show.author;
 
           return (
             <div
@@ -34,7 +36,7 @@ export function AfishaSlider({ onCardClick }: Props) {
               role="button"
               tabIndex={0}
               onKeyDown={e => e.key === 'Enter' && onCardClick(show)}
-              aria-label={show.title}
+              aria-label={title}
             >
               {show.image && (
                 <div
@@ -54,8 +56,8 @@ export function AfishaSlider({ onCardClick }: Props) {
                 </div>
 
                 <div className={styles.middle}>
-                  <div className={styles.showTitle}>{show.title}</div>
-                  <div className={styles.showAuthor}>{show.author}</div>
+                  <div className={styles.showTitle}>{title}</div>
+                  <div className={styles.showAuthor}>{author}</div>
                 </div>
 
                 <div className={styles.bottom}>
@@ -68,7 +70,7 @@ export function AfishaSlider({ onCardClick }: Props) {
                   </div>
 
                   <div className={styles.openHint}>
-                    <span className={styles.hintText}>Подробнее</span>
+                    <span className={styles.hintText}>{t.repertoire.more}</span>
                     <span className={styles.hintArrow}>→</span>
                   </div>
                 </div>

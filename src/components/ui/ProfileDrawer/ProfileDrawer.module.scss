@@ -1,9 +1,10 @@
 @use '../../../styles/mixins';
 
+// ── Overlay ──────────────────────────────────────────────────────────────────
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.55);
   z-index: 400;
   opacity: 0;
   pointer-events: none;
@@ -15,19 +16,49 @@
   }
 }
 
+// ── Unsaved toast ────────────────────────────────────────────────────────────
+.unsavedToast {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-2);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  padding: 8px 16px;
+  border-radius: 4px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  animation: toastIn 0.2s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+// ── Drawer ───────────────────────────────────────────────────────────────────
 .drawer {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 380px;
+  width: 400px;
   background: var(--bg-2);
-  border-left: 1px solid var(--line-strong);
+  border-left: 1px solid var(--line);
   z-index: 401;
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
 
   &.drawerOpen { transform: translateX(0); }
@@ -38,25 +69,31 @@
   }
 }
 
-// ── Header ──────────────────────────────────────────────────────────────────────
+// ── Header ───────────────────────────────────────────────────────────────────
 .drawerHeader {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 24px 20px 20px;
+  gap: 16px;
+  padding: 28px 24px 22px;
   border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  background: var(--bg-2);
+}
+
+.avatarWrap {
+  position: relative;
   flex-shrink: 0;
 }
 
 .avatar {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, #6b1a1a 100%);
   display: grid;
   place-items: center;
-  flex-shrink: 0;
   overflow: hidden;
+  border: 2px solid var(--line-strong);
 
   img {
     width: 100%;
@@ -66,9 +103,10 @@
 
   span {
     font-family: var(--font-display);
-    font-size: 18px;
-    color: var(--fg);
+    font-size: 20px;
+    color: #fff;
     letter-spacing: 0.04em;
+    font-weight: 500;
   }
 }
 
@@ -78,70 +116,76 @@
 }
 
 .userName {
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--fg);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
 .userEmail {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--fg-mute);
   font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .closeBtn {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   color: var(--fg-mute);
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease;
   flex-shrink: 0;
 
-  &:hover { color: var(--fg); }
+  &:hover {
+    color: var(--fg);
+    background: var(--bg-3);
+  }
 
   svg { width: 16px; height: 16px; }
 }
 
-// ── Scrollable content ──────────────────────────────────────────────────────────
+// ── Scrollable content ───────────────────────────────────────────────────────
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 20px;
+  padding: 0 0 8px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
 
-  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar { width: 3px; }
   &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
 }
 
-.sectionTitle {
+// ── Form sections ────────────────────────────────────────────────────────────
+.formSection {
+  padding: 22px 24px 4px;
+  border-bottom: 1px solid var(--line);
+
+  &:last-of-type { border-bottom: none; }
+}
+
+.sectionLabel {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--fg-mute);
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
-.section {
-  border-top: 1px solid var(--line);
-  padding-top: 24px;
-}
-
-// ── Form fields ─────────────────────────────────────────────────────────────────
+// ── Fields ───────────────────────────────────────────────────────────────────
 .field {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 
   label {
     display: block;
@@ -149,7 +193,7 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--fg-mute);
-    margin-bottom: 6px;
+    margin-bottom: 7px;
     font-family: var(--font-mono);
   }
 
@@ -157,25 +201,187 @@
     width: 100%;
     background: var(--bg-3);
     border: 1px solid var(--line);
-    border-radius: 3px;
-    padding: 10px 12px;
+    border-radius: 4px;
+    padding: 10px 13px;
     font-size: 14px;
     color: var(--fg);
     outline: none;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    font-family: var(--font-body);
 
-    &::placeholder { color: var(--fg-mute); }
-    &:focus { border-color: var(--accent); }
+    &::placeholder { color: var(--fg-mute); opacity: 0.6; }
+
+    &:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(184, 0, 0, 0.1);
+    }
+
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 }
 
-// ── Notifications toggle ────────────────────────────────────────────────────────
+.fieldMt { margin-top: 14px; }
+
+.dateInput {
+  color-scheme: dark;
+}
+
+// ── Phone row ────────────────────────────────────────────────────────────────
+.phoneRow {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+
+  input { flex: 1; }
+}
+
+.verifyBtn {
+  flex-shrink: 0;
+  padding: 0 14px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  white-space: nowrap;
+  transition: border-color 0.2s ease, color 0.2s ease;
+  font-family: var(--font-mono);
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.verifiedBadge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #4caf50;
+  font-family: var(--font-mono);
+  background: rgba(76, 175, 80, 0.08);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 4px;
+}
+
+.otpRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.otpInput {
+  flex: 1;
+  background: var(--bg-3);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 9px 13px;
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  color: var(--fg);
+  outline: none;
+  text-align: center;
+  font-family: var(--font-mono);
+
+  &::placeholder { letter-spacing: 0.05em; font-size: 12px; }
+}
+
+.fieldError {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+// ── Messenger choice ─────────────────────────────────────────────────────────
+.messengerRow {
+  margin-bottom: 18px;
+}
+
+.messengerLabel {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  margin-bottom: 10px;
+  font-family: var(--font-mono);
+}
+
+.messengerOptions {
+  display: flex;
+  gap: 8px;
+}
+
+.messengerBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--fg-mute);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    border-color: var(--line-strong);
+    color: var(--fg);
+  }
+
+  &.active {
+    border-color: var(--accent);
+    color: var(--fg);
+    background: rgba(184, 0, 0, 0.06);
+  }
+}
+
+// ── Facebook button ──────────────────────────────────────────────────────────
+.fbBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 16px;
+  background: #1877f2;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  transition: background 0.2s ease, opacity 0.2s ease;
+  margin-bottom: 4px;
+
+  &:hover:not(:disabled) { background: #166fe5; }
+
+  &:disabled { opacity: 0.7; cursor: not-allowed; }
+
+  &.fbConnected {
+    background: var(--bg-3);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+  }
+}
+
+// ── Notifications toggle ─────────────────────────────────────────────────────
 .toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 14px;
   cursor: pointer;
 
   span:first-child {
@@ -215,24 +421,42 @@
   .toggleOn & { transform: translateX(18px); }
 }
 
+// ── Save button ──────────────────────────────────────────────────────────────
 .saveBtn {
-  width: 100%;
-  padding: 11px 16px;
+  display: block;
+  width: calc(100% - 48px);
+  margin: 20px 24px;
+  padding: 13px 16px;
   background: var(--accent);
-  color: var(--fg);
-  border-radius: 3px;
+  color: #fff;
+  border-radius: 6px;
   font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  font-family: var(--font-mono);
 
   &:hover:not(:disabled) {
     background: var(--accent-bright);
-    box-shadow: 0 4px 20px rgba(200, 16, 46, 0.35);
+    box-shadow: 0 5px 24px rgba(200, 16, 46, 0.4);
+    transform: translateY(-1px);
   }
 
   &:disabled { opacity: 0.7; cursor: not-allowed; }
+
+  &.savedBtn {
+    background: #4caf50;
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+// ── History section ──────────────────────────────────────────────────────────
+.historySection {
+  padding: 22px 24px 16px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
 }
 
 .emptyText {
@@ -241,22 +465,148 @@
   font-style: italic;
 }
 
-// ── Footer ──────────────────────────────────────────────────────────────────────
+// ── Footer ───────────────────────────────────────────────────────────────────
 .drawerFooter {
-  padding: 16px 20px;
+  padding: 14px 24px;
   border-top: 1px solid var(--line);
   flex-shrink: 0;
+  background: var(--bg-2);
 }
 
 .logoutBtn {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--fg-mute);
+  font-family: var(--font-mono);
   transition: color 0.2s ease;
 
-  &:hover { color: var(--accent-glow); }
+  &:hover { color: var(--accent); }
 }
+
+// ── Incomplete profile banner ────────────────────────────────────────────────
+.incompleteBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: rgba(184, 0, 0, 0.07);
+  border-bottom: 1px solid rgba(184, 0, 0, 0.2);
+  font-size: 12px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+// ── Input error state ────────────────────────────────────────────────────────
+.inputError {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(184, 0, 0, 0.12) !important;
+}
+
+// ── Facebook badge inline (next to label) ───────────────────────────────────
+.fbBadgeInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: #1877f2;
+  font-family: var(--font-mono);
+  background: rgba(24, 119, 242, 0.1);
+  border: 1px solid rgba(24, 119, 242, 0.2);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 8px;
+  vertical-align: middle;
+  text-transform: none;
+}
+
+// ── Auto-filled from Facebook ────────────────────────────────────────────────
+.autoFilled {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px 13px;
+  font-size: 14px;
+  color: var(--fg);
+}
+
+.fbBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #1877f2;
+  font-family: var(--font-mono);
+  background: rgba(24, 119, 242, 0.1);
+  border: 1px solid rgba(24, 119, 242, 0.25);
+  border-radius: 3px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+// ── Loading skeleton ─────────────────────────────────────────────────────────
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to   { background-position:  400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-3) 25%,
+    var(--line-strong) 50%,
+    var(--bg-3) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 4px;
+}
+
+.skeletonWrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 28px 24px 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.skeletonAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeletonLines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeletonLine      { height: 16px; width: 60%; }
+.skeletonLineShort { height: 11px; width: 40%; }
+
+.skeletonBlock {
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeletonTitle { height: 10px; width: 30%; }
+.skeletonField { height: 40px; width: 100%; border-radius: 4px; }
+

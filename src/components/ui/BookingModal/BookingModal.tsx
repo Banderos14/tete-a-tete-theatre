@@ -36,17 +36,17 @@ function formatPhone(raw: string): string {
 
 type Step = 'auth' | 'form' | 'success';
 
-function mapFirebaseError(code: string): string {
+function mapFirebaseError(code: string, errors: Record<string, string>): string {
   const map: Record<string, string> = {
-    'auth/invalid-email':        'Неверный формат email',
-    'auth/wrong-password':       'Неверный пароль',
-    'auth/invalid-credential':   'Неверный email или пароль',
-    'auth/email-already-in-use': 'Этот email уже используется',
-    'auth/weak-password':        'Минимум 6 символов',
-    'auth/user-not-found':       'Пользователь не найден',
-    'auth/too-many-requests':    'Слишком много попыток — подождите',
+    'auth/invalid-email':        errors.invalidEmail,
+    'auth/wrong-password':       errors.wrongPassword,
+    'auth/invalid-credential':   errors.wrongPassword,
+    'auth/email-already-in-use': errors.emailInUse,
+    'auth/weak-password':        errors.weakPassword,
+    'auth/user-not-found':       errors.userNotFound,
+    'auth/too-many-requests':    errors.tooManyRequests,
   };
-  return map[code] ?? 'Ошибка, попробуйте снова';
+  return map[code] ?? errors.generic;
 }
 
 export function BookingModal({ show, onClose }: Props) {
@@ -114,8 +114,8 @@ export function BookingModal({ show, onClose }: Props) {
     setAuthLoading(true); setAuthError('');
     try { await signInWithGoogle(); }
     catch (e) {
-      if (e instanceof FirebaseError) setAuthError(mapFirebaseError(e.code));
-      else setAuthError('Ошибка входа через Google');
+      if (e instanceof FirebaseError) setAuthError(mapFirebaseError(e.code, t.auth.errors));
+      else setAuthError(t.auth.errors.generic);
     } finally { setAuthLoading(false); }
   }
 
@@ -125,8 +125,8 @@ export function BookingModal({ show, onClose }: Props) {
       if (authTab === 'signIn') await signInWithEmail(authEmail, authPassword);
       else                      await signUpWithEmail(authEmail, authPassword, authName);
     } catch (e) {
-      if (e instanceof FirebaseError) setAuthError(mapFirebaseError(e.code));
-      else setAuthError('Произошла ошибка');
+      if (e instanceof FirebaseError) setAuthError(mapFirebaseError(e.code, t.auth.errors));
+      else setAuthError(t.auth.errors.generic);
     } finally { setAuthLoading(false); }
   }
 
@@ -157,11 +157,16 @@ export function BookingModal({ show, onClose }: Props) {
       });
       setStep('success');
     } catch {
-      setSubmitError('Не удалось сохранить бронирование. Попробуйте ещё раз.');
+      setSubmitError(t.booking.submitError);
     } finally { setSubmitLoading(false); }
   }
 
-  const userEmail = user?.email ?? userProfile?.email ?? '';
+  const userEmail   = user?.email ?? userProfile?.email ?? '';
+  const showTitle   = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
+  const monthLabel  = t.months[show.month] ?? show.month;
+  const ticketLabel = (id: string | undefined) =>
+    id === 'standard' ? t.admin.ticketStandard :
+    id === 'student'  ? t.admin.ticketStudent  : (id ?? '');
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -185,8 +190,8 @@ export function BookingModal({ show, onClose }: Props) {
             <div className={styles.authShowStrip} style={{ background: show.palette }}>
               <span className={styles.authGlyph}>{show.glyph}</span>
               <div>
-                <p className={styles.authShowTitle}>{show.title}</p>
-                <p className={styles.authShowMeta}>{show.day} {show.month} · {show.time}</p>
+                <p className={styles.authShowTitle}>{showTitle}</p>
+                <p className={styles.authShowMeta}>{show.day} {monthLabel} · {show.time}</p>
               </div>
             </div>
 
@@ -256,8 +261,8 @@ export function BookingModal({ show, onClose }: Props) {
               <div className={styles.showHeader} style={{ background: show.palette }}>
                 <span className={styles.showGlyph}>{show.glyph}</span>
                 <div>
-                  <p className={styles.showTitle}>{show.title}</p>
-                  <p className={styles.showMeta}>{show.day} {show.month} {show.year} · {show.time}</p>
+                  <p className={styles.showTitle}>{showTitle}</p>
+                  <p className={styles.showMeta}>{show.day} {monthLabel} {show.year} · {show.time}</p>
                 </div>
               </div>
 
@@ -273,7 +278,7 @@ export function BookingModal({ show, onClose }: Props) {
                       onClick={() => { setSelectedTicket(tt); setTickets(1); }}
                     >
                       <div className={styles.ttLeft}>
-                        <span className={styles.ttName}>{tt.label}</span>
+                        <span className={styles.ttName}>{ticketLabel(tt.id)}</span>
                         <span className={styles.ttSeats}>{t.booking.seatsLeft}: {tt.available}</span>
                       </div>
                       <div className={styles.ttDivider} />
@@ -322,7 +327,7 @@ export function BookingModal({ show, onClose }: Props) {
                 <div className={styles.formRightLabel}>
                   {lang === 'FR' ? 'RÉSERVATION' : 'БРОНИРОВАНИЕ'}
                 </div>
-                <p className={styles.formRightShowTitle}>{show.title}</p>
+                <p className={styles.formRightShowTitle}>{showTitle}</p>
               </div>
 
               {/* Phone */}
@@ -405,10 +410,10 @@ export function BookingModal({ show, onClose }: Props) {
               {/* Booking summary table */}
               <div className={styles.infoBox}>
                 {([
-                  [lang === 'FR' ? 'Spectacle' : 'Спектакль', show.title],
-                  [lang === 'FR' ? 'Date' : 'Дата', `${show.day} ${show.month} ${show.year} · ${show.time}`],
-                  [lang === 'FR' ? 'Billets' : 'Билеты', `${tickets} × ${activeTicket?.label ?? ''}`],
-                  [lang === 'FR' ? 'Montant' : 'Сумма', `${totalAmount} €`],
+                  [t.booking.labelShow,    showTitle],
+                  [t.booking.labelDate,    `${show.day} ${monthLabel} ${show.year} · ${show.time}`],
+                  [t.booking.labelTickets, `${tickets} × ${ticketLabel(activeTicket?.id)}`],
+                  [t.booking.labelAmount,  `${totalAmount} €`],
                 ] as [string, string][]).map(([label, value]) => (
                   <div key={label} className={styles.infoBoxRow}>
                     <span>{label}</span>

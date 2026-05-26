@@ -1,19 +1,7 @@
 import { LINKS, ADDRESS } from '../../constants/links';
 import { useLang } from '../../i18n/LangContext';
 import styles from './Contacts.module.scss';
-
-// ── Map — correct coordinates for 24 Rue Rossini, 06000 Nice ─────────────────
-// To change: update LAT / LNG below. Source: Google Maps link in constants/links.ts
-const LAT = 43.7006;
-const LNG = 7.2607;
-const ZOOM_DELTA = 0.004; // half-width/height of bounding box
-
-const MAP_URL = [
-  'https://www.openstreetmap.org/export/embed.html',
-  `?bbox=${LNG - ZOOM_DELTA}%2C${LAT - ZOOM_DELTA * 0.6}%2C${LNG + ZOOM_DELTA}%2C${LAT + ZOOM_DELTA * 0.6}`,
-  `&layer=mapnik`,
-  `&marker=${LAT}%2C${LNG}`,
-].join('');
+import { LeafletMap } from './LeafletMap';
 
 export function Contacts() {
   const { t } = useLang();
@@ -96,12 +84,7 @@ export function Contacts() {
         {/* ── Map column ── */}
         <div className={`${styles.mapWrapper} reveal`}>
           <div className={styles.mapFrame}>
-            <iframe
-              src={MAP_URL}
-              title="Карта театра ТЕТ-А-ТЕТ"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
+            <LeafletMap />
           </div>
           <div className={styles.mapOverlay}>
             <div className={styles.mapAddr}>{t.contacts.mapAddr}</div>

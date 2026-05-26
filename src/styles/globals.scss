@@ -95,10 +95,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 // ── Shared section wrapper ─────────────────────────────────────────────────────
 section {
   position: relative;
-  padding: 140px 40px;
+  padding: 0 40px 140px;
   border-top: 1px solid var(--line);
 
-  @include mixins.mobile { padding: 80px 20px; }
+  @include mixins.mobile { padding: 0 20px 80px; }
 }
 
 // ── Grain overlay ──────────────────────────────────────────────────────────────
@@ -150,6 +150,7 @@ section {
   }
 
   &.btn-primary {
+    border-radius: 7px;
     background: var(--accent);
     color: #fff;
     border-color: var(--accent);

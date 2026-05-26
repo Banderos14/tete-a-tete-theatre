@@ -3,11 +3,11 @@ import { useLang } from '../../i18n/LangContext';
 import styles from './Socials.module.scss';
 
 const TILES = [
-  { kind: 'feature', label: 'Премьера', bg: 'linear-gradient(135deg,#3a0a0e,#0a0605)', glyph: '❦' },
-  { kind: '',        label: 'Закулисье', bg: 'linear-gradient(135deg,#1a1014,#08060a)', glyph: '✸' },
-  { kind: '',        label: 'Репетиция', bg: 'linear-gradient(135deg,#2a1a0a,#14080a)', glyph: '❧' },
-  { kind: '',        label: 'Поклон',    bg: 'linear-gradient(135deg,#1a141a,#08060a)', glyph: '✺' },
-  { kind: '',        label: 'Сцена',     bg: 'linear-gradient(135deg,#2a0e14,#14060a)', glyph: '❋' },
+  { kind: 'feature', bg: 'linear-gradient(135deg,#3a0a0e,#0a0605)', glyph: '❦' },
+  { kind: '',        bg: 'linear-gradient(135deg,#1a1014,#08060a)', glyph: '✸' },
+  { kind: '',        bg: 'linear-gradient(135deg,#2a1a0a,#14080a)', glyph: '❧' },
+  { kind: '',        bg: 'linear-gradient(135deg,#1a141a,#08060a)', glyph: '✺' },
+  { kind: '',        bg: 'linear-gradient(135deg,#2a0e14,#14060a)', glyph: '❋' },
 ] as const;
 
 export function Socials() {
@@ -42,7 +42,7 @@ export function Socials() {
               style={{ background: tile.bg }}
             >
               <div className={styles.tileGlyph}>{tile.glyph}</div>
-              <div className={styles.badge}>{tile.label}</div>
+              <div className={styles.badge}>{t.socials.tileLabels[i]}</div>
             </div>
           ))}
         </div>

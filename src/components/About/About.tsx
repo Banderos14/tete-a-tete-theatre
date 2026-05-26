@@ -2,10 +2,10 @@ import { useLang } from '../../i18n/LangContext';
 import styles from './About.module.scss';
 
 const IMAGES = [
-  { tone: 'linear-gradient(135deg,#2a0e0e,#0a0405)', cls: 'tall', caption: 'Сцена · 2025', glyph: '✸' },
-  { tone: 'linear-gradient(135deg,#1a141a,#08060a)', cls: '',     caption: 'Зрительный зал', glyph: '❧' },
-  { tone: 'linear-gradient(135deg,#2a1a0a,#0a0605)', cls: '',     caption: 'Репетиция',      glyph: '❦' },
-  { tone: 'linear-gradient(135deg,#3a1a1a,#14080a)', cls: 'wide', caption: 'Поклон труппы',  glyph: '❋' },
+  { tone: 'linear-gradient(135deg,#2a0e0e,#0a0405)', cls: 'tall', glyph: '✸' },
+  { tone: 'linear-gradient(135deg,#1a141a,#08060a)', cls: '',     glyph: '❧' },
+  { tone: 'linear-gradient(135deg,#2a1a0a,#0a0605)', cls: '',     glyph: '❦' },
+  { tone: 'linear-gradient(135deg,#3a1a1a,#14080a)', cls: 'wide', glyph: '❋' },
 ] as const;
 
 export function About() {
@@ -51,7 +51,7 @@ export function About() {
             >
               <div className={styles.imgGlyph}>{img.glyph}</div>
               <div className={styles.caption}>
-                <span>{img.caption}</span>
+                <span>{t.about.imageLabels[i]}</span>
                 <span>0{i + 1}</span>
               </div>
             </div>
