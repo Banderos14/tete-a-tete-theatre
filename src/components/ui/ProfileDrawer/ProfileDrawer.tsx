@@ -91,7 +91,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   // ── unsaved guard ──
   const [isDirty,     setIsDirty]     = useState(false);
   const [warnVisible, setWarnVisible] = useState(false);
-  const warnTimer = useRef<ReturnType<typeof setTimeout>>();
+  const warnTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // ── facebook ──
   const [fbLoading, setFbLoading] = useState(false);
