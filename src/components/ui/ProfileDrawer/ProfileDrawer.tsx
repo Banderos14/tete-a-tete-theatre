@@ -33,17 +33,18 @@ function getInitials(name: string | null | undefined): string {
   return name.trim().split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join('');
 }
 
-function mapFbError(err: unknown): string {
-  const code = (err as { code?: string })?.code ?? '';
+function mapFbError(err: unknown, lang: 'RU' | 'FR'): string {
+  const code  = (err as { code?: string })?.code ?? '';
+  const isFR  = lang === 'FR';
   const map: Record<string, string> = {
-    'auth/popup-closed-by-user':        'Окно закрыто',
-    'auth/cancelled-popup-request':     'Запрос отменён',
-    'auth/operation-not-allowed':       'Facebook не включён в Firebase Console',
-    'auth/provider-already-linked':     'Facebook уже подключён',
-    'auth/account-exists-with-different-credential': 'Этот аккаунт Facebook уже используется',
-    'auth/network-request-failed':      'Ошибка сети',
+    'auth/popup-closed-by-user':        isFR ? 'Fenêtre fermée'                          : 'Окно закрыто',
+    'auth/cancelled-popup-request':     isFR ? 'Requête annulée'                         : 'Запрос отменён',
+    'auth/operation-not-allowed':       isFR ? 'Facebook non activé dans Firebase'       : 'Facebook не включён в Firebase Console',
+    'auth/provider-already-linked':     isFR ? 'Facebook déjà connecté'                  : 'Facebook уже подключён',
+    'auth/account-exists-with-different-credential': isFR ? 'Ce compte Facebook est déjà utilisé' : 'Этот аккаунт Facebook уже используется',
+    'auth/network-request-failed':      isFR ? 'Erreur réseau'                           : 'Ошибка сети',
   };
-  return map[code] ?? (err instanceof Error ? err.message : 'Ошибка подключения');
+  return map[code] ?? (err instanceof Error ? err.message : (isFR ? 'Erreur de connexion' : 'Ошибка подключения'));
 }
 
 // ── validation ─────────────────────────────────────────────────────────────────
@@ -54,11 +55,11 @@ interface ValidationErrors {
   phone?:       string;
 }
 
-function validate(displayName: string, birthday: string, phone: string): ValidationErrors {
+function validate(displayName: string, birthday: string, phone: string, required: string): ValidationErrors {
   const errors: ValidationErrors = {};
-  if (!displayName.trim())  errors.displayName = 'Обязательное поле';
-  if (!birthday)            errors.birthday    = 'Обязательное поле';
-  if (!phone.trim())        errors.phone       = 'Обязательное поле';
+  if (!displayName.trim())  errors.displayName = required;
+  if (!birthday)            errors.birthday    = required;
+  if (!phone.trim())        errors.phone       = required;
   return errors;
 }
 
@@ -70,7 +71,7 @@ interface Props {
 }
 
 export function ProfileDrawer({ open, onClose }: Props) {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const { user, userProfile, loading, logout, saveProfile, linkFacebook } = useAuth();
 
   // ── form fields ──
@@ -139,14 +140,14 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
   // Live-validate after first submit attempt
   useEffect(() => {
-    if (submitted) setErrors(validate(displayName, birthday, phone));
-  }, [displayName, birthday, phone, submitted]);
+    if (submitted) setErrors(validate(displayName, birthday, phone, t.profile.required));
+  }, [displayName, birthday, phone, submitted, t.profile.required]);
 
   // ── save ──
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSubmitted(true);
-    const errs = validate(displayName, birthday, phone);
+    const errs = validate(displayName, birthday, phone, t.profile.required);
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
@@ -167,7 +168,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
       if (name) { setDisplayName(name); markDirty(); }
       if (bd)   { setBirthday(bd);      markDirty(); }
     } catch (err) {
-      setFbError(mapFbError(err));
+      setFbError(mapFbError(err, lang));
     } finally {
       setFbLoading(false);
     }
@@ -184,7 +185,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const photoURL      = user?.photoURL ?? null;
   const fbLinked      = userProfile?.facebookLinked ?? false;
   const birthdayFromFb = userProfile?.birthdayFromFb ?? false;
-  const missingCount  = Object.keys(validate(displayName, birthday, phone)).length;
+  const missingCount  = Object.keys(validate(displayName, birthday, phone, t.profile.required)).length;
 
   // ── loading skeleton ──
   if (open && loading) {
@@ -255,7 +256,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
               <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
             </svg>
-            Заполните профиль — осталось {missingCount} {missingCount === 1 ? 'поле' : 'поля'}
+            {t.profile.incomplete(missingCount)}
           </div>
         )}
 
@@ -280,7 +281,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
                   type="text"
                   value={displayName}
                   onChange={e => { setDisplayName(e.target.value); markDirty(); }}
-                  placeholder="Ваше имя"
+                  placeholder={t.auth.nameLabel}
                   autoComplete="name"
                   className={errors.displayName ? styles.inputError : ''}
                 />

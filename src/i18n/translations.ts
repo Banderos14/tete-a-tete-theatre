@@ -64,6 +64,8 @@ export interface T {
     noHistory: string;
     notifications: string;
     logout: string;
+    required: string;
+    incomplete: (n: number) => string;
   };
   booking: {
     title: string;
@@ -80,6 +82,7 @@ export interface T {
     comment: string;
     commentPlaceholder: string;
     submit: string;
+    submitError: string;
     successTitle: string;
     successText: string;
     successOnSite: string;
@@ -91,6 +94,10 @@ export interface T {
     close: string;
     total: string;
     phone: string;
+    labelShow: string;
+    labelDate: string;
+    labelTickets: string;
+    labelAmount: string;
   };
   admin: {
     title: string;
@@ -154,6 +161,7 @@ export interface T {
     h3It: string;
     h3After: string;
     text: string;
+    tileLabels: string[];
   };
   about: {
     num: string;
@@ -165,6 +173,7 @@ export interface T {
     p1: string;
     p2: string;
     stats: Stat[];
+    imageLabels: string[];
   };
   repertoire: {
     num: string;
@@ -219,7 +228,7 @@ export interface T {
 export const translations: Record<Lang, T> = {
   RU: {
     curtain: {
-      sub: 'Русский театр · Nice',
+      sub: 'Русскоязычный театр · Nice',
     },
     nav: {
       afisha:     'Афиша',
@@ -257,6 +266,7 @@ export const translations: Record<Lang, T> = {
       h3It:    'хроника',
       h3After: 'сцены',
       text:    'Наш Instagram — живая афиша театра: репетиции, премьеры, закулисье и новости. Следите за тем, как рождается спектакль — от первой читки до выхода на сцену.',
+      tileLabels: ['Премьера', 'Закулисье', 'Репетиция', 'Поклон', 'Сцена'],
     },
     about: {
       num:       '03 / About',
@@ -265,13 +275,14 @@ export const translations: Record<Lang, T> = {
       meta:      'Основан в 2018\nNICE · FRANCE',
       quote:     'Театр — это не место. Это разговор. Очень тихий, очень близкий — лицом к лицу.',
       quoteAttr: '— Из манифеста театра, 2018',
-      p1: 'ТЕТ-А-ТЕТ — независимый русский театр в Ницце, основанный в 2018 году. Камерная сцена в самом сердце города, где каждый спектакль — встреча с автором на расстоянии вытянутой руки.',
+      p1: 'ТЕТ-А-ТЕТ — независимый русскоязычный театр в Ницце, основанный в 2018 году. Камерная сцена в самом сердце города, где каждый спектакль — встреча с автором на расстоянии вытянутой руки.',
       p2: 'Мы играем русскую и европейскую классику, современную драматургию, ставим спектакли для детей. Мы не музей и не реконструкция — мы живой театр, говорящий с сегодняшним зрителем на двух языках.',
       stats: [
         { num: '7',    suffix: ' лет', label: 'на сцене',      italic: true  },
         { num: '42',   suffix: '',     label: 'постановки',    italic: false },
         { num: '1635', suffix: '',     label: 'зрителей · сезон', italic: false },
       ],
+      imageLabels: ['Сцена · 2025', 'Зрительный зал', 'Репетиция', 'Поклон труппы'],
     },
     repertoire: {
       num:          '04 / Репертуар',
@@ -317,7 +328,7 @@ export const translations: Record<Lang, T> = {
       mapLink:      'Открыть карту',
     },
     footer: {
-      copyright: '© 2026 ТЕТ-А-ТЕТ · Русский театр в Ницце',
+      copyright: '© 2026 ТЕТ-А-ТЕТ · Русскоязычный театр в Ницце',
       backTop:   'Наверх',
     },
     auth: {
@@ -373,6 +384,8 @@ export const translations: Record<Lang, T> = {
       noHistory:             'Билетов пока нет',
       notifications:         'Уведомления о новых спектаклях',
       logout:                'Выйти',
+      required:              'Обязательное поле',
+      incomplete:            (n) => `Заполните профиль — осталось ${n} ${n === 1 ? 'поле' : 'поля'}`,
     },
     booking: {
       title:               'Бронирование',
@@ -389,6 +402,7 @@ export const translations: Record<Lang, T> = {
       comment:             'Комментарий',
       commentPlaceholder:  'Особые пожелания, вопросы...',
       submit:              'Подтвердить бронирование',
+      submitError:         'Не удалось сохранить бронирование. Попробуйте ещё раз.',
       successTitle:        'Бронирование принято',
       successText:         'Детали будут отправлены на ваш e-mail.',
       successOnSite:       'Ваше бронирование принято. Детали придут на ваш e-mail. Оплата — на месте, перед спектаклем.',
@@ -400,6 +414,10 @@ export const translations: Record<Lang, T> = {
       close:               'Закрыть',
       total:               'Итого',
       phone:               'Контактный телефон',
+      labelShow:           'Спектакль',
+      labelDate:           'Дата',
+      labelTickets:        'Билеты',
+      labelAmount:         'Сумма',
     },
     admin: {
       title:           'Панель администратора',
@@ -455,7 +473,7 @@ export const translations: Record<Lang, T> = {
 
   FR: {
     curtain: {
-      sub: 'Théâtre russe · Nice',
+      sub: 'Théâtre russophone · Nice',
     },
     nav: {
       afisha:     'Affiche',
@@ -466,7 +484,7 @@ export const translations: Record<Lang, T> = {
     hero: {
       eyebrow:     'Saison 2025 / 2026 · Nice, Côte d\'Azur',
       title:       { before: 'tête', letter: 'à', after: 'tête' },
-      sub:         { accent: 'Théâtre', rest: 'russe' },
+      sub:         { accent: 'Théâtre', rest: 'russophone' },
       ctaAfisha:   'Voir l\'affiche',
       ctaRep:      'Répertoire',
       ctaInstagram:'Instagram',
@@ -493,6 +511,7 @@ export const translations: Record<Lang, T> = {
       h3It:    'vivante',
       h3After: 'de la scène',
       text:    'Notre Instagram — la chronique vivante du théâtre : répétitions, premières, coulisses et actualités. Suivez la naissance d\'un spectacle — de la première lecture à la représentation.',
+      tileLabels: ['Première', 'Coulisses', 'Répétition', 'Salut', 'Scène'],
     },
     about: {
       num:       '03 / About',
@@ -501,13 +520,14 @@ export const translations: Record<Lang, T> = {
       meta:      'Fondé en 2018\nNICE · FRANCE',
       quote:     'Le théâtre n\'est pas un lieu. C\'est une conversation. Très silencieuse, très intime — face à face.',
       quoteAttr: '— Du manifeste du théâtre, 2018',
-      p1: 'TÊT-À-TÊT est un théâtre russe indépendant à Nice, fondé en 2018. Une scène intime au cœur de la ville, où chaque spectacle est une rencontre avec l\'auteur à portée de main.',
+      p1: 'TÊT-À-TÊT est un théâtre russophone indépendant à Nice, fondé en 2018. Une scène intime au cœur de la ville, où chaque spectacle est une rencontre avec l\'auteur à portée de main.',
       p2: 'Nous jouons les classiques russes et européens, la dramaturgie contemporaine, et proposons des spectacles pour enfants. Nous ne sommes pas un musée — nous sommes un théâtre vivant qui parle au public d\'aujourd\'hui en deux langues.',
       stats: [
         { num: '7',    suffix: ' ans', label: 'sur scène',             italic: true  },
         { num: '42',   suffix: '',     label: 'spectacles',            italic: false },
         { num: '1635', suffix: '',     label: 'spectateurs · saison',  italic: false },
       ],
+      imageLabels: ['Scène · 2025', 'Salle', 'Répétition', 'Salut de la troupe'],
     },
     repertoire: {
       num:          '04 / Répertoire',
@@ -553,7 +573,7 @@ export const translations: Record<Lang, T> = {
       mapLink:      'Ouvrir la carte',
     },
     footer: {
-      copyright: '© 2026 TÊT-À-TÊT · Théâtre russe à Nice',
+      copyright: '© 2026 TÊT-À-TÊT · Théâtre russophone à Nice',
       backTop:   'Haut de page',
     },
     auth: {
@@ -609,6 +629,8 @@ export const translations: Record<Lang, T> = {
       noHistory:             'Aucun billet pour l\'instant',
       notifications:         'Notifications pour les nouveaux spectacles',
       logout:                'Se déconnecter',
+      required:              'Champ obligatoire',
+      incomplete:            (n) => `Complétez votre profil — encore ${n} champ${n > 1 ? 's' : ''}`,
     },
     booking: {
       title:               'Réservation',
@@ -625,6 +647,7 @@ export const translations: Record<Lang, T> = {
       comment:             'Commentaire',
       commentPlaceholder:  'Demandes spéciales, questions...',
       submit:              'Confirmer la réservation',
+      submitError:         'La réservation a échoué. Veuillez réessayer.',
       successTitle:        'Réservation acceptée',
       successText:         'Les détails seront envoyés à votre adresse e-mail.',
       successOnSite:       'Votre réservation est acceptée. Les détails seront envoyés par e-mail. Le paiement s\'effectue sur place avant le spectacle.',
@@ -636,6 +659,10 @@ export const translations: Record<Lang, T> = {
       close:               'Fermer',
       total:               'Total',
       phone:               'Téléphone de contact',
+      labelShow:           'Spectacle',
+      labelDate:           'Date',
+      labelTickets:        'Billets',
+      labelAmount:         'Montant',
     },
     admin: {
       title:           'Panneau d\'administration',

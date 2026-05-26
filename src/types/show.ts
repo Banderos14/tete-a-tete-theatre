@@ -8,15 +8,19 @@ export interface TicketType {
 export interface Show {
   id: string;
   title: string;
+  titleFR?: string;
   author: string;
+  authorFR?: string;
   date: string;
   day: string;
   month: string;
   time: string;
   year: string;
   age: string;
-  price: string; // display string, kept for ShowModal compat
+  price: string;
+  priceFR?: string;
   duration: string;
+  durationFR?: string;
   desc: string;
   descFR: string;
   href: string;
@@ -32,7 +36,9 @@ export interface RepertoireItem {
   id: string;
   status: 'active' | 'past';
   title: string;
+  titleFR?: string;
   author: string;
+  authorFR?: string;
   tag: string;
   age: string;
   glyph: string;
@@ -40,4 +46,5 @@ export interface RepertoireItem {
   description?: string;
   descriptionFR?: string;
   duration?: string;
+  durationFR?: string;
 }

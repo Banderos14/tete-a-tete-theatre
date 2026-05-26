@@ -21,7 +21,8 @@ interface PersonCardProps {
 }
 
 function PersonCard({ person, index }: PersonCardProps) {
-  const { t } = useLang();
+  const { lang, t } = useLang();
+  const displayName = lang === 'FR' ? (person.nameFR ?? person.name) : person.name;
   return (
     <div
       className={`${styles.person} reveal`}
@@ -29,10 +30,10 @@ function PersonCard({ person, index }: PersonCardProps) {
     >
       <div className={styles.photo}>
         <div className={styles.photoInner} style={{ background: person.tone }}>
-          <div className={styles.initials}>{getInitials(person.name)}</div>
+          <div className={styles.initials}>{getInitials(displayName)}</div>
         </div>
       </div>
-      <div className={styles.name}>{person.name}</div>
+      <div className={styles.name}>{displayName}</div>
       <div className={styles.role}>{t.team.roles[person.role] ?? person.role}</div>
     </div>
   );

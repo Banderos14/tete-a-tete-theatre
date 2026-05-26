@@ -16,7 +16,10 @@ interface ModalProps {
 
 function RepertoireModal({ item, onClose, onBook }: ModalProps) {
   const { lang, t } = useLang();
-  const desc = lang === 'FR' ? (item.descriptionFR ?? item.description) : item.description;
+  const desc     = lang === 'FR' ? (item.descriptionFR ?? item.description) : item.description;
+  const title    = lang === 'FR' ? (item.titleFR    ?? item.title)    : item.title;
+  const author   = lang === 'FR' ? (item.authorFR   ?? item.author)   : item.author;
+  const duration = lang === 'FR' ? (item.durationFR ?? item.duration) : item.duration;
 
   const linkedShow = item.status === 'active'
     ? SHOWS.find(s => s.id === item.id) ?? null
@@ -42,7 +45,7 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
         <button className={styles.modalClose} onClick={onClose} aria-label="Закрыть">✕</button>
 
         <div className={styles.modalPoster}>
-          <PosterPlaceholder palette={item.palette} glyph={item.glyph} title={item.title} kind="rep" />
+          <PosterPlaceholder palette={item.palette} glyph={item.glyph} title={title} kind="rep" />
         </div>
 
         <div className={styles.modalInfo}>
@@ -51,13 +54,13 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
             <span className={styles.modalAge}>{item.age}</span>
           </div>
 
-          <h3 className={styles.modalTitle}>{item.title}</h3>
-          <div className={styles.modalAuthor}>{item.author}</div>
+          <h3 className={styles.modalTitle}>{title}</h3>
+          <div className={styles.modalAuthor}>{author}</div>
 
-          {item.duration && (
+          {duration && (
             <div className={styles.modalDuration}>
               <span className={styles.modalDurationLabel}>{t.showModal.labelDuration}</span>
-              <span>{item.duration}</span>
+              <span>{duration}</span>
             </div>
           )}
 
@@ -87,7 +90,7 @@ interface Props {
 }
 
 export function Repertoire({ onBook }: Props) {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const [selected,      setSelected]      = useState<RepertoireItem | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [allForceVisible, setAllForceVisible] = useState(false);
@@ -128,7 +131,10 @@ export function Repertoire({ onBook }: Props) {
       </div>
 
       <div className={styles.grid}>
-        {REPERTOIRE.map((item) => (
+        {REPERTOIRE.map((item) => {
+          const cardTitle  = lang === 'FR' ? (item.titleFR  ?? item.title)  : item.title;
+          const cardAuthor = lang === 'FR' ? (item.authorFR ?? item.author) : item.author;
+          return (
           <button
             key={item.id}
             ref={el => {
@@ -145,14 +151,14 @@ export function Repertoire({ onBook }: Props) {
             type="button"
           >
             <div className={styles.poster}>
-              <PosterPlaceholder palette={item.palette} glyph={item.glyph} title={item.title} kind="rep" />
+              <PosterPlaceholder palette={item.palette} glyph={item.glyph} title={cardTitle} kind="rep" />
             </div>
             <div className={styles.meta}>
               <span>{t.showTags[item.tag] ?? item.tag}</span>
               <span>{item.age}</span>
             </div>
-            <div className={styles.title}>{item.title}</div>
-            <div className={styles.author}>{item.author}</div>
+            <div className={styles.title}>{cardTitle}</div>
+            <div className={styles.author}>{cardAuthor}</div>
 
             {item.status === 'active' ? (
               <div className={styles.activeBadge}>{t.repertoire.statusActive}</div>
@@ -164,7 +170,8 @@ export function Repertoire({ onBook }: Props) {
               {t.repertoire.more} <span className="arrow">→</span>
             </div>
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {selected && (
