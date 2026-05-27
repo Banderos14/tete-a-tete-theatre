@@ -4,7 +4,7 @@
   background: var(--bg);
 }
 
-// ── Groups wrapper ────────────────────────────────────────────────────────────
+// ── Groups wrapper ──
 .groups {
   max-width: 1500px;
   margin: 0 auto;
@@ -30,7 +30,7 @@
   border-bottom: 1px solid var(--line);
 }
 
-// ── Person grid ───────────────────────────────────────────────────────────────
+// ── Person grid ──
 .grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -51,13 +51,24 @@
   overflow: hidden;
   margin-bottom: 14px;
 
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.72) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
   &::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.35) 100%);
+    background: linear-gradient(to bottom, transparent 45%, rgba(184,0,0,0.55) 100%);
     opacity: 0;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+    z-index: 2;
   }
 
   .person:hover &::after { opacity: 1; }
@@ -75,6 +86,14 @@
   }
 }
 
+.photoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
 .initials {
   position: absolute;
   inset: 0;
@@ -83,7 +102,7 @@
   font-family: var(--font-display);
   font-size: 72px;
   font-style: italic;
-  color: rgba(245, 241, 234, 0.14);
+  color: var(--line-strong);
 }
 
 .name {

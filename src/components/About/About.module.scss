@@ -116,7 +116,7 @@
   place-items: center;
   font-family: var(--font-display);
   font-size: 80px;
-  color: rgba(245, 241, 234, 0.14);
+  color: rgba(245, 241, 234, 0.55);
 }
 
 .caption {
@@ -126,7 +126,7 @@
   right: 12px;
   @include mixins.mono(9px, 0.16em);
   text-transform: uppercase;
-  color: var(--fg);
+  color: rgba(245, 241, 234, 0.85);
   z-index: 2;
   display: flex;
   justify-content: space-between;

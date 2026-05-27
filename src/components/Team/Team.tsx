@@ -3,12 +3,12 @@ import { useLang } from '../../i18n/LangContext';
 import type { TeamMember, TeamGroup } from '../../types';
 import styles from './Team.module.scss';
 
-const GROUP_ORDER: TeamGroup[] = ['directors', 'actors', 'crew'];
+const GROUP_ORDER: TeamGroup[] = ['directors', 'actors', 'youth'];
 
 const GROUP_LABELS: Record<TeamGroup, { RU: string; FR: string }> = {
-  directors: { RU: 'Режиссёры',              FR: 'Metteurs en scène' },
-  actors:    { RU: 'Актёры',                 FR: 'Acteurs'           },
-  crew:      { RU: 'Постановочная группа',   FR: 'Équipe technique'  },
+  directors: { RU: 'Режиссёры',                    FR: 'Metteurs en scène'          },
+  actors:    { RU: 'Актёры',             FR: 'Acteurs'       },
+  youth:     { RU: 'Актёры молодёжного театра',     FR: 'Acteurs du théâtre jeunesse'},
 };
 
 function getInitials(name: string): string {
@@ -30,7 +30,10 @@ function PersonCard({ person, index }: PersonCardProps) {
     >
       <div className={styles.photo}>
         <div className={styles.photoInner} style={{ background: person.tone }}>
-          <div className={styles.initials}>{getInitials(displayName)}</div>
+          {person.photo
+            ? <img src={`/images/team/${person.photo}`} alt={displayName} className={styles.photoImg} />
+            : <div className={styles.initials}>{getInitials(displayName)}</div>
+          }
         </div>
       </div>
       <div className={styles.name}>{displayName}</div>

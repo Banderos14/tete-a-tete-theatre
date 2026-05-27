@@ -88,6 +88,26 @@
   grid-row: span 2;
 }
 
+// ── Dark tile backgrounds (default) ──────────────────────────────────────────
+.tile[data-tile="0"] { background: linear-gradient(135deg, #3a0a0e, #0a0605); }
+.tile[data-tile="1"] { background: linear-gradient(135deg, #1a1014, #08060a); }
+.tile[data-tile="2"] { background: linear-gradient(135deg, #2a1a0a, #14080a); }
+.tile[data-tile="3"] { background: linear-gradient(135deg, #1a141a, #08060a); }
+.tile[data-tile="4"] { background: linear-gradient(135deg, #2a0e14, #14060a); }
+
+// ── Light theme tile backgrounds ──────────────────────────────────────────────
+.mosaic[data-theme='light'] {
+  .tile[data-tile="0"] { background: linear-gradient(135deg, #b89098, #9a7280); }
+  .tile[data-tile="1"] { background: linear-gradient(135deg, #9090a0, #7a7888); }
+  .tile[data-tile="2"] { background: linear-gradient(135deg, #a09070, #887858); }
+  .tile[data-tile="3"] { background: linear-gradient(135deg, #9088a0, #7a7090); }
+  .tile[data-tile="4"] { background: linear-gradient(135deg, #aa8890, #927078); }
+
+  .tileGlyph { color: rgba(245, 241, 234, 0.25); }
+
+  .badge { color: rgba(245, 241, 234, 0.85); }
+}
+
 .tileGlyph {
   position: absolute;
   inset: 0;
@@ -105,7 +125,7 @@
   bottom: 10px;
   left: 12px;
   @include mixins.mono(9px, 0.18em);
-  color: var(--fg);
+  color: rgba(245, 241, 234, 0.75);
   text-transform: uppercase;
   z-index: 2;
 }

@@ -39,8 +39,8 @@
   width: 100%;
   max-width: 900px;
   height: min(76vh, 580px);
-  background: #1F1D1B;
-  border: 1px solid rgba(255,255,255,0.10);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
   border-radius: 14px;
   overflow: hidden;
   animation: slideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -104,7 +104,7 @@
   font-family: var(--font-display);
   font-size: 80px;
   opacity: 0.1;
-  color: #fff;
+  color: var(--fg);
   pointer-events: none;
   user-select: none;
 }
@@ -158,10 +158,10 @@
   align-items: center;
   height: 90px;
   flex-shrink: 0;
-  border-top: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid var(--line);
   padding: 10px 12px;
   gap: 8px;
-  background: rgba(0,0,0,0.18);
+  background: var(--bg-3);
 }
 
 // Slim circular arrows for scroll — conditionally rendered so no phantom spacing
@@ -170,9 +170,9 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.14);
-  color: rgba(255,255,255,0.65);
+  background: var(--line);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-mute);
   font-size: 14px;
   cursor: pointer;
   display: flex;
@@ -182,8 +182,8 @@
   padding-bottom: 1px;
 
   &:hover {
-    background: rgba(255,255,255,0.12);
-    color: #fff;
+    background: var(--line-strong);
+    color: var(--fg);
   }
 }
 
@@ -238,7 +238,7 @@
 .info {
   flex: 1;
   padding: 32px 28px;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -324,7 +324,9 @@
   font-size: 13px;
   line-height: 1.78;
   color: var(--fg-dim);
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 // ── CTA ───────────────────────────────────────────────────────────────────────
