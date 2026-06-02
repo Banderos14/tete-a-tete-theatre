@@ -109,18 +109,18 @@
 }
 
 .headline {
-  display: grid;
-  grid-template-columns: auto auto auto;
-  column-gap: clamp(16px, 5vw, 100px);
-  row-gap: clamp(8px, 1.4vw, 20px);
-  justify-content: center;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: clamp(8px, 1.4vw, 20px);
   max-width: 100%;
   margin: 0 auto;
 }
 
 .title {
-  display: contents;
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 5vw, 100px);
   font-size: clamp(60px, 13vw, 200px);
   font-family: var(--font-title);
   letter-spacing: var(--font-display-spacing);
@@ -131,23 +131,11 @@
   line-height: 1;
 }
 
-.titleBefore {
-  grid-column: 1;
-  grid-row: 1;
-}
-
 .accentGroup {
-  grid-column: 2;
-  grid-row: 1;
   display: inline-flex;
   flex-direction: row;
   align-items: center;
   gap: 22px;
-}
-
-.titleAfter {
-  grid-column: 3;
-  grid-row: 1;
 }
 
 .accentDot {
@@ -170,7 +158,7 @@
   text-transform: uppercase;
   font-size: clamp(42px, 5.4vw, 84px);
   line-height: 0.85;
-  margin-top: 30px;
+  margin-top: 50px;
   text-shadow: 0 0 40px rgba(204, 0, 0, 0.45);
 }
 

@@ -3,14 +3,18 @@ import { useLang } from '../../i18n/LangContext';
 import styles from './Socials.module.scss';
 
 const TILES = [
-  { kind: 'feature', bg: 'linear-gradient(135deg,#3a0a0e,#0a0605)', glyph: '❦' },
-  { kind: '',        bg: 'linear-gradient(135deg,#1a1014,#08060a)', glyph: '✸' },
-  { kind: '',        bg: 'linear-gradient(135deg,#2a1a0a,#14080a)', glyph: '❧' },
-  { kind: '',        bg: 'linear-gradient(135deg,#1a141a,#08060a)', glyph: '✺' },
-  { kind: '',        bg: 'linear-gradient(135deg,#2a0e14,#14060a)', glyph: '❋' },
+  { kind: 'feature', glyph: '❦' },
+  { kind: '',        glyph: '✸' },
+  { kind: '',        glyph: '❧' },
+  { kind: '',        glyph: '✺' },
+  { kind: '',        glyph: '❋' },
 ] as const;
 
-export function Socials() {
+interface Props {
+  theme: 'dark' | 'light';
+}
+
+export function Socials({ theme }: Props) {
   const { t } = useLang();
 
   return (
@@ -34,12 +38,12 @@ export function Socials() {
           </div>
         </div>
 
-        <div className={`${styles.mosaic} reveal`}>
+        <div className={`${styles.mosaic} reveal`} data-theme={theme}>
           {TILES.map((tile, i) => (
             <div
               key={i}
               className={`${styles.tile} ${tile.kind === 'feature' ? styles.feature : ''}`}
-              style={{ background: tile.bg }}
+              data-tile={i}
             >
               <div className={styles.tileGlyph}>{tile.glyph}</div>
               <div className={styles.badge}>{t.socials.tileLabels[i]}</div>

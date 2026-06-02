@@ -25,9 +25,9 @@ import { AdminPage }     from './pages/AdminPage';
 type Theme = 'dark' | 'light';
 type IntroState = 'closed' | 'opening' | 'done';
 
-const INTRO_SPEED = 1.6;
+const INTRO_SPEED = 2.2;
 
-// ── Landing page ──────────────────────────────────────────────────────────────
+// ── Landing page ───
 
 function LandingPage({
   theme, lang, introState,
@@ -56,7 +56,7 @@ function LandingPage({
       <Marquee />
       <Afisha onBook={onBook} />
       <Marquee />
-      <Socials />
+      <Socials theme={theme} />
       <About />
       <Repertoire onBook={onBook} />
       <Team />
@@ -66,7 +66,7 @@ function LandingPage({
   );
 }
 
-// ── Root App ──────────────────────────────────────────────────────────────────
+// ── Root App ──
 
 export default function App() {
   const [theme,       setTheme]       = useState<Theme>('dark');

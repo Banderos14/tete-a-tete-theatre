@@ -2,10 +2,10 @@ import { useLang } from '../../i18n/LangContext';
 import styles from './About.module.scss';
 
 const IMAGES = [
-  { tone: 'linear-gradient(135deg,#2a0e0e,#0a0405)', cls: 'tall', glyph: '✸' },
-  { tone: 'linear-gradient(135deg,#1a141a,#08060a)', cls: '',     glyph: '❧' },
-  { tone: 'linear-gradient(135deg,#2a1a0a,#0a0605)', cls: '',     glyph: '❦' },
-  { tone: 'linear-gradient(135deg,#3a1a1a,#14080a)', cls: 'wide', glyph: '❋' },
+  { tone: 'var(--ph-1)', cls: 'tall', glyph: '✸' },
+  { tone: 'var(--ph-5)', cls: '',     glyph: '❧' },
+  { tone: 'var(--ph-4)', cls: '',     glyph: '❦' },
+  { tone: 'var(--ph-1)', cls: 'wide', glyph: '❋' },
 ] as const;
 
 export function About() {

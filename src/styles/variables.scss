@@ -21,6 +21,13 @@
   --line-strong:  rgba(245, 241, 234, 0.22);
   --grain-opacity:0.06;
 
+  // Placeholder palette — 5 colour families for photo-less blocks
+  --ph-1: linear-gradient(135deg, #3a0808 0%, #140304 100%);   // crimson
+  --ph-2: linear-gradient(135deg, #161210 0%, #080604 100%);   // near-black
+  --ph-3: linear-gradient(135deg, #060c28 0%, #030614 100%);   // navy
+  --ph-4: linear-gradient(135deg, #1c1408 0%, #0c0a04 100%);   // earth
+  --ph-5: linear-gradient(135deg, #18081c 0%, #08040a 100%);   // mauve
+
   --font-display: "Bad Russian";
   --font-title: "Forum", sans-serif;
   --font-title-blocks: "Dela Gothic One", sans-serif;
@@ -46,4 +53,11 @@
   --line:         rgba(26, 23, 21, 0.10);
   --line-strong:  rgba(26, 23, 21, 0.22);
   --grain-opacity:0.03;
+
+  // Placeholder palette — light variants
+  --ph-1: linear-gradient(135deg, #c07878 0%, #9e6060 100%);   // dusty rose
+  --ph-2: linear-gradient(135deg, #c8c0b8 0%, #aca49a 100%);   // warm grey
+  --ph-3: linear-gradient(135deg, #8898c0 0%, #6878a4 100%);   // slate blue
+  --ph-4: linear-gradient(135deg, #b89860 0%, #9e8048 100%);   // amber
+  --ph-5: linear-gradient(135deg, #b098b4 0%, #967e9a 100%);   // dusty mauve
 }
