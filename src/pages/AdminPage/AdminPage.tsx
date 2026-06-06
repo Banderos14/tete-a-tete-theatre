@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLang } from '../../i18n/LangContext';
-import { getAllBookings, updateBookingStatus, updatePaymentStatus } from '../../services/bookingService';
+import { getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPaid } from '../../services/bookingService';
+import { markEligibleBookingsAsAttended } from '../../services/attendanceService';
 import { getAllUsers, getUsersForNewsletter } from '../../services/userService';
 import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail, sendNewShowAnnouncementEmail } from '../../services/emailService';
 import { SHOWS } from '../../data/shows';
@@ -74,6 +75,10 @@ export function AdminPage() {
       const [bData, uData] = await Promise.all([getAllBookings(), getAllUsers()]);
       setBookings(bData);
       setUsers(uData);
+      // Non-blocking: auto-mark attended for confirmed+paid shows that ended 2+ hours ago
+      markEligibleBookingsAsAttended(bData, (id) => {
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
+      }).catch(() => {/* non-blocking */});
     } finally {
       setFetching(false);
     }
@@ -89,7 +94,8 @@ export function AdminPage() {
       await updateBookingStatus(bookingId, status);
       setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
 
-      // Send email for confirmed and cancelled; attended — no email (not needed)
+      // confirmed (manual, on_site) and cancelled send email.
+      // attended is set automatically and never sends email.
       if (status === 'confirmed' || status === 'cancelled') {
         sendBookingStatusUpdateEmail({
           userEmail:    booking.userEmail,
@@ -101,7 +107,7 @@ export function AdminPage() {
           totalAmount:  booking.totalAmount,
           ticketCode:   booking.ticketCode,
           newStatus:    status,
-          lang:         'RU',
+          lang:         'FR',
         }).catch(() => {/* non-blocking */});
       }
     } finally { setUpdatingId(null); }
@@ -114,11 +120,13 @@ export function AdminPage() {
 
     setUpdatingId(bookingId);
     try {
-      await updatePaymentStatus(bookingId, paymentStatus);
-      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, paymentStatus } : b));
-
-      // Send email only when marking as paid
       if (paymentStatus === 'paid') {
+        // Single write: paid + confirmed together
+        await markBookingPaid(bookingId);
+        setBookings(prev => prev.map(b =>
+          b.id === bookingId ? { ...b, paymentStatus: 'paid', status: 'confirmed' } : b
+        ));
+        // One email: "Оплата получена. Место подтверждено."
         sendPaymentPaidEmail({
           userEmail:     booking.userEmail,
           userName:      booking.userName,
@@ -128,9 +136,13 @@ export function AdminPage() {
           ticketsCount:  booking.ticketsCount,
           totalAmount:   booking.totalAmount,
           ticketCode:    booking.ticketCode,
-          bookingStatus: booking.status,
-          lang:          'RU',
+          bookingStatus: 'confirmed', // always confirmed after payment
+          lang:          'FR',
         }).catch(() => {/* non-blocking */});
+      } else {
+        // "Не оплачено" — revert payment status only, no email
+        await updatePaymentStatus(bookingId, paymentStatus);
+        setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, paymentStatus } : b));
       }
     } finally { setUpdatingId(null); }
   }
@@ -168,7 +180,7 @@ export function AdminPage() {
           price:       show.price,
           description: show.desc,
           siteUrl:     window.location.origin,
-          lang:        'RU',
+          lang:        'FR',
         });
         sent++;
       } catch {
@@ -422,19 +434,14 @@ export function AdminPage() {
                         <td className={styles.cellComment}>{b.comment || '—'}</td>
                         <td>
                           <div className={styles.actions}>
-                            {bStatus !== 'confirmed' && bStatus !== 'attended' && (
+                            {/* Manual confirm — for on_site or edge cases without payment */}
+                            {bStatus === 'pending' && b.paymentMethod === 'on_site' && (
                               <button
-                                className={styles.actionConfirm}
+                                className={styles.actionConfirmSecondary}
                                 disabled={isBusy}
                                 onClick={() => handleStatus(b.id, 'confirmed')}
-                              >{t.admin.markConfirmed}</button>
-                            )}
-                            {bStatus !== 'attended' && bStatus !== 'cancelled' && (
-                              <button
-                                className={styles.actionAttended}
-                                disabled={isBusy}
-                                onClick={() => handleStatus(b.id, 'attended')}
-                              >{t.admin.markAttended}</button>
+                                title="Подтвердить без оплаты (наличные на месте)"
+                              >Подтвердить вручную</button>
                             )}
                             {bStatus !== 'cancelled' && (
                               <button

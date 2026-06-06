@@ -170,10 +170,12 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
 
   const subject = isRU
     ? `${THEATRE_NAME} — бронирование принято: ${data.showTitle}`
-    : `${THEATRE_NAME} — réservation acceptée : ${data.showTitle}`;
+    : `${THEATRE_NAME} — réservation reçue : ${data.showTitle}`;
 
-  const headerTitle = isRU ? 'Бронирование принято' : 'Réservation acceptée';
-  const greeting    = isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName}&nbsp;!`;
+  const headerTitle = isRU ? 'Бронирование принято' : 'Réservation reçue';
+  const greeting    = isRU
+    ? `Здравствуйте, ${data.userName}!`
+    : `Bonjour, ${data.userName}&nbsp;!<br><span style="font-size:13px;color:#888;">Merci pour votre réservation&nbsp;!</span>`;
   const ticketLabel = isRU ? 'Код брони' : 'Code de réservation';
 
   const payNote = isRU
@@ -265,7 +267,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
         THEATRE_NAME,
         '',
         `Bonjour, ${data.userName} !`,
-        'Votre réservation est acceptée.',
+        'Merci pour votre réservation. Votre réservation est reçue.',
         '',
         `Spectacle : ${data.showTitle}`,
         `Date : ${data.showDate} · ${data.showTime}`,
@@ -306,7 +308,7 @@ function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html
       headerRU:  'Бронирование отменено',
       headerFR:  'Réservation annulée',
       noteRU:    'Если у вас есть вопросы, напишите нам.',
-      noteFR:    'Si vous avez des questions, contactez-nous.',
+      noteFR:    'Nous espérons vous revoir bientôt. Pour toute question, n\'hésitez pas à nous contacter.',
     },
     attended: {
       subjectRU: `Спасибо за визит: ${data.showTitle}`,
@@ -368,7 +370,7 @@ function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: string; h
 
   const subject = isRU
     ? `${THEATRE_NAME} — оплата получена: ${data.showTitle}`
-    : `${THEATRE_NAME} — paiement reçu : ${data.showTitle}`;
+    : `${THEATRE_NAME} — paiement reçu · votre place est confirmée : ${data.showTitle}`;
 
   const headerTitle = isRU ? 'Оплата получена' : 'Paiement reçu';
   const greeting    = isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName}&nbsp;!`;

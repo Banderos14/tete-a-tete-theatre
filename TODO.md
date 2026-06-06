@@ -52,7 +52,7 @@
     showDate, showTime, ticketsCount, ticketType, priceInfo, totalAmount, ticketCode,
     status (pending/confirmed/cancelled/attended), paymentMethod, paymentStatus,
     comment, createdAt, updatedAt
--+- Статус брони: pending (новая) → confirmed / cancelled / attended (admin)
+-+- Статус брони: pending (новая) → confirmed / cancelled / attended
 -+- Генерация уникального ticketCode при создании (формат XXXX-XXXX, crypto.getRandomValues)
 -+- updatedAt проставляется при каждой смене статуса или оплаты
 -+- bank_transfer — способ оплаты, показывает реквизиты
@@ -60,10 +60,19 @@
 -+- ticketCode — отображается в модалке, письме и личном кабинете
 -+- Копирование реквизитов в буфер одной кнопкой
 -+- paymentStatus в админке: not_paid / awaiting_transfer / paid
--+- status в AdminPage: confirmed / attended / cancelled
+-+- "Оплачено" атомарно ставит paymentStatus=paid + status=confirmed (одна запись Firestore)
+-+- Одно письмо при нажатии "Оплачено": оплата получена + место подтверждено
+-+- attended считается автоматически: confirmed + paid + спектакль закончился 2+ ч назад
+    (attendanceService.ts: при загрузке AdminPage обновляет Firestore, ProfileDrawer считает вычисленно)
+-+- Кнопка "Посещение" удалена из основного UI — посещение ставится автоматически
+-+- "Подтвердить вручную" — только для on_site, второстепенная кнопка
+-+- ProfileDrawer корректно считает посещения (status=attended + computed)
+-+- transferCodeWarning: заметное предупреждение о коде брони в назначении платежа
+-+- ticketCode используется для связи платежа и брони
 --- Stripe / онлайн-оплата
 --- Автоматическая проверка поступления платежей
 --- PDF-билет: архитектура готова в ticketService.ts (jspdf, закомментировано)
+--- QR-код билета
 
 ## Личный кабинет
 
@@ -71,10 +80,13 @@
 -+- Профиль: имя, email, телефон, день рождения, соц сеть
 -+- Подключение Facebook для авто-заполнения данных
 -+- Уведомления — настройка в профиле
--+- История бронирований пользователя (загружается из Firestore при открытии)
+-+- История разделена на две секции:
+    «Мои билеты» (pending / confirmed / cancelled — активные и будущие)
+    «Мои спектакли» (attended / computed attended — посещённые)
+-+- Карточка билета: глиф спектакля с цветом палитры, название, дата, код, статусы оплаты и брони
+-+- Счётчик посещений и прогресс-бар в секции «Мои спектакли»
 -+- Статус брони и оплаты в карточке
 -+- Код брони в карточке
--+- Счётчик посещений (отметка attended = посещение)
 -+- Прогресс-бар: каждое 5-е посещение — подарок (5 точек, заполняются)
 -+- Явные статусные сообщения: «Бронь подтверждена», «Бронь отменена», «Оплата получена»
 --- День рождения → поздравление от театра + подарок
@@ -112,6 +124,9 @@
 -+- Защита от дублей: если статус не изменился, письмо повторно не отправляется
 -+- api/send-email.ts: Vercel Serverless Function через Resend
 -+- emailService.ts: шаблоны RU/FR для всех событий бронирования
+-+- Все письма от администратора отправляются на FR (язык театра и аудитории)
+-+- FR копии обновлены: «Réservation reçue», «Merci pour votre réservation !»,
+    «Paiement reçu · votre place est confirmée», тёплая отмена
 -+- Рассылка нового спектакля подписчикам (ручной запуск из AdminPage → вкладка «Рассылка»)
 -+- getUsersForNewsletter(): только пользователи с notifications=true, не admin
 -+- AdminPage: выбор спектакля, подтверждение, результат (sent / errors)

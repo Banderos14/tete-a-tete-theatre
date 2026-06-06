@@ -67,6 +67,7 @@ export interface T {
     saved: string;
     unsavedWarning: string;
     history: string;
+    historyAttended: string;
     noHistory: string;
     notifications: string;
     logout: string;
@@ -126,6 +127,7 @@ export interface T {
     copied: string;
     transferReceiver: string;
     transferPurpose: string;
+    transferCodeWarning: string;
   };
   admin: {
     title: string;

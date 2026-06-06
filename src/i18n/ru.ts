@@ -153,6 +153,7 @@ export const RU: T = {
     saved:                 'Сохранено',
     unsavedWarning:        'Сохраните изменения',
     history:               'Мои билеты',
+    historyAttended:       'Мои спектакли',
     noHistory:             'Билетов пока нет',
     notifications:         'Уведомления о новых спектаклях',
     logout:                'Выйти',
@@ -212,6 +213,7 @@ export const RU: T = {
     copied:              'Скопировано ✓',
     transferReceiver:    'Получатель',
     transferPurpose:     'Назначение платежа',
+    transferCodeWarning: 'Обязательно укажите код брони в назначении платежа. Без кода администратор не сможет связать перевод с вашей бронью.',
   },
   admin: {
     title:           'Панель администратора',

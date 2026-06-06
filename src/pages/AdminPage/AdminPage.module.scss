@@ -278,18 +278,18 @@
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
-.actionAttended {
+.actionConfirmSecondary {
   font-size: 11px;
   padding: 4px 8px;
   border-radius: 2px;
-  background: rgba(76, 175, 80, 0.1);
-  color: #2e7d32;
-  border: 1px solid rgba(76, 175, 80, 0.25);
+  background: transparent;
+  color: var(--fg-mute);
+  border: 1px solid var(--line);
   letter-spacing: 0.04em;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
 
-  &:hover:not(:disabled) { background: rgba(76, 175, 80, 0.22); }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover:not(:disabled) { background: var(--surface-2, rgba(0,0,0,0.05)); color: var(--fg); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 
 .actionCancel {

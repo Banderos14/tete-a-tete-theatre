@@ -162,6 +162,7 @@ export const FR: T = {
     saved:                 'Enregistré',
     unsavedWarning:        'Enregistrez les modifications',
     history:               'Mes billets',
+    historyAttended:       'Mes spectacles',
     noHistory:             'Aucun billet pour l\'instant',
     notifications:         'Notifications pour les nouveaux spectacles',
     logout:                'Se déconnecter',
@@ -221,6 +222,7 @@ export const FR: T = {
     copied:              'Copié ✓',
     transferReceiver:    'Bénéficiaire',
     transferPurpose:     'Libellé du paiement',
+    transferCodeWarning: 'Indiquez obligatoirement le code de réservation dans le libellé du virement. Sans ce code, l\'administrateur ne pourra pas associer le virement à votre réservation.',
   },
   admin: {
     title:           'Panneau d\'administration',

@@ -763,6 +763,17 @@
   text-align: center;
 }
 
+.transferCodeWarning {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  background: rgba(var(--accent-rgb, 201, 169, 110), 0.1);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fg-mute);
+}
+
 .closeSuccessBtn {
   align-self: flex-start;
   padding: 11px 22px;
