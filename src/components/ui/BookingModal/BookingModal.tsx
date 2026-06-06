@@ -4,7 +4,7 @@ import { useLang } from '../../../i18n/LangContext';
 import { createBooking } from '../../../services/bookingService';
 import { generateTicketCode } from '../../../services/ticketService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
-import { mapAuthError, isPopupClosedError } from '../../../utils/authErrors';
+import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
 import styles from './BookingModal.module.scss';
@@ -114,6 +114,8 @@ export function BookingModal({ show, onClose }: Props) {
       if (authTab === 'signIn') await signInWithEmail(authEmail, authPassword);
       else                      await signUpWithEmail(authEmail, authPassword, authName);
     } catch (e) {
+      // Email exists during signup → switch to login tab; authEmail is already filled
+      if (authTab === 'signUp' && isEmailInUseError(e)) setAuthTab('signIn');
       setAuthError(mapAuthError(e, t.auth.errors));
     } finally { setAuthLoading(false); }
   }
@@ -129,6 +131,15 @@ export function BookingModal({ show, onClose }: Props) {
       const userName   = user.displayName ?? userProfile?.displayName ?? '';
       const userEmail  = user.email ?? userProfile?.email ?? '';
       const showDate   = `${show.day} ${show.month} ${show.year}`;
+
+      if (import.meta.env.DEV) {
+        console.log('[BookingModal] booking recipient debug', {
+          uid:          user.uid,
+          authEmail:    user.email,
+          profileEmail: userProfile?.email,
+          bookingEmail: userEmail,
+        });
+      }
 
       await createBooking({
         showId:        show.id,

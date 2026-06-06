@@ -19,6 +19,8 @@ const THEATRE_EMAIL   = 'teteatete.theatre.nice@gmail.com';
 const THEATRE_PHONE   = '+33 6 13 67 55 95';
 const THEATRE_NAME    = 'Théâtre Tête-à-Tête';
 const THEATRE_MAPS    = 'https://maps.app.goo.gl/...'; // optional link
+const THEATRE_IBAN    = 'FR76 XXXX XXXX XXXX XXXX XXXX XXX';
+const THEATRE_BIC     = 'XXXXFRXX';
 
 // ── Data types ────────────────────────────────────────────────────────────────
 
@@ -149,7 +151,8 @@ function noteBlock(text: string): string {
 // ── Booking confirmation email ─────────────────────────────────────────────────
 
 function buildConfirmationEmail(data: BookingEmailData): { subject: string; html: string; text: string } {
-  const isRU = data.lang !== 'FR';
+  const isRU           = data.lang !== 'FR';
+  const isBankTransfer = data.paymentMethod === 'bank_transfer';
 
   const subject = isRU
     ? `${THEATRE_NAME} — бронирование принято: ${data.showTitle}`
@@ -160,12 +163,12 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
   const ticketLabel = isRU ? 'Код брони' : 'Code de réservation';
 
   const payNote = isRU
-    ? (data.paymentMethod === 'on_site'
-        ? 'Оплата — наличными в кассе театра, перед спектаклем.'
-        : 'Перевод: реквизиты театра будут направлены отдельным письмом. Сохраните этот код брони.')
-    : (data.paymentMethod === 'on_site'
-        ? 'Le paiement s\'effectue en espèces à la caisse du théâtre avant le spectacle.'
-        : 'Virement bancaire : les coordonnées vous seront envoyées séparément. Conservez ce code.');
+    ? (isBankTransfer
+        ? 'Для подтверждения бронирования переведите указанную сумму по реквизитам ниже. В назначении платежа укажите код брони.'
+        : 'Оплата — наличными в кассе театра, перед спектаклем.')
+    : (isBankTransfer
+        ? 'Pour confirmer votre réservation, veuillez effectuer le virement avec les coordonnées ci-dessous. Indiquez le code de réservation dans le libellé du paiement.'
+        : 'Le paiement s\'effectue en espèces à la caisse du théâtre avant le spectacle.');
 
   const rows: [string, string][] = isRU ? [
     ['Зритель',   data.userName],
@@ -181,13 +184,49 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
     ['Montant',    `${data.totalAmount}&nbsp;€`],
   ];
 
+  // Bank transfer details block — included in the same email, no second email needed
+  const paymentPurpose = `${data.showTitle} ${data.showDate} ${data.ticketCode}`;
+  const transferRows: [string, string][] = isRU ? [
+    ['Получатель',         THEATRE_NAME],
+    ['IBAN',               THEATRE_IBAN],
+    ['BIC',                THEATRE_BIC],
+    ['Назначение платежа', paymentPurpose],
+  ] : [
+    ['Bénéficiaire', THEATRE_NAME],
+    ['IBAN',         THEATRE_IBAN],
+    ['BIC',          THEATRE_BIC],
+    ['Libellé',      paymentPurpose],
+  ];
+
+  const transferHtml = isBankTransfer ? `
+  <div style="background:#f0ede8;border-radius:4px;padding:16px 20px;margin-top:20px;">
+    <p style="margin:0 0 10px;font-size:10px;letter-spacing:3px;text-transform:uppercase;
+              color:#999;font-family:Arial,sans-serif;">
+      ${isRU ? 'Реквизиты для перевода' : 'Coordonnées bancaires'}
+    </p>
+    ${infoTable(transferRows)}
+  </div>` : '';
+
   const bodyHtml = `
     <p style="margin:0 0 20px;font-size:15px;color:#333;">${greeting}</p>
     ${infoTable(rows)}
     ${codeBlock(data.ticketCode, ticketLabel)}
-    ${noteBlock(payNote)}`;
+    ${noteBlock(payNote)}
+    ${transferHtml}`;
 
   const html = wrapHtml(isRU ? 'ru' : 'fr', subject, headerTitle, bodyHtml);
+
+  // Plain-text version
+  const transferText = isBankTransfer
+    ? [
+        '',
+        isRU ? 'Реквизиты для перевода:' : 'Coordonnées bancaires :',
+        isRU ? `Получатель: ${THEATRE_NAME}` : `Bénéficiaire : ${THEATRE_NAME}`,
+        `IBAN: ${THEATRE_IBAN}`,
+        `BIC: ${THEATRE_BIC}`,
+        isRU ? `Назначение платежа: ${paymentPurpose}` : `Libellé : ${paymentPurpose}`,
+      ]
+    : [];
 
   const text = isRU
     ? [
@@ -203,6 +242,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
         `Код брони: ${data.ticketCode}`,
         '',
         payNote,
+        ...transferText,
         '',
         THEATRE_ADDRESS,
         `${THEATRE_EMAIL} · ${THEATRE_PHONE}`,
@@ -220,6 +260,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
         `Code : ${data.ticketCode}`,
         '',
         payNote,
+        ...transferText,
         '',
         THEATRE_ADDRESS,
         `${THEATRE_EMAIL} · ${THEATRE_PHONE}`,
@@ -330,6 +371,10 @@ async function callEndpoint(payload: { to: string; subject: string; html: string
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function sendBookingConfirmationEmail(data: BookingEmailData): Promise<void> {
+  if (!data.userEmail) {
+    console.warn('[emailService] sendBookingConfirmationEmail: no recipient email, skipping');
+    return;
+  }
   const { subject, html, text } = buildConfirmationEmail(data);
   await callEndpoint({ to: data.userEmail, subject, html, text });
 }

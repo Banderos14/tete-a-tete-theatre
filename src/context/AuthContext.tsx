@@ -56,11 +56,6 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 // ── Firestore helpers ──────────────────────────────────────────────────────────
 
-async function fetchProfile(uid: string): Promise<UserProfile | null> {
-  const snap = await getDoc(doc(db, 'users', uid));
-  return snap.exists() ? (snap.data() as UserProfile) : null;
-}
-
 // Always writes updatedAt — never exposes API key to frontend
 async function upsertProfile(uid: string, data: Partial<UserProfile> & Record<string, unknown>) {
   await setDoc(
@@ -81,6 +76,51 @@ function defaultProfile(overrides: Partial<UserProfile> = {}): UserProfile {
   };
 }
 
+// Resolves provider string from Firebase providerData
+function resolveProvider(firebaseUser: import('firebase/auth').User): UserProfile['provider'] {
+  const pid = firebaseUser.providerData[0]?.providerId;
+  return pid === 'google.com' ? 'google' : 'email';
+}
+
+/**
+ * Ensures users/{uid} document exists and is up-to-date.
+ *
+ * - Document exists   → updates lastLoginAt + backfills missing photoURL/provider.
+ *                       NEVER overwrites role, phone, displayName or any user-set field.
+ * - Document missing  → creates a fresh document with role:'user'.
+ *                       Safe for orphaned Auth accounts and first-time Google users.
+ *
+ * Returns the profile as it exists in Firestore (pre-update snapshot for existing docs).
+ */
+async function ensureUserDocument(firebaseUser: import('firebase/auth').User): Promise<UserProfile> {
+  const ref  = doc(db, 'users', firebaseUser.uid);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    const existing = snap.data() as UserProfile;
+    // Only merge safe system fields — never touch role or user-edited data
+    const updates: Record<string, unknown> = { lastLoginAt: serverTimestamp() };
+    if (!existing.photoURL && firebaseUser.photoURL) updates.photoURL  = firebaseUser.photoURL;
+    if (!existing.provider)                          updates.provider   = resolveProvider(firebaseUser);
+    await upsertProfile(firebaseUser.uid, updates);  // also writes updatedAt
+    return existing;
+  }
+
+  // Document missing — create with all required fields
+  const profile = defaultProfile({
+    displayName: firebaseUser.displayName ?? '',
+    email:       firebaseUser.email ?? '',
+    photoURL:    firebaseUser.photoURL ?? undefined,
+    provider:    resolveProvider(firebaseUser),
+  });
+  await upsertProfile(firebaseUser.uid, {
+    ...profile,
+    createdAt:   serverTimestamp(),
+    lastLoginAt: serverTimestamp(),
+  });
+  return profile;
+}
+
 // Converts Facebook birthday MM/DD/YYYY → YYYY-MM-DD
 function parseFbBirthday(fb: string): string {
   const parts = fb.split('/');
@@ -98,30 +138,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
-
       if (firebaseUser) {
-        let profile = await fetchProfile(firebaseUser.uid);
-
-        if (!profile) {
-          // Firestore document is missing — auto-recover.
-          // This handles: orphaned Auth accounts, documents deleted manually,
-          // or the brief window between createUserWithEmailAndPassword and signUpWithEmail's write.
-          profile = defaultProfile({
-            displayName: firebaseUser.displayName ?? '',
-            email:       firebaseUser.email ?? '',
-            photoURL:    firebaseUser.photoURL ?? undefined,
-          });
-          await upsertProfile(firebaseUser.uid, {
-            ...profile,
-            createdAt: serverTimestamp(),
-          });
-        }
-
+        const profile = await ensureUserDocument(firebaseUser);
         setUserProfile(profile);
       } else {
         setUserProfile(null);
       }
-
       setLoading(false);
     });
   }, []);
@@ -138,60 +160,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     // Always prompt account selection so users can switch accounts
     provider.setCustomParameters({ prompt: 'select_account' });
-
     const result  = await signInWithPopup(auth, provider);
-    const u       = result.user;
-    const existing = await fetchProfile(u.uid);
-
-    if (!existing) {
-      // New Google user — create full profile
-      const profile = defaultProfile({
-        displayName: u.displayName ?? '',
-        email:       u.email ?? '',
-        photoURL:    u.photoURL ?? undefined,
-        provider:    'google',
-      });
-      await upsertProfile(u.uid, { ...profile, createdAt: serverTimestamp() });
-      setUserProfile(profile);
-    } else {
-      // Returning user — merge any updated Google fields without overwriting custom data
-      const updates: Partial<UserProfile> & Record<string, unknown> = {};
-      if (u.photoURL && !existing.photoURL) updates.photoURL = u.photoURL;
-      if (!existing.provider)               updates.provider  = 'google';
-
-      if (Object.keys(updates).length > 0) {
-        await upsertProfile(u.uid, updates);
-        setUserProfile({ ...existing, ...updates });
-      } else {
-        setUserProfile(existing);
-      }
-    }
+    const profile = await ensureUserDocument(result.user);
+    setUserProfile(profile);
   }
 
   // ── Email sign-in ──────────────────────────────────────────────────────────
   async function signInWithEmail(email: string, password: string) {
     const result  = await signInWithEmailAndPassword(auth, email, password);
-    const profile = await fetchProfile(result.user.uid);
-    if (profile) {
-      setUserProfile(profile);
-    } else {
-      // Firestore document missing for existing Auth user — auto-create
-      const fresh = defaultProfile({
-        email,
-        displayName: result.user.displayName ?? '',
-        provider:    'email',
-      });
-      await upsertProfile(result.user.uid, { ...fresh, createdAt: serverTimestamp() });
-      setUserProfile(fresh);
-    }
+    const profile = await ensureUserDocument(result.user);
+    setUserProfile(profile);
   }
 
   // ── Email sign-up ──────────────────────────────────────────────────────────
+  // Explicit write here (not ensureUserDocument) to guarantee the correct
+  // displayName from the form field lands in Firestore before onAuthStateChanged
+  // fires and potentially reads a still-null displayName from Auth.
   async function signUpWithEmail(email: string, password: string, name: string) {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await firebaseUpdateProfile(result.user, { displayName: name });
     const profile = defaultProfile({ displayName: name, email, provider: 'email' });
-    await upsertProfile(result.user.uid, { ...profile, createdAt: serverTimestamp() });
+    await upsertProfile(result.user.uid, {
+      ...profile,
+      createdAt:   serverTimestamp(),
+      lastLoginAt: serverTimestamp(),
+    });
     setUserProfile(profile);
   }
 
