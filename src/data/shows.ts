@@ -16,8 +16,8 @@ export const SHOWS: Show[] = [
     href: 'https://constellation.events/event/volsebnyi-sekret-kolobka',
     palette: 'var(--ph-1)',
     glyph: '✦',
-    image: showImage('kolobok.jpg'),
-    photos: [showImage('kolobok.jpg'), showImage('shutka.jpg'), showImage('kolobok.jpg')],
+    image: showImage('kolobok.webp'),
+    photos: [showImage('kolobok.webp'), showImage('shutka.webp'), showImage('kolobok.webp')],
     totalSeats: 100,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 15, available: 40 },
@@ -36,7 +36,7 @@ export const SHOWS: Show[] = [
     href: 'https://constellation.events/event/i-v-sutku-i-vserez-12-copy',
     palette: 'var(--ph-2)',
     glyph: '❦',
-    image: showImage('shutka.jpg'),
+    image: showImage('shutka.webp'),
     totalSeats: 100,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 15, available: 38 },
@@ -56,7 +56,7 @@ export const SHOWS: Show[] = [
     href: 'https://constellation.events/event/graf-nulin-12',
     palette: 'var(--ph-1)',
     glyph: '❧',
-    image: showImage('nulin.jpg'),
+    image: showImage('nulin.webp'),
     totalSeats: 100,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 30, available: 45 },

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { LangContext } from './i18n/LangContext';
 import { translations } from './i18n/translations';
@@ -17,15 +17,16 @@ import { Repertoire }    from './components/Repertoire';
 import { Team }          from './components/Team';
 import { Contacts }      from './components/Contacts';
 import { Footer }        from './components/Footer';
-import { AuthModal }     from './components/ui/AuthModal';
-import { ProfileDrawer } from './components/ui/ProfileDrawer';
-import { BookingModal }  from './components/ui/BookingModal';
-import { AdminPage }     from './pages/AdminPage';
+const AdminPage     = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const AuthModal     = lazy(() => import('./components/ui/AuthModal').then(m => ({ default: m.AuthModal })));
+const ProfileDrawer = lazy(() => import('./components/ui/ProfileDrawer').then(m => ({ default: m.ProfileDrawer })));
+const BookingModal  = lazy(() => import('./components/ui/BookingModal').then(m => ({ default: m.BookingModal })));
 
 type Theme = 'dark' | 'light';
 type IntroState = 'closed' | 'opening' | 'done';
 
-const INTRO_SPEED = 2.2;
+const IS_MOBILE = typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches;
+const INTRO_SPEED = IS_MOBILE ? 0 : 2.2;
 
 // ── Landing page ───
 
@@ -71,7 +72,7 @@ function LandingPage({
 export default function App() {
   const [theme,       setTheme]       = useState<Theme>('dark');
   const [lang,        setLang]        = useState<Lang>('RU');
-  const [introState,  setIntroState]  = useState<IntroState>('closed');
+  const [introState,  setIntroState]  = useState<IntroState>(IS_MOBILE ? 'done' : 'closed');
   const [authOpen,    setAuthOpen]    = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [bookingShow, setBookingShow] = useState<Show | null>(null);
@@ -81,6 +82,10 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    if (IS_MOBILE) {
+      window.dispatchEvent(new CustomEvent('theatre:intro-done'));
+      return;
+    }
     document.body.style.overflow = 'hidden';
     const t1 = setTimeout(() => setIntroState('opening'), 500);
     const t2 = setTimeout(() => {
@@ -130,13 +135,19 @@ export default function App() {
               />
             }
           />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin" element={<Suspense fallback={null}><AdminPage /></Suspense>} />
         </Routes>
 
-        {/* Global modals — rendered outside Routes so they persist across navigation */}
-        <AuthModal     open={authOpen}      onClose={() => setAuthOpen(false)} />
-        <ProfileDrawer open={profileOpen}   onClose={() => setProfileOpen(false)} />
-        <BookingModal  show={bookingShow}   onClose={() => setBookingShow(null)} />
+        {/* Global modals — lazy-loaded, rendered outside Routes so they persist across navigation */}
+        <Suspense fallback={null}>
+          <AuthModal     open={authOpen}      onClose={() => setAuthOpen(false)} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <ProfileDrawer open={profileOpen}   onClose={() => setProfileOpen(false)} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <BookingModal  show={bookingShow}   onClose={() => setBookingShow(null)} />
+        </Suspense>
 
       </LangContext.Provider>
     </AuthProvider>

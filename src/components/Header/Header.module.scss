@@ -1,5 +1,6 @@
 @use '../../styles/mixins';
 
+// ── Fixed header ───────────────────────────────────────────────────────────────
 .header {
   position: fixed;
   top: 0;
@@ -34,6 +35,7 @@
   }
 }
 
+// ── Desktop nav ────────────────────────────────────────────────────────────────
 .nav {
   display: flex;
   gap: 32px;
@@ -76,6 +78,7 @@
   gap: 12px;
 }
 
+// ── Logo ───────────────────────────────────────────────────────────────────────
 .logo {
   justify-self: center;
   display: flex;
@@ -92,6 +95,17 @@
   }
 }
 
+// ── Desktop visibility helpers ─────────────────────────────────────────────────
+.desktopOnly {
+  @include mixins.mobile { display: none !important; }
+}
+
+.mobileOnly {
+  display: none !important;
+  @include mixins.mobile { display: grid !important; }
+}
+
+// ── Lang switch ────────────────────────────────────────────────────────────────
 .langSwitch {
   display: flex;
   font-family: var(--font-mono);
@@ -115,6 +129,7 @@
   color: var(--fg) !important;
 }
 
+// ── Theme toggle ───────────────────────────────────────────────────────────────
 .themeToggle {
   width: 32px;
   height: 32px;
@@ -131,6 +146,7 @@
   @include mixins.mobile { display: none; }
 }
 
+// ── Sign in btn ────────────────────────────────────────────────────────────────
 .signInBtn {
   font-size: 11px;
   letter-spacing: 0.1em;
@@ -148,6 +164,7 @@
   }
 }
 
+// ── Avatar btn ─────────────────────────────────────────────────────────────────
 .avatarBtn {
   width: 32px;
   height: 32px;
@@ -174,5 +191,262 @@
     font-weight: 600;
     color: var(--fg);
     letter-spacing: 0.03em;
+  }
+}
+
+// ── Burger button ──────────────────────────────────────────────────────────────
+.burgerBtn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+
+  @include mixins.mobile { display: flex; }
+
+  span {
+    display: block;
+    height: 1.5px;
+    background: var(--fg-dim);
+    border-radius: 1px;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.2s ease,
+                width 0.3s ease;
+
+    &:nth-child(1) { width: 22px; }
+    &:nth-child(2) { width: 16px; }
+    &:nth-child(3) { width: 22px; }
+  }
+
+  &[data-open='true'] {
+    span {
+      &:nth-child(1) {
+        transform: translateY(6.5px) rotate(45deg);
+        width: 22px;
+      }
+      &:nth-child(2) {
+        opacity: 0;
+        width: 0;
+      }
+      &:nth-child(3) {
+        transform: translateY(-6.5px) rotate(-45deg);
+        width: 22px;
+      }
+    }
+  }
+}
+
+// ── Mobile menu overlay (backdrop) ────────────────────────────────────────────
+.menuOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 198;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+
+  @include mixins.mobile { display: block; }
+
+  &.menuOverlayOpen {
+    opacity: 1;
+    pointer-events: all;
+  }
+}
+
+// ── Mobile menu drawer ─────────────────────────────────────────────────────────
+.mobileMenu {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(340px, 88vw);
+  background: var(--bg-2);
+  border-left: 1px solid var(--line-strong);
+  z-index: 199;
+  transform: translateX(100%);
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  @include mixins.mobile { display: flex; }
+
+  &.mobileMenuOpen {
+    transform: translateX(0);
+  }
+}
+
+// ── Menu top: logo + close ─────────────────────────────────────────────────────
+.menuTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.menuLogo {
+  height: 40px;
+  filter: invert(1);
+
+  [data-theme='light'] & { filter: none; }
+}
+
+.menuClose {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-mute);
+  transition: color 0.2s ease;
+  flex-shrink: 0;
+
+  &:hover { color: var(--fg); }
+
+  svg { width: 20px; height: 20px; }
+}
+
+// ── Mobile nav list ────────────────────────────────────────────────────────────
+.mobileNav {
+  list-style: none;
+  flex: 1;
+  padding: 12px 0;
+
+  li {
+    border-bottom: 1px solid var(--line);
+
+    &:first-child { border-top: none; }
+    &:last-child { border-bottom: none; }
+  }
+
+  a, button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 18px 24px;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: var(--fg-dim);
+    text-align: left;
+    text-transform: none;
+    transition: color 0.2s ease, padding-left 0.2s ease;
+
+    &:hover, &:active {
+      color: var(--fg);
+      padding-left: 30px;
+    }
+
+    &:active { color: var(--accent); }
+  }
+}
+
+// ── Controls: lang + theme ─────────────────────────────────────────────────────
+.menuControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.menuLangSwitch {
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  overflow: hidden;
+
+  button {
+    padding: 8px 14px;
+    color: var(--fg-mute);
+    transition: all 0.2s ease;
+
+    &:hover:not(.active) { color: var(--fg); }
+  }
+}
+
+.menuThemeToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 8px 14px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    color: var(--fg);
+    border-color: var(--fg-mute);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+}
+
+// ── Auth area ──────────────────────────────────────────────────────────────────
+.menuAuth {
+  padding: 16px 24px 32px;
+  flex-shrink: 0;
+}
+
+.menuAuthBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 6px;
+  transition: opacity 0.2s ease;
+  min-height: 48px;
+
+  &:hover { opacity: 0.88; }
+}
+
+.menuAuthAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 }

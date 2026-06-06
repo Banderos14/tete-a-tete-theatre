@@ -86,9 +86,17 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   @include mixins.mobile {
     grid-template-columns: 1fr;
     gap: 16px;
-    margin-bottom: 48px;
+    margin: 56px auto 48px;
 
     .meta { text-align: left; }
+
+    h2 { font-size: clamp(40px, 10vw, 108px); }
+  }
+
+  @include mixins.small {
+    margin: 44px auto 36px;
+
+    h2 { font-size: clamp(36px, 9.5vw, 108px); }
   }
 }
 
@@ -99,6 +107,7 @@ section {
   border-top: 1px solid var(--line);
 
   @include mixins.mobile { padding: 0 20px 80px; }
+  @include mixins.small  { padding: 0 16px 64px; }
 }
 
 // ── Grain overlay ──────────────────────────────────────────────────────────────
@@ -118,6 +127,7 @@ section {
   align-items: center;
   gap: 10px;
   padding: 14px 24px;
+  min-height: 48px; // touch target — minimum 48px for mobile
   font-family: var(--font-body);
   font-size: 13px;
   letter-spacing: 0.12em;
