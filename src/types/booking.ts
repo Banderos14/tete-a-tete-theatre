@@ -1,6 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export type BookingStatus  = 'confirmed' | 'cancelled';
+export type BookingStatus  = 'pending' | 'confirmed' | 'cancelled' | 'attended';
 export type PaymentMethod  = 'on_site' | 'bank_transfer';
 export type PaymentStatus  = 'not_paid' | 'paid' | 'awaiting_transfer';
 export type TicketTypeId   = 'standard' | 'student';
@@ -19,11 +19,13 @@ export interface Booking {
   ticketType:    TicketTypeId;
   priceInfo:     string;
   totalAmount:   number;
+  ticketCode:    string;
   status:        BookingStatus;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   comment:       string;
   createdAt:     Timestamp;
+  updatedAt?:    Timestamp;
 }
 
-export type NewBooking = Omit<Booking, 'id' | 'createdAt'>;
+export type NewBooking = Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>;

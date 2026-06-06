@@ -32,6 +32,12 @@ export interface T {
       weakPassword: string;
       userNotFound: string;
       tooManyRequests: string;
+      popupBlocked: string;
+      popupClosed: string;
+      unauthorizedDomain: string;
+      accountExistsDifferentCredential: string;
+      operationNotAllowed: string;
+      networkError: string;
       generic: string;
     };
   };
@@ -66,6 +72,17 @@ export interface T {
     logout: string;
     required: string;
     incomplete: (n: number) => string;
+    visitCount: (n: number) => string;
+    bonusProgress: (remaining: number) => string;
+    bonusComplete: string;
+    ticketCode: string;
+    statusPending: string;
+    statusConfirmed: string;
+    statusCancelled: string;
+    statusAttended: string;
+    payStatusNotPaid: string;
+    payStatusPaid: string;
+    payStatusAwaiting: string;
   };
   booking: {
     title: string;
@@ -122,12 +139,21 @@ export interface T {
     comment: string;
     statusConfirmed: string;
     statusCancelled: string;
+    statusPending: string;
+    statusAttended: string;
     payOnSite: string;
     payTransfer: string;
     backToSite: string;
     filterAll: string;
     markConfirmed: string;
     markCancelled: string;
+    markAttended: string;
+    bookingsTab: string;
+    usersTab: string;
+    usersCount: string;
+    userCreatedAt: string;
+    noUsers: string;
+    filterByStatus: string;
   };
   nav: {
     afisha: string;
@@ -338,13 +364,19 @@ export const translations: Record<Lang, T> = {
       register:        'Зарегистрироваться',
       resetSent:       'Ссылка для сброса пароля отправлена на почту',
       errors: {
-        invalidEmail:     'Неверный формат email',
-        wrongPassword:    'Неверный пароль',
-        emailInUse:       'Этот email уже используется',
-        weakPassword:     'Пароль должен содержать минимум 6 символов',
-        userNotFound:     'Пользователь с таким email не найден',
-        tooManyRequests:  'Слишком много попыток — попробуйте позже',
-        generic:          'Произошла ошибка, попробуйте снова',
+        invalidEmail:                     'Неверный формат email',
+        wrongPassword:                    'Неверный пароль',
+        emailInUse:                       'Этот email уже зарегистрирован. Попробуйте войти.',
+        weakPassword:                     'Пароль должен содержать минимум 6 символов',
+        userNotFound:                     'Пользователь с таким email не найден',
+        tooManyRequests:                  'Слишком много попыток — попробуйте позже',
+        popupBlocked:                     'Браузер заблокировал окно Google. Разрешите всплывающие окна и попробуйте снова.',
+        popupClosed:                      'Вход через Google был отменён.',
+        unauthorizedDomain:               'Этот домен не авторизован в Firebase. Обратитесь к администратору.',
+        accountExistsDifferentCredential: 'Аккаунт с этим email уже существует через другой способ входа. Попробуйте войти через email.',
+        operationNotAllowed:              'Этот способ входа не включён в настройках Firebase.',
+        networkError:                     'Ошибка сети. Проверьте интернет-соединение.',
+        generic:                          'Произошла ошибка, попробуйте снова',
       },
     },
     profile: {
@@ -378,6 +410,17 @@ export const translations: Record<Lang, T> = {
       logout:                'Выйти',
       required:              'Обязательное поле',
       incomplete:            (n) => `Заполните профиль — осталось ${n} ${n === 1 ? 'поле' : 'поля'}`,
+      visitCount:            (n) => n === 0 ? 'Вы ещё не посетили ни одного спектакля' : `Вы посетили ${n} ${n === 1 ? 'спектакль' : n < 5 ? 'спектакля' : 'спектаклей'}`,
+      bonusProgress:         (r) => `До подарка осталось ${r} ${r === 1 ? 'посещение' : r < 5 ? 'посещения' : 'посещений'}`,
+      bonusComplete:         '🎁 Вы получаете подарок на следующий спектакль!',
+      ticketCode:            'Код брони',
+      statusPending:         'Ожидает подтверждения',
+      statusConfirmed:       'Подтверждено',
+      statusCancelled:       'Отменено',
+      statusAttended:        'Посещено',
+      payStatusNotPaid:      'Не оплачено',
+      payStatusPaid:         'Оплачено',
+      payStatusAwaiting:     'Ожидает перевода',
     },
     booking: {
       title:               'Бронирование',
@@ -434,12 +477,21 @@ export const translations: Record<Lang, T> = {
       comment:         'Комментарий',
       statusConfirmed: 'Подтверждено',
       statusCancelled: 'Отменено',
+      statusPending:   'Ожидает',
+      statusAttended:  'Посещено',
       payOnSite:       'На месте',
       payTransfer:     'Перевод',
       backToSite:      '← На сайт',
       filterAll:       'Все спектакли',
       markConfirmed:   'Подтвердить',
       markCancelled:   'Отменить',
+      markAttended:    'Посещение',
+      bookingsTab:     'Бронирования',
+      usersTab:        'Зрители',
+      usersCount:      'зрителей',
+      userCreatedAt:   'Дата регистрации',
+      noUsers:         'Зрителей пока нет',
+      filterByStatus:  'Статус:',
     },
     showModal: {
       labelDate:     'Дата',
@@ -584,13 +636,19 @@ export const translations: Record<Lang, T> = {
       register:        "S'inscrire",
       resetSent:       'Un lien de réinitialisation a été envoyé à votre e-mail',
       errors: {
-        invalidEmail:    'Format d\'e-mail invalide',
-        wrongPassword:   'Mot de passe incorrect',
-        emailInUse:      'Cet e-mail est déjà utilisé',
-        weakPassword:    'Le mot de passe doit contenir au moins 6 caractères',
-        userNotFound:    'Aucun compte trouvé pour cet e-mail',
-        tooManyRequests: 'Trop de tentatives — réessayez plus tard',
-        generic:         'Une erreur est survenue, veuillez réessayer',
+        invalidEmail:                     'Format d\'e-mail invalide',
+        wrongPassword:                    'Mot de passe incorrect',
+        emailInUse:                       'Cet e-mail est déjà utilisé. Essayez de vous connecter.',
+        weakPassword:                     'Le mot de passe doit contenir au moins 6 caractères',
+        userNotFound:                     'Aucun compte trouvé pour cet e-mail',
+        tooManyRequests:                  'Trop de tentatives — réessayez plus tard',
+        popupBlocked:                     'Le navigateur a bloqué la fenêtre Google. Autorisez les fenêtres contextuelles et réessayez.',
+        popupClosed:                      'La connexion Google a été annulée.',
+        unauthorizedDomain:               'Ce domaine n\'est pas autorisé dans Firebase. Contactez l\'administrateur.',
+        accountExistsDifferentCredential: 'Un compte existe déjà avec cet e-mail via une autre méthode. Essayez la connexion par e-mail.',
+        operationNotAllowed:              'Cette méthode de connexion n\'est pas activée dans Firebase.',
+        networkError:                     'Erreur réseau. Vérifiez votre connexion internet.',
+        generic:                          'Une erreur est survenue, veuillez réessayer',
       },
     },
     profile: {
@@ -624,6 +682,17 @@ export const translations: Record<Lang, T> = {
       logout:                'Se déconnecter',
       required:              'Champ obligatoire',
       incomplete:            (n) => `Complétez votre profil — encore ${n} champ${n > 1 ? 's' : ''}`,
+      visitCount:            (n) => n === 0 ? 'Vous n\'avez encore assisté à aucun spectacle' : `Vous avez assisté à ${n} spectacle${n > 1 ? 's' : ''}`,
+      bonusProgress:         (r) => `Encore ${r} visite${r > 1 ? 's' : ''} avant un cadeau`,
+      bonusComplete:         '🎁 Vous recevez un cadeau pour le prochain spectacle !',
+      ticketCode:            'Code de réservation',
+      statusPending:         'En attente',
+      statusConfirmed:       'Confirmé',
+      statusCancelled:       'Annulé',
+      statusAttended:        'Présent',
+      payStatusNotPaid:      'Non payé',
+      payStatusPaid:         'Payé',
+      payStatusAwaiting:     'En attente de virement',
     },
     booking: {
       title:               'Réservation',
@@ -680,12 +749,21 @@ export const translations: Record<Lang, T> = {
       comment:         'Commentaire',
       statusConfirmed: 'Confirmé',
       statusCancelled: 'Annulé',
+      statusPending:   'En attente',
+      statusAttended:  'Présent',
       payOnSite:       'Sur place',
       payTransfer:     'Virement',
       backToSite:      '← Retour au site',
       filterAll:       'Tous les spectacles',
       markConfirmed:   'Confirmer',
       markCancelled:   'Annuler',
+      markAttended:    'Présent',
+      bookingsTab:     'Réservations',
+      usersTab:        'Spectateurs',
+      usersCount:      'spectateurs',
+      userCreatedAt:   'Date d\'inscription',
+      noUsers:         'Aucun spectateur pour l\'instant',
+      filterByStatus:  'Statut :',
     },
     showModal: {
       labelDate:     'Date',

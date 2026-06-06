@@ -1,0 +1,61 @@
+// Firestore Security Rules — Théâtre Tête-à-Tête
+//
+// Deploy via Firebase CLI:
+//   firebase deploy --only firestore:rules
+//
+// Or paste into Firebase Console → Firestore → Rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ── Users collection ─────────────────────────────────────────────────────
+    // users/{uid} — profile document, owned by the user
+
+    match /users/{uid} {
+      // User can read and write their own profile
+      allow read, write: if isOwner(uid);
+
+      // Admin can read all user profiles (for the users tab)
+      allow read: if isAdmin();
+    }
+
+    // ── Bookings collection ──────────────────────────────────────────────────
+    // bookings/{bookingId}
+
+    match /bookings/{bookingId} {
+
+      // Any authenticated user can create a booking,
+      // but only with their own userId in the document.
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      // User can read their own bookings.
+      allow read: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      // User cannot update or delete their own bookings
+      // (status changes are admin-only).
+      allow update, delete: if false;
+
+      // Admin can read, update, and delete any booking.
+      allow read, update, delete: if isAdmin();
+    }
+
+  }
+}

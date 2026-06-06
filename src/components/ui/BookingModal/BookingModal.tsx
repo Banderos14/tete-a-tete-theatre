@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
-import { FirebaseError } from 'firebase/app';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { createBooking } from '../../../services/bookingService';
+import { generateTicketCode } from '../../../services/ticketService';
+import { sendBookingConfirmationEmail } from '../../../services/emailService';
+import { mapAuthError, isPopupClosedError } from '../../../utils/authErrors';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
 import styles from './BookingModal.module.scss';
@@ -35,19 +37,6 @@ function formatPhone(raw: string): string {
 }
 
 type Step = 'auth' | 'form' | 'success';
-
-function mapFirebaseError(code: string, errors: Record<string, string>): string {
-  const map: Record<string, string> = {
-    'auth/invalid-email':        errors.invalidEmail,
-    'auth/wrong-password':       errors.wrongPassword,
-    'auth/invalid-credential':   errors.wrongPassword,
-    'auth/email-already-in-use': errors.emailInUse,
-    'auth/weak-password':        errors.weakPassword,
-    'auth/user-not-found':       errors.userNotFound,
-    'auth/too-many-requests':    errors.tooManyRequests,
-  };
-  return map[code] ?? errors.generic;
-}
 
 export function BookingModal({ show, onClose }: Props) {
   const { lang, t } = useLang();
@@ -114,8 +103,8 @@ export function BookingModal({ show, onClose }: Props) {
     setAuthLoading(true); setAuthError('');
     try { await signInWithGoogle(); }
     catch (e) {
-      if (e instanceof FirebaseError) setAuthError(mapFirebaseError(e.code, t.auth.errors));
-      else setAuthError(t.auth.errors.generic);
+      if (isPopupClosedError(e)) { setAuthLoading(false); return; }
+      setAuthError(mapAuthError(e, t.auth.errors));
     } finally { setAuthLoading(false); }
   }
 
@@ -125,8 +114,7 @@ export function BookingModal({ show, onClose }: Props) {
       if (authTab === 'signIn') await signInWithEmail(authEmail, authPassword);
       else                      await signUpWithEmail(authEmail, authPassword, authName);
     } catch (e) {
-      if (e instanceof FirebaseError) setAuthError(mapFirebaseError(e.code, t.auth.errors));
-      else setAuthError(t.auth.errors.generic);
+      setAuthError(mapAuthError(e, t.auth.errors));
     } finally { setAuthLoading(false); }
   }
 
@@ -137,24 +125,46 @@ export function BookingModal({ show, onClose }: Props) {
     if (!user || !activeTicket || !show) return;
     setSubmitLoading(true); setSubmitError('');
     try {
+      const ticketCode = generateTicketCode();
+      const userName   = user.displayName ?? userProfile?.displayName ?? '';
+      const userEmail  = user.email ?? userProfile?.email ?? '';
+      const showDate   = `${show.day} ${show.month} ${show.year}`;
+
       await createBooking({
         showId:        show.id,
         showTitle:     show.title,
-        showDate:      `${show.day} ${show.month} ${show.year}`,
+        showDate,
         showTime:      show.time,
         userId:        user.uid,
-        userName:      user.displayName ?? userProfile?.displayName ?? '',
-        userEmail:     user.email ?? userProfile?.email ?? '',
+        userName,
+        userEmail,
         userPhone:     phone,
         ticketsCount:  tickets,
         ticketType:    activeTicket.id,
         priceInfo:     `${activeTicket.label} · ${activeTicket.price}€ × ${tickets} = ${totalAmount}€`,
         totalAmount,
-        status:        'confirmed',
+        ticketCode,
+        status:        'pending',
         paymentMethod: payment,
         paymentStatus: payment === 'bank_transfer' ? 'awaiting_transfer' : 'not_paid',
         comment,
       });
+
+      // Non-blocking — booking is already saved if email fails
+      sendBookingConfirmationEmail({
+        userEmail,
+        userName,
+        showTitle:    show.title,
+        showDate,
+        showTime:     show.time,
+        ticketsCount: tickets,
+        ticketType:   activeTicket.id,
+        totalAmount,
+        ticketCode,
+        paymentMethod: payment,
+        lang,
+      }).catch(() => {/* silently ignored */});
+
       setStep('success');
     } catch {
       setSubmitError(t.booking.submitError);

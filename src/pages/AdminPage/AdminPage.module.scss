@@ -198,6 +198,7 @@
 }
 
 .rowCancelled td { opacity: 0.5; }
+.rowAttended  td { background: rgba(76, 175, 80, 0.04); }
 
 .cellName { color: var(--fg); font-weight: 500; }
 .cellShow { font-size: 11px; color: var(--fg-mute); margin-top: 2px; }
@@ -242,6 +243,21 @@
   color: var(--accent-glow);
 }
 
+.statusPending {
+  background: rgba(255, 160, 0, 0.12);
+  color: #e08a00;
+}
+
+.statusAttended {
+  background: rgba(76, 175, 80, 0.15);
+  color: #2e7d32;
+}
+
+.badgeAdmin {
+  background: rgba(156, 39, 176, 0.12);
+  color: #7b1fa2;
+}
+
 .actions {
   display: flex;
   gap: 6px;
@@ -258,6 +274,20 @@
   transition: background 0.2s;
 
   &:hover:not(:disabled) { background: rgba(76, 175, 80, 0.25); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.actionAttended {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 2px;
+  background: rgba(76, 175, 80, 0.1);
+  color: #2e7d32;
+  border: 1px solid rgba(76, 175, 80, 0.25);
+  letter-spacing: 0.04em;
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) { background: rgba(76, 175, 80, 0.22); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
@@ -309,6 +339,86 @@
   background: rgba(76, 175, 80, 0.12);
   color: #4caf50;
   border-color: rgba(76, 175, 80, 0.3);
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tabBtn {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--fg-mute);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+
+  &:hover { color: var(--fg); }
+}
+
+.tabActive {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
+
+// ── Filter row ────────────────────────────────────────────────────────────────
+
+.filtersRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filterLabel {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+}
+
+.statusFilterBtn {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  color: var(--fg-mute);
+  background: transparent;
+  transition: all 0.15s;
+
+  &:hover { color: var(--fg); border-color: var(--fg-mute); }
+}
+
+.statusFilterActive {
+  color: var(--fg);
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb, 201, 169, 110), 0.08);
+}
+
+.clearFilter {
+  font-size: 14px;
+  color: var(--fg-mute);
+  line-height: 1;
+
+  &:hover { color: var(--fg); }
 }
 
 // ── States ───────────────────────────────────────────────────────────────────
