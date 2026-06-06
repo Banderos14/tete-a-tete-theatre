@@ -1,7 +1,35 @@
+import { lazy, Suspense } from 'react';
 import { LINKS, ADDRESS } from '../../constants/links';
 import { useLang } from '../../i18n/LangContext';
 import styles from './Contacts.module.scss';
-import { LeafletMap } from './LeafletMap';
+
+// Leaflet is split into a separate bundle — loads asynchronously, not blocking main thread
+const LeafletMap = lazy(() =>
+  import('./LeafletMap').then(m => ({ default: m.LeafletMap }))
+);
+
+function MapFallback() {
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        minHeight: 320,
+        background: 'var(--bg-3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--fg-mute)',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 11,
+        letterSpacing: '0.18em',
+        textTransform: 'uppercase',
+      }}
+    >
+      Загрузка карты…
+    </div>
+  );
+}
 
 export function Contacts() {
   const { t } = useLang();
@@ -84,7 +112,9 @@ export function Contacts() {
         {/* ── Map column ── */}
         <div className={`${styles.mapWrapper} reveal`}>
           <div className={styles.mapFrame}>
-            <LeafletMap />
+            <Suspense fallback={<MapFallback />}>
+              <LeafletMap />
+            </Suspense>
           </div>
           <div className={styles.mapOverlay}>
             <div className={styles.mapAddr}>{t.contacts.mapAddr}</div>

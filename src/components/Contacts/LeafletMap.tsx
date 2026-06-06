@@ -6,9 +6,9 @@ import styles from './LeafletMap.module.scss';
 const LNG = 7.2607;
 const LAT = 43.7006;
 
-const TILE_URL = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png';
+const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ATTRIBUTION =
-  '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>';
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
 
 export function LeafletMap() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -26,7 +26,7 @@ export function LeafletMap() {
 
     L.tileLayer(TILE_URL, {
       attribution: ATTRIBUTION,
-      maxZoom: 20,
+      maxZoom: 19,
     }).addTo(map);
 
     const markerIcon = L.divIcon({

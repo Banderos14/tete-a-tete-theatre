@@ -50,9 +50,12 @@ export function AdminPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!isAdmin) return;
+    if (!isAdmin) {
+      const timer = setTimeout(() => navigate('/'), 1500);
+      return () => clearTimeout(timer);
+    }
     fetchAll();
-  }, [loading, isAdmin]);
+  }, [loading, isAdmin, navigate]);
 
   async function fetchAll() {
     setFetching(true);

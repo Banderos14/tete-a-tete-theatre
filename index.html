@@ -2,30 +2,37 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/assets/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="ТЕТ-А-ТЕТ — независимый русскоязычный театр в Ницце. Спектакли, афиша, репертуар." />
+
+    <!-- OpenGraph / Social sharing -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:locale"      content="ru_RU" />
+    <meta property="og:site_name"   content="Театр ТЕТ-А-ТЕТ" />
+    <meta property="og:title"       content="ТЕТ-А-ТЕТ · Русскоязычный театр в Ницце" />
+    <meta property="og:description" content="Независимый русскоязычный театр в Ницце. Спектакли, афиша, репертуар." />
+    <meta property="og:url"         content="https://tete-a-tete-theatre.vercel.app/" />
+    <meta property="og:image"       content="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="ТЕТ-А-ТЕТ · Русскоязычный театр в Ницце" />
+    <meta name="twitter:description" content="Независимый русскоязычный театр в Ницце. Спектакли, афиша, репертуар." />
+    <meta name="twitter:image"       content="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" />
+
     <title>ТЕТ-А-ТЕТ · Русскоязычный театр в Ницце</title>
-    <!-- Google Fonts -->
-    
-    <!--Bad Russian-->
-    <link href="https://db.onlinewebfonts.com/c/cf313f40df6c8f4aca1b34d756e4f272?family=Bad+Russian" rel="stylesheet">
-    <link rel="icon" type="image/png" href="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG">
-  
-    <!--Pinyon Script-->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
 
-    <!--Forum-->
-    <link href="https://fonts.googleapis.com/css2?family=Forum&display=swap" rel="stylesheet">
+    <!-- Preconnect — only for CDN fonts still loaded externally -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!--Great Vibes-->
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
-
-    <!--Dela Gothic One-->
-    <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
- 
+    <!-- Dela Gothic One: only this font remains on Google CDN (it's 1.1MB — too large to self-host without subsetting) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Bad Russian and Forum are now self-hosted — see /public/fonts/ and variables.scss -->
   </head>
   <body>
     <div id="root"></div>

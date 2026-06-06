@@ -19,7 +19,7 @@
 
 .hero {
   position: relative;
-  min-height: 100vh;
+  min-height: 100svh;
   display: grid;
   grid-template-rows: 1fr auto;
   justify-items: center;
@@ -28,6 +28,18 @@
   padding: 120px 40px 0;
   overflow: hidden;
   border-top: none !important;
+
+  @include mixins.mobile {
+    padding: 96px 24px 0;
+    // Static background for mobile — canvas is disabled
+    background:
+      radial-gradient(ellipse 80% 45% at 50% 0%, rgba(184, 0, 0, 0.11) 0%, transparent 60%),
+      #0a0908;
+  }
+
+  @include mixins.small {
+    padding: 84px 16px 0;
+  }
 }
 
 .canvas {
@@ -36,6 +48,8 @@
   width: 100%;
   height: 100%;
   z-index: 1;
+
+  @include mixins.mobile { display: none; }
 }
 
 .rigBar {
@@ -92,11 +106,24 @@
 .eyebrow {
   font-family: var(--font-display);
   letter-spacing: clamp(0.1em, 1.6vw, 0.5em);
-  // letter-spacing: 1.15em;
   display: inline-flex;
   align-items: center;
   gap: 14px;
   margin-bottom: 36px;
+
+  @include mixins.mobile {
+    letter-spacing: 0.07em;
+    font-size: 11px;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  @include mixins.small {
+    letter-spacing: 0.04em;
+    font-size: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 
 .dot {
@@ -106,6 +133,7 @@
   border-radius: 50%;
   box-shadow: 0 0 12px var(--accent-glow);
   animation: pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 .headline {
@@ -129,6 +157,16 @@
   text-transform: uppercase;
   font-weight: 200;
   line-height: 1;
+
+  @include mixins.mobile {
+    font-size: clamp(50px, 13vw, 200px);
+    gap: clamp(8px, 4vw, 60px);
+  }
+
+  @include mixins.small {
+    font-size: clamp(42px, 11.5vw, 200px);
+    gap: clamp(6px, 3vw, 40px);
+  }
 }
 
 .accentGroup {
@@ -160,6 +198,16 @@
   line-height: 0.85;
   margin-top: 50px;
   text-shadow: 0 0 40px rgba(204, 0, 0, 0.45);
+
+  @include mixins.mobile {
+    font-size: clamp(32px, 5.4vw, 84px);
+    margin-top: 36px;
+  }
+
+  @include mixins.small {
+    font-size: clamp(28px, 5vw, 84px);
+    margin-top: 28px;
+  }
 }
 
 .sub {
@@ -172,11 +220,18 @@
   min-width: 0;
   font-family: var(--font-display);
   letter-spacing: var(--font-display-spacing);
-  // font-style: italic;
   font-size: clamp(22px, 2.6vw, 34px);
   color: var(--fg-dim);
   font-weight: normal;
   white-space: nowrap;
+
+  @include mixins.mobile {
+    flex-direction: column;
+    align-items: center;
+    white-space: normal;
+    gap: 4px;
+    font-size: clamp(14px, 3.5vw, 24px);
+  }
 }
 
 .subAccent {
@@ -186,6 +241,14 @@
   font-size: clamp(38px, 5vw, 72px);
   line-height: 0.85;
   color: var(--accent);
+
+  @include mixins.mobile {
+    font-size: clamp(28px, 7.5vw, 56px);
+  }
+
+  @include mixins.small {
+    font-size: clamp(24px, 6.5vw, 48px);
+  }
 }
 
 .meta {
@@ -199,6 +262,13 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--fg-mute);
+
+  @include mixins.mobile {
+    gap: 16px;
+    margin-top: 24px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
 }
 
 .sep { color: var(--accent); }
@@ -209,6 +279,23 @@
   justify-content: center;
   margin-top: 56px;
   flex-wrap: wrap;
+
+  @include mixins.mobile {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 36px;
+    width: 100%;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+
+    // Make all buttons fill the column
+    :global(.btn) {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 }
 
 .scroll {
@@ -224,6 +311,11 @@
   letter-spacing: 0.3em;
   color: var(--fg-mute);
   text-transform: uppercase;
+
+  @include mixins.mobile {
+    margin-top: 32px;
+    padding-bottom: 24px;
+  }
 }
 
 .scrollLine {

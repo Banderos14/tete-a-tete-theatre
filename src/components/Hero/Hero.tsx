@@ -20,6 +20,7 @@ export function Hero() {
   const handleRep    = useCallback(() => scrollToSection('repertoire'), []);
 
   useEffect(() => {
+    if (window.matchMedia('(max-width: 900px)').matches) return;
     const stage = new StageLight('stage-canvas', 'top');
     stage.start();
     return () => stage.stop();

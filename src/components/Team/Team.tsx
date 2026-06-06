@@ -31,7 +31,13 @@ function PersonCard({ person, index }: PersonCardProps) {
       <div className={styles.photo}>
         <div className={styles.photoInner} style={{ background: person.tone }}>
           {person.photo
-            ? <img src={`/images/team/${person.photo}`} alt={displayName} className={styles.photoImg} />
+            ? <img
+                src={`/images/team/${person.photo}`}
+                alt={displayName}
+                className={styles.photoImg}
+                loading="lazy"
+                decoding="async"
+              />
             : <div className={styles.initials}>{getInitials(displayName)}</div>
           }
         </div>
