@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLang } from '../../i18n/LangContext';
 import { getAllBookings, updateBookingStatus, updatePaymentStatus } from '../../services/bookingService';
-import { getAllUsers } from '../../services/userService';
+import { getAllUsers, getUsersForNewsletter } from '../../services/userService';
+import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail, sendNewShowAnnouncementEmail } from '../../services/emailService';
 import { SHOWS } from '../../data/shows';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/booking';
 import type { AdminUser } from '../../services/userService';
@@ -11,7 +12,7 @@ import styles from './AdminPage.module.scss';
 
 type FilterShowId    = 'all' | string;
 type FilterStatus    = 'all' | BookingStatus;
-type AdminTab        = 'bookings' | 'users';
+type AdminTab        = 'bookings' | 'users' | 'newsletter';
 
 function formatTimestamp(ts: unknown): string {
   if (!ts) return '—';
@@ -52,6 +53,10 @@ export function AdminPage() {
   const [fetching,    setFetching]    = useState(true);
   const [updatingId,  setUpdatingId]  = useState<string | null>(null);
 
+  const [nlShowId,    setNlShowId]    = useState<string>(SHOWS[0]?.id ?? '');
+  const [nlSending,   setNlSending]   = useState(false);
+  const [nlResult,    setNlResult]    = useState<{ sent: number; errors: string[] } | null>(null);
+
   const isAdmin = userProfile?.role === 'admin';
 
   useEffect(() => {
@@ -75,19 +80,104 @@ export function AdminPage() {
   }
 
   async function handleStatus(bookingId: string, status: BookingStatus) {
+    const booking = bookings.find(b => b.id === bookingId);
+    // Guard: skip if status did not change (prevents duplicate emails)
+    if (!booking || booking.status === status) return;
+
     setUpdatingId(bookingId);
     try {
       await updateBookingStatus(bookingId, status);
       setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
+
+      // Send email for confirmed and cancelled; attended — no email (not needed)
+      if (status === 'confirmed' || status === 'cancelled') {
+        sendBookingStatusUpdateEmail({
+          userEmail:    booking.userEmail,
+          userName:     booking.userName,
+          showTitle:    booking.showTitle,
+          showDate:     booking.showDate,
+          showTime:     booking.showTime,
+          ticketsCount: booking.ticketsCount,
+          totalAmount:  booking.totalAmount,
+          ticketCode:   booking.ticketCode,
+          newStatus:    status,
+          lang:         'RU',
+        }).catch(() => {/* non-blocking */});
+      }
     } finally { setUpdatingId(null); }
   }
 
   async function handlePaymentStatus(bookingId: string, paymentStatus: PaymentStatus) {
+    const booking = bookings.find(b => b.id === bookingId);
+    // Guard: skip if paymentStatus did not change (prevents duplicate emails)
+    if (!booking || (booking.paymentStatus ?? 'not_paid') === paymentStatus) return;
+
     setUpdatingId(bookingId);
     try {
       await updatePaymentStatus(bookingId, paymentStatus);
       setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, paymentStatus } : b));
+
+      // Send email only when marking as paid
+      if (paymentStatus === 'paid') {
+        sendPaymentPaidEmail({
+          userEmail:     booking.userEmail,
+          userName:      booking.userName,
+          showTitle:     booking.showTitle,
+          showDate:      booking.showDate,
+          showTime:      booking.showTime,
+          ticketsCount:  booking.ticketsCount,
+          totalAmount:   booking.totalAmount,
+          ticketCode:    booking.ticketCode,
+          bookingStatus: booking.status,
+          lang:          'RU',
+        }).catch(() => {/* non-blocking */});
+      }
     } finally { setUpdatingId(null); }
+  }
+
+  async function handleNewsletter() {
+    const show = SHOWS.find(s => s.id === nlShowId);
+    if (!show) return;
+
+    const recipients = await getUsersForNewsletter();
+    if (recipients.length === 0) {
+      setNlResult({ sent: 0, errors: [] });
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Будет отправлено ${recipients.length} писем${recipients.length > 100 ? '\n\n⚠️ Больше 100 получателей — проверьте лимиты Resend.' : ''}. Продолжить?`
+    );
+    if (!confirmed) return;
+
+    setNlSending(true);
+    setNlResult(null);
+
+    const errors: string[] = [];
+    let sent = 0;
+    const showDate = `${show.day} ${show.month} ${show.year}`;
+
+    for (const recipient of recipients) {
+      try {
+        await sendNewShowAnnouncementEmail({
+          userEmail:   recipient.email,
+          userName:    recipient.displayName || recipient.email,
+          showTitle:   show.title,
+          showDate,
+          showTime:    show.time,
+          price:       show.price,
+          description: show.desc,
+          siteUrl:     window.location.origin,
+          lang:        'RU',
+        });
+        sent++;
+      } catch {
+        errors.push(recipient.email);
+      }
+    }
+
+    setNlSending(false);
+    setNlResult({ sent, errors });
   }
 
   // ── Access control ──────────────────────────────────────────────────────────
@@ -160,6 +250,10 @@ export function AdminPage() {
           className={`${styles.tabBtn} ${tab === 'users' ? styles.tabActive : ''}`}
           onClick={() => setTab('users')}
         >{t.admin.usersTab} ({users.length})</button>
+        <button
+          className={`${styles.tabBtn} ${tab === 'newsletter' ? styles.tabActive : ''}`}
+          onClick={() => { setTab('newsletter'); setNlResult(null); }}
+        >Рассылка</button>
       </div>
 
       {/* ── BOOKINGS TAB ── */}
@@ -238,16 +332,15 @@ export function AdminPage() {
                   <tr>
                     <th>{t.admin.name}</th>
                     <th>{t.admin.email}</th>
-                    <th>{t.admin.phone}</th>
                     <th>{t.admin.tickets}</th>
-                    <th>{t.admin.ticketType}</th>
                     <th>{t.admin.amount}</th>
                     <th>{t.admin.payment}</th>
                     <th>{t.admin.paymentStatus}</th>
+                    <th>Код брони</th>
                     <th>{t.admin.date}</th>
                     <th>{t.admin.status}</th>
                     <th>{t.admin.comment}</th>
-                    <th></th>
+                    <th>Действия</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -265,14 +358,15 @@ export function AdminPage() {
                       >
                         <td>
                           <p className={styles.cellName}>{b.userName}</p>
-                          {filterShow === 'all' && (
-                            <p className={styles.cellShow}>{b.showTitle}</p>
-                          )}
+                          <p className={styles.cellShow}>{b.showTitle}</p>
+                          <p className={styles.cellShowMeta}>{b.showDate} · {b.showTime}</p>
+                          <a href={`mailto:${b.userEmail}`} className={styles.emailLink}>{b.userEmail}</a>
+                          {b.userPhone && <p className={styles.cellShowMeta}>{b.userPhone}</p>}
                         </td>
                         <td><a href={`mailto:${b.userEmail}`} className={styles.emailLink}>{b.userEmail}</a></td>
-                        <td>{b.userPhone || '—'}</td>
-                        <td className={styles.cellCenter}>{b.ticketsCount}</td>
-                        <td>
+                        <td className={styles.cellCenter}>
+                          {b.ticketsCount}
+                          <br />
                           <span className={styles.badge}>
                             {b.ticketType === 'student' ? t.admin.ticketStudent : t.admin.ticketStandard}
                           </span>
@@ -286,16 +380,30 @@ export function AdminPage() {
                           </span>
                         </td>
                         <td>
-                          <select
-                            className={`${styles.paySelect} ${PAY_STATUS_STYLE[payStatus]}`}
-                            value={payStatus}
-                            disabled={isBusy || bStatus === 'cancelled'}
-                            onChange={e => handlePaymentStatus(b.id, e.target.value as PaymentStatus)}
-                          >
-                            {(Object.keys(PAY_STATUS_LABELS) as PaymentStatus[]).map(ps => (
-                              <option key={ps} value={ps}>{PAY_STATUS_LABELS[ps]}</option>
-                            ))}
-                          </select>
+                          <span className={`${styles.payBadge} ${PAY_STATUS_STYLE[payStatus]}`}>
+                            {PAY_STATUS_LABELS[payStatus]}
+                          </span>
+                          {bStatus !== 'cancelled' && (
+                            <div className={styles.payActions}>
+                              {payStatus !== 'paid' && (
+                                <button
+                                  className={styles.actionPaid}
+                                  disabled={isBusy}
+                                  onClick={() => handlePaymentStatus(b.id, 'paid')}
+                                >Оплачено</button>
+                              )}
+                              {payStatus === 'paid' && (
+                                <button
+                                  className={styles.actionUnpaid}
+                                  disabled={isBusy}
+                                  onClick={() => handlePaymentStatus(b.id, 'not_paid')}
+                                >Не оплачено</button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className={styles.cellMono}>
+                          {b.ticketCode || '—'}
                         </td>
                         <td className={styles.cellMono}>{formatTimestamp(b.createdAt)}</td>
                         <td>
@@ -394,6 +502,62 @@ export function AdminPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* ── NEWSLETTER TAB ── */}
+      {tab === 'newsletter' && (
+        <div className={styles.newsletterWrap}>
+          <h2 className={styles.newsletterTitle}>Рассылка нового спектакля</h2>
+          <p className={styles.newsletterHint}>
+            Письмо уйдёт только пользователям с включёнными уведомлениями.
+            Рассылка запускается вручную — автоматически ничего не отправляется.
+          </p>
+
+          <div className={styles.newsletterWarning}>
+            На бесплатном тарифе Resend есть дневные и месячные лимиты.
+            Не запускайте рассылку несколько раз подряд.
+          </div>
+
+          <div className={styles.section}>
+            <label className={styles.sectionLabel} htmlFor="nl-show">Выбрать спектакль</label>
+            <select
+              id="nl-show"
+              className={styles.select}
+              value={nlShowId}
+              onChange={e => { setNlShowId(e.target.value); setNlResult(null); }}
+              disabled={nlSending}
+            >
+              {SHOWS.map(s => (
+                <option key={s.id} value={s.id}>{s.title}</option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            className={styles.actionConfirm}
+            onClick={handleNewsletter}
+            disabled={nlSending}
+          >
+            {nlSending ? 'Отправляется…' : 'Отправить рассылку'}
+          </button>
+
+          {nlResult && (
+            <div className={styles.newsletterResult}>
+              <p>Отправлено успешно: <strong>{nlResult.sent}</strong></p>
+              {nlResult.errors.length > 0 && (
+                <>
+                  <p>Ошибки ({nlResult.errors.length}):</p>
+                  <ul>
+                    {nlResult.errors.map(e => <li key={e}>{e}</li>)}
+                  </ul>
+                </>
+              )}
+              {nlResult.sent === 0 && nlResult.errors.length === 0 && (
+                <p>Нет подписчиков с включёнными уведомлениями.</p>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
     </div>

@@ -5,6 +5,7 @@ import { createBooking } from '../../../services/bookingService';
 import { generateTicketCode } from '../../../services/ticketService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
+import { PAYMENT_CONFIG } from '../../../config/payment';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
 import styles from './BookingModal.module.scss';
@@ -57,8 +58,11 @@ export function BookingModal({ show, onClose }: Props) {
   const [payment,       setPayment]       = useState<PaymentMethod>('on_site');
   const [phone,         setPhone]         = useState('');
   const [comment,       setComment]       = useState('');
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [submitError,   setSubmitError]   = useState('');
+  const [submitLoading,  setSubmitLoading]  = useState(false);
+  const [submitError,    setSubmitError]    = useState('');
+  const [ticketCode,     setTicketCode]     = useState('');
+  const [copiedDetails,  setCopiedDetails]  = useState(false);
+  const [copiedCode,     setCopiedCode]     = useState(false);
 
   const defaultTicket = useMemo(
     () => (show?.ticketTypes?.length ? show.ticketTypes[0] : null),
@@ -127,10 +131,10 @@ export function BookingModal({ show, onClose }: Props) {
     if (!user || !activeTicket || !show) return;
     setSubmitLoading(true); setSubmitError('');
     try {
-      const ticketCode = generateTicketCode();
-      const userName   = user.displayName ?? userProfile?.displayName ?? '';
-      const userEmail  = user.email ?? userProfile?.email ?? '';
-      const showDate   = `${show.day} ${show.month} ${show.year}`;
+      const code     = generateTicketCode();
+      const userName  = user.displayName ?? userProfile?.displayName ?? '';
+      const userEmail = user.email ?? userProfile?.email ?? '';
+      const showDate  = `${show.day} ${show.month} ${show.year}`;
 
       if (import.meta.env.DEV) {
         console.log('[BookingModal] booking recipient debug', {
@@ -154,7 +158,7 @@ export function BookingModal({ show, onClose }: Props) {
         ticketType:    activeTicket.id,
         priceInfo:     `${activeTicket.label} · ${activeTicket.price}€ × ${tickets} = ${totalAmount}€`,
         totalAmount,
-        ticketCode,
+        ticketCode:    code,
         status:        'pending',
         paymentMethod: payment,
         paymentStatus: payment === 'bank_transfer' ? 'awaiting_transfer' : 'not_paid',
@@ -171,15 +175,25 @@ export function BookingModal({ show, onClose }: Props) {
         ticketsCount: tickets,
         ticketType:   activeTicket.id,
         totalAmount,
-        ticketCode,
+        ticketCode:   code,
         paymentMethod: payment,
         lang,
       }).catch(() => {/* silently ignored */});
 
+      setTicketCode(code);
       setStep('success');
     } catch {
       setSubmitError(t.booking.submitError);
     } finally { setSubmitLoading(false); }
+  }
+
+  // ── Copy helpers ─────────────────────────────────────────────────────────────
+
+  function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {/* clipboard not available */});
   }
 
   const userEmail   = user?.email ?? userProfile?.email ?? '';
@@ -416,65 +430,96 @@ export function BookingModal({ show, onClose }: Props) {
         )}
 
         {/* ── Success step ── */}
-        {step === 'success' && (
-          <div className={styles.successWrap}>
-            <div className={styles.successLeft} style={{ background: show.palette }}>
-              <span className={styles.successGlyph}>{show.glyph}</span>
-              <div className={styles.successCheckWrap}>
-                <div className={styles.successIcon}>✓</div>
-              </div>
-            </div>
+        {step === 'success' && (() => {
+          const showDate      = `${show.day} ${show.month} ${show.year}`;
+          const paymentPurpose = `${show.title} — ${showDate} — ${ticketCode}`;
+          const detailsText   = [
+            `${t.booking.transferReceiver}: ${PAYMENT_CONFIG.receiverName}`,
+            `IBAN: ${PAYMENT_CONFIG.iban}`,
+            `BIC: ${PAYMENT_CONFIG.bic}`,
+            `${t.booking.successAmount}: ${totalAmount} €`,
+            `${t.booking.transferPurpose}: ${paymentPurpose}`,
+          ].join('\n');
 
-            <div className={styles.successRight}>
-              <h3 className={styles.successTitle}>{t.booking.successTitle}</h3>
-
-              {/* Booking summary table */}
-              <div className={styles.infoBox}>
-                {([
-                  [t.booking.labelShow,    showTitle],
-                  [t.booking.labelDate,    `${show.day} ${monthLabel} ${show.year} · ${show.time}`],
-                  [t.booking.labelTickets, `${tickets} × ${ticketLabel(activeTicket?.id)}`],
-                  [t.booking.labelAmount,  `${totalAmount} €`],
-                ] as [string, string][]).map(([label, value]) => (
-                  <div key={label} className={styles.infoBoxRow}>
-                    <span>{label}</span>
-                    <span>{value}</span>
-                  </div>
-                ))}
+          return (
+            <div className={styles.successWrap}>
+              <div className={styles.successLeft} style={{ background: show.palette }}>
+                <span className={styles.successGlyph}>{show.glyph}</span>
+                <div className={styles.successCheckWrap}>
+                  <div className={styles.successIcon}>✓</div>
+                </div>
               </div>
 
-              {payment === 'on_site' ? (
-                <p className={styles.successText}>{t.booking.successOnSite}</p>
-              ) : (
-                <>
-                  <p className={styles.successText}>{t.booking.successTransfer}</p>
-                  <div className={styles.transferBox}>
-                    <div className={styles.transferRow}>
-                      <span>{t.booking.successAmount}</span>
-                      <strong>{totalAmount}&nbsp;€</strong>
+              <div className={styles.successRight}>
+                <h3 className={styles.successTitle}>{t.booking.successTitle}</h3>
+
+                {/* Booking summary */}
+                <div className={styles.infoBox}>
+                  {([
+                    [t.booking.labelShow,    showTitle],
+                    [t.booking.labelDate,    `${show.day} ${monthLabel} ${show.year} · ${show.time}`],
+                    [t.booking.labelTickets, `${tickets} × ${ticketLabel(activeTicket?.id)}`],
+                    [t.booking.labelAmount,  `${totalAmount} €`],
+                  ] as [string, string][]).map(([label, value]) => (
+                    <div key={label} className={styles.infoBoxRow}>
+                      <span>{label}</span>
+                      <span>{value}</span>
                     </div>
-                    {/* TODO: Замени на реальные реквизиты театра.
-                        Для автоматической отправки на email подключи Firebase Functions или EmailJS. */}
-                    <div className={styles.transferDetails}>
-                      <p className={styles.transferDetailLabel}>{t.booking.transferDetailsLabel}</p>
-                      <p>IBAN: <strong>FR76 XXXX XXXX XXXX XXXX XXXX XXX</strong></p>
-                      <p>BIC: <strong>XXXXFRXX</strong></p>
-                      <p>{t.booking.transferRef}: <strong>{show.title} · {show.day} {show.month}</strong></p>
-                    </div>
+                  ))}
+                </div>
+
+                {/* Ticket code */}
+                <div className={styles.ticketCodeBox}>
+                  <span className={styles.ticketCodeLabel}>{lang === 'FR' ? 'Code de réservation' : 'Код брони'}</span>
+                  <div className={styles.ticketCodeRow}>
+                    <code className={styles.ticketCodeValue}>{ticketCode}</code>
+                    <button
+                      className={`${styles.copyBtn} ${copiedCode ? styles.copyBtnDone : ''}`}
+                      onClick={() => copyToClipboard(ticketCode, setCopiedCode)}
+                    >
+                      {copiedCode ? t.booking.copied : t.booking.copyCode}
+                    </button>
                   </div>
-                </>
-              )}
+                </div>
 
-              <p className={styles.successEmail}>
-                {t.booking.successEmailHint} <strong>{userEmail}</strong>
-              </p>
+                {payment === 'on_site' ? (
+                  <p className={styles.successText}>{t.booking.successOnSite}</p>
+                ) : (
+                  <>
+                    <p className={styles.successText}>{t.booking.successTransfer}</p>
+                    <div className={styles.transferBox}>
+                      <div className={styles.transferRow}>
+                        <span>{t.booking.successAmount}</span>
+                        <strong>{totalAmount}&nbsp;€</strong>
+                      </div>
+                      <div className={styles.transferDetails}>
+                        <p className={styles.transferDetailLabel}>{t.booking.transferDetailsLabel}</p>
+                        <p>{t.booking.transferReceiver}: <strong>{PAYMENT_CONFIG.receiverName}</strong></p>
+                        <p>IBAN: <strong>{PAYMENT_CONFIG.iban}</strong></p>
+                        <p>BIC: <strong>{PAYMENT_CONFIG.bic}</strong></p>
+                        <p>{t.booking.transferPurpose}: <strong>{paymentPurpose}</strong></p>
+                      </div>
+                      <button
+                        className={`${styles.copyBtn} ${styles.copyBtnWide} ${copiedDetails ? styles.copyBtnDone : ''}`}
+                        onClick={() => copyToClipboard(detailsText, setCopiedDetails)}
+                      >
+                        {copiedDetails ? t.booking.copied : t.booking.copyDetails}
+                      </button>
+                    </div>
+                  </>
+                )}
 
-              <button className={styles.closeSuccessBtn} onClick={onClose}>
-                {t.booking.close}
-              </button>
+                <p className={styles.successEmail}>
+                  {t.booking.successEmailHint} <strong>{userEmail}</strong>
+                </p>
+
+                <button className={styles.closeSuccessBtn} onClick={onClose}>
+                  {t.booking.close}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
       </div>
     </div>

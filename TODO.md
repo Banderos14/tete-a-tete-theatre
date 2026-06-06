@@ -46,7 +46,7 @@
 --- Instagram: ссылка из сторис → прокрутка к нужной афише + подсветка
 --- Кулисы: поиграться с задержкой и цветом
 
-## Бронирование (Этап 5 — июнь 2026)
+## Бронирование / Оплата
 
 -+- Структура брони: id, userId, userEmail, userName, userPhone, showId, showTitle,
     showDate, showTime, ticketsCount, ticketType, priceInfo, totalAmount, ticketCode,
@@ -55,12 +55,15 @@
 -+- Статус брони: pending (новая) → confirmed / cancelled / attended (admin)
 -+- Генерация уникального ticketCode при создании (формат XXXX-XXXX, crypto.getRandomValues)
 -+- updatedAt проставляется при каждой смене статуса или оплаты
--?- Email-подтверждение бронирования (emailService.ts готов, нужен бэкенд-эндпоинт)
---- Vercel Serverless Function /api/send-email — создать и подключить
---- Добавить в .env: VITE_EMAIL_ENDPOINT=/api/send-email
---- Добавить в Vercel Dashboard (и .env локально, без VITE_ префикса):
-    EMAIL_API_KEY, EMAIL_FROM, EMAIL_PROVIDER (sendgrid | resend)
---- PDF-билет: архитектура готова в ticketService.ts, нужен npm install jspdf
+-+- bank_transfer — способ оплаты, показывает реквизиты
+-+- on_site — оплата на месте, без реквизитов
+-+- ticketCode — отображается в модалке, письме и личном кабинете
+-+- Копирование реквизитов в буфер одной кнопкой
+-+- paymentStatus в админке: not_paid / awaiting_transfer / paid
+-+- status в AdminPage: confirmed / attended / cancelled
+--- Stripe / онлайн-оплата
+--- Автоматическая проверка поступления платежей
+--- PDF-билет: архитектура готова в ticketService.ts (jspdf, закомментировано)
 
 ## Личный кабинет
 
@@ -73,6 +76,7 @@
 -+- Код брони в карточке
 -+- Счётчик посещений (отметка attended = посещение)
 -+- Прогресс-бар: каждое 5-е посещение — подарок (5 точек, заполняются)
+-+- Явные статусные сообщения: «Бронь подтверждена», «Бронь отменена», «Оплата получена»
 --- День рождения → поздравление от театра + подарок
 --- Привязка соц сети через кнопку входа, а не вручную
 
@@ -85,7 +89,8 @@
 -+- Смена статуса брони: confirmed / attended / cancelled
 -+- Смена статуса оплаты: not_paid / awaiting_transfer / paid
 -+- updatedAt обновляется при смене статуса
---- Автоматическая рассылка при новых спектаклях
+-+- Таблица: имя, email, спектакль, дата, сумма, способ оплаты, статус оплаты, статус брони, ticketCode
+-+- Ручная рассылка при новых спектаклях (вкладка «Рассылка» в AdminPage)
 
 ## Безопасность
 
@@ -96,23 +101,58 @@
 
 ## Email / Уведомления
 
--+- emailService.ts: sendBookingConfirmationEmail + sendBookingStatusUpdateEmail, RU/FR шаблон
--+- Вызывается после создания брони (не блокирует, ошибки — в консоль)
--+- api/send-email.ts — Vercel Serverless Function (Resend): валидация, security, graceful fallback
--+- VITE_EMAIL_ENDPOINT по умолчанию /api/send-email (без env-переменной на frontend)
--+- .env.example — шаблон переменных (Firebase + Resend)
--?- Реальная отправка: добавить RESEND_API_KEY и EMAIL_FROM в Vercel Dashboard
---- Email при смене статуса брони (sendBookingStatusUpdateEmail готова, нужно подключить в AdminPage)
---- Рассылка при новых спектаклях подписчикам
+Готово:
+-+- Подтверждение бронирования на почту: одно письмо после создания брони
+-+- Одно письмо на одну бронь: без дублей и без второго письма с реквизитами
+-+- Реквизиты оплаты в письме при bank_transfer
+-+- Email без реквизитов при on_site
+-+- Email при подтверждении брони администратором
+-+- Email при отмене брони администратором
+-+- Email при отметке «Оплачено»
+-+- Защита от дублей: если статус не изменился, письмо повторно не отправляется
+-+- api/send-email.ts: Vercel Serverless Function через Resend
+-+- emailService.ts: шаблоны RU/FR для всех событий бронирования
+-+- Рассылка нового спектакля подписчикам (ручной запуск из AdminPage → вкладка «Рассылка»)
+-+- getUsersForNewsletter(): только пользователи с notifications=true, не admin
+-+- AdminPage: выбор спектакля, подтверждение, результат (sent / errors)
+-+- Защита от двойного клика: кнопка disabled пока идёт отправка
+
+Проверить вручную:
+-?- Реальная отправка через Resend: добавить RESEND_API_KEY и EMAIL_FROM в Vercel Dashboard
+-?- Отправка на разные email после подключения собственного домена в Resend
+    (с onboarding@resend.dev письма идут только на email владельца аккаунта Resend)
+
+Настройка Resend:
+    RESEND_API_KEY  → Resend Dashboard → API Keys → добавить в Vercel Dashboard
+    EMAIL_FROM      → onboarding@resend.dev (тест) или billets@yourdomain.fr (прод)
+    Добавлять только в Vercel Dashboard → Settings → Environment Variables (не во frontend!)
+
+Не делать сейчас:
 --- Поздравление с днём рождения + подарок
+--- Автоматическая birthday-рассылка
+--- SMS-уведомления
+--- Firestore-лог отправленных рассылок
+--- Очередь писем / cron
+--- Unsubscribe-ссылка в письме
 
 ## Билеты
 
--+- ticketCode генерируется при бронировании (formат XXXX-XXXX)
+-+- ticketCode генерируется при бронировании (формат XXXX-XXXX)
 -+- ticketCode хранится в Firestore вместе с бронью
 -+- ticketCode отображается в истории бронирований (личный кабинет)
 -+- ticketService.ts: архитектура PDF готова (jspdf, закомментировано)
 --- PDF-билет: npm install jspdf → раскомментировать generateTicketPdf
+
+## i18n
+
+-+- Переводы RU / FR разделены по файлам:
+    src/i18n/types.ts        — интерфейс T (единый источник правды)
+    src/i18n/ru.ts           — русский перевод
+    src/i18n/fr.ts           — французский перевод
+    src/i18n/index.ts        — точка сборки
+    src/i18n/translations.ts — compatibility re-export (старые импорты не ломаются)
+-+- TypeScript проверяет совпадение ключей RU и FR через тип T
+-+- i18n упрощён: папка locales/ удалена, переводы лежат прямо в src/i18n/
 
 ## SEO / Meta
 

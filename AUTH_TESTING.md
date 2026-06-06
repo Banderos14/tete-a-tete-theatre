@@ -1,118 +1,228 @@
-# Auth & Booking — Manual Testing Checklist
+# Проверка авторизации, бронирования и email
 
-Run through each scenario after any auth-related change.
-Check Firebase Console → Authentication → Users and Firestore → users/ in parallel.
+Запускай этот чеклист после любых изменений в авторизации, бронировании или отправке писем.
+Проверяй Firebase Console → Authentication → Users и Firestore → users/ одновременно.
 
 ---
 
-## A. New email/password user
+## 1. Новый пользователь email/password
 
-1. Open the site in an incognito window (no existing session).
-2. Open booking modal or AuthModal → go to "Регистрация" tab.
-3. Fill name, new email, password → submit.
-4. **Expected**: modal closes, user is logged in.
-5. Firebase Console → Authentication → Users → email appears.
-6. Firestore → users/{uid} → document exists with:
+1. Открой сайт в режиме инкогнито (без существующей сессии).
+2. Открой модальное окно бронирования или кнопку «Войти» → вкладка «Регистрация».
+3. Заполни имя, новый email, пароль → отправь.
+4. **Ожидаемый результат**: окно закрывается, пользователь вошёл.
+5. Firebase Console → Authentication → Users → email появился.
+6. Firestore → users/{uid} → документ существует с полями:
    - `role: "user"`, `provider: "email"`, `displayName`, `email`, `createdAt`, `lastLoginAt`
-7. Proceed to create a booking.
-8. **Expected**: booking appears in Firestore → bookings/{id} with `userId` = the new uid.
-9. **Expected**: confirmation email arrives at the registered email address.
+7. Создай бронь.
+8. **Ожидаемый результат**: бронь появилась в Firestore → bookings/{id} с `userId` = uid пользователя.
+9. **Ожидаемый результат**: на почту пришло письмо-подтверждение.
 
 ---
 
-## B. Existing email/password user — duplicate registration attempt
+## 2. Повторная регистрация уже существующего email
 
-1. On the "Регистрация" tab, enter the **same email** as an already-registered account.
-2. **Expected**: error message "Этот email уже зарегистрирован. Войдите в аккаунт или используйте Google."
-3. **Expected**: the modal automatically switches to the "Вход" tab.
-4. **Expected**: the email field retains the typed email.
-5. Enter the correct password → login succeeds.
-6. Firestore → users/{uid} → `lastLoginAt` is updated; `role` is unchanged.
-
----
-
-## C. Google user
-
-1. Click "Войти через Google" in AuthModal or BookingModal.
-2. Select a Google account in the popup.
-3. **Expected**: popup closes, user is logged in.
-4. Firebase Console → Authentication → Users → Google account appears.
-5. Firestore → users/{uid} → document exists with `provider: "google"`, `photoURL` set.
-6. Create a booking.
-7. **Expected**: confirmation email arrives at the Google account's email.
-
-**Edge cases:**
-- Close the popup without selecting an account → no error shown (silent dismiss).
-- Popup blocked by browser → message: "Всплывающее окно заблокировано браузером."
-- Domain not in Firebase Authorized Domains → message about unauthorized domain.
+1. На вкладке «Регистрация» введи email уже зарегистрированного аккаунта.
+2. **Ожидаемый результат**: сообщение об ошибке «Этот email уже зарегистрирован. Попробуйте войти.»
+3. **Ожидаемый результат**: форма автоматически переключается на вкладку «Вход».
+4. **Ожидаемый результат**: поле email сохраняет введённый адрес.
+5. Введи правильный пароль → вход выполнен.
+6. Firestore → users/{uid} → `lastLoginAt` обновился; `role` не изменился.
 
 ---
 
-## D. Admin account
+## 3. Вход через Google
 
-1. Log in with the admin email/password account.
-2. Firestore → users/{uid} → `role: "admin"` must be present.
-3. Log out and log back in.
-4. **Expected**: `role` is still `"admin"` — `ensureUserDocument` never overwrites it.
-5. Navigate to /admin → AdminPage loads without redirect.
-6. Check that the Users tab in AdminPage shows all Firestore users.
+1. Нажми «Войти через Google» в любом месте сайта.
+2. Выбери аккаунт Google во всплывающем окне.
+3. **Ожидаемый результат**: окно закрылось, пользователь вошёл.
+4. Firebase Console → Authentication → Users → Google-аккаунт появился.
+5. Firestore → users/{uid} → документ с `provider: "google"`, поле `photoURL` заполнено.
+6. Создай бронь.
+7. **Ожидаемый результат**: письмо пришло на email Google-аккаунта.
 
----
-
-## E. Dev debug logs (booking email recipient)
-
-1. Run `npm run dev`.
-2. Open DevTools → Console.
-3. Create a booking as any non-admin user.
-4. **Expected** console output:
-   ```
-   [BookingModal] booking recipient debug {
-     uid: "<firebase-uid>",
-     authEmail: "<user@example.com>",
-     profileEmail: "<user@example.com>",
-     bookingEmail: "<user@example.com>",
-   }
-   ```
-5. Verify `bookingEmail` matches the logged-in user — NOT a hardcoded admin address.
-6. These logs do NOT appear in production (`npm run build` + Vercel).
+**Граничные случаи:**
+- Закрыть окно Google без выбора аккаунта → ошибка не отображается (тихий выход).
+- Браузер заблокировал окно → сообщение «Всплывающее окно заблокировано браузером».
+- Домен не добавлен в Firebase → сообщение о неавторизованном домене.
 
 ---
 
-## F. Deleting a test user (full cleanup)
+## 4. Проверка аккаунта администратора
 
-To completely remove a test account:
+1. Войди с email/паролем администратора.
+2. Firestore → users/{uid} → должно быть `role: "admin"`.
+3. Выйди и войди снова.
+4. **Ожидаемый результат**: `role` остаётся `"admin"` — функция `ensureUserDocument` никогда не перезаписывает роль.
+5. Перейди по адресу `/admin` → страница AdminPage загружается без редиректа.
+6. Убедись, что вкладка «Зрители» в AdminPage показывает всех пользователей из Firestore.
 
-**Step 1 — Firebase Authentication:**
+---
+
+## 5. Проверка бронирования — bank_transfer
+
+1. Войди как обычный пользователь.
+2. Открой модальное окно бронирования → выбери «Банковский перевод».
+3. Создай бронь.
+4. **Ожидаемый результат**: экран успеха показывает:
+   - Код брони (формат XXXX-XXXX)
+   - Реквизиты для перевода (получатель, IBAN, BIC, назначение платежа)
+   - Кнопку «Скопировать реквизиты»
+5. Firestore → bookings/{id}:
+   - `paymentMethod: "bank_transfer"`
+   - `paymentStatus: "awaiting_transfer"`
+   - `status: "pending"`
+6. В личном кабинете бронь появилась с напоминанием об оплате.
+7. На почту пришло письмо с реквизитами банковского перевода.
+
+---
+
+## 6. Проверка бронирования — on_site
+
+1. Войди как обычный пользователь.
+2. Открой модальное окно бронирования → выбери «Оплата на месте».
+3. Создай бронь.
+4. **Ожидаемый результат**: экран успеха показывает:
+   - Код брони
+   - Сообщение «Оплата на месте перед спектаклем»
+   - Без реквизитов банковского перевода
+5. Firestore → bookings/{id}:
+   - `paymentMethod: "on_site"`
+   - `paymentStatus: "not_paid"`
+   - `status: "pending"`
+6. На почту пришло письмо без банковских реквизитов.
+
+---
+
+## 7. Проверка письма при создании брони
+
+1. Создай бронь любым способом (bank_transfer или on_site).
+2. **Ожидаемый результат** — письмо содержит:
+   - Тему: «Бронирование принято: [название спектакля]»
+   - Имя зрителя
+   - Название спектакля, дату, время
+   - Количество билетов и сумму
+   - Код брони (крупно)
+   - Если bank_transfer: реквизиты для перевода (IBAN, BIC, назначение)
+   - Если on_site: сообщение об оплате на месте
+3. Одно событие = одно письмо. Повторных писем быть не должно.
+
+---
+
+## 8. Проверка письма при подтверждении брони
+
+1. Войди как администратор → перейди на `/admin`.
+2. Найди бронь со статусом «Ожидает».
+3. Нажми кнопку «Подтвердить».
+4. **Ожидаемый результат**: статус в таблице сменился на «Подтверждено».
+5. **Ожидаемый результат**: зрителю пришло письмо:
+   - Тема: «Бронирование подтверждено: [спектакль]»
+   - «Ваше место зарезервировано. Приходите за 15 минут до начала.»
+   - Код брони
+6. Если нажать «Подтвердить» повторно на уже подтверждённой брони → письмо не отправляется (защита от дублей).
+
+---
+
+## 9. Проверка письма при отметке «Оплачено»
+
+1. Войди как администратор → перейди на `/admin`.
+2. Найди бронь со статусом оплаты «Не оплачено» или «Ожидает перевода».
+3. Нажми кнопку «Оплачено».
+4. **Ожидаемый результат**: статус оплаты сменился на «Оплачено».
+5. **Ожидаемый результат**: зрителю пришло письмо:
+   - Тема: «Оплата получена: [спектакль]»
+   - Код брони
+   - Если бронь уже подтверждена: «Ваша бронь подтверждена. Ждём вас в театре!»
+   - Если бронь ещё ожидает: «Бронь ожидает подтверждения.»
+6. Если нажать «Оплачено» повторно → письмо не отправляется.
+7. При нажатии «Не оплачено» → письмо не отправляется.
+
+---
+
+## 10. Как удалить тестового пользователя полностью
+
+**Шаг 1 — Firebase Authentication:**
 - Firebase Console → Authentication → Users
-- Find the email → click ⋮ → "Delete account"
+- Найди email → нажми ⋮ → «Delete account»
 
-**Step 2 — Firestore user document:**
-- Firestore → Collection: `users` → find document with the uid → Delete document
+**Шаг 2 — документ пользователя в Firestore:**
+- Firestore → Коллекция `users` → найди документ с нужным uid → удали
 
-**Step 3 — Test bookings:**
-- Firestore → Collection: `bookings`
-- Filter by `userId` == the uid (use "Filter" in the Console)
-- Delete each matching document
+**Шаг 3 — тестовые брони:**
+- Firestore → Коллекция `bookings`
+- Фильтр: `userId` == uid (используй «Filter» в консоли)
+- Удали все найденные документы
 
-> After deletion: the email can be re-registered fresh without conflicts.
-
----
-
-## G. Firebase Console — settings to verify
-
-| Setting | Location | Required value |
-|---------|----------|----------------|
-| Email/Password sign-in | Authentication → Sign-in method | Enabled |
-| Google sign-in | Authentication → Sign-in method | Enabled |
-| Authorized domains | Authentication → Settings → Authorized domains | `localhost` + Vercel domain |
-| Firestore rules | Firestore → Rules | Deployed from `firestore.rules` |
+> После удаления: email можно зарегистрировать заново без конфликтов.
 
 ---
 
-## Notes
+## 11. Что проверять в Firebase Console
 
-- `ensureUserDocument` is in `src/context/AuthContext.tsx`.
-- It is called from `onAuthStateChanged`, `signInWithGoogle`, `signInWithEmail`.
-- `signUpWithEmail` writes the document explicitly to guarantee `displayName` from the form.
-- Email recipient in booking: `user.email ?? userProfile?.email ?? ''` (Firebase Auth first).
-- One booking = one email. `sendBookingStatusUpdateEmail` is only triggered manually from AdminPage.
+| Настройка | Где находится | Нужное значение |
+|-----------|---------------|-----------------|
+| Вход через email/пароль | Authentication → Sign-in method | Включён |
+| Вход через Google | Authentication → Sign-in method | Включён |
+| Авторизованные домены | Authentication → Settings → Authorized domains | `localhost` + домен Vercel |
+| Правила Firestore | Firestore → Rules | Развёрнуты из `firestore.rules` |
+
+---
+
+## 12. Что проверять в Resend
+
+1. Перейди на [resend.com](https://resend.com) → Dashboard → Emails.
+2. Найди письмо по теме или адресу получателя.
+3. **Проверь**: статус `Delivered`, а не `Bounced` или `Failed`.
+4. **Проверь**: письмо отображается корректно (HTML + plain text версия).
+5. **Проверь**: отправитель — `EMAIL_FROM` из Vercel Dashboard.
+6. **Проверь**: в письме нет реальных ключей (только плейсхолдеры IBAN/BIC до продакшена).
+
+---
+
+## 13. Что проверять в Vercel
+
+1. Vercel Dashboard → проект → Deployments → последний деплой → статус `Ready`.
+2. Functions → `api/send-email` → посмотри логи последних вызовов.
+3. Settings → Environment Variables → убедись, что `RESEND_API_KEY` и `EMAIL_FROM` заполнены.
+4. **Проверь**: в Environment Variables нет реальных банковских реквизитов или секретных ключей без необходимости.
+5. **Проверь**: `.env` файл не попал в деплой (он должен быть в `.gitignore`).
+
+---
+
+## 14. Проверка рассылки нового спектакля
+
+1. Убедись, что хотя бы один пользователь (не admin) зарегистрирован и у него включены уведомления:
+   Firestore → users/{uid} → `notifications: true`.
+2. Войди как администратор → перейди на `/admin`.
+3. Перейди на вкладку «Рассылка».
+4. Выбери спектакль из выпадающего списка.
+5. Нажми кнопку «Отправить рассылку».
+6. **Ожидаемый результат**: появился запрос подтверждения с числом получателей.
+7. Подтверди отправку.
+8. **Ожидаемый результат**: кнопка недоступна пока идёт отправка (статус «Отправляется…»).
+9. **Ожидаемый результат**: после завершения виден результат:
+   - сколько писем отправлено успешно;
+   - если были ошибки — список email с ошибками.
+10. Проверь Resend → Dashboard → Emails: письмо должно появиться со статусом `Delivered`.
+11. **Проверь**: рассылка НЕ запускается автоматически при добавлении спектакля.
+12. **Проверь**: пользователи с `notifications: false` или без email письмо не получили.
+13. **Проверь**: admin из рассылки исключён.
+
+**Что делать, если письмо не пришло:**
+- Resend → Emails → проверь статус и ошибку.
+- Vercel → Functions → `api/send-email` → посмотри логи.
+- Проверь, что `RESEND_API_KEY` и `EMAIL_FROM` заполнены в Vercel Dashboard.
+- С `onboarding@resend.dev` письма уходят только на email владельца Resend-аккаунта.
+  Для отправки всем нужен собственный домен в Resend.
+
+---
+
+## Дополнительные заметки
+
+- `ensureUserDocument` находится в `src/context/AuthContext.tsx`.
+- Вызывается из `onAuthStateChanged`, `signInWithGoogle`, `signInWithEmail`.
+- `signUpWithEmail` пишет документ явно, чтобы сохранить `displayName` из формы.
+- Email получателя в брони: `user.email ?? userProfile?.email ?? ''` (сначала Firebase Auth).
+- Одна бронь = одно письмо при создании. Письма при смене статуса — только когда статус действительно меняется.
+- Реальные реквизиты театра (IBAN/BIC) нужно вписать в `src/config/payment.ts` перед продакшеном.
+- Не вставлять банковские реквизиты в `.env` или `.env.example`.
