@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
+import { getUserBookings } from '../../../services/bookingService';
+import type { Booking, BookingStatus } from '../../../types/booking';
 import type { Messenger } from '../../../context/AuthContext';
 import styles from './ProfileDrawer.module.scss';
 
@@ -97,6 +99,10 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const [fbLoading, setFbLoading] = useState(false);
   const [fbError,   setFbError]   = useState('');
 
+  // ── booking history ──
+  const [bookings,        setBookings]        = useState<Booking[]>([]);
+  const [historyLoading,  setHistoryLoading]  = useState(false);
+
   // ── sync from Firestore ──
   useEffect(() => {
     if (!userProfile) return;
@@ -124,6 +130,16 @@ export function ProfileDrawer({ open, onClose }: Props) {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [open]);
+
+  // ── load booking history when drawer opens ──
+  useEffect(() => {
+    if (!open || !user) return;
+    setHistoryLoading(true);
+    getUserBookings(user.uid)
+      .then(setBookings)
+      .catch(() => setBookings([]))
+      .finally(() => setHistoryLoading(false));
+  }, [open, user]);
 
   // ── helpers ──
   const markDirty = useCallback(() => setIsDirty(true), []);
@@ -385,7 +401,23 @@ export function ProfileDrawer({ open, onClose }: Props) {
           {/* ── МОИ БИЛЕТЫ ── */}
           <div className={styles.historySection}>
             <p className={styles.sectionLabel}>{t.profile.history}</p>
-            <p className={styles.emptyText}>{t.profile.noHistory}</p>
+
+            {/* Visit counter + bonus */}
+            <VisitCounter bookings={bookings} t={t} />
+
+            {historyLoading ? (
+              <div className={styles.historyLoading}>
+                {[1, 2].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonField}`} />)}
+              </div>
+            ) : bookings.length === 0 ? (
+              <p className={styles.emptyText}>{t.profile.noHistory}</p>
+            ) : (
+              <div className={styles.bookingList}>
+                {bookings.map(b => (
+                  <BookingCard key={b.id} booking={b} t={t} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -462,5 +494,72 @@ function TelegramIcon() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
     </svg>
+  );
+}
+
+// ── Booking history sub-components ────────────────────────────────────────────
+
+import type { T } from '../../../i18n/translations';
+
+const BONUS_EVERY = 5;
+
+const STATUS_LABEL_KEY: Record<BookingStatus, keyof T['profile']> = {
+  pending:   'statusPending',
+  confirmed: 'statusConfirmed',
+  cancelled: 'statusCancelled',
+  attended:  'statusAttended',
+};
+
+function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
+  const attended = bookings.filter(b => b.status === 'attended').length;
+  const remaining = attended === 0 ? BONUS_EVERY : BONUS_EVERY - (attended % BONUS_EVERY);
+  const isBonusReady = attended > 0 && attended % BONUS_EVERY === 0;
+
+  return (
+    <div className={styles.visitCounter}>
+      <p className={styles.visitText}>{t.profile.visitCount(attended)}</p>
+      {attended > 0 && (
+        isBonusReady
+          ? <p className={styles.visitBonus}>{t.profile.bonusComplete}</p>
+          : <p className={styles.visitProgress}>{t.profile.bonusProgress(remaining)}</p>
+      )}
+      {attended > 0 && (
+        <div className={styles.visitBar}>
+          {Array.from({ length: BONUS_EVERY }, (_, i) => (
+            <div
+              key={i}
+              className={`${styles.visitDot} ${i < (attended % BONUS_EVERY || BONUS_EVERY) ? styles.visitDotFilled : ''}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BookingCard({ booking: b, t }: { booking: Booking; t: T }) {
+  const statusKey = STATUS_LABEL_KEY[b.status] as keyof typeof t.profile;
+  const statusLabel = t.profile[statusKey] as string;
+
+  return (
+    <div className={`${styles.bookingCard} ${styles[`bookingCard_${b.status}`] ?? ''}`}>
+      <div className={styles.bookingCardTop}>
+        <span className={styles.bookingShowTitle}>{b.showTitle}</span>
+        <span className={`${styles.bookingStatus} ${styles[`bookingStatus_${b.status}`]}`}>
+          {statusLabel}
+        </span>
+      </div>
+      <div className={styles.bookingCardMeta}>
+        <span>{b.showDate} · {b.showTime}</span>
+        <span>{b.ticketsCount} {b.ticketsCount === 1 ? 'билет' : 'билета'}</span>
+        {b.totalAmount > 0 && <span>{b.totalAmount}&nbsp;€</span>}
+      </div>
+      {b.ticketCode && (
+        <div className={styles.bookingTicketCode}>
+          <span>{t.profile.ticketCode}:</span>
+          <code>{b.ticketCode}</code>
+        </div>
+      )}
+    </div>
   );
 }

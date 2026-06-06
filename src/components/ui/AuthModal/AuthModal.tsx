@@ -1,27 +1,14 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { FirebaseError } from 'firebase/app';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
+import { mapAuthError, isEmailInUseError, isPopupClosedError } from '../../../utils/authErrors';
 import styles from './AuthModal.module.scss';
+
+type Tab = 'signIn' | 'signUp';
 
 interface Props {
   open: boolean;
   onClose: () => void;
-}
-
-type Tab = 'signIn' | 'signUp';
-
-function mapFirebaseError(code: string, errors: Record<string, string>): string {
-  const map: Record<string, string> = {
-    'auth/invalid-email':        errors.invalidEmail,
-    'auth/wrong-password':       errors.wrongPassword,
-    'auth/invalid-credential':   errors.wrongPassword,
-    'auth/email-already-in-use': errors.emailInUse,
-    'auth/weak-password':        errors.weakPassword,
-    'auth/user-not-found':       errors.userNotFound,
-    'auth/too-many-requests':    errors.tooManyRequests,
-  };
-  return map[code] ?? errors.generic;
 }
 
 export function AuthModal({ open, onClose }: Props) {
@@ -59,10 +46,13 @@ export function AuthModal({ open, onClose }: Props) {
 
   async function handleGoogle() {
     setLoading(true); resetForm();
-    try { await signInWithGoogle(); onClose(); }
-    catch (e) {
-      if (e instanceof FirebaseError) setError(mapFirebaseError(e.code, t.auth.errors));
-      else setError(t.auth.errors.generic);
+    try {
+      await signInWithGoogle();
+      onClose();
+    } catch (e) {
+      // Popup closed silently — not an error worth surfacing
+      if (isPopupClosedError(e)) { setLoading(false); return; }
+      setError(mapAuthError(e, t.auth.errors));
     } finally { setLoading(false); }
   }
 
@@ -76,8 +66,13 @@ export function AuthModal({ open, onClose }: Props) {
       }
       onClose();
     } catch (e) {
-      if (e instanceof FirebaseError) setError(mapFirebaseError(e.code, t.auth.errors));
-      else setError(t.auth.errors.generic);
+      // Email already in use during registration → guide user to sign-in tab
+      if (tab === 'signUp' && isEmailInUseError(e)) {
+        setTab('signIn');
+        setError(mapAuthError(e, t.auth.errors));
+      } else {
+        setError(mapAuthError(e, t.auth.errors));
+      }
     } finally { setLoading(false); }
   }
 
@@ -89,8 +84,7 @@ export function AuthModal({ open, onClose }: Props) {
       setInfo(t.auth.resetSent);
       setShowReset(false);
     } catch (e) {
-      if (e instanceof FirebaseError) setError(mapFirebaseError(e.code, t.auth.errors));
-      else setError(t.auth.errors.generic);
+      setError(mapAuthError(e, t.auth.errors));
     } finally { setLoading(false); }
   }
 

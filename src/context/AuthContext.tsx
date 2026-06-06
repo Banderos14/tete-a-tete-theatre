@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
-export type UserRole = 'user' | 'admin';
+export type UserRole  = 'user' | 'admin';
 export type Messenger = 'whatsapp' | 'telegram';
 
 export interface UserProfile {
@@ -29,25 +29,27 @@ export interface UserProfile {
   phone:           string;
   phoneVerified?:  boolean;
   phoneMessenger?: Messenger;
-  birthday?:       string;        // 'YYYY-MM-DD'
-  birthdayFromFb?: boolean;       // true if auto-filled from Facebook
+  birthday?:       string;       // 'YYYY-MM-DD'
+  birthdayFromFb?: boolean;
   socialLink:      string;
   facebookLinked?: boolean;
+  photoURL?:       string;
+  provider?:       'email' | 'google' | 'facebook';
   notifications:   boolean;
   role:            UserRole;
 }
 
 interface AuthContextType {
-  user:              User | null;
-  userProfile:       UserProfile | null;
-  loading:           boolean;
-  signInWithGoogle:  () => Promise<void>;
-  signInWithEmail:   (email: string, password: string) => Promise<void>;
-  signUpWithEmail:   (email: string, password: string, name: string) => Promise<void>;
-  logout:            () => Promise<void>;
-  resetPassword:     (email: string) => Promise<void>;
-  saveProfile:       (data: Partial<UserProfile>) => Promise<void>;
-  linkFacebook: () => Promise<{ name?: string; birthday?: string }>;
+  user:             User | null;
+  userProfile:      UserProfile | null;
+  loading:          boolean;
+  signInWithGoogle: () => Promise<void>;
+  signInWithEmail:  (email: string, password: string) => Promise<void>;
+  signUpWithEmail:  (email: string, password: string, name: string) => Promise<void>;
+  logout:           () => Promise<void>;
+  resetPassword:    (email: string) => Promise<void>;
+  saveProfile:      (data: Partial<UserProfile>) => Promise<void>;
+  linkFacebook:     () => Promise<{ name?: string; birthday?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -59,8 +61,13 @@ async function fetchProfile(uid: string): Promise<UserProfile | null> {
   return snap.exists() ? (snap.data() as UserProfile) : null;
 }
 
+// Always writes updatedAt — never exposes API key to frontend
 async function upsertProfile(uid: string, data: Partial<UserProfile> & Record<string, unknown>) {
-  await setDoc(doc(db, 'users', uid), data, { merge: true });
+  await setDoc(
+    doc(db, 'users', uid),
+    { ...data, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
 }
 
 function defaultProfile(overrides: Partial<UserProfile> = {}): UserProfile {
@@ -74,7 +81,7 @@ function defaultProfile(overrides: Partial<UserProfile> = {}): UserProfile {
   };
 }
 
-// Convert Facebook birthday MM/DD/YYYY → YYYY-MM-DD
+// Converts Facebook birthday MM/DD/YYYY → YYYY-MM-DD
 function parseFbBirthday(fb: string): string {
   const parts = fb.split('/');
   if (parts.length === 3) return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
@@ -91,86 +98,128 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+
       if (firebaseUser) {
-        const profile = await fetchProfile(firebaseUser.uid);
+        let profile = await fetchProfile(firebaseUser.uid);
+
+        if (!profile) {
+          // Firestore document is missing — auto-recover.
+          // This handles: orphaned Auth accounts, documents deleted manually,
+          // or the brief window between createUserWithEmailAndPassword and signUpWithEmail's write.
+          profile = defaultProfile({
+            displayName: firebaseUser.displayName ?? '',
+            email:       firebaseUser.email ?? '',
+            photoURL:    firebaseUser.photoURL ?? undefined,
+          });
+          await upsertProfile(firebaseUser.uid, {
+            ...profile,
+            createdAt: serverTimestamp(),
+          });
+        }
+
         setUserProfile(profile);
       } else {
         setUserProfile(null);
       }
+
       setLoading(false);
     });
   }, []);
 
-  // ── Save (create-or-merge) ──
+  // ── Save (merge into Firestore + local state) ──────────────────────────────
   async function saveProfile(data: Partial<UserProfile>) {
     if (!user) return;
     await upsertProfile(user.uid, data as Record<string, unknown>);
     setUserProfile(prev => (prev ? { ...prev, ...data } : defaultProfile(data)));
   }
 
-  // ── Google sign-in ──
+  // ── Google sign-in ─────────────────────────────────────────────────────────
   async function signInWithGoogle() {
-    const result = await signInWithPopup(auth, new GoogleAuthProvider());
-    const u = result.user;
+    const provider = new GoogleAuthProvider();
+    // Always prompt account selection so users can switch accounts
+    provider.setCustomParameters({ prompt: 'select_account' });
+
+    const result  = await signInWithPopup(auth, provider);
+    const u       = result.user;
     const existing = await fetchProfile(u.uid);
+
     if (!existing) {
-      const profile = defaultProfile({ displayName: u.displayName ?? '', email: u.email ?? '' });
+      // New Google user — create full profile
+      const profile = defaultProfile({
+        displayName: u.displayName ?? '',
+        email:       u.email ?? '',
+        photoURL:    u.photoURL ?? undefined,
+        provider:    'google',
+      });
       await upsertProfile(u.uid, { ...profile, createdAt: serverTimestamp() });
       setUserProfile(profile);
     } else {
-      setUserProfile(existing);
+      // Returning user — merge any updated Google fields without overwriting custom data
+      const updates: Partial<UserProfile> & Record<string, unknown> = {};
+      if (u.photoURL && !existing.photoURL) updates.photoURL = u.photoURL;
+      if (!existing.provider)               updates.provider  = 'google';
+
+      if (Object.keys(updates).length > 0) {
+        await upsertProfile(u.uid, updates);
+        setUserProfile({ ...existing, ...updates });
+      } else {
+        setUserProfile(existing);
+      }
     }
   }
 
-  // ── Email sign-in ──
+  // ── Email sign-in ──────────────────────────────────────────────────────────
   async function signInWithEmail(email: string, password: string) {
-    const result = await signInWithEmailAndPassword(auth, email, password);
+    const result  = await signInWithEmailAndPassword(auth, email, password);
     const profile = await fetchProfile(result.user.uid);
     if (profile) {
       setUserProfile(profile);
     } else {
-      // First login — profile might not exist yet
-      const fresh = defaultProfile({ email, displayName: result.user.displayName ?? '' });
+      // Firestore document missing for existing Auth user — auto-create
+      const fresh = defaultProfile({
+        email,
+        displayName: result.user.displayName ?? '',
+        provider:    'email',
+      });
       await upsertProfile(result.user.uid, { ...fresh, createdAt: serverTimestamp() });
       setUserProfile(fresh);
     }
   }
 
-  // ── Email sign-up ──
+  // ── Email sign-up ──────────────────────────────────────────────────────────
   async function signUpWithEmail(email: string, password: string, name: string) {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await firebaseUpdateProfile(result.user, { displayName: name });
-    const profile = defaultProfile({ displayName: name, email });
+    const profile = defaultProfile({ displayName: name, email, provider: 'email' });
     await upsertProfile(result.user.uid, { ...profile, createdAt: serverTimestamp() });
     setUserProfile(profile);
   }
 
-  // ── Logout ──
+  // ── Logout ─────────────────────────────────────────────────────────────────
   async function logout() {
     await firebaseSignOut(auth);
   }
 
-  // ── Reset password ──
+  // ── Reset password ─────────────────────────────────────────────────────────
   async function resetPassword(email: string) {
     await sendPasswordResetEmail(auth, email);
   }
 
-  // ── Link Facebook + fetch name & birthday ──
+  // ── Link Facebook + fetch name & birthday ─────────────────────────────────
   async function linkFacebook(): Promise<{ name?: string; birthday?: string }> {
     if (!user) throw new Error('Not authenticated');
 
-    const provider = new FacebookAuthProvider();
-    provider.addScope('user_birthday');
-    provider.addScope('public_profile');
+    const fbProvider = new FacebookAuthProvider();
+    fbProvider.addScope('user_birthday');
+    fbProvider.addScope('public_profile');
 
-    const result = await linkWithPopup(user, provider);
-    const credential = FacebookAuthProvider.credentialFromResult(result);
+    const result      = await linkWithPopup(user, fbProvider);
+    const credential  = FacebookAuthProvider.credentialFromResult(result);
     const accessToken = credential?.accessToken;
 
-    let fbName: string | undefined;
+    let fbName:     string | undefined;
     let fbBirthday: string | undefined;
 
-    // Fetch name + birthday from Graph API using the access token
     if (accessToken) {
       try {
         const resp = await fetch(
@@ -182,23 +231,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (data.birthday) fbBirthday = parseFbBirthday(data.birthday);
         }
       } catch {
-        // Graph API call failed — continue without birthday
+        // Graph API failed — continue without birthday
       }
     }
 
     const updates: Partial<UserProfile> = { facebookLinked: true };
 
-    // Prefer Graph API name; fall back to what Firebase Auth received from FB
     const resolvedName = fbName ?? result.user.displayName ?? undefined;
-    if (resolvedName) updates.displayName = resolvedName;
-    if (fbBirthday)   { updates.birthday = fbBirthday; updates.birthdayFromFb = true; }
+    if (resolvedName) updates.displayName   = resolvedName;
+    if (fbBirthday)   { updates.birthday    = fbBirthday; updates.birthdayFromFb = true; }
 
-    // Also update Firebase Auth displayName so the header shows the correct name
     if (resolvedName && !user.displayName) {
       await firebaseUpdateProfile(user, { displayName: resolvedName });
     }
 
-    // Clear any legacy malformed socialLink (old code saved accessToken as URL)
+    // Clear legacy malformed socialLink (old code saved access token as URL)
     const currentSocial = userProfile?.socialLink ?? '';
     if (currentSocial.startsWith('https://facebook.com/EAA')) {
       updates.socialLink = '';

@@ -50,11 +50,11 @@ export async function getAllBookings(filters: { showId?: string } = {}): Promise
 }
 
 export async function updateBookingStatus(bookingId: string, status: BookingStatus): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, bookingId), { status });
+  await updateDoc(doc(db, COLLECTION, bookingId), { status, updatedAt: serverTimestamp() });
 }
 
 export async function updatePaymentStatus(bookingId: string, paymentStatus: PaymentStatus): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, bookingId), { paymentStatus });
+  await updateDoc(doc(db, COLLECTION, bookingId), { paymentStatus, updatedAt: serverTimestamp() });
 }
 
 function snapshotToBookings(snapshot: Awaited<ReturnType<typeof getDocs>>): Booking[] {
