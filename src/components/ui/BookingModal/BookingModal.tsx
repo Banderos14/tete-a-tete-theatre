@@ -505,6 +505,9 @@ export function BookingModal({ show, onClose }: Props) {
                       >
                         {copiedDetails ? t.booking.copied : t.booking.copyDetails}
                       </button>
+                      <p className={styles.transferCodeWarning}>
+                        ⚠ {t.booking.transferCodeWarning}
+                      </p>
                     </div>
                   </>
                 )}

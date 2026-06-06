@@ -57,6 +57,16 @@ export async function updatePaymentStatus(bookingId: string, paymentStatus: Paym
   await updateDoc(doc(db, COLLECTION, bookingId), { paymentStatus, updatedAt: serverTimestamp() });
 }
 
+// Marks payment as received AND confirms the booking in a single write.
+// Use this instead of calling updatePaymentStatus + updateBookingStatus separately.
+export async function markBookingPaid(bookingId: string): Promise<void> {
+  await updateDoc(doc(db, COLLECTION, bookingId), {
+    paymentStatus: 'paid',
+    status: 'confirmed',
+    updatedAt: serverTimestamp(),
+  });
+}
+
 function snapshotToBookings(snapshot: Awaited<ReturnType<typeof getDocs>>): Booking[] {
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as object) } as Booking));
 }

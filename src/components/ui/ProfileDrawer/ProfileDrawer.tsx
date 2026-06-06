@@ -201,7 +201,9 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const photoURL      = user?.photoURL ?? null;
   const fbLinked      = userProfile?.facebookLinked ?? false;
   const birthdayFromFb = userProfile?.birthdayFromFb ?? false;
-  const missingCount  = Object.keys(validate(displayName, birthday, phone, t.profile.required)).length;
+  const missingCount     = Object.keys(validate(displayName, birthday, phone, t.profile.required)).length;
+  const activeBookings   = bookings.filter(b => !computedIsAttended(b));
+  const attendedBookings = bookings.filter(computedIsAttended);
 
   // ── loading skeleton ──
   if (open && loading) {
@@ -398,23 +400,36 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
           </form>
 
-          {/* ── МОИ БИЛЕТЫ ── */}
+          {/* ── МОИ БИЛЕТЫ (active / future) ── */}
           <div className={styles.historySection}>
             <p className={styles.sectionLabel}>{t.profile.history}</p>
-
-            {/* Visit counter + bonus */}
-            <VisitCounter bookings={bookings} t={t} />
-
             {historyLoading ? (
               <div className={styles.historyLoading}>
                 {[1, 2].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonField}`} />)}
               </div>
-            ) : bookings.length === 0 ? (
+            ) : activeBookings.length === 0 ? (
               <p className={styles.emptyText}>{t.profile.noHistory}</p>
             ) : (
               <div className={styles.bookingList}>
-                {bookings.map(b => (
-                  <BookingCard key={b.id} booking={b} t={t} />
+                {activeBookings.map(b => (
+                  <BookingCard key={b.id} booking={b} t={t} show={SHOW_MAP.get(b.showId)} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── МОИ СПЕКТАКЛИ (attended) ── */}
+          <div className={styles.historySection}>
+            <p className={styles.sectionLabel}>{t.profile.historyAttended}</p>
+            <VisitCounter bookings={bookings} t={t} />
+            {historyLoading ? (
+              <div className={styles.historyLoading}>
+                {[1].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonField}`} />)}
+              </div>
+            ) : attendedBookings.length > 0 && (
+              <div className={styles.bookingList}>
+                {attendedBookings.map(b => (
+                  <BookingCard key={b.id} booking={b} t={t} show={SHOW_MAP.get(b.showId)} />
                 ))}
               </div>
             )}
@@ -500,6 +515,11 @@ function TelegramIcon() {
 // ── Booking history sub-components ────────────────────────────────────────────
 
 import type { T } from '../../../i18n/translations';
+import type { Show } from '../../../types';
+import { SHOWS } from '../../../data/shows';
+import { computedIsAttended } from '../../../services/attendanceService';
+
+const SHOW_MAP = new Map<string, Show>(SHOWS.map(s => [s.id, s]));
 
 const BONUS_EVERY = 5;
 
@@ -511,7 +531,7 @@ const STATUS_LABEL_KEY: Record<BookingStatus, keyof T['profile']> = {
 };
 
 function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
-  const attended = bookings.filter(b => b.status === 'attended').length;
+  const attended = bookings.filter(computedIsAttended).length;
   const remaining = attended === 0 ? BONUS_EVERY : BONUS_EVERY - (attended % BONUS_EVERY);
   const isBonusReady = attended > 0 && attended % BONUS_EVERY === 0;
 
@@ -537,8 +557,10 @@ function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
   );
 }
 
-function BookingCard({ booking: b, t }: { booking: Booking; t: T }) {
-  const statusKey   = STATUS_LABEL_KEY[b.status] as keyof typeof t.profile;
+function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: Show }) {
+  const isAttended  = computedIsAttended(b);
+  const displayStatus: BookingStatus = isAttended ? 'attended' : b.status;
+  const statusKey   = STATUS_LABEL_KEY[displayStatus] as keyof typeof t.profile;
   const statusLabel = t.profile[statusKey] as string;
 
   const payStatus = b.paymentStatus ?? 'not_paid';
@@ -555,44 +577,53 @@ function BookingCard({ booking: b, t }: { booking: Booking; t: T }) {
                                         t.profile.payStatusNotPaid;
 
   return (
-    <div className={`${styles.bookingCard} ${styles[`bookingCard_${b.status}`] ?? ''}`}>
-      <div className={styles.bookingCardTop}>
-        <span className={styles.bookingShowTitle}>{b.showTitle}</span>
-        <span className={`${styles.bookingStatus} ${styles[`bookingStatus_${b.status}`]}`}>
-          {statusLabel}
-        </span>
-      </div>
-      <div className={styles.bookingCardMeta}>
-        <span>{b.showDate} · {b.showTime}</span>
-        <span>{b.ticketsCount} {b.ticketsCount === 1 ? 'билет' : 'билета'}</span>
-        {b.totalAmount > 0 && <span>{b.totalAmount}&nbsp;€</span>}
-      </div>
-      <div className={styles.bookingPayInfo}>
-        <span className={styles.bookingPayMethod}>{payMethodLabel}</span>
-        <span className={`${styles.bookingPayStatus} ${styles[`bookingPayStatus_${payStatus}`]}`}>
-          {payStatusLabel}
-        </span>
-      </div>
-      {b.ticketCode && (
-        <div className={styles.bookingTicketCode}>
-          <span>{t.profile.ticketCode}:</span>
-          <code>{b.ticketCode}</code>
+    <div className={`${styles.bookingCard} ${styles[`bookingCard_${displayStatus}`] ?? ''}`}>
+      <div className={styles.bookingCardRow}>
+        {show && (
+          <div className={styles.showGlyphBox} style={{ background: show.palette }}>
+            {show.glyph}
+          </div>
+        )}
+        <div className={styles.bookingCardContent}>
+          <div className={styles.bookingCardTop}>
+            <span className={styles.bookingShowTitle}>{b.showTitle}</span>
+            <span className={`${styles.bookingStatus} ${styles[`bookingStatus_${displayStatus}`]}`}>
+              {statusLabel}
+            </span>
+          </div>
+          <div className={styles.bookingCardMeta}>
+            <span>{b.showDate} · {b.showTime}</span>
+            <span>{b.ticketsCount} {b.ticketsCount === 1 ? 'билет' : 'билета'}</span>
+            {b.totalAmount > 0 && <span>{b.totalAmount}&nbsp;€</span>}
+          </div>
+          <div className={styles.bookingPayInfo}>
+            <span className={styles.bookingPayMethod}>{payMethodLabel}</span>
+            <span className={`${styles.bookingPayStatus} ${styles[`bookingPayStatus_${payStatus}`]}`}>
+              {payStatusLabel}
+            </span>
+          </div>
+          {b.ticketCode && (
+            <div className={styles.bookingTicketCode}>
+              <span>{t.profile.ticketCode}:</span>
+              <code>{b.ticketCode}</code>
+            </div>
+          )}
+          {isPendingTransfer && b.ticketCode && (
+            <p className={styles.bookingTransferReminder}>
+              {t.profile.payTransferReminder(b.ticketCode)}
+            </p>
+          )}
+          {!isAttended && displayStatus === 'confirmed' && (
+            <p className={styles.bookingNoteOk}>{t.profile.bookingNoteConfirmed}</p>
+          )}
+          {!isAttended && displayStatus === 'cancelled' && (
+            <p className={styles.bookingNoteBad}>{t.profile.bookingNoteCancelled}</p>
+          )}
+          {!isAttended && payStatus === 'paid' && displayStatus === 'pending' && (
+            <p className={styles.bookingNoteOk}>{t.profile.bookingNotePaid}</p>
+          )}
         </div>
-      )}
-      {isPendingTransfer && b.ticketCode && (
-        <p className={styles.bookingTransferReminder}>
-          {t.profile.payTransferReminder(b.ticketCode)}
-        </p>
-      )}
-      {payStatus === 'paid' && (
-        <p className={styles.bookingNoteOk}>{t.profile.bookingNotePaid}</p>
-      )}
-      {b.status === 'confirmed' && (
-        <p className={styles.bookingNoteOk}>{t.profile.bookingNoteConfirmed}</p>
-      )}
-      {b.status === 'cancelled' && (
-        <p className={styles.bookingNoteBad}>{t.profile.bookingNoteCancelled}</p>
-      )}
+      </div>
     </div>
   );
 }
