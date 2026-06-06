@@ -538,8 +538,21 @@ function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
 }
 
 function BookingCard({ booking: b, t }: { booking: Booking; t: T }) {
-  const statusKey = STATUS_LABEL_KEY[b.status] as keyof typeof t.profile;
+  const statusKey   = STATUS_LABEL_KEY[b.status] as keyof typeof t.profile;
   const statusLabel = t.profile[statusKey] as string;
+
+  const payStatus = b.paymentStatus ?? 'not_paid';
+  const isPendingTransfer =
+    b.paymentMethod === 'bank_transfer' && (payStatus === 'not_paid' || payStatus === 'awaiting_transfer');
+
+  const payMethodLabel = b.paymentMethod === 'bank_transfer'
+    ? t.profile.payMethodTransfer
+    : t.profile.payMethodOnSite;
+
+  const payStatusLabel =
+    payStatus === 'paid'              ? t.profile.payStatusPaid      :
+    payStatus === 'awaiting_transfer' ? t.profile.payStatusAwaiting  :
+                                        t.profile.payStatusNotPaid;
 
   return (
     <div className={`${styles.bookingCard} ${styles[`bookingCard_${b.status}`] ?? ''}`}>
@@ -554,11 +567,31 @@ function BookingCard({ booking: b, t }: { booking: Booking; t: T }) {
         <span>{b.ticketsCount} {b.ticketsCount === 1 ? 'билет' : 'билета'}</span>
         {b.totalAmount > 0 && <span>{b.totalAmount}&nbsp;€</span>}
       </div>
+      <div className={styles.bookingPayInfo}>
+        <span className={styles.bookingPayMethod}>{payMethodLabel}</span>
+        <span className={`${styles.bookingPayStatus} ${styles[`bookingPayStatus_${payStatus}`]}`}>
+          {payStatusLabel}
+        </span>
+      </div>
       {b.ticketCode && (
         <div className={styles.bookingTicketCode}>
           <span>{t.profile.ticketCode}:</span>
           <code>{b.ticketCode}</code>
         </div>
+      )}
+      {isPendingTransfer && b.ticketCode && (
+        <p className={styles.bookingTransferReminder}>
+          {t.profile.payTransferReminder(b.ticketCode)}
+        </p>
+      )}
+      {payStatus === 'paid' && (
+        <p className={styles.bookingNoteOk}>{t.profile.bookingNotePaid}</p>
+      )}
+      {b.status === 'confirmed' && (
+        <p className={styles.bookingNoteOk}>{t.profile.bookingNoteConfirmed}</p>
+      )}
+      {b.status === 'cancelled' && (
+        <p className={styles.bookingNoteBad}>{t.profile.bookingNoteCancelled}</p>
       )}
     </div>
   );

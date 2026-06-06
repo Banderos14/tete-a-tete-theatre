@@ -11,16 +11,17 @@
 // email is best-effort.
 
 import type { BookingStatus } from '../types/booking';
+import { PAYMENT_CONFIG } from '../config/payment';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const THEATRE_ADDRESS = '24 Rue Rossini, 06000 Nice';
-const THEATRE_EMAIL   = 'teteatete.theatre.nice@gmail.com';
-const THEATRE_PHONE   = '+33 6 13 67 55 95';
-const THEATRE_NAME    = 'Théâtre Tête-à-Tête';
-const THEATRE_MAPS    = 'https://maps.app.goo.gl/...'; // optional link
-const THEATRE_IBAN    = 'FR76 XXXX XXXX XXXX XXXX XXXX XXX';
-const THEATRE_BIC     = 'XXXXFRXX';
+const THEATRE_NAME    = PAYMENT_CONFIG.receiverName;
+const THEATRE_ADDRESS = PAYMENT_CONFIG.address;
+const THEATRE_EMAIL   = PAYMENT_CONFIG.paymentEmail;
+const THEATRE_PHONE   = PAYMENT_CONFIG.paymentPhone;
+const THEATRE_IBAN    = PAYMENT_CONFIG.iban;
+const THEATRE_BIC     = PAYMENT_CONFIG.bic;
+const THEATRE_MAPS    = 'https://maps.app.goo.gl/...';
 
 // ── Data types ────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,19 @@ export interface BookingStatusEmailData {
   ticketCode:   string;
   newStatus:    Extract<BookingStatus, 'confirmed' | 'cancelled' | 'attended'>;
   lang:         'RU' | 'FR';
+}
+
+export interface PaymentPaidEmailData {
+  userEmail:     string;
+  userName:      string;
+  showTitle:     string;
+  showDate:      string;
+  showTime:      string;
+  ticketsCount:  number;
+  totalAmount:   number;
+  ticketCode:    string;
+  bookingStatus: BookingStatus;
+  lang:          'RU' | 'FR';
 }
 
 // ── Shared HTML building blocks ───────────────────────────────────────────────
@@ -185,7 +199,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
   ];
 
   // Bank transfer details block — included in the same email, no second email needed
-  const paymentPurpose = `${data.showTitle} ${data.showDate} ${data.ticketCode}`;
+  const paymentPurpose = `${data.showTitle} — ${data.showDate} — ${data.ticketCode}`;
   const transferRows: [string, string][] = isRU ? [
     ['Получатель',         THEATRE_NAME],
     ['IBAN',               THEATRE_IBAN],
@@ -346,6 +360,140 @@ function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html
   return { subject, html, text };
 }
 
+// ── Payment paid email ────────────────────────────────────────────────────────
+
+function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: string; html: string; text: string } {
+  const isRU      = data.lang !== 'FR';
+  const isAlreadyConfirmed = data.bookingStatus === 'confirmed';
+
+  const subject = isRU
+    ? `${THEATRE_NAME} — оплата получена: ${data.showTitle}`
+    : `${THEATRE_NAME} — paiement reçu : ${data.showTitle}`;
+
+  const headerTitle = isRU ? 'Оплата получена' : 'Paiement reçu';
+  const greeting    = isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName}&nbsp;!`;
+  const ticketLabel = isRU ? 'Код брони' : 'Code de réservation';
+
+  const nextNote = isRU
+    ? (isAlreadyConfirmed
+        ? 'Ваша бронь подтверждена. Ждём вас в театре!'
+        : 'Бронь ожидает подтверждения. Мы свяжемся с вами в ближайшее время.')
+    : (isAlreadyConfirmed
+        ? 'Votre réservation est confirmée. Nous vous attendons au théâtre&nbsp;!'
+        : 'Votre réservation est en attente de confirmation. Nous vous contacterons prochainement.');
+
+  const rows: [string, string][] = isRU ? [
+    ['Спектакль', data.showTitle],
+    ['Дата',      `${data.showDate} · ${data.showTime}`],
+    ['Билеты',    `${data.ticketsCount} шт.`],
+    ['Сумма',     `${data.totalAmount}&nbsp;€`],
+  ] : [
+    ['Spectacle', data.showTitle],
+    ['Date',      `${data.showDate} · ${data.showTime}`],
+    ['Billets',   `${data.ticketsCount} billet${data.ticketsCount > 1 ? 's' : ''}`],
+    ['Montant',   `${data.totalAmount}&nbsp;€`],
+  ];
+
+  const bodyHtml = `
+    <p style="margin:0 0 20px;font-size:15px;color:#333;">${greeting}</p>
+    ${infoTable(rows)}
+    ${codeBlock(data.ticketCode, ticketLabel)}
+    ${noteBlock(nextNote)}
+    <p style="margin:16px 0 0;font-size:12px;color:#aaa;">
+      <a href="${THEATRE_MAPS}" style="color:#c9a96e;text-decoration:none;">${THEATRE_ADDRESS}</a>
+    </p>`;
+
+  const html = wrapHtml(isRU ? 'ru' : 'fr', subject, headerTitle, bodyHtml);
+
+  const text = [
+    THEATRE_NAME, '',
+    isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName} !`,
+    isRU ? 'Мы получили вашу оплату.' : 'Nous avons reçu votre paiement.',
+    '',
+    isRU ? `Спектакль: ${data.showTitle}` : `Spectacle : ${data.showTitle}`,
+    isRU ? `Дата: ${data.showDate} · ${data.showTime}` : `Date : ${data.showDate} · ${data.showTime}`,
+    isRU ? `Сумма: ${data.totalAmount} €` : `Montant : ${data.totalAmount} €`,
+    isRU ? `Код брони: ${data.ticketCode}` : `Code : ${data.ticketCode}`,
+    '', nextNote, '',
+    THEATRE_ADDRESS, `${THEATRE_EMAIL} · ${THEATRE_PHONE}`,
+  ].join('\n');
+
+  return { subject, html, text };
+}
+
+// ── New show announcement email ───────────────────────────────────────────────
+
+export interface NewShowEmailData {
+  userEmail:   string;
+  userName:    string;
+  showTitle:   string;
+  showDate:    string;
+  showTime:    string;
+  price?:      string;
+  description?: string;
+  siteUrl:     string;
+  lang:        'RU' | 'FR';
+}
+
+function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: string; text: string } {
+  const isRU = data.lang !== 'FR';
+
+  const subject = isRU
+    ? `${THEATRE_NAME} — новый спектакль в афише: ${data.showTitle}`
+    : `${THEATRE_NAME} — nouveau spectacle à l'affiche : ${data.showTitle}`;
+
+  const headerTitle = isRU ? 'Новый спектакль в афише' : 'Nouveau spectacle à l\'affiche';
+  const greeting    = isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName} !`;
+
+  const rows: [string, string][] = isRU ? [
+    ['Спектакль', data.showTitle],
+    ['Дата',      `${data.showDate} · ${data.showTime}`],
+    ...(data.price ? [['Билеты', data.price] as [string, string]] : []),
+  ] : [
+    ['Spectacle', data.showTitle],
+    ['Date',      `${data.showDate} · ${data.showTime}`],
+    ...(data.price ? [['Billets', data.price] as [string, string]] : []),
+  ];
+
+  const descBlock = data.description
+    ? noteBlock(data.description)
+    : '';
+
+  const ctaLabel = isRU ? 'Смотреть афишу' : 'Voir l\'affiche';
+
+  const bodyHtml = `
+    <p style="margin:0 0 20px;font-size:15px;color:#333;">${greeting}</p>
+    ${infoTable(rows)}
+    ${descBlock}
+    <p style="margin:20px 0 0;text-align:center;">
+      <a href="${data.siteUrl}"
+         style="display:inline-block;background:#111;color:#fff;padding:12px 28px;
+                border-radius:4px;text-decoration:none;font-size:13px;
+                letter-spacing:2px;font-family:Arial,sans-serif;">
+        ${ctaLabel}
+      </a>
+    </p>`;
+
+  const html = wrapHtml(isRU ? 'ru' : 'fr', subject, headerTitle, bodyHtml);
+
+  const text = [
+    THEATRE_NAME, '',
+    isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName} !`,
+    isRU ? 'Новый спектакль в афише:' : 'Nouveau spectacle à l\'affiche :',
+    '',
+    isRU ? `Спектакль: ${data.showTitle}` : `Spectacle : ${data.showTitle}`,
+    isRU ? `Дата: ${data.showDate} · ${data.showTime}` : `Date : ${data.showDate} · ${data.showTime}`,
+    ...(data.price ? [isRU ? `Билеты: ${data.price}` : `Billets : ${data.price}`] : []),
+    '',
+    data.siteUrl,
+    '',
+    THEATRE_ADDRESS,
+    `${THEATRE_EMAIL} · ${THEATRE_PHONE}`,
+  ].join('\n');
+
+  return { subject, html, text };
+}
+
 // ── API call ──────────────────────────────────────────────────────────────────
 
 async function callEndpoint(payload: { to: string; subject: string; html: string; text: string }): Promise<void> {
@@ -379,10 +527,24 @@ export async function sendBookingConfirmationEmail(data: BookingEmailData): Prom
   await callEndpoint({ to: data.userEmail, subject, html, text });
 }
 
-// Sends an update when admin changes the booking status.
-// Call this from AdminPage after updateBookingStatus() — currently a TODO.
+// Sends an update when admin changes booking status (confirmed / cancelled / attended).
 export async function sendBookingStatusUpdateEmail(data: BookingStatusEmailData): Promise<void> {
   const { subject, html, text } = buildStatusEmail(data);
+  await callEndpoint({ to: data.userEmail, subject, html, text });
+}
+
+// Sends a payment confirmation when admin marks booking as paid.
+export async function sendPaymentPaidEmail(data: PaymentPaidEmailData): Promise<void> {
+  if (!data.userEmail) return;
+  const { subject, html, text } = buildPaymentPaidEmail(data);
+  await callEndpoint({ to: data.userEmail, subject, html, text });
+}
+
+// Sends a new-show announcement to a single subscriber.
+// Call once per recipient — AdminPage loops over getUsersForNewsletter().
+export async function sendNewShowAnnouncementEmail(data: NewShowEmailData): Promise<void> {
+  if (!data.userEmail) return;
+  const { subject, html, text } = buildNewShowEmail(data);
   await callEndpoint({ to: data.userEmail, subject, html, text });
 }
 

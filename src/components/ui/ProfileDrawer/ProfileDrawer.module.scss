@@ -602,6 +602,86 @@
   }
 }
 
+.bookingPayInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.bookingPayMethod {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  color: var(--fg-mute);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 2px 6px;
+}
+
+.bookingPayStatus {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  border-radius: 2px;
+  padding: 2px 6px;
+}
+
+.bookingPayStatus_not_paid {
+  background: rgba(100, 100, 100, 0.1);
+  color: var(--fg-mute);
+  border: 1px solid var(--line);
+}
+
+.bookingPayStatus_awaiting_transfer {
+  background: rgba(255, 160, 0, 0.12);
+  color: #e08a00;
+  border: 1px solid rgba(255, 160, 0, 0.3);
+}
+
+.bookingPayStatus_paid {
+  background: rgba(76, 175, 80, 0.12);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.bookingTransferReminder {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #e08a00;
+  line-height: 1.5;
+  padding: 6px 10px;
+  background: rgba(255, 160, 0, 0.08);
+  border-left: 2px solid #e08a00;
+  border-radius: 3px;
+}
+
+.bookingNoteOk {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #2a8a4a;
+  line-height: 1.5;
+  padding: 5px 10px;
+  background: rgba(42, 138, 74, 0.08);
+  border-left: 2px solid #2a8a4a;
+  border-radius: 3px;
+}
+
+.bookingNoteBad {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #b04040;
+  line-height: 1.5;
+  padding: 5px 10px;
+  background: rgba(176, 64, 64, 0.08);
+  border-left: 2px solid #b04040;
+  border-radius: 3px;
+}
+
 // ── Footer ───────────────────────────────────────────────────────────────────
 .drawerFooter {
   padding: 14px 24px;
