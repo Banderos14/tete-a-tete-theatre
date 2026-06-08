@@ -141,6 +141,10 @@ export function hoursUntilExpiry(booking: Booking): number | null {
   return Math.floor((expiresMs - Date.now()) / (1000 * 60 * 60));
 }
 
+export async function forceBookingPaymentMethod(bookingId: string): Promise<void> {
+  await updateDoc(doc(db, COLLECTION, bookingId), { paymentMethod: 'on_site', updatedAt: serverTimestamp() });
+}
+
 export async function getBookingByTicketCode(ticketCode: string): Promise<Booking | null> {
   const q = query(collection(db, COLLECTION), where('ticketCode', '==', ticketCode));
   const snap = await getDocs(q);

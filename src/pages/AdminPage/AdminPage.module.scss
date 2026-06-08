@@ -639,3 +639,74 @@
 
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
+
+// ── Confirm dialog overlay ────────────────────────────────────────────────────
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
+
+.confirmDialog {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 28px 32px;
+  max-width: 360px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.confirmTitle {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.confirmText {
+  font-size: 14px;
+  color: var(--fg-dim);
+  line-height: 1.5;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.confirmCancel {
+  padding: 9px 18px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--fg-mute);
+  transition: color 0.2s, border-color 0.2s;
+
+  &:hover { color: var(--fg); border-color: var(--line-strong); }
+}
+
+.confirmOk {
+  padding: 9px 18px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  transition: background 0.2s;
+
+  &:hover { background: var(--accent-bright, #c00); }
+}

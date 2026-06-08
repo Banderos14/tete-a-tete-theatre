@@ -32,9 +32,9 @@ function formatTimestamp(ts: unknown): string {
 
 const PAY_STATUS_LABELS: Record<PaymentStatus, string> = {
   not_paid:          'Не оплачено',
-  awaiting_transfer: 'En attente de virement',
+  awaiting_transfer: 'Ожидает перевода',
   paid:              'Оплачено',
-  expired:           'Истекла',
+  expired:           'Истекло',
 };
 
 const PAY_STATUS_STYLE: Record<PaymentStatus, string> = {
@@ -56,6 +56,7 @@ export function AdminPage() {
   const [filterStatus,setFilterStatus]= useState<FilterStatus>('all');
   const [fetching,    setFetching]    = useState(true);
   const [updatingId,  setUpdatingId]  = useState<string | null>(null);
+  const [confirmUnpaidId, setConfirmUnpaidId] = useState<string | null>(null);
 
   const [nlShowId,    setNlShowId]    = useState<string>(SHOWS[0]?.id ?? '');
   const [nlSending,   setNlSending]   = useState(false);
@@ -448,7 +449,7 @@ export function AdminPage() {
                                 <button
                                   className={styles.actionUnpaid}
                                   disabled={isBusy}
-                                  onClick={() => handlePaymentStatus(b.id, 'not_paid')}
+                                  onClick={() => setConfirmUnpaidId(b.id)}
                                 >Не оплачено</button>
                               )}
                             </div>
@@ -474,15 +475,6 @@ export function AdminPage() {
                         <td className={styles.cellComment}>{b.comment || '—'}</td>
                         <td>
                           <div className={styles.actions}>
-                            {/* Manual confirm — for on_site or edge cases without payment */}
-                            {bStatus === 'pending' && b.paymentMethod === 'on_site' && (
-                              <button
-                                className={styles.actionConfirmSecondary}
-                                disabled={isBusy}
-                                onClick={() => handleStatus(b.id, 'confirmed')}
-                                title="Подтвердить без оплаты (наличные на месте)"
-                              >Подтвердить вручную</button>
-                            )}
                             {bStatus !== 'cancelled' && (
                               <button
                                 className={styles.actionCancel}
@@ -604,6 +596,30 @@ export function AdminPage() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Confirm "not paid" dialog ── */}
+      {confirmUnpaidId && (
+        <div className={styles.confirmOverlay}>
+          <div className={styles.confirmDialog}>
+            <p className={styles.confirmTitle}>Подтверждение действия</p>
+            <p className={styles.confirmText}>Вы действительно хотите изменить статус оплаты?</p>
+            <div className={styles.confirmActions}>
+              <button
+                className={styles.confirmCancel}
+                onClick={() => setConfirmUnpaidId(null)}
+              >Отмена</button>
+              <button
+                className={styles.confirmOk}
+                onClick={() => {
+                  const id = confirmUnpaidId;
+                  setConfirmUnpaidId(null);
+                  handlePaymentStatus(id, 'not_paid');
+                }}
+              >Подтвердить</button>
+            </div>
+          </div>
         </div>
       )}
 
