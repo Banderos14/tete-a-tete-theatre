@@ -2,33 +2,31 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useAuth } from '../../context/AuthContext';
-import { getBookingByTicketCode, updateBookingStatus } from '../../services/bookingService';
+import { getBookingByTicketCode, updateBookingStatus, markBookingPaid } from '../../services/bookingService';
 import { parseTicketCodeFromScan } from '../../utils/parseTicketCode';
 import type { Booking } from '../../types/booking';
 import styles from './TicketCheckPage.module.scss';
 
-type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'marking' | 'done' | 'error';
-type CardVariant = 'valid' | 'invalid' | 'used';
+type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'error';
 
 const IS_DEV = import.meta.env.DEV;
 
 export function TicketCheckPage() {
-  const navigate        = useNavigate();
-  const [searchParams]  = useSearchParams();
+  const navigate       = useNavigate();
+  const [searchParams] = useSearchParams();
   const { userProfile, loading } = useAuth();
   const isAdmin = userProfile?.role === 'admin';
 
-  // React Router (HashRouter) already extracts the ticket value from the hash search string
   const ticketFromUrl = searchParams.get('ticket') ?? '';
 
-  // Start in loading state immediately if ticket is in URL — avoids idle flash
-  const [scanState, setScanState] = useState<ScanState>(ticketFromUrl ? 'loading' : 'idle');
-  const [booking,   setBooking]   = useState<Booking | null>(null);
-  const [errorMsg,  setErrorMsg]  = useState('');
+  const [scanState,  setScanState]  = useState<ScanState>(ticketFromUrl ? 'loading' : 'idle');
+  const [booking,    setBooking]    = useState<Booking | null>(null);
+  const [errorMsg,   setErrorMsg]   = useState('');
+  const [operating,  setOperating]  = useState(false);
   const scannerRef    = useRef<Html5QrcodeScanner | null>(null);
   const urlLookupDone = useRef(false);
 
-  // ── Auth guard ──
+  // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (loading) return;
     if (!isAdmin) {
@@ -37,15 +35,14 @@ export function TicketCheckPage() {
     }
   }, [loading, isAdmin, navigate]);
 
-  // ── Auto-lookup when ?ticket= is present in the URL ──
+  // ── Auto-lookup when ?ticket= is present in the URL ────────────────────────
   useEffect(() => {
     if (loading || !isAdmin || !ticketFromUrl || urlLookupDone.current) return;
     urlLookupDone.current = true;
 
     const code = parseTicketCodeFromScan(ticketFromUrl);
     if (IS_DEV) {
-      console.log('[TicketCheck] url raw:', ticketFromUrl);
-      console.log('[TicketCheck] parsed ticketCode:', code);
+      console.log('[TicketCheck] url raw:', ticketFromUrl, '→ parsed:', code);
     }
 
     if (!code) {
@@ -62,6 +59,14 @@ export function TicketCheckPage() {
           setScanState('error');
           return;
         }
+        if (IS_DEV) {
+          console.log('[TicketCheck] booking', {
+            id: found.id,
+            paymentMethod: found.paymentMethod,
+            paymentStatus: found.paymentStatus,
+            status: found.status,
+          });
+        }
         setBooking(found);
         setScanState('found');
       })
@@ -71,7 +76,7 @@ export function TicketCheckPage() {
       });
   }, [loading, isAdmin, ticketFromUrl]);
 
-  // ── Camera scanner lifecycle ──
+  // ── Camera scanner lifecycle ────────────────────────────────────────────────
   function startScanning() {
     setScanState('scanning');
     setBooking(null);
@@ -95,15 +100,10 @@ export function TicketCheckPage() {
           scannerRef.current = null;
           setScanState('loading');
 
-          if (IS_DEV) {
-            console.log('[TicketCheck] raw scan:', text);
-          }
+          if (IS_DEV) console.log('[TicketCheck] raw scan:', text);
 
           const code = parseTicketCodeFromScan(text);
-
-          if (IS_DEV) {
-            console.log('[TicketCheck] parsed ticketCode:', code);
-          }
+          if (IS_DEV) console.log('[TicketCheck] parsed:', code);
 
           if (!code) {
             setErrorMsg('QR-код не похож на билет Théâtre Tête-à-Tête.');
@@ -117,6 +117,14 @@ export function TicketCheckPage() {
             setScanState('error');
             return;
           }
+          if (IS_DEV) {
+            console.log('[TicketCheck] booking', {
+              id: found.id,
+              paymentMethod: found.paymentMethod,
+              paymentStatus: found.paymentStatus,
+              status: found.status,
+            });
+          }
           setBooking(found);
           setScanState('found');
         } catch {
@@ -124,7 +132,7 @@ export function TicketCheckPage() {
           setScanState('error');
         }
       },
-      () => { /* per-frame errors — ignored */ },
+      () => {},
     );
 
     return () => {
@@ -135,23 +143,40 @@ export function TicketCheckPage() {
     };
   }, [scanState]);
 
-  // ── Actions ──
+  // ── Actions ─────────────────────────────────────────────────────────────────
+
+  async function handleCashReceived() {
+    if (!booking) return;
+    setOperating(true);
+    try {
+      await markBookingPaid(booking.id);
+      setBooking(prev => prev ? { ...prev, paymentStatus: 'paid', status: 'confirmed' } : prev);
+    } catch {
+      setErrorMsg('Ошибка при подтверждении оплаты.');
+      setScanState('error');
+    } finally {
+      setOperating(false);
+    }
+  }
+
   async function handleMarkAttended() {
     if (!booking) return;
-    setScanState('marking');
+    setOperating(true);
     try {
       await updateBookingStatus(booking.id, 'attended');
       setBooking(prev => prev ? { ...prev, status: 'attended' } : prev);
-      setScanState('done');
     } catch {
       setErrorMsg('Ошибка при обновлении статуса.');
       setScanState('error');
+    } finally {
+      setOperating(false);
     }
   }
 
   function reset() {
     setBooking(null);
     setErrorMsg('');
+    setOperating(false);
     setScanState('idle');
     urlLookupDone.current = false;
     if (ticketFromUrl) {
@@ -159,7 +184,7 @@ export function TicketCheckPage() {
     }
   }
 
-  // ── Render guards ──
+  // ── Render guards ────────────────────────────────────────────────────────────
   if (loading) {
     return <div className={styles.centered}><span className={styles.spinner} /></div>;
   }
@@ -176,33 +201,27 @@ export function TicketCheckPage() {
     );
   }
 
-  const b           = booking;
-  const isPaid      = b?.paymentStatus === 'paid';
-  const isCancelled = b?.status === 'cancelled';
-  const isAttended  = b?.status === 'attended';
-  const isValid     = isPaid && b?.status === 'confirmed';
-  const markedNow   = scanState === 'done';
+  // ── Derived booking flags ─────────────────────────────────────────────────────
+  const b = booking;
 
-  function getCardVariant(): CardVariant {
-    if (!b) return 'invalid';
-    if (isAttended || markedNow) return 'used';
-    if (isValid) return 'valid';
-    return 'invalid';
-  }
-
-  function getInvalidReason(): string {
-    if (!b) return 'не найден';
-    if (b.paymentStatus === 'expired') return 'Срок оплаты истёк — бронь аннулирована';
-    if (b.paymentStatus === 'awaiting_transfer') return 'Перевод ещё не получен';
-    if (isCancelled) return 'Бронь отменена';
-    if (!isPaid) return 'Билет не оплачен';
-    return 'Недействителен';
-  }
+  const isOnSiteUnpaid       = b?.paymentMethod === 'on_site'       && b.paymentStatus === 'not_paid';
+  const isBankTransferUnpaid = b?.paymentMethod === 'bank_transfer'  && b.paymentStatus !== 'paid';
+  const isPaidValid          = b?.paymentStatus === 'paid'           && b.status === 'confirmed';
+  const isAttended           = b?.status === 'attended';
 
   function ticketsWord(n: number): string {
     if (n === 1) return 'билет';
     if (n >= 2 && n <= 4) return 'билета';
     return 'билетов';
+  }
+
+  function getInvalidReason(): string {
+    if (!b) return 'не найден';
+    if (b.status === 'cancelled')                 return 'Бронь отменена';
+    if (b.paymentStatus === 'expired')            return 'Срок оплаты истёк — бронь аннулирована';
+    if (b.paymentStatus === 'awaiting_transfer')  return 'Перевод ещё не получен';
+    if (b.paymentStatus !== 'paid')               return 'Билет не оплачен';
+    return 'Недействителен';
   }
 
   return (
@@ -214,7 +233,7 @@ export function TicketCheckPage() {
         </button>
       </div>
 
-      {/* ── Idle (scanner mode — only when no ticket in URL) ── */}
+      {/* ── Idle ─────────────────────────────────────────────────────────────── */}
       {scanState === 'idle' && !ticketFromUrl && (
         <div className={styles.idleBlock}>
           <p className={styles.hint}>Отсканируйте QR-код билета зрителя.</p>
@@ -224,7 +243,7 @@ export function TicketCheckPage() {
         </div>
       )}
 
-      {/* ── Scanner ── */}
+      {/* ── Scanner ──────────────────────────────────────────────────────────── */}
       {scanState === 'scanning' && (
         <div className={styles.scanBlock}>
           <div id="qr-reader" className={styles.qrReader} />
@@ -232,12 +251,12 @@ export function TicketCheckPage() {
         </div>
       )}
 
-      {/* ── Loading ── */}
-      {scanState === 'loading' && (
+      {/* ── Spinner ──────────────────────────────────────────────────────────── */}
+      {(scanState === 'loading' || operating) && (
         <div className={styles.centered}><span className={styles.spinner} /></div>
       )}
 
-      {/* ── Error (ticket not found or unrecognized QR) ── */}
+      {/* ── Error ────────────────────────────────────────────────────────────── */}
       {scanState === 'error' && (
         <div className={styles.cardWrap}>
           <div className={`${styles.card} ${styles.cardInvalid}`}>
@@ -257,91 +276,194 @@ export function TicketCheckPage() {
         </div>
       )}
 
-      {/* ── Found / Marking / Done ── */}
-      {(scanState === 'found' || scanState === 'marking' || scanState === 'done') && b && (() => {
-        const variant = getCardVariant();
-        const variantClass =
-          variant === 'valid' ? styles.cardValid :
-          variant === 'used'  ? styles.cardUsed  :
-          styles.cardInvalid;
-        const statusClass =
-          variant === 'valid' ? styles.cardStatusValid :
-          variant === 'used'  ? styles.cardStatusUsed  :
-          styles.cardStatusInvalid;
+      {/* ── Found ────────────────────────────────────────────────────────────── */}
+      {scanState === 'found' && b && !operating && (() => {
 
+        // 1. Билет уже использован ──────────────────────────────────────────────
+        if (isAttended) {
+          return (
+            <div className={styles.cardWrap}>
+              <div className={`${styles.card} ${styles.cardUsed}`}>
+                <div className={styles.cardHeader}>
+                  <span className={styles.cardIcon}>⚠️</span>
+                  <span className={`${styles.cardStatus} ${styles.cardStatusUsed}`}>
+                    БИЛЕТ УЖЕ ИСПОЛЬЗОВАН
+                  </span>
+                </div>
+                <div className={styles.cardDetails}>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Зритель</span>
+                    <span className={styles.cardValue}>{b.userName}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Спектакль</span>
+                    <span className={styles.cardValue}>{b.showTitle}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Дата</span>
+                    <span className={styles.cardValue}>{b.showDate}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Код билета</span>
+                    <span className={`${styles.cardValue} ${styles.mono}`}>{b.ticketCode}</span>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.actions}>
+                <button className={styles.secondaryBtn} onClick={reset}>
+                  {ticketFromUrl ? 'К сканеру' : 'Сканировать снова'}
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        // 2. on_site, не оплачено — взять наличные ──────────────────────────────
+        if (isOnSiteUnpaid) {
+          return (
+            <div className={styles.cardWrap}>
+              <div className={`${styles.card} ${styles.cardValid}`}>
+                <div className={styles.cardHeader}>
+                  <span className={styles.cardIcon}>✅</span>
+                  <span className={`${styles.cardStatus} ${styles.cardStatusValid}`}>
+                    БИЛЕТ ДЕЙСТВИТЕЛЕН
+                  </span>
+                </div>
+                <div className={styles.cardDetails}>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Зритель</span>
+                    <span className={styles.cardValue}>{b.userName}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Спектакль</span>
+                    <span className={styles.cardValue}>{b.showTitle}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Дата</span>
+                    <span className={styles.cardValue}>{b.showDate}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Код билета</span>
+                    <span className={`${styles.cardValue} ${styles.mono}`}>{b.ticketCode}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Количество</span>
+                    <span className={styles.cardValue}>
+                      {b.ticketsCount} {ticketsWord(b.ticketsCount)}
+                    </span>
+                  </div>
+                  {b.totalAmount > 0 && (
+                    <div className={styles.cardRow}>
+                      <span className={styles.cardLabel}>Сумма</span>
+                      <span className={`${styles.cardValue} ${styles.cardValueAmount}`}>
+                        {b.totalAmount}&nbsp;€
+                      </span>
+                    </div>
+                  )}
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Оплата</span>
+                    <span className={`${styles.cardValue} ${styles.cardValueUnpaid}`}>
+                      НЕ ОПЛАЧЕНО — ОПЛАТА НА МЕСТЕ
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.actions}>
+                <button className={styles.cashBtn} onClick={handleCashReceived}>
+                  Оплачено
+                </button>
+                <button className={styles.secondaryBtn} onClick={reset}>
+                  {ticketFromUrl ? 'К сканеру' : 'Сканировать снова'}
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        // 3. Оплачен и подтверждён — разрешить вход ─────────────────────────────
+        if (isPaidValid) {
+          return (
+            <div className={styles.cardWrap}>
+              <div className={`${styles.card} ${styles.cardValid}`}>
+                <div className={styles.cardHeader}>
+                  <span className={styles.cardIcon}>✅</span>
+                  <span className={`${styles.cardStatus} ${styles.cardStatusValid}`}>
+                    БИЛЕТ ДЕЙСТВИТЕЛЕН
+                  </span>
+                </div>
+                <div className={styles.cardDetails}>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Зритель</span>
+                    <span className={styles.cardValue}>{b.userName}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Спектакль</span>
+                    <span className={styles.cardValue}>{b.showTitle}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Дата</span>
+                    <span className={styles.cardValue}>{b.showDate}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Код билета</span>
+                    <span className={`${styles.cardValue} ${styles.mono}`}>{b.ticketCode}</span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Количество</span>
+                    <span className={styles.cardValue}>
+                      {b.ticketsCount} {ticketsWord(b.ticketsCount)}
+                    </span>
+                  </div>
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Оплата</span>
+                    <span className={styles.cardValue}>Оплачено</span>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.actions}>
+                <button className={styles.markBtn} onClick={handleMarkAttended}>
+                  Отметить посещение
+                </button>
+                <button className={styles.secondaryBtn} onClick={reset}>
+                  {ticketFromUrl ? 'К сканеру' : 'Сканировать снова'}
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        // 4 + 5. Недействителен (bank_transfer не оплачен / отменён / прочее) ───
         return (
           <div className={styles.cardWrap}>
-            <div className={`${styles.card} ${variantClass}`}>
-              {/* Header */}
+            <div className={`${styles.card} ${styles.cardInvalid}`}>
               <div className={styles.cardHeader}>
-                <span className={styles.cardIcon}>
-                  {variant === 'valid' ? '✅' : variant === 'used' ? '⚠️' : '❌'}
-                </span>
-                <span className={`${styles.cardStatus} ${statusClass}`}>
-                  {variant === 'valid' ? 'БИЛЕТ ДЕЙСТВИТЕЛЕН'    :
-                   variant === 'used'  ? 'БИЛЕТ УЖЕ ИСПОЛЬЗОВАН' :
-                                         'БИЛЕТ НЕ ДЕЙСТВИТЕЛЕН'}
+                <span className={styles.cardIcon}>❌</span>
+                <span className={`${styles.cardStatus} ${styles.cardStatusInvalid}`}>
+                  БИЛЕТ НЕ ДЕЙСТВИТЕЛЕН
                 </span>
               </div>
-
-              {/* Details */}
               <div className={styles.cardDetails}>
+                <div className={styles.cardRow}>
+                  <span className={styles.cardLabel}>Зритель</span>
+                  <span className={styles.cardValue}>{b.userName}</span>
+                </div>
                 <div className={styles.cardRow}>
                   <span className={styles.cardLabel}>Спектакль</span>
                   <span className={styles.cardValue}>{b.showTitle}</span>
-                </div>
-                <div className={styles.cardRow}>
-                  <span className={styles.cardLabel}>Дата</span>
-                  <span className={styles.cardValue}>{b.showDate}</span>
-                </div>
-                <div className={styles.cardRow}>
-                  <span className={styles.cardLabel}>Время</span>
-                  <span className={styles.cardValue}>{b.showTime}</span>
                 </div>
                 <div className={styles.cardRow}>
                   <span className={styles.cardLabel}>Код билета</span>
                   <span className={`${styles.cardValue} ${styles.mono}`}>{b.ticketCode}</span>
                 </div>
                 <div className={styles.cardRow}>
-                  <span className={styles.cardLabel}>Количество</span>
-                  <span className={styles.cardValue}>
-                    {b.ticketsCount} {ticketsWord(b.ticketsCount)}
+                  <span className={styles.cardLabel}>Причина</span>
+                  <span className={`${styles.cardValue} ${styles.cardValueReason}`}>
+                    {isBankTransferUnpaid ? 'Перевод ещё не получен' : getInvalidReason()}
                   </span>
                 </div>
-                <div className={styles.cardRow}>
-                  <span className={styles.cardLabel}>Оплата</span>
-                  <span className={styles.cardValue}>
-                    {b.paymentStatus === 'paid'              ? 'Оплачено'               :
-                     b.paymentStatus === 'awaiting_transfer' ? 'Ожидает перевода'       :
-                     b.paymentStatus === 'expired'           ? 'Истёк срок оплаты'      :
-                                                               'Не оплачено'}
-                  </span>
-                </div>
-                {variant === 'invalid' && (
-                  <div className={styles.cardRow}>
-                    <span className={styles.cardLabel}>Причина</span>
-                    <span className={`${styles.cardValue} ${styles.cardValueReason}`}>
-                      {getInvalidReason()}
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
-
-            {/* Actions */}
             <div className={styles.actions}>
-              {markedNow && (
-                <div className={styles.markedBanner}>✅ Посещение отмечено</div>
-              )}
-              {isValid && !markedNow && (
-                <button
-                  className={styles.markBtn}
-                  onClick={handleMarkAttended}
-                  disabled={scanState === 'marking'}
-                >
-                  {scanState === 'marking' ? '…' : 'Отметить посещение'}
-                </button>
-              )}
               <button className={styles.secondaryBtn} onClick={reset}>
                 {ticketFromUrl ? 'К сканеру' : 'Сканировать снова'}
               </button>

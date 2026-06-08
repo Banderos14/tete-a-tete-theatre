@@ -56,11 +56,22 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
           <code className={styles.ticketCode}>{b.ticketCode}</code>
         </div>
         <div className={styles.headerRight}>
-          <span className={`${styles.statusBadge} ${b.paymentStatus === 'paid' ? styles.paid : styles.confirmed}`}>
-            {b.paymentStatus === 'paid'
-              ? (isFR ? 'Payé' : 'Оплачено')
-              : (isFR ? 'Confirmé' : 'Подтверждено')}
-          </span>
+          {b.paymentMethod === 'on_site' && b.paymentStatus === 'not_paid' ? (
+            <div className={styles.onSiteBadges}>
+              <span className={`${styles.statusBadge} ${styles.onSite}`}>
+                {isFR ? 'Sur place' : 'Оплата на месте'}
+              </span>
+              <span className={`${styles.statusBadge} ${styles.notPaid}`}>
+                {isFR ? 'Non payé' : 'Не оплачено'}
+              </span>
+            </div>
+          ) : (
+            <span className={`${styles.statusBadge} ${b.paymentStatus === 'paid' ? styles.paid : styles.confirmed}`}>
+              {b.paymentStatus === 'paid'
+                ? (isFR ? 'Payé' : 'Оплачено')
+                : (isFR ? 'Confirmé' : 'Подтверждено')}
+            </span>
+          )}
           <div className={`${styles.qrBtn} ${isExpanded ? styles.qrBtnOpen : ''}`}>
             <QrIcon />
             <span>{isExpanded ? (isFR ? 'Masquer' : 'Скрыть') : 'QR'}</span>

@@ -548,7 +548,10 @@ export function ProfileDrawer({ open, onClose }: Props) {
                 ) : (
                   <div className={styles.ticketList}>
                     {activeBookings.map(b => {
-                      const isQrTicket = b.paymentStatus === 'paid' && b.status === 'confirmed' && !!b.ticketCode;
+                      const isQrTicket = (
+                        (b.paymentStatus === 'paid' && b.status === 'confirmed') ||
+                        (b.paymentMethod === 'on_site' && b.paymentStatus === 'not_paid')
+                      ) && !!b.ticketCode;
                       return isQrTicket ? (
                         <TicketCardSlot
                           key={b.id}

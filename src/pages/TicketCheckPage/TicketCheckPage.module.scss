@@ -104,6 +104,11 @@
   border: 1px solid rgba(255, 160, 0, 0.32);
 }
 
+.cardOnSite {
+  background: rgba(33, 150, 243, 0.05);
+  border: 1px solid rgba(33, 150, 243, 0.3);
+}
+
 // ── Card header ───────────────────────────────────────────────────────────────
 .cardHeader {
   display: flex;
@@ -130,6 +135,7 @@
 .cardStatusValid   { color: #4caf50; }
 .cardStatusInvalid { color: var(--accent-glow, #b80000); }
 .cardStatusUsed    { color: #e08a00; }
+.cardStatusOnSite  { color: #1976d2; }
 
 .cardReason {
   padding: 16px 24px;
@@ -173,6 +179,19 @@
   color: var(--accent-glow, #b80000);
 }
 
+.cardValueAmount {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.cardValueUnpaid {
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: #e08a00;
+}
+
 .mono {
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
@@ -183,6 +202,22 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.cashBtn {
+  font-size: 13px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  padding: 13px 28px;
+  border-radius: 4px;
+  background: rgba(33, 150, 243, 0.12);
+  color: #1976d2;
+  border: 1px solid rgba(33, 150, 243, 0.3);
+  transition: background 0.2s;
+  width: 100%;
+
+  &:hover:not(:disabled) { background: rgba(33, 150, 243, 0.24); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .markedBanner {
