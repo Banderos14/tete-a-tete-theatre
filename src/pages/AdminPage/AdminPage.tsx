@@ -107,7 +107,7 @@ export function AdminPage() {
           totalAmount:  booking.totalAmount,
           ticketCode:   booking.ticketCode,
           newStatus:    status,
-          lang:         'FR',
+          lang:         booking.lang ?? 'FR',
         }).catch(() => {/* non-blocking */});
       }
     } finally { setUpdatingId(null); }
@@ -137,7 +137,7 @@ export function AdminPage() {
           totalAmount:   booking.totalAmount,
           ticketCode:    booking.ticketCode,
           bookingStatus: 'confirmed', // always confirmed after payment
-          lang:          'FR',
+          lang:          booking.lang ?? 'FR',
         }).catch(() => {/* non-blocking */});
       } else {
         // "Не оплачено" — revert payment status only, no email

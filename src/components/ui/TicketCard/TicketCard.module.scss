@@ -54,4 +54,21 @@
 .qr {
   display: block;
   border-radius: 2px;
+  width: 88px;
+  height: 88px;
+}
+
+.qrLoading {
+  background: var(--bg-2);
+  animation: qrPulse 1.2s ease-in-out infinite;
+}
+
+.qrError {
+  background: var(--bg-2);
+  opacity: 0.4;
+}
+
+@keyframes qrPulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.9; }
 }

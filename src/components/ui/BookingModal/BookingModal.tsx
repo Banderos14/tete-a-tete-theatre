@@ -163,6 +163,7 @@ export function BookingModal({ show, onClose }: Props) {
         paymentMethod: payment,
         paymentStatus: payment === 'bank_transfer' ? 'awaiting_transfer' : 'not_paid',
         comment,
+        lang,
       });
 
       // Non-blocking — booking is already saved if email fails

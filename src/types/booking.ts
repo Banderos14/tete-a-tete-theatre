@@ -24,6 +24,7 @@ export interface Booking {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   comment:       string;
+  lang?:         'RU' | 'FR';
   createdAt:     Timestamp;
   updatedAt?:    Timestamp;
 }
