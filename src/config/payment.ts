@@ -54,7 +54,7 @@ export const PAYMENT_CONFIG = {
       label:        'Ukraine',
       description:  'Перевод на карту',
       receiverName: 'ANTON SHYSHENKO',
-      cardNumber:   '4874 0700 1069 2091',
+      cardNumber:   '5168 7520 8118 7158',
       bankName:     '',
       currency:     'EUR',
     },
