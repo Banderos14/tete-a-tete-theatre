@@ -1,0 +1,76 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: grid;
+  place-items: center;
+  z-index: 1100;
+  padding: 16px;
+}
+
+.dialog {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 32px 36px;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--fg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.message {
+  font-size: 14px;
+  color: var(--fg-dim);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.cancelBtn {
+  padding: 10px 20px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--fg-mute);
+  transition: color 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) { color: var(--fg); border-color: var(--line-strong); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.confirmBtn {
+  padding: 10px 20px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  transition: background 0.2s, opacity 0.2s;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) { background: var(--accent-bright, #c00); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}

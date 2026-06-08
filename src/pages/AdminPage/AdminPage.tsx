@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useLang } from '../../i18n/LangContext';
+import { RU } from '../../i18n';
 import { getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPaid, expireOverdueBookings, hoursUntilExpiry } from '../../services/bookingService';
 import { getPaymentAccount, PAYMENT_CONFIG } from '../../config/payment';
 import { markEligibleBookingsAsAttended } from '../../services/attendanceService';
 import { getAllUsers, getUsersForNewsletter } from '../../services/userService';
 import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail, sendNewShowAnnouncementEmail } from '../../services/emailService';
 import { SHOWS } from '../../data/shows';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/booking';
 import type { AdminUser } from '../../services/userService';
 import styles from './AdminPage.module.scss';
@@ -15,6 +16,11 @@ import styles from './AdminPage.module.scss';
 type FilterShowId    = 'all' | string;
 type FilterStatus    = 'all' | BookingStatus;
 type AdminTab        = 'bookings' | 'users' | 'newsletter';
+type ConfirmAction   =
+  | { type: 'paid';   bookingId: string }
+  | { type: 'unpaid'; bookingId: string }
+  | { type: 'cancel'; bookingId: string }
+  | null;
 
 function formatTimestamp(ts: unknown): string {
   if (!ts) return '—';
@@ -46,7 +52,7 @@ const PAY_STATUS_STYLE: Record<PaymentStatus, string> = {
 
 export function AdminPage() {
   const navigate    = useNavigate();
-  const { t }       = useLang();
+  const t           = RU;
   const { userProfile, loading } = useAuth();
 
   const [tab,         setTab]         = useState<AdminTab>('bookings');
@@ -55,8 +61,8 @@ export function AdminPage() {
   const [filterShow,  setFilterShow]  = useState<FilterShowId>('all');
   const [filterStatus,setFilterStatus]= useState<FilterStatus>('all');
   const [fetching,    setFetching]    = useState(true);
-  const [updatingId,  setUpdatingId]  = useState<string | null>(null);
-  const [confirmUnpaidId, setConfirmUnpaidId] = useState<string | null>(null);
+  const [updatingId,    setUpdatingId]    = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
 
   const [nlShowId,    setNlShowId]    = useState<string>(SHOWS[0]?.id ?? '');
   const [nlSending,   setNlSending]   = useState(false);
@@ -442,14 +448,14 @@ export function AdminPage() {
                                 <button
                                   className={styles.actionPaid}
                                   disabled={isBusy}
-                                  onClick={() => handlePaymentStatus(b.id, 'paid')}
+                                  onClick={() => setConfirmAction({ type: 'paid', bookingId: b.id })}
                                 >Оплачено</button>
                               )}
                               {payStatus === 'paid' && (
                                 <button
                                   className={styles.actionUnpaid}
                                   disabled={isBusy}
-                                  onClick={() => setConfirmUnpaidId(b.id)}
+                                  onClick={() => setConfirmAction({ type: 'unpaid', bookingId: b.id })}
                                 >Не оплачено</button>
                               )}
                             </div>
@@ -479,7 +485,7 @@ export function AdminPage() {
                               <button
                                 className={styles.actionCancel}
                                 disabled={isBusy}
-                                onClick={() => handleStatus(b.id, 'cancelled')}
+                                onClick={() => setConfirmAction({ type: 'cancel', bookingId: b.id })}
                               >{t.admin.markCancelled}</button>
                             )}
                           </div>
@@ -599,29 +605,56 @@ export function AdminPage() {
         </div>
       )}
 
-      {/* ── Confirm "not paid" dialog ── */}
-      {confirmUnpaidId && (
-        <div className={styles.confirmOverlay}>
-          <div className={styles.confirmDialog}>
-            <p className={styles.confirmTitle}>Подтверждение действия</p>
-            <p className={styles.confirmText}>Вы действительно хотите изменить статус оплаты?</p>
-            <div className={styles.confirmActions}>
-              <button
-                className={styles.confirmCancel}
-                onClick={() => setConfirmUnpaidId(null)}
-              >Отмена</button>
-              <button
-                className={styles.confirmOk}
-                onClick={() => {
-                  const id = confirmUnpaidId;
-                  setConfirmUnpaidId(null);
-                  handlePaymentStatus(id, 'not_paid');
-                }}
-              >Подтвердить</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Confirm: Оплачено ── */}
+      <ConfirmDialog
+        isOpen={confirmAction?.type === 'paid'}
+        title="Подтвердить оплату?"
+        message="Вы уверены, что хотите отметить эту бронь как оплаченную? Это изменит статус оплаты."
+        confirmLabel="Да, оплату получили"
+        cancelLabel="Отмена"
+        loading={updatingId === confirmAction?.bookingId}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (!confirmAction || confirmAction.type !== 'paid') return;
+          const id = confirmAction.bookingId;
+          setConfirmAction(null);
+          handlePaymentStatus(id, 'paid');
+        }}
+      />
+
+      {/* ── Confirm: Не оплачено ── */}
+      <ConfirmDialog
+        isOpen={confirmAction?.type === 'unpaid'}
+        title="Снять оплату?"
+        message="Вы уверены, что хотите снова отметить эту бронь как неоплаченную? Это действие может сделать билет недействительным."
+        confirmLabel="Да, снять оплату"
+        cancelLabel="Отмена"
+        loading={updatingId === confirmAction?.bookingId}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (!confirmAction || confirmAction.type !== 'unpaid') return;
+          const id = confirmAction.bookingId;
+          setConfirmAction(null);
+          handlePaymentStatus(id, 'not_paid');
+        }}
+      />
+
+      {/* ── Confirm: Отменить бронь ── */}
+      <ConfirmDialog
+        isOpen={confirmAction?.type === 'cancel'}
+        title="Отменить бронь?"
+        message="Вы уверены, что хотите отменить эту бронь? Билет станет недействительным."
+        confirmLabel="Да, отменить бронь"
+        cancelLabel="Назад"
+        loading={updatingId === confirmAction?.bookingId}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (!confirmAction || confirmAction.type !== 'cancel') return;
+          const id = confirmAction.bookingId;
+          setConfirmAction(null);
+          handleStatus(id, 'cancelled');
+        }}
+      />
 
     </div>
   );
