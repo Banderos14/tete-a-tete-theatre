@@ -30,7 +30,7 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
     if (!qrSrc || pdfLoading) return;
     setPdfLoading(true);
     try {
-      await generateTicketPdf(b, qrSrc);
+      await generateTicketPdf(b, qrSrc, lang);
     } finally {
       setPdfLoading(false);
     }

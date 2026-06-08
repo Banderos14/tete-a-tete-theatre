@@ -3,11 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useAuth } from '../../context/AuthContext';
 import { getBookingByTicketCode, updateBookingStatus } from '../../services/bookingService';
+import { parseTicketCodeFromScan } from '../../utils/parseTicketCode';
 import type { Booking } from '../../types/booking';
 import styles from './TicketCheckPage.module.scss';
 
 type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'marking' | 'done' | 'error';
 type CardVariant = 'valid' | 'invalid' | 'used';
+
+const IS_DEV = import.meta.env.DEV;
 
 export function TicketCheckPage() {
   const navigate        = useNavigate();
@@ -15,6 +18,7 @@ export function TicketCheckPage() {
   const { userProfile, loading } = useAuth();
   const isAdmin = userProfile?.role === 'admin';
 
+  // React Router (HashRouter) already extracts the ticket value from the hash search string
   const ticketFromUrl = searchParams.get('ticket') ?? '';
 
   // Start in loading state immediately if ticket is in URL — avoids idle flash
@@ -33,16 +37,28 @@ export function TicketCheckPage() {
     }
   }, [loading, isAdmin, navigate]);
 
-  // ── Auto-lookup when ?ticket= is present ──
+  // ── Auto-lookup when ?ticket= is present in the URL ──
   useEffect(() => {
     if (loading || !isAdmin || !ticketFromUrl || urlLookupDone.current) return;
     urlLookupDone.current = true;
+
+    const code = parseTicketCodeFromScan(ticketFromUrl);
+    if (IS_DEV) {
+      console.log('[TicketCheck] url raw:', ticketFromUrl);
+      console.log('[TicketCheck] parsed ticketCode:', code);
+    }
+
+    if (!code) {
+      setErrorMsg('QR-код не похож на билет Théâtre Tête-à-Tête.');
+      setScanState('error');
+      return;
+    }
+
     setScanState('loading');
-    const code = decodeURIComponent(ticketFromUrl);
     getBookingByTicketCode(code)
       .then(found => {
         if (!found) {
-          setErrorMsg(`Бронь с кодом «${code}» не найдена.`);
+          setErrorMsg(`Билет с кодом ${code} не найден.`);
           setScanState('error');
           return;
         }
@@ -79,24 +95,25 @@ export function TicketCheckPage() {
           scannerRef.current = null;
           setScanState('loading');
 
-          let ticketCode = text.trim();
-
-          try {
-            const url   = new URL(text);
-            const param = url.searchParams.get('ticket');
-            if (param) ticketCode = decodeURIComponent(param);
-          } catch {
-            try {
-              const parsed = JSON.parse(text) as { ticketCode?: string };
-              if (parsed.ticketCode) ticketCode = parsed.ticketCode;
-            } catch {
-              // raw ticketCode string, use as-is
-            }
+          if (IS_DEV) {
+            console.log('[TicketCheck] raw scan:', text);
           }
 
-          const found = await getBookingByTicketCode(ticketCode);
+          const code = parseTicketCodeFromScan(text);
+
+          if (IS_DEV) {
+            console.log('[TicketCheck] parsed ticketCode:', code);
+          }
+
+          if (!code) {
+            setErrorMsg('QR-код не похож на билет Théâtre Tête-à-Tête.');
+            setScanState('error');
+            return;
+          }
+
+          const found = await getBookingByTicketCode(code);
           if (!found) {
-            setErrorMsg(`Бронь с кодом «${ticketCode}» не найдена.`);
+            setErrorMsg(`Билет с кодом ${code} не найден.`);
             setScanState('error');
             return;
           }
@@ -218,7 +235,7 @@ export function TicketCheckPage() {
         <div className={styles.centered}><span className={styles.spinner} /></div>
       )}
 
-      {/* ── Error (ticket not found) ── */}
+      {/* ── Error (ticket not found or unrecognized QR) ── */}
       {scanState === 'error' && (
         <div className={styles.cardWrap}>
           <div className={`${styles.card} ${styles.cardInvalid}`}>
