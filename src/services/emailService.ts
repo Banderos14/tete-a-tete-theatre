@@ -65,6 +65,19 @@ export interface PaymentPaidEmailData {
   lang:          'RU' | 'FR';
 }
 
+// ── Month translation (showDate stored as "17 Май 2026") ─────────────────────
+
+const MONTHS_RU_TO_FR: Record<string, string> = {
+  'Янв': 'Janvier', 'Фев': 'Février',  'Мар': 'Mars',      'Апр': 'Avril',
+  'Май': 'Mai',      'Июн': 'Juin',     'Июл': 'Juillet',   'Авг': 'Août',
+  'Сен': 'Septembre','Окт': 'Octobre',  'Ноя': 'Novembre',  'Дек': 'Décembre',
+};
+
+function localeDate(showDate: string, lang: 'RU' | 'FR'): string {
+  if (lang === 'RU') return showDate;
+  return showDate.replace(/[А-ЯЁ][а-яё]+/, m => MONTHS_RU_TO_FR[m] ?? m);
+}
+
 // ── Shared HTML building blocks ───────────────────────────────────────────────
 
 function wrapHtml(lang: string, subject: string, headerTitle: string, bodyHtml: string): string {
@@ -167,6 +180,7 @@ function noteBlock(text: string): string {
 function buildConfirmationEmail(data: BookingEmailData): { subject: string; html: string; text: string } {
   const isRU           = data.lang !== 'FR';
   const isBankTransfer = data.paymentMethod === 'bank_transfer';
+  const dateStr        = localeDate(data.showDate, data.lang);
 
   const subject = isRU
     ? `${THEATRE_NAME} — бронирование принято: ${data.showTitle}`
@@ -189,13 +203,13 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
   const rows: [string, string][] = isRU ? [
     ['Зритель',   data.userName],
     ['Спектакль', data.showTitle],
-    ['Дата',      `${data.showDate} · ${data.showTime}`],
+    ['Дата',      `${dateStr} · ${data.showTime}`],
     ['Билеты',    `${data.ticketsCount} шт.`],
     ['Сумма',     `${data.totalAmount}&nbsp;€`],
   ] : [
     ['Spectateur', data.userName],
     ['Spectacle',  data.showTitle],
-    ['Date',       `${data.showDate} · ${data.showTime}`],
+    ['Date',       `${dateStr} · ${data.showTime}`],
     ['Billets',    `${data.ticketsCount} billet${data.ticketsCount > 1 ? 's' : ''}`],
     ['Montant',    `${data.totalAmount}&nbsp;€`],
   ];
@@ -252,7 +266,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
         'Ваше бронирование принято.',
         '',
         `Спектакль: ${data.showTitle}`,
-        `Дата: ${data.showDate} · ${data.showTime}`,
+        `Дата: ${dateStr} · ${data.showTime}`,
         `Билеты: ${data.ticketsCount} шт.`,
         `Сумма: ${data.totalAmount} €`,
         `Код брони: ${data.ticketCode}`,
@@ -270,7 +284,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
         'Merci pour votre réservation. Votre réservation est reçue.',
         '',
         `Spectacle : ${data.showTitle}`,
-        `Date : ${data.showDate} · ${data.showTime}`,
+        `Date : ${dateStr} · ${data.showTime}`,
         `Billets : ${data.ticketsCount}`,
         `Montant : ${data.totalAmount} €`,
         `Code : ${data.ticketCode}`,
@@ -288,7 +302,8 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
 // ── Status update email ───────────────────────────────────────────────────────
 
 function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html: string; text: string } {
-  const isRU = data.lang !== 'FR';
+  const isRU    = data.lang !== 'FR';
+  const dateStr = localeDate(data.showDate, data.lang);
 
   const STATUS_COPY: Record<
     BookingStatusEmailData['newStatus'],
@@ -329,11 +344,11 @@ function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html
 
   const rows: [string, string][] = isRU ? [
     ['Спектакль', data.showTitle],
-    ['Дата',      `${data.showDate} · ${data.showTime}`],
+    ['Дата',      `${dateStr} · ${data.showTime}`],
     ['Билеты',    `${data.ticketsCount} шт.`],
   ] : [
     ['Spectacle', data.showTitle],
-    ['Date',      `${data.showDate} · ${data.showTime}`],
+    ['Date',      `${dateStr} · ${data.showTime}`],
     ['Billets',   `${data.ticketsCount} billet${data.ticketsCount > 1 ? 's' : ''}`],
   ];
 
@@ -353,7 +368,7 @@ function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html
     isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName} !`,
     isRU ? header : header, '',
     isRU ? `Спектакль: ${data.showTitle}` : `Spectacle : ${data.showTitle}`,
-    isRU ? `Дата: ${data.showDate} · ${data.showTime}` : `Date : ${data.showDate} · ${data.showTime}`,
+    isRU ? `Дата: ${dateStr} · ${data.showTime}` : `Date : ${dateStr} · ${data.showTime}`,
     isRU ? `Код брони: ${data.ticketCode}` : `Code : ${data.ticketCode}`,
     '', note, '',
     THEATRE_ADDRESS, `${THEATRE_EMAIL} · ${THEATRE_PHONE}`,
@@ -365,8 +380,9 @@ function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html
 // ── Payment paid email ────────────────────────────────────────────────────────
 
 function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: string; html: string; text: string } {
-  const isRU      = data.lang !== 'FR';
+  const isRU               = data.lang !== 'FR';
   const isAlreadyConfirmed = data.bookingStatus === 'confirmed';
+  const dateStr            = localeDate(data.showDate, data.lang);
 
   const subject = isRU
     ? `${THEATRE_NAME} — оплата получена: ${data.showTitle}`
@@ -386,12 +402,12 @@ function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: string; h
 
   const rows: [string, string][] = isRU ? [
     ['Спектакль', data.showTitle],
-    ['Дата',      `${data.showDate} · ${data.showTime}`],
+    ['Дата',      `${dateStr} · ${data.showTime}`],
     ['Билеты',    `${data.ticketsCount} шт.`],
     ['Сумма',     `${data.totalAmount}&nbsp;€`],
   ] : [
     ['Spectacle', data.showTitle],
-    ['Date',      `${data.showDate} · ${data.showTime}`],
+    ['Date',      `${dateStr} · ${data.showTime}`],
     ['Billets',   `${data.ticketsCount} billet${data.ticketsCount > 1 ? 's' : ''}`],
     ['Montant',   `${data.totalAmount}&nbsp;€`],
   ];
@@ -413,7 +429,7 @@ function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: string; h
     isRU ? 'Мы получили вашу оплату.' : 'Nous avons reçu votre paiement.',
     '',
     isRU ? `Спектакль: ${data.showTitle}` : `Spectacle : ${data.showTitle}`,
-    isRU ? `Дата: ${data.showDate} · ${data.showTime}` : `Date : ${data.showDate} · ${data.showTime}`,
+    isRU ? `Дата: ${dateStr} · ${data.showTime}` : `Date : ${dateStr} · ${data.showTime}`,
     isRU ? `Сумма: ${data.totalAmount} €` : `Montant : ${data.totalAmount} €`,
     isRU ? `Код брони: ${data.ticketCode}` : `Code : ${data.ticketCode}`,
     '', nextNote, '',
@@ -438,7 +454,8 @@ export interface NewShowEmailData {
 }
 
 function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: string; text: string } {
-  const isRU = data.lang !== 'FR';
+  const isRU    = data.lang !== 'FR';
+  const dateStr = localeDate(data.showDate, data.lang);
 
   const subject = isRU
     ? `${THEATRE_NAME} — новый спектакль в афише: ${data.showTitle}`
@@ -449,11 +466,11 @@ function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: str
 
   const rows: [string, string][] = isRU ? [
     ['Спектакль', data.showTitle],
-    ['Дата',      `${data.showDate} · ${data.showTime}`],
+    ['Дата',      `${dateStr} · ${data.showTime}`],
     ...(data.price ? [['Билеты', data.price] as [string, string]] : []),
   ] : [
     ['Spectacle', data.showTitle],
-    ['Date',      `${data.showDate} · ${data.showTime}`],
+    ['Date',      `${dateStr} · ${data.showTime}`],
     ...(data.price ? [['Billets', data.price] as [string, string]] : []),
   ];
 
@@ -484,7 +501,7 @@ function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: str
     isRU ? 'Новый спектакль в афише:' : 'Nouveau spectacle à l\'affiche :',
     '',
     isRU ? `Спектакль: ${data.showTitle}` : `Spectacle : ${data.showTitle}`,
-    isRU ? `Дата: ${data.showDate} · ${data.showTime}` : `Date : ${data.showDate} · ${data.showTime}`,
+    isRU ? `Дата: ${dateStr} · ${data.showTime}` : `Date : ${dateStr} · ${data.showTime}`,
     ...(data.price ? [isRU ? `Билеты: ${data.price}` : `Billets : ${data.price}`] : []),
     '',
     data.siteUrl,

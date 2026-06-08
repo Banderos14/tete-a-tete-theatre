@@ -174,11 +174,11 @@ export function AdminPage() {
         await sendNewShowAnnouncementEmail({
           userEmail:   recipient.email,
           userName:    recipient.displayName || recipient.email,
-          showTitle:   show.title,
+          showTitle:   show.titleFR ?? show.title,
           showDate,
           showTime:    show.time,
-          price:       show.price,
-          description: show.desc,
+          price:       show.priceFR ?? show.price,
+          description: show.descFR ?? show.desc,
           siteUrl:     window.location.origin,
           lang:        'FR',
         });
