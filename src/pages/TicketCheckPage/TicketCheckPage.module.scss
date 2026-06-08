@@ -38,7 +38,7 @@
   &:hover { color: var(--fg); border-color: var(--accent); }
 }
 
-// ── Layout blocks ─────────────────────────────────────────────────────────────
+// ── Layout helpers ────────────────────────────────────────────────────────────
 .centered {
   display: grid;
   place-items: center;
@@ -77,117 +77,153 @@
   overflow: hidden;
 }
 
-.resultBlock {
-  max-width: 560px;
+// ── Theatrical result card ────────────────────────────────────────────────────
+.cardWrap {
+  max-width: 520px;
   margin: 0 auto;
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────────
-.statusBadge {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  padding: 8px 18px;
-  border-radius: 4px;
-  margin-bottom: 24px;
-}
-
-.statusOk {
-  background: rgba(76, 175, 80, 0.15);
-  color: #4caf50;
-  border: 1px solid rgba(76, 175, 80, 0.3);
-}
-
-.statusInvalid {
-  background: rgba(184, 0, 0, 0.12);
-  color: var(--accent-glow);
-  border: 1px solid rgba(184, 0, 0, 0.25);
-}
-
-.statusUsed {
-  background: rgba(255, 160, 0, 0.12);
-  color: #e08a00;
-  border: 1px solid rgba(255, 160, 0, 0.25);
-}
-
-.statusDone {
-  background: rgba(76, 175, 80, 0.15);
-  color: #4caf50;
-  border: 1px solid rgba(76, 175, 80, 0.3);
-}
-
-// ── Details table ─────────────────────────────────────────────────────────────
-.details {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+.card {
+  border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-.detailRow {
+.cardValid {
+  background: rgba(76, 175, 80, 0.05);
+  border: 1px solid rgba(76, 175, 80, 0.35);
+}
+
+.cardInvalid {
+  background: rgba(184, 0, 0, 0.05);
+  border: 1px solid rgba(184, 0, 0, 0.28);
+}
+
+.cardUsed {
+  background: rgba(255, 160, 0, 0.05);
+  border: 1px solid rgba(255, 160, 0, 0.32);
+}
+
+// ── Card header ───────────────────────────────────────────────────────────────
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cardIcon {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.cardStatus {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.cardStatusValid   { color: #4caf50; }
+.cardStatusInvalid { color: var(--accent-glow, #b80000); }
+.cardStatusUsed    { color: #e08a00; }
+
+.cardReason {
+  padding: 16px 24px;
+  font-size: 13px;
+  color: var(--fg-dim);
+  line-height: 1.5;
+}
+
+// ── Card details table ────────────────────────────────────────────────────────
+.cardDetails {
+  padding: 0;
+}
+
+.cardRow {
   display: flex;
   align-items: baseline;
   gap: 16px;
-  padding: 12px 18px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--line);
 
   &:last-child { border-bottom: none; }
 }
 
-.detailLabel {
-  font-size: 11px;
+.cardLabel {
+  font-size: 10px;
   font-family: var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--fg-mute);
-  min-width: 120px;
+  min-width: 110px;
   flex-shrink: 0;
 }
 
-.detailValue {
+.cardValue {
   font-size: 14px;
   color: var(--fg);
+  line-height: 1.4;
+}
+
+.cardValueReason {
+  color: var(--accent-glow, #b80000);
 }
 
 .mono {
   font-family: var(--font-mono);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 .actions {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.markedBanner {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 6px;
+  padding: 14px 20px;
+  text-align: center;
 }
 
 .startBtn {
   font-size: 13px;
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
-  padding: 12px 28px;
+  padding: 13px 28px;
   border-radius: 4px;
   background: var(--accent);
   color: #fff;
   transition: background 0.2s;
+  width: 100%;
 
-  &:hover { background: var(--accent-bright); }
+  &:hover { background: var(--accent-bright, #c00); }
 }
 
 .markBtn {
   font-size: 13px;
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
-  padding: 12px 28px;
+  padding: 13px 28px;
   border-radius: 4px;
-  background: rgba(76, 175, 80, 0.15);
+  background: rgba(76, 175, 80, 0.12);
   color: #4caf50;
   border: 1px solid rgba(76, 175, 80, 0.3);
   transition: background 0.2s;
+  width: 100%;
 
-  &:hover:not(:disabled) { background: rgba(76, 175, 80, 0.28); }
+  &:hover:not(:disabled) { background: rgba(76, 175, 80, 0.24); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
@@ -204,20 +240,27 @@
   &:hover { color: var(--fg); border-color: var(--line-strong); }
 }
 
-// ── Error ─────────────────────────────────────────────────────────────────────
-.errorMsg {
-  font-size: 14px;
-  color: var(--fg-dim);
-  margin-bottom: 20px;
-  line-height: 1.5;
+.secondaryBtn {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
+  padding: 12px 20px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  color: var(--fg-mute);
+  transition: color 0.2s, border-color 0.2s;
+  width: 100%;
+  text-align: center;
+
+  &:hover { color: var(--fg); border-color: var(--line-strong); }
 }
 
+// ── Misc ──────────────────────────────────────────────────────────────────────
 .accessDenied {
   font-size: 18px;
   color: var(--fg-dim);
 }
 
-// ── Spinner ───────────────────────────────────────────────────────────────────
 .spinner {
   display: block;
   width: 32px;

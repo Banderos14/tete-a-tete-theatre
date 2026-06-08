@@ -7,6 +7,7 @@ import type { Booking } from '../../types/booking';
 import styles from './TicketCheckPage.module.scss';
 
 type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'marking' | 'done' | 'error';
+type CardVariant = 'valid' | 'invalid' | 'used';
 
 export function TicketCheckPage() {
   const navigate        = useNavigate();
@@ -16,7 +17,8 @@ export function TicketCheckPage() {
 
   const ticketFromUrl = searchParams.get('ticket') ?? '';
 
-  const [scanState, setScanState] = useState<ScanState>('idle');
+  // Start in loading state immediately if ticket is in URL — avoids idle flash
+  const [scanState, setScanState] = useState<ScanState>(ticketFromUrl ? 'loading' : 'idle');
   const [booking,   setBooking]   = useState<Booking | null>(null);
   const [errorMsg,  setErrorMsg]  = useState('');
   const scannerRef    = useRef<Html5QrcodeScanner | null>(null);
@@ -77,17 +79,13 @@ export function TicketCheckPage() {
           scannerRef.current = null;
           setScanState('loading');
 
-          // Resolve ticketCode from scanned text.
-          // New format: URL containing ?ticket=XXXX-XXXX
-          // Legacy format: raw code or JSON {"ticketCode":"..."}
           let ticketCode = text.trim();
 
           try {
-            const url  = new URL(text);
+            const url   = new URL(text);
             const param = url.searchParams.get('ticket');
             if (param) ticketCode = decodeURIComponent(param);
           } catch {
-            // not a URL — try JSON legacy format
             try {
               const parsed = JSON.parse(text) as { ticketCode?: string };
               if (parsed.ticketCode) ticketCode = parsed.ticketCode;
@@ -138,7 +136,7 @@ export function TicketCheckPage() {
     setBooking(null);
     setErrorMsg('');
     setScanState('idle');
-    // Clear URL param so fresh scanner session starts
+    urlLookupDone.current = false;
     if (ticketFromUrl) {
       navigate('/admin/checkin', { replace: true });
     }
@@ -166,6 +164,27 @@ export function TicketCheckPage() {
   const isCancelled = b?.status === 'cancelled';
   const isAttended  = b?.status === 'attended';
   const isValid     = isPaid && b?.status === 'confirmed';
+  const markedNow   = scanState === 'done';
+
+  function getCardVariant(): CardVariant {
+    if (!b) return 'invalid';
+    if (isAttended || markedNow) return 'used';
+    if (isValid) return 'valid';
+    return 'invalid';
+  }
+
+  function getInvalidReason(): string {
+    if (!b) return 'не найден';
+    if (isCancelled) return 'Бронь отменена';
+    if (!isPaid) return 'Билет не оплачен';
+    return 'Недействителен';
+  }
+
+  function ticketsWord(n: number): string {
+    if (n === 1) return 'билет';
+    if (n >= 2 && n <= 4) return 'билета';
+    return 'билетов';
+  }
 
   return (
     <div className={styles.page}>
@@ -176,8 +195,8 @@ export function TicketCheckPage() {
         </button>
       </div>
 
-      {/* ── Idle ── */}
-      {scanState === 'idle' && (
+      {/* ── Idle (scanner mode — only when no ticket in URL) ── */}
+      {scanState === 'idle' && !ticketFromUrl && (
         <div className={styles.idleBlock}>
           <p className={styles.hint}>Отсканируйте QR-код билета зрителя.</p>
           <button className={styles.startBtn} onClick={startScanning}>
@@ -199,99 +218,117 @@ export function TicketCheckPage() {
         <div className={styles.centered}><span className={styles.spinner} /></div>
       )}
 
-      {/* ── Error ── */}
+      {/* ── Error (ticket not found) ── */}
       {scanState === 'error' && (
-        <div className={styles.resultBlock}>
-          <div className={`${styles.statusBadge} ${styles.statusInvalid}`}>Ошибка</div>
-          <p className={styles.errorMsg}>{errorMsg}</p>
-          <button className={styles.startBtn} onClick={reset}>
-            {ticketFromUrl ? 'Назад к сканеру' : 'Сканировать снова'}
-          </button>
+        <div className={styles.cardWrap}>
+          <div className={`${styles.card} ${styles.cardInvalid}`}>
+            <div className={styles.cardHeader}>
+              <span className={styles.cardIcon}>❌</span>
+              <span className={`${styles.cardStatus} ${styles.cardStatusInvalid}`}>
+                БИЛЕТ НЕ ДЕЙСТВИТЕЛЕН
+              </span>
+            </div>
+            <div className={styles.cardReason}>{errorMsg}</div>
+          </div>
+          <div className={styles.actions}>
+            <button className={styles.secondaryBtn} onClick={reset}>
+              {ticketFromUrl ? 'К сканеру' : 'Сканировать снова'}
+            </button>
+          </div>
         </div>
       )}
 
       {/* ── Found / Marking / Done ── */}
-      {(scanState === 'found' || scanState === 'marking' || scanState === 'done') && b && (
-        <div className={styles.resultBlock}>
+      {(scanState === 'found' || scanState === 'marking' || scanState === 'done') && b && (() => {
+        const variant = getCardVariant();
+        const variantClass =
+          variant === 'valid' ? styles.cardValid :
+          variant === 'used'  ? styles.cardUsed  :
+          styles.cardInvalid;
+        const statusClass =
+          variant === 'valid' ? styles.cardStatusValid :
+          variant === 'used'  ? styles.cardStatusUsed  :
+          styles.cardStatusInvalid;
 
-          {/* Status banner */}
-          {!isPaid && (
-            <div className={`${styles.statusBadge} ${styles.statusInvalid}`}>Билет не оплачен</div>
-          )}
-          {isPaid && isCancelled && (
-            <div className={`${styles.statusBadge} ${styles.statusInvalid}`}>Билет отменён</div>
-          )}
-          {isPaid && isAttended && (
-            <div className={`${styles.statusBadge} ${styles.statusUsed}`}>Билет уже использован</div>
-          )}
-          {scanState === 'done' && (
-            <div className={`${styles.statusBadge} ${styles.statusDone}`}>Посещение отмечено ✓</div>
-          )}
-          {isValid && scanState === 'found' && (
-            <div className={`${styles.statusBadge} ${styles.statusOk}`}>Билет действителен</div>
-          )}
+        return (
+          <div className={styles.cardWrap}>
+            <div className={`${styles.card} ${variantClass}`}>
+              {/* Header */}
+              <div className={styles.cardHeader}>
+                <span className={styles.cardIcon}>
+                  {variant === 'valid' ? '✅' : variant === 'used' ? '⚠️' : '❌'}
+                </span>
+                <span className={`${styles.cardStatus} ${statusClass}`}>
+                  {variant === 'valid' ? 'БИЛЕТ ДЕЙСТВИТЕЛЕН'    :
+                   variant === 'used'  ? 'БИЛЕТ УЖЕ ИСПОЛЬЗОВАН' :
+                                         'БИЛЕТ НЕ ДЕЙСТВИТЕЛЕН'}
+                </span>
+              </div>
 
-          {/* Booking details */}
-          <div className={styles.details}>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Зритель</span>
-              <span className={styles.detailValue}>{b.userName}</span>
+              {/* Details */}
+              <div className={styles.cardDetails}>
+                <div className={styles.cardRow}>
+                  <span className={styles.cardLabel}>Спектакль</span>
+                  <span className={styles.cardValue}>{b.showTitle}</span>
+                </div>
+                <div className={styles.cardRow}>
+                  <span className={styles.cardLabel}>Дата</span>
+                  <span className={styles.cardValue}>{b.showDate}</span>
+                </div>
+                <div className={styles.cardRow}>
+                  <span className={styles.cardLabel}>Время</span>
+                  <span className={styles.cardValue}>{b.showTime}</span>
+                </div>
+                <div className={styles.cardRow}>
+                  <span className={styles.cardLabel}>Код билета</span>
+                  <span className={`${styles.cardValue} ${styles.mono}`}>{b.ticketCode}</span>
+                </div>
+                <div className={styles.cardRow}>
+                  <span className={styles.cardLabel}>Количество</span>
+                  <span className={styles.cardValue}>
+                    {b.ticketsCount} {ticketsWord(b.ticketsCount)}
+                  </span>
+                </div>
+                <div className={styles.cardRow}>
+                  <span className={styles.cardLabel}>Оплата</span>
+                  <span className={styles.cardValue}>
+                    {b.paymentStatus === 'paid'              ? 'Оплачено'          :
+                     b.paymentStatus === 'awaiting_transfer' ? 'Ожидает перевода'  :
+                                                               'Не оплачено'}
+                  </span>
+                </div>
+                {variant === 'invalid' && (
+                  <div className={styles.cardRow}>
+                    <span className={styles.cardLabel}>Причина</span>
+                    <span className={`${styles.cardValue} ${styles.cardValueReason}`}>
+                      {getInvalidReason()}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Email</span>
-              <span className={styles.detailValue}>{b.userEmail}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Спектакль</span>
-              <span className={styles.detailValue}>{b.showTitle}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Дата</span>
-              <span className={styles.detailValue}>{b.showDate} · {b.showTime}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Код брони</span>
-              <span className={`${styles.detailValue} ${styles.mono}`}>{b.ticketCode}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Оплата</span>
-              <span className={styles.detailValue}>
-                {b.paymentStatus === 'paid'              ? 'Оплачено'          :
-                 b.paymentStatus === 'awaiting_transfer' ? 'Ожидает перевода'  :
-                                                           'Не оплачено'}
-              </span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Статус брони</span>
-              <span className={styles.detailValue}>
-                {b.status === 'confirmed' ? 'Подтверждена' :
-                 b.status === 'attended'  ? 'Посещено'     :
-                 b.status === 'cancelled' ? 'Отменена'     :
-                                            'Ожидает'}
-              </span>
+
+            {/* Actions */}
+            <div className={styles.actions}>
+              {markedNow && (
+                <div className={styles.markedBanner}>✅ Посещение отмечено</div>
+              )}
+              {isValid && !markedNow && (
+                <button
+                  className={styles.markBtn}
+                  onClick={handleMarkAttended}
+                  disabled={scanState === 'marking'}
+                >
+                  {scanState === 'marking' ? '…' : 'Отметить посещение'}
+                </button>
+              )}
+              <button className={styles.secondaryBtn} onClick={reset}>
+                {ticketFromUrl ? 'К сканеру' : 'Сканировать снова'}
+              </button>
             </div>
           </div>
-
-          {/* Actions */}
-          <div className={styles.actions}>
-            {isValid && scanState === 'found' && (
-              <button
-                className={styles.markBtn}
-                onClick={handleMarkAttended}
-                disabled={scanState !== 'found'}
-              >
-                Отметить посещение
-              </button>
-            )}
-            {scanState !== 'marking' && (
-              <button className={styles.cancelBtn} onClick={reset}>
-                {ticketFromUrl ? 'Назад к сканеру' : 'Сканировать снова'}
-              </button>
-            )}
-          </div>
-
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
