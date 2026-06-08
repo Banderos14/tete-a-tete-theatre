@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useAuth } from '../../context/AuthContext';
 import { getBookingByTicketCode, updateBookingStatus } from '../../services/bookingService';
@@ -9,15 +9,20 @@ import styles from './TicketCheckPage.module.scss';
 type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'marking' | 'done' | 'error';
 
 export function TicketCheckPage() {
-  const navigate = useNavigate();
+  const navigate        = useNavigate();
+  const [searchParams]  = useSearchParams();
   const { userProfile, loading } = useAuth();
   const isAdmin = userProfile?.role === 'admin';
+
+  const ticketFromUrl = searchParams.get('ticket') ?? '';
 
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [booking,   setBooking]   = useState<Booking | null>(null);
   const [errorMsg,  setErrorMsg]  = useState('');
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerRef    = useRef<Html5QrcodeScanner | null>(null);
+  const urlLookupDone = useRef(false);
 
+  // ── Auth guard ──
   useEffect(() => {
     if (loading) return;
     if (!isAdmin) {
@@ -26,6 +31,29 @@ export function TicketCheckPage() {
     }
   }, [loading, isAdmin, navigate]);
 
+  // ── Auto-lookup when ?ticket= is present ──
+  useEffect(() => {
+    if (loading || !isAdmin || !ticketFromUrl || urlLookupDone.current) return;
+    urlLookupDone.current = true;
+    setScanState('loading');
+    const code = decodeURIComponent(ticketFromUrl);
+    getBookingByTicketCode(code)
+      .then(found => {
+        if (!found) {
+          setErrorMsg(`Бронь с кодом «${code}» не найдена.`);
+          setScanState('error');
+          return;
+        }
+        setBooking(found);
+        setScanState('found');
+      })
+      .catch(() => {
+        setErrorMsg('Ошибка при поиске брони.');
+        setScanState('error');
+      });
+  }, [loading, isAdmin, ticketFromUrl]);
+
+  // ── Camera scanner lifecycle ──
   function startScanning() {
     setScanState('scanning');
     setBooking(null);
@@ -40,7 +68,6 @@ export function TicketCheckPage() {
       { fps: 10, qrbox: { width: 250, height: 250 } },
       false,
     );
-
     scannerRef.current = scanner;
 
     scanner.render(
@@ -50,12 +77,23 @@ export function TicketCheckPage() {
           scannerRef.current = null;
           setScanState('loading');
 
+          // Resolve ticketCode from scanned text.
+          // New format: URL containing ?ticket=XXXX-XXXX
+          // Legacy format: raw code or JSON {"ticketCode":"..."}
           let ticketCode = text.trim();
+
           try {
-            const parsed = JSON.parse(text) as { ticketCode?: string };
-            if (parsed.ticketCode) ticketCode = parsed.ticketCode;
+            const url  = new URL(text);
+            const param = url.searchParams.get('ticket');
+            if (param) ticketCode = decodeURIComponent(param);
           } catch {
-            // raw ticketCode, use as-is
+            // not a URL — try JSON legacy format
+            try {
+              const parsed = JSON.parse(text) as { ticketCode?: string };
+              if (parsed.ticketCode) ticketCode = parsed.ticketCode;
+            } catch {
+              // raw ticketCode string, use as-is
+            }
           }
 
           const found = await getBookingByTicketCode(ticketCode);
@@ -82,6 +120,7 @@ export function TicketCheckPage() {
     };
   }, [scanState]);
 
+  // ── Actions ──
   async function handleMarkAttended() {
     if (!booking) return;
     setScanState('marking');
@@ -99,8 +138,13 @@ export function TicketCheckPage() {
     setBooking(null);
     setErrorMsg('');
     setScanState('idle');
+    // Clear URL param so fresh scanner session starts
+    if (ticketFromUrl) {
+      navigate('/admin/checkin', { replace: true });
+    }
   }
 
+  // ── Render guards ──
   if (loading) {
     return <div className={styles.centered}><span className={styles.spinner} /></div>;
   }
@@ -108,12 +152,16 @@ export function TicketCheckPage() {
   if (!isAdmin) {
     return (
       <div className={styles.centered}>
-        <p className={styles.accessDenied}>Доступ запрещён</p>
+        <p className={styles.accessDenied}>
+          {ticketFromUrl
+            ? 'Для проверки билета войдите как администратор'
+            : 'Доступ запрещён'}
+        </p>
       </div>
     );
   }
 
-  const b = booking;
+  const b           = booking;
   const isPaid      = b?.paymentStatus === 'paid';
   const isCancelled = b?.status === 'cancelled';
   const isAttended  = b?.status === 'attended';
@@ -154,13 +202,15 @@ export function TicketCheckPage() {
       {/* ── Error ── */}
       {scanState === 'error' && (
         <div className={styles.resultBlock}>
-          <div className={styles.statusBadge + ' ' + styles.statusInvalid}>Ошибка</div>
+          <div className={`${styles.statusBadge} ${styles.statusInvalid}`}>Ошибка</div>
           <p className={styles.errorMsg}>{errorMsg}</p>
-          <button className={styles.startBtn} onClick={reset}>Сканировать снова</button>
+          <button className={styles.startBtn} onClick={reset}>
+            {ticketFromUrl ? 'Назад к сканеру' : 'Сканировать снова'}
+          </button>
         </div>
       )}
 
-      {/* ── Found ── */}
+      {/* ── Found / Marking / Done ── */}
       {(scanState === 'found' || scanState === 'marking' || scanState === 'done') && b && (
         <div className={styles.resultBlock}>
 
@@ -235,7 +285,7 @@ export function TicketCheckPage() {
             )}
             {scanState !== 'marking' && (
               <button className={styles.cancelBtn} onClick={reset}>
-                Сканировать снова
+                {ticketFromUrl ? 'Назад к сканеру' : 'Сканировать снова'}
               </button>
             )}
           </div>

@@ -13,6 +13,7 @@
     "@types/leaflet": "^1.9.21",
     "firebase": "^12.13.0",
     "html5-qrcode": "^2.3.8",
+    "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
     "qrcode": "^1.5.4",
     "react": "^19.2.5",

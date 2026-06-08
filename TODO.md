@@ -69,6 +69,7 @@
 -+- ProfileDrawer корректно считает посещения (status=attended + computed)
 -+- transferCodeWarning: заметное предупреждение о коде брони в назначении платежа
 -+- ticketCode используется для связи платежа и брони
+-+- QR использует production URL (VITE_PUBLIC_SITE_URL), не localhost
 --- Stripe / онлайн-оплата
 --- Автоматическая проверка поступления платежей
 --- PDF-билет: архитектура готова в ticketService.ts (jspdf, закомментировано)
@@ -89,6 +90,12 @@
 -+- Код брони в карточке
 -+- Прогресс-бар: каждое 5-е посещение — подарок (5 точек, заполняются)
 -+- Явные статусные сообщения: «Бронь подтверждена», «Бронь отменена», «Оплата получена»
+-+- ProfileDrawer redesigned as dashboard modal (centered, max-width 1050px, 88vh)
+-+- Sidebar: avatar, name, email, nav sections (Личные данные / Контакты / Соцсети / Уведомления / Мои билеты / Мои спектакли / Выход)
+-+- TicketCard compact/expanded: collapsed header (title + date + code + status) → expanded (QR + venue details)
+-+- QR visible only on expanded ticket (lazy-loaded on first expand)
+-+- One expanded ticket at a time (previous collapses on new open)
+-?- Mobile profile dashboard polish (tabs work, further refinement possible)
 --- День рождения → поздравление от театра + подарок
 --- Привязка соц сети через кнопку входа, а не вручную
 
@@ -165,7 +172,14 @@
 -+- Страница сканирования (/admin/checkin: html5-qrcode, только admin)
 -+- Проверка билета (paid+confirmed → зелёный; cancelled/not_paid/attended → ошибка)
 -+- Отметка посещения (кнопка "Отметить посещение" → status = attended)
---- PDF-билет
+-+- QR содержит URL проверки: /admin/checkin?ticket=XXXX-XXXX (читается обычной камерой iPhone)
+-+- /admin/checkin поддерживает ?ticket= — автоматически ищет бронь, не запускает сканер
+-+- Обратная совместимость: сканер парсит и старый JSON, и новый URL, и raw-код
+-+- PDF-билет: кнопка "Скачать PDF" в expanded TicketCard (ticketPdfService.ts, jspdf, lazy chunk)
+-+- PDF содержит QR, ticketCode, детали спектакля, адрес, имя зрителя
+-+- PDF всегда на латинице/французском: кириллица транслитерируется, "???" исключены
+-+- TicketCard: плавное раскрытие и закрытие (grid-template-rows + opacity)
+-+- ProfileDrawer: плавное открытие и закрытие (visibility + opacity на overlay и modal)
 --- Apple Wallet
 --- Google Wallet
 
