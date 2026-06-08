@@ -10,7 +10,7 @@ function getPublicSiteUrl(): string {
 
 export async function generateTicketQR(ticketCode: string): Promise<string> {
   const base = getPublicSiteUrl();
-  const url = `${base}/admin/checkin?ticket=${encodeURIComponent(ticketCode)}`;
+  const url = `${base}/#/admin/checkin?ticket=${encodeURIComponent(ticketCode)}`;
   return QRCode.toDataURL(url, {
     width: 280,
     margin: 2,
