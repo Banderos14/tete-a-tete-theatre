@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import { useAuth } from '../../context/AuthContext';
 import { getBookingByTicketCode, updateBookingStatus, markBookingPaid } from '../../services/bookingService';
 import { parseTicketCodeFromScan } from '../../utils/parseTicketCode';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import type { Booking } from '../../types/booking';
 import styles from './TicketCheckPage.module.scss';
 
@@ -19,11 +20,16 @@ export function TicketCheckPage() {
 
   const ticketFromUrl = searchParams.get('ticket') ?? '';
 
-  const [scanState,  setScanState]  = useState<ScanState>(ticketFromUrl ? 'loading' : 'idle');
-  const [booking,    setBooking]    = useState<Booking | null>(null);
-  const [errorMsg,   setErrorMsg]   = useState('');
-  const [operating,  setOperating]  = useState(false);
-  const scannerRef    = useRef<Html5QrcodeScanner | null>(null);
+  type ConfirmType = 'cash' | 'attended' | null;
+
+  const [scanState,    setScanState]    = useState<ScanState>(ticketFromUrl ? 'loading' : 'idle');
+  const [booking,      setBooking]      = useState<Booking | null>(null);
+  const [errorMsg,     setErrorMsg]     = useState('');
+  const [operating,    setOperating]    = useState(false);
+  const [confirmType,  setConfirmType]  = useState<ConfirmType>(null);
+  const [cameraError,  setCameraError]  = useState('');
+  const scannerRef    = useRef<Html5Qrcode | null>(null);
+  const fileInputRef  = useRef<HTMLInputElement>(null);
   const urlLookupDone = useRef(false);
 
   // ── Auth guard ──────────────────────────────────────────────────────────────
@@ -41,9 +47,7 @@ export function TicketCheckPage() {
     urlLookupDone.current = true;
 
     const code = parseTicketCodeFromScan(ticketFromUrl);
-    if (IS_DEV) {
-      console.log('[TicketCheck] url raw:', ticketFromUrl, '→ parsed:', code);
-    }
+    if (IS_DEV) console.log('[TicketCheck] url raw:', ticketFromUrl, '→ parsed:', code);
 
     if (!code) {
       setErrorMsg('QR-код не похож на билет Théâtre Tête-à-Tête.');
@@ -59,14 +63,7 @@ export function TicketCheckPage() {
           setScanState('error');
           return;
         }
-        if (IS_DEV) {
-          console.log('[TicketCheck] booking', {
-            id: found.id,
-            paymentMethod: found.paymentMethod,
-            paymentStatus: found.paymentStatus,
-            status: found.status,
-          });
-        }
+        if (IS_DEV) console.log('[TicketCheck] booking', { id: found.id, paymentMethod: found.paymentMethod, paymentStatus: found.paymentStatus, status: found.status });
         setBooking(found);
         setScanState('found');
       })
@@ -78,26 +75,27 @@ export function TicketCheckPage() {
 
   // ── Camera scanner lifecycle ────────────────────────────────────────────────
   function startScanning() {
-    setScanState('scanning');
+    setCameraError('');
     setBooking(null);
     setErrorMsg('');
+    setScanState('scanning');
   }
 
   useEffect(() => {
     if (scanState !== 'scanning') return;
 
-    const scanner = new Html5QrcodeScanner(
-      'qr-reader',
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      false,
-    );
+    const scanner = new Html5Qrcode('qr-reader');
     scannerRef.current = scanner;
 
-    scanner.render(
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
       async (text) => {
         try {
-          scanner.clear();
-          scannerRef.current = null;
+          if (scannerRef.current) {
+            await scannerRef.current.stop();
+            scannerRef.current = null;
+          }
           setScanState('loading');
 
           if (IS_DEV) console.log('[TicketCheck] raw scan:', text);
@@ -117,14 +115,7 @@ export function TicketCheckPage() {
             setScanState('error');
             return;
           }
-          if (IS_DEV) {
-            console.log('[TicketCheck] booking', {
-              id: found.id,
-              paymentMethod: found.paymentMethod,
-              paymentStatus: found.paymentStatus,
-              status: found.status,
-            });
-          }
+          if (IS_DEV) console.log('[TicketCheck] booking', { id: found.id, paymentMethod: found.paymentMethod, paymentStatus: found.paymentStatus, status: found.status });
           setBooking(found);
           setScanState('found');
         } catch {
@@ -133,15 +124,64 @@ export function TicketCheckPage() {
         }
       },
       () => {},
-    );
+    ).catch((err) => {
+      if (IS_DEV) console.log('[TicketCheck] camera error:', err);
+      scannerRef.current = null;
+      scanner.clear();
+      const msg = String(err).toLowerCase();
+      setCameraError(
+        msg.includes('permission') || msg.includes('notallowed') || msg.includes('denied')
+          ? 'Для проверки билетов необходимо разрешить доступ к камере.'
+          : 'Не удалось запустить камеру. Попробуйте ещё раз.',
+      );
+      setScanState('idle');
+    });
 
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.clear().catch(() => {});
+        scannerRef.current.stop().catch(() => {});
+        scannerRef.current.clear();
         scannerRef.current = null;
       }
     };
   }, [scanState]);
+
+  // ── File-based QR scan ───────────────────────────────────────────────────────
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    setScanState('loading');
+    const scanner = new Html5Qrcode('qr-file-scanner');
+    try {
+      const text = await scanner.scanFile(file, false);
+      scanner.clear();
+
+      if (IS_DEV) console.log('[TicketCheck] file scan result:', text);
+
+      const code = parseTicketCodeFromScan(text);
+      if (!code) {
+        setErrorMsg('QR-код не похож на билет Théâtre Tête-à-Tête.');
+        setScanState('error');
+        return;
+      }
+
+      const found = await getBookingByTicketCode(code);
+      if (!found) {
+        setErrorMsg(`Билет с кодом ${code} не найден.`);
+        setScanState('error');
+        return;
+      }
+      if (IS_DEV) console.log('[TicketCheck] booking', { id: found.id, paymentMethod: found.paymentMethod, paymentStatus: found.paymentStatus, status: found.status });
+      setBooking(found);
+      setScanState('found');
+    } catch {
+      scanner.clear();
+      setErrorMsg('Не удалось распознать QR-код в изображении.');
+      setScanState('error');
+    }
+  }
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -177,6 +217,7 @@ export function TicketCheckPage() {
     setBooking(null);
     setErrorMsg('');
     setOperating(false);
+    setCameraError('');
     setScanState('idle');
     urlLookupDone.current = false;
     if (ticketFromUrl) {
@@ -194,7 +235,7 @@ export function TicketCheckPage() {
       <div className={styles.centered}>
         <p className={styles.accessDenied}>
           {ticketFromUrl
-            ? 'Для проверки билета войдите как администратор'
+            ? 'Для проверки билетов войдите как администратор'
             : 'Доступ запрещён'}
         </p>
       </div>
@@ -226,6 +267,9 @@ export function TicketCheckPage() {
 
   return (
     <div className={styles.page}>
+      {/* Hidden container for file-based QR scanning — must always be in DOM */}
+      <div id="qr-file-scanner" style={{ display: 'none' }} />
+
       <div className={styles.topBar}>
         <h1 className={styles.pageTitle}>Проверка билетов</h1>
         <button className={styles.backBtn} onClick={() => navigate('/admin')}>
@@ -233,19 +277,53 @@ export function TicketCheckPage() {
         </button>
       </div>
 
-      {/* ── Idle ─────────────────────────────────────────────────────────────── */}
+      {/* ── Idle: экран до старта ─────────────────────────────────────────────── */}
       {scanState === 'idle' && !ticketFromUrl && (
         <div className={styles.idleBlock}>
-          <p className={styles.hint}>Отсканируйте QR-код билета зрителя.</p>
-          <button className={styles.startBtn} onClick={startScanning}>
-            Начать сканирование
-          </button>
+          <div className={styles.qrIconWrap}>
+            <QrScanIcon />
+          </div>
+
+          <p className={styles.scanTitle}>СКАНИРОВАНИЕ БИЛЕТА</p>
+          <p className={styles.scanHint}>
+            Наведите камеру на QR-код или выберите изображение из галереи
+          </p>
+
+          {cameraError && (
+            <div className={styles.cameraErrorBox}>
+              <span className={styles.cameraErrorSign}>🚫</span>
+              {cameraError}
+            </div>
+          )}
+
+          <div className={styles.scanActions}>
+            <button className={styles.scanStartBtn} onClick={startScanning}>
+              <CameraIcon />
+              {cameraError ? 'Попробовать снова' : 'Сканировать QR-код'}
+            </button>
+            <button
+              className={styles.scanFileBtn}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <ImageIcon />
+              Выбрать изображение
+            </button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+          />
         </div>
       )}
 
-      {/* ── Scanner ──────────────────────────────────────────────────────────── */}
+      {/* ── Scanner: активная камера ──────────────────────────────────────────── */}
       {scanState === 'scanning' && (
         <div className={styles.scanBlock}>
+          <p className={styles.scanActiveHint}>Наведите QR-код в рамку</p>
           <div id="qr-reader" className={styles.qrReader} />
           <button className={styles.cancelBtn} onClick={reset}>Отмена</button>
         </div>
@@ -369,7 +447,7 @@ export function TicketCheckPage() {
                 </div>
               </div>
               <div className={styles.actions}>
-                <button className={styles.cashBtn} onClick={handleCashReceived}>
+                <button className={styles.cashBtn} onClick={() => setConfirmType('cash')}>
                   Оплачено
                 </button>
                 <button className={styles.secondaryBtn} onClick={reset}>
@@ -421,7 +499,7 @@ export function TicketCheckPage() {
                 </div>
               </div>
               <div className={styles.actions}>
-                <button className={styles.markBtn} onClick={handleMarkAttended}>
+                <button className={styles.markBtn} onClick={() => setConfirmType('attended')}>
                   Отметить посещение
                 </button>
                 <button className={styles.secondaryBtn} onClick={reset}>
@@ -432,7 +510,7 @@ export function TicketCheckPage() {
           );
         }
 
-        // 4 + 5. Недействителен (bank_transfer не оплачен / отменён / прочее) ───
+        // 4 + 5. Недействителен ────────────────────────────────────────────────
         return (
           <div className={styles.cardWrap}>
             <div className={`${styles.card} ${styles.cardInvalid}`}>
@@ -471,6 +549,67 @@ export function TicketCheckPage() {
           </div>
         );
       })()}
+      {/* ── Confirm: Оплачено (on_site) ── */}
+      <ConfirmDialog
+        isOpen={confirmType === 'cash'}
+        title="Подтвердить оплату?"
+        message="Вы уверены, что хотите отметить эту бронь как оплаченную? Это изменит статус оплаты."
+        confirmLabel="Да, оплату получили"
+        cancelLabel="Отмена"
+        loading={operating}
+        onCancel={() => setConfirmType(null)}
+        onConfirm={() => {
+          setConfirmType(null);
+          handleCashReceived();
+        }}
+      />
+
+      {/* ── Confirm: Отметить посещение ── */}
+      <ConfirmDialog
+        isOpen={confirmType === 'attended'}
+        title="Отметить посещение?"
+        message="Вы уверены, что зритель прошёл в зал? После этого билет будет считаться использованным."
+        confirmLabel="Да, отметить посещение"
+        cancelLabel="Отмена"
+        loading={operating}
+        onCancel={() => setConfirmType(null)}
+        onConfirm={() => {
+          setConfirmType(null);
+          handleMarkAttended();
+        }}
+      />
     </div>
+  );
+}
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+
+function QrScanIcon() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M18 18v2"/>
+    </svg>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+  );
+}
+
+function ImageIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <circle cx="8.5" cy="8.5" r="1.5"/>
+      <path d="M21 15l-5-5L5 21"/>
+    </svg>
   );
 }

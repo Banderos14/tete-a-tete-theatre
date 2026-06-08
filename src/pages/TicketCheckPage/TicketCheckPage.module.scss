@@ -45,27 +45,137 @@
   min-height: 60vh;
 }
 
+// ── Idle: pre-scan screen ─────────────────────────────────────────────────────
 .idleBlock {
-  max-width: 480px;
+  max-width: 400px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  padding-top: 40px;
+  padding-top: 24px;
 }
 
-.hint {
-  font-size: 15px;
+.qrIconWrap {
+  width: 88px;
+  height: 88px;
+  background: rgba(184, 0, 0, 0.07);
+  border: 1px solid rgba(184, 0, 0, 0.18);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+  color: var(--fg-dim);
+}
+
+.scanTitle {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg);
+  margin-bottom: 10px;
+}
+
+.scanHint {
+  font-size: 14px;
   color: var(--fg-mute);
+  line-height: 1.55;
   margin-bottom: 28px;
-  line-height: 1.5;
+  max-width: 280px;
 }
 
+.cameraErrorBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(184, 0, 0, 0.07);
+  border: 1px solid rgba(184, 0, 0, 0.22);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--accent-glow, #b80000);
+  line-height: 1.5;
+  text-align: left;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.cameraErrorSign {
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.scanActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.scanStartBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 14px 24px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 4px;
+  width: 100%;
+  transition: background 0.18s;
+
+  &:hover  { background: var(--accent-bright, #c00); }
+  &:active { transform: scale(0.98); }
+}
+
+.scanFileBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 12px 24px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  background: transparent;
+  color: var(--fg-dim);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  width: 100%;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--line-strong);
+    color: var(--fg);
+  }
+}
+
+// ── Scanner: active camera view ───────────────────────────────────────────────
 .scanBlock {
   max-width: 480px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
+}
+
+.scanActiveHint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
 }
 
 .qrReader {
@@ -75,6 +185,20 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
+
+  // Suppress any library-injected text nodes
+  font-size: 0;
+
+  // Library renders video/canvas inside — restore size
+  video, canvas { font-size: 14px; }
+}
+
+// ── Deprecated (kept for safety, unused in new UI) ────────────────────────────
+.hint {
+  font-size: 15px;
+  color: var(--fg-mute);
+  margin-bottom: 28px;
+  line-height: 1.5;
 }
 
 // ── Theatrical result card ────────────────────────────────────────────────────
