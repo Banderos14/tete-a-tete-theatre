@@ -192,6 +192,8 @@ export function TicketCheckPage() {
 
   function getInvalidReason(): string {
     if (!b) return 'не найден';
+    if (b.paymentStatus === 'expired') return 'Срок оплаты истёк — бронь аннулирована';
+    if (b.paymentStatus === 'awaiting_transfer') return 'Перевод ещё не получен';
     if (isCancelled) return 'Бронь отменена';
     if (!isPaid) return 'Билет не оплачен';
     return 'Недействителен';
@@ -309,8 +311,9 @@ export function TicketCheckPage() {
                 <div className={styles.cardRow}>
                   <span className={styles.cardLabel}>Оплата</span>
                   <span className={styles.cardValue}>
-                    {b.paymentStatus === 'paid'              ? 'Оплачено'          :
-                     b.paymentStatus === 'awaiting_transfer' ? 'Ожидает перевода'  :
+                    {b.paymentStatus === 'paid'              ? 'Оплачено'               :
+                     b.paymentStatus === 'awaiting_transfer' ? 'Ожидает перевода'       :
+                     b.paymentStatus === 'expired'           ? 'Истёк срок оплаты'      :
                                                                'Не оплачено'}
                   </span>
                 </div>

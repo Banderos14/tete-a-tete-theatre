@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { createBooking } from '../../../services/bookingService';
 import { generateTicketCode } from '../../../services/ticketService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
-import { PAYMENT_CONFIG } from '../../../config/payment';
+import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
 import styles from './BookingModal.module.scss';
@@ -53,16 +54,23 @@ export function BookingModal({ show, onClose }: Props) {
   const [authError,    setAuthError]    = useState('');
   const [authLoading,  setAuthLoading]  = useState(false);
 
-  const [tickets,       setTickets]       = useState(1);
-  const [selectedTicket,setSelectedTicket]= useState<TicketType | null>(null);
-  const [payment,       setPayment]       = useState<PaymentMethod>('on_site');
-  const [phone,         setPhone]         = useState('');
-  const [comment,       setComment]       = useState('');
-  const [submitLoading,  setSubmitLoading]  = useState(false);
-  const [submitError,    setSubmitError]    = useState('');
-  const [ticketCode,     setTicketCode]     = useState('');
-  const [copiedDetails,  setCopiedDetails]  = useState(false);
-  const [copiedCode,     setCopiedCode]     = useState(false);
+  const [tickets,          setTickets]          = useState(1);
+  const [selectedTicket,   setSelectedTicket]   = useState<TicketType | null>(null);
+  const [payment,          setPayment]          = useState<PaymentMethod>('on_site');
+  const [selectedAccountId,setSelectedAccountId]= useState<string>(PAYMENT_CONFIG.paymentAccounts[0].id);
+  const [savedAccountId,   setSavedAccountId]   = useState<string>(PAYMENT_CONFIG.paymentAccounts[0].id);
+  const [phone,            setPhone]            = useState('');
+  const [comment,          setComment]          = useState('');
+  const [submitLoading,    setSubmitLoading]    = useState(false);
+  const [submitError,      setSubmitError]      = useState('');
+  const [ticketCode,       setTicketCode]       = useState('');
+  const [savedAmount,      setSavedAmount]      = useState(0);
+  const [copiedDetails,    setCopiedDetails]    = useState(false);
+  const [copiedCode,       setCopiedCode]       = useState(false);
+  const [copiedIban,       setCopiedIban]       = useState(false);
+  const [copiedBic,        setCopiedBic]        = useState(false);
+  const [copiedCard,       setCopiedCard]       = useState(false);
+  const [copiedRef,        setCopiedRef]        = useState(false);
 
   const defaultTicket = useMemo(
     () => (show?.ticketTypes?.length ? show.ticketTypes[0] : null),
@@ -88,6 +96,7 @@ export function BookingModal({ show, onClose }: Props) {
     if (!show) return;
     setStep(user ? 'form' : 'auth');
     setTickets(1); setSelectedTicket(null); setPayment('on_site');
+    setSelectedAccountId(PAYMENT_CONFIG.paymentAccounts[0].id);
     setComment(''); setSubmitError('');
     setAuthEmail(''); setAuthPassword(''); setAuthName(''); setAuthError('');
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -145,6 +154,14 @@ export function BookingModal({ show, onClose }: Props) {
         });
       }
 
+      const isBankTransfer   = payment === 'bank_transfer';
+      const paymentExpiresAt = isBankTransfer
+        ? Timestamp.fromDate(new Date(Date.now() + PAYMENT_CONFIG.paymentExpiryHours * 60 * 60 * 1000))
+        : undefined;
+      const paymentReference = isBankTransfer
+        ? `${PAYMENT_CONFIG.paymentReferencePrefix}-${code}`
+        : undefined;
+
       await createBooking({
         showId:        show.id,
         showTitle:     show.title,
@@ -161,28 +178,34 @@ export function BookingModal({ show, onClose }: Props) {
         ticketCode:    code,
         status:        'pending',
         paymentMethod: payment,
-        paymentStatus: payment === 'bank_transfer' ? 'awaiting_transfer' : 'not_paid',
+        paymentStatus: isBankTransfer ? 'awaiting_transfer' : 'not_paid',
         comment,
         lang,
+        ...(isBankTransfer ? { paymentAccountId: selectedAccountId } : {}),
+        ...(paymentReference ? { paymentReference } : {}),
+        ...(paymentExpiresAt ? { paymentExpiresAt } : {}),
       });
 
       // Non-blocking — booking is already saved if email fails
       sendBookingConfirmationEmail({
         userEmail,
         userName,
-        showTitle:    show.title,
-        showTitleFR:  show.titleFR,
+        showTitle:        show.title,
+        showTitleFR:      show.titleFR,
         showDate,
-        showTime:     show.time,
-        ticketsCount: tickets,
-        ticketType:   activeTicket.id,
+        showTime:         show.time,
+        ticketsCount:     tickets,
+        ticketType:       activeTicket.id,
         totalAmount,
-        ticketCode:   code,
-        paymentMethod: payment,
+        ticketCode:       code,
+        paymentMethod:    payment,
+        paymentAccountId: isBankTransfer ? selectedAccountId : undefined,
         lang,
       }).catch(() => {/* silently ignored */});
 
       setTicketCode(code);
+      setSavedAmount(totalAmount);
+      setSavedAccountId(selectedAccountId);
       setStep('success');
     } catch {
       setSubmitError(t.booking.submitError);
@@ -407,6 +430,33 @@ export function BookingModal({ show, onClose }: Props) {
                 </div>
               </div>
 
+              {/* Account selection — only for bank_transfer */}
+              {payment === 'bank_transfer' && (
+                <div className={styles.section}>
+                  <div className={styles.sectionLabel}>
+                    {lang === 'FR' ? 'Région de paiement' : 'Регион оплаты'}
+                  </div>
+                  <div className={styles.paymentCards}>
+                    {PAYMENT_CONFIG.paymentAccounts.map(acc => (
+                      <button
+                        key={acc.id}
+                        type="button"
+                        className={`${styles.paymentCard} ${selectedAccountId === acc.id ? styles.paymentCardActive : ''}`}
+                        onClick={() => setSelectedAccountId(acc.id)}
+                      >
+                        <span className={styles.paymentIcon}>
+                          {acc.type === 'iban' ? '🇪🇺' : '🇺🇦'}
+                        </span>
+                        <div>
+                          <div className={styles.paymentName}>{acc.label}</div>
+                          <div className={styles.paymentDesc}>{acc.description}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Comment */}
               <div className={styles.section}>
                 <label className={styles.sectionLabel} htmlFor="bk-comment">{t.booking.comment}</label>
@@ -433,15 +483,20 @@ export function BookingModal({ show, onClose }: Props) {
 
         {/* ── Success step ── */}
         {step === 'success' && (() => {
-          const showDate      = `${show.day} ${show.month} ${show.year}`;
-          const paymentPurpose = `${show.title} — ${showDate} — ${ticketCode}`;
-          const detailsText   = [
-            `${t.booking.transferReceiver}: ${PAYMENT_CONFIG.receiverName}`,
-            `IBAN: ${PAYMENT_CONFIG.iban}`,
-            `BIC: ${PAYMENT_CONFIG.bic}`,
-            `${t.booking.successAmount}: ${totalAmount} €`,
-            `${t.booking.transferPurpose}: ${paymentPurpose}`,
-          ].join('\n');
+          const paymentRef  = `${PAYMENT_CONFIG.paymentReferencePrefix}-${ticketCode}`;
+          const account     = getPaymentAccount(savedAccountId);
+          const isIban      = account.type === 'iban';
+          const copyRows: string[] = [
+            `${t.booking.transferReceiver}: ${account.receiverName}`,
+            ...(account.bankName ? [`${lang === 'FR' ? 'Banque' : 'Банк'}: ${account.bankName}`] : []),
+            ...(isIban
+              ? [`IBAN: ${account.iban}`, `BIC / SWIFT: ${account.bic}`]
+              : [`${lang === 'FR' ? 'Numéro de carte' : 'Номер карты'}: ${account.cardNumber}`]
+            ),
+            `${t.booking.successAmount}: ${savedAmount} €`,
+            `${t.booking.transferPurpose}: ${paymentRef}`,
+          ];
+          const detailsText = copyRows.join('\n');
 
           return (
             <div className={styles.successWrap}>
@@ -461,7 +516,7 @@ export function BookingModal({ show, onClose }: Props) {
                     [t.booking.labelShow,    showTitle],
                     [t.booking.labelDate,    `${show.day} ${monthLabel} ${show.year} · ${show.time}`],
                     [t.booking.labelTickets, `${tickets} × ${ticketLabel(activeTicket?.id)}`],
-                    [t.booking.labelAmount,  `${totalAmount} €`],
+                    [t.booking.labelAmount,  `${savedAmount} €`],
                   ] as [string, string][]).map(([label, value]) => (
                     <div key={label} className={styles.infoBoxRow}>
                       <span>{label}</span>
@@ -489,26 +544,107 @@ export function BookingModal({ show, onClose }: Props) {
                 ) : (
                   <>
                     <p className={styles.successText}>{t.booking.successTransfer}</p>
+
                     <div className={styles.transferBox}>
+                      {/* Amount row */}
                       <div className={styles.transferRow}>
                         <span>{t.booking.successAmount}</span>
-                        <strong>{totalAmount}&nbsp;€</strong>
+                        <strong>{savedAmount}&nbsp;€</strong>
                       </div>
+
+                      {/* Bank details with individual copy buttons */}
                       <div className={styles.transferDetails}>
-                        <p className={styles.transferDetailLabel}>{t.booking.transferDetailsLabel}</p>
-                        <p>{t.booking.transferReceiver}: <strong>{PAYMENT_CONFIG.receiverName}</strong></p>
-                        <p>IBAN: <strong>{PAYMENT_CONFIG.iban}</strong></p>
-                        <p>BIC: <strong>{PAYMENT_CONFIG.bic}</strong></p>
-                        <p>{t.booking.transferPurpose}: <strong>{paymentPurpose}</strong></p>
+                        <p className={styles.transferDetailLabel}>
+                          {account.label} · {account.description}
+                        </p>
+
+                        <div className={styles.transferFieldRow}>
+                          <div>
+                            <span>{t.booking.transferReceiver}: </span>
+                            <strong>{account.receiverName}</strong>
+                          </div>
+                        </div>
+
+                        {account.bankName && (
+                          <div className={styles.transferFieldRow}>
+                            <div>
+                              <span>{lang === 'FR' ? 'Banque' : 'Банк'}: </span>
+                              <strong>{account.bankName}</strong>
+                            </div>
+                          </div>
+                        )}
+
+                        {isIban ? (
+                          <>
+                            <div className={styles.transferFieldRow}>
+                              <div>
+                                <span>IBAN: </span>
+                                <strong>{account.iban}</strong>
+                              </div>
+                              <button
+                                className={`${styles.copyBtn} ${copiedIban ? styles.copyBtnDone : ''}`}
+                                onClick={() => copyToClipboard(account.iban, setCopiedIban)}
+                              >
+                                {copiedIban ? t.booking.copied : (lang === 'FR' ? 'Copier' : 'Копировать')}
+                              </button>
+                            </div>
+
+                            <div className={styles.transferFieldRow}>
+                              <div>
+                                <span>BIC / SWIFT: </span>
+                                <strong>{account.bic}</strong>
+                              </div>
+                              <button
+                                className={`${styles.copyBtn} ${copiedBic ? styles.copyBtnDone : ''}`}
+                                onClick={() => copyToClipboard(account.bic, setCopiedBic)}
+                              >
+                                {copiedBic ? t.booking.copied : (lang === 'FR' ? 'Copier' : 'Копировать')}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className={styles.transferFieldRow}>
+                            <div>
+                              <span>{lang === 'FR' ? 'Numéro de carte' : 'Номер карты'}: </span>
+                              <strong>{account.cardNumber}</strong>
+                            </div>
+                            <button
+                              className={`${styles.copyBtn} ${copiedCard ? styles.copyBtnDone : ''}`}
+                              onClick={() => copyToClipboard(account.cardNumber, setCopiedCard)}
+                            >
+                              {copiedCard ? t.booking.copied : (lang === 'FR' ? 'Copier' : 'Копировать')}
+                            </button>
+                          </div>
+                        )}
+
+                        <div className={styles.transferFieldRow}>
+                          <div>
+                            <span>{t.booking.transferPurpose}: </span>
+                            <strong>{paymentRef}</strong>
+                          </div>
+                          <button
+                            className={`${styles.copyBtn} ${copiedRef ? styles.copyBtnDone : ''}`}
+                            onClick={() => copyToClipboard(paymentRef, setCopiedRef)}
+                          >
+                            {copiedRef ? t.booking.copied : (lang === 'FR' ? 'Copier' : 'Копировать')}
+                          </button>
+                        </div>
                       </div>
+
+                      {/* Copy all */}
                       <button
                         className={`${styles.copyBtn} ${styles.copyBtnWide} ${copiedDetails ? styles.copyBtnDone : ''}`}
                         onClick={() => copyToClipboard(detailsText, setCopiedDetails)}
                       >
                         {copiedDetails ? t.booking.copied : t.booking.copyDetails}
                       </button>
-                      <p className={styles.transferCodeWarning}>
-                        ⚠ {t.booking.transferCodeWarning}
+
+                      {/* Pending confirmation warning */}
+                      <p className={styles.transferPendingNote}>
+                        ⚠&nbsp;
+                        {lang === 'FR'
+                          ? 'Votre réservation sera confirmée uniquement après vérification du virement bancaire.'
+                          : 'Ваша бронь будет подтверждена только после проверки банковского перевода.'}
                       </p>
                     </div>
                   </>

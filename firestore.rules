@@ -25,14 +25,26 @@ service cloud.firestore {
     }
 
     // ── Users collection ─────────────────────────────────────────────────────
-    // users/{uid} — profile document, owned by the user
+    // users/{uid} — profile document owned by the user.
 
     match /users/{uid} {
-      // User can read and write their own profile
-      allow read, write: if isOwner(uid);
 
-      // Admin can read all user profiles (for the users tab)
-      allow read: if isAdmin();
+      // User can read their own profile; admin can read any profile.
+      allow read: if isOwner(uid) || isAdmin();
+
+      // User can create their own profile document, but ONLY with role='user'.
+      // Prevents privilege escalation via create.
+      allow create: if isOwner(uid)
+        && request.resource.data.role == 'user';
+
+      // User can update their own profile, but CANNOT change their role.
+      // request.resource.data is the full document after the write —
+      // so this check catches any attempt to set role to a different value.
+      allow update: if isOwner(uid)
+        && request.resource.data.role == resource.data.role;
+
+      // Admin can update or delete any user document (including role changes).
+      allow update, delete: if isAdmin();
     }
 
     // ── Bookings collection ──────────────────────────────────────────────────
@@ -40,20 +52,56 @@ service cloud.firestore {
 
     match /bookings/{bookingId} {
 
-      // Any authenticated user can create a booking,
-      // but only with their own userId in the document.
-      allow create: if isSignedIn()
-        && request.resource.data.userId == request.auth.uid;
-
-      // User can read their own bookings.
+      // User can read their own bookings (realtime subscription + one-off reads).
       allow read: if isSignedIn()
         && resource.data.userId == request.auth.uid;
 
-      // User cannot update or delete their own bookings
-      // (status changes are admin-only).
-      allow update, delete: if false;
+      // ── Create ─────────────────────────────────────────────────────────────
+      // User can create a booking for themselves, with strictly constrained
+      // initial field values.  No privileged fields can be set on create.
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
 
-      // Admin can read, update, and delete any booking.
+        // Initial booking status must always be 'pending'.
+        // 'confirmed', 'attended', 'cancelled' are admin-only transitions.
+        && request.resource.data.status == 'pending'
+
+        // paymentStatus can only be 'not_paid' (on_site) or 'awaiting_transfer'
+        // (bank_transfer).  'paid' and 'expired' are admin/system transitions.
+        && request.resource.data.paymentStatus in ['not_paid', 'awaiting_transfer']
+
+        // paidAt must never be present on creation — it is set by admin only.
+        && !('paidAt' in request.resource.data)
+
+        // paymentExpiresAt rules:
+        //   bank_transfer → must be present, must be a future timestamp.
+        //   on_site        → must NOT be present.
+        && (
+          request.resource.data.paymentMethod == 'bank_transfer'
+          ? (
+              'paymentExpiresAt' in request.resource.data
+              && request.resource.data.paymentExpiresAt is timestamp
+              && request.resource.data.paymentExpiresAt > request.time
+            )
+          : !('paymentExpiresAt' in request.resource.data)
+        );
+
+      // ── Update (user — expiry only) ────────────────────────────────────────
+      // A normal user may expire ONLY their own booking, ONLY when
+      // paymentExpiresAt has already passed (server time), and ONLY by
+      // transitioning paymentStatus → 'expired' and status → 'cancelled'.
+      // No other fields may be touched.
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && resource.data.paymentStatus == 'awaiting_transfer'
+        && resource.data.paymentExpiresAt < request.time
+        && request.resource.data.paymentStatus == 'expired'
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['paymentStatus', 'status', 'updatedAt']);
+
+      // ── Admin ──────────────────────────────────────────────────────────────
+      // Admin can read, update, and delete any booking without restriction.
       allow read, update, delete: if isAdmin();
     }
 

@@ -412,6 +412,53 @@
   border-color: rgba(76, 175, 80, 0.3);
 }
 
+.payExpired {
+  background: rgba(176, 64, 64, 0.1);
+  color: #b04040;
+  border-color: rgba(176, 64, 64, 0.25);
+}
+
+.payCountdown {
+  display: inline-block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #e08a00;
+  background: rgba(255, 160, 0, 0.08);
+  border: 1px solid rgba(255, 160, 0, 0.3);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.payExpiredTag {
+  display: inline-block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #b04040;
+  background: rgba(176, 64, 64, 0.08);
+  border: 1px solid rgba(176, 64, 64, 0.2);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.payAccountLabel {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--fg-mute);
+}
+
+.payRef {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--fg-dim);
+  letter-spacing: 0.04em;
+  word-break: break-all;
+}
+
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 
 .tabs {

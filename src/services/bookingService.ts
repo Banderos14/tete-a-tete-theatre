@@ -13,6 +13,14 @@ import {
 import { db } from '../firebase/config';
 import type { Booking, NewBooking, BookingStatus, PaymentStatus } from '../types/booking';
 
+function getTimestampMs(ts: unknown): number {
+  if (!ts) return 0;
+  const t = ts as { toDate?: () => Date; seconds?: number };
+  if (t.toDate) return t.toDate().getTime();
+  if (t.seconds) return t.seconds * 1000;
+  return 0;
+}
+
 const COLLECTION = 'bookings';
 
 export async function createBooking(data: NewBooking): Promise<string> {
@@ -91,8 +99,46 @@ export async function markBookingPaid(bookingId: string): Promise<void> {
   await updateDoc(doc(db, COLLECTION, bookingId), {
     paymentStatus: 'paid',
     status: 'confirmed',
+    paidAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+}
+
+// Expires a booking: sets paymentStatus='expired', status='cancelled'.
+// Does NOT delete the booking document.
+export async function expireBooking(bookingId: string): Promise<void> {
+  await updateDoc(doc(db, COLLECTION, bookingId), {
+    paymentStatus: 'expired',
+    status: 'cancelled',
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// Scans a list of bookings and expires any awaiting_transfer bookings
+// whose paymentExpiresAt has passed. Calls onExpired(id) for each expired booking.
+export async function expireOverdueBookings(
+  bookings: Booking[],
+  onExpired: (id: string) => void,
+): Promise<void> {
+  const now = Date.now();
+  const toExpire = bookings.filter(b => {
+    if (b.paymentStatus !== 'awaiting_transfer') return false;
+    const expiresMs = getTimestampMs(b.paymentExpiresAt);
+    return expiresMs > 0 && expiresMs < now;
+  });
+  for (const b of toExpire) {
+    await expireBooking(b.id);
+    onExpired(b.id);
+  }
+}
+
+// Returns hours remaining until paymentExpiresAt (floored).
+// Returns null if paymentExpiresAt is not set.
+// Returns a negative number if already expired.
+export function hoursUntilExpiry(booking: Booking): number | null {
+  const expiresMs = getTimestampMs(booking.paymentExpiresAt);
+  if (!expiresMs) return null;
+  return Math.floor((expiresMs - Date.now()) / (1000 * 60 * 60));
 }
 
 export async function getBookingByTicketCode(ticketCode: string): Promise<Booking | null> {

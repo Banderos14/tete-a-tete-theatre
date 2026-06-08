@@ -84,12 +84,14 @@ export interface T {
     payStatusNotPaid: string;
     payStatusPaid: string;
     payStatusAwaiting: string;
+    payStatusExpired: string;
     payMethodTransfer: string;
     payMethodOnSite: string;
     payTransferReminder:  (code: string) => string;
     bookingNoteConfirmed: string;
     bookingNoteCancelled: string;
     bookingNotePaid:      string;
+    bookingNoteExpired:   string;
   };
   booking: {
     title: string;

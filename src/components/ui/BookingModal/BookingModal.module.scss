@@ -774,6 +774,37 @@
   color: var(--fg-mute);
 }
 
+.transferFieldRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+
+  &:last-child { border-bottom: none; }
+
+  > div {
+    font-size: 12px;
+    line-height: 1.6;
+    span   { color: var(--fg-mute); }
+    strong { color: var(--fg-dim); font-family: var(--font-mono); font-size: 11px; }
+  }
+
+  .copyBtn { flex-shrink: 0; padding: 4px 8px; font-size: 9px; }
+}
+
+.transferPendingNote {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  background: rgba(255, 140, 0, 0.08);
+  border-left: 3px solid #e08a00;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #c07500;
+}
+
 .closeSuccessBtn {
   align-self: flex-start;
   padding: 11px 22px;

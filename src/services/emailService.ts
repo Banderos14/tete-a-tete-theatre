@@ -11,7 +11,7 @@
 // email is best-effort.
 
 import type { BookingStatus } from '../types/booking';
-import { PAYMENT_CONFIG } from '../config/payment';
+import { PAYMENT_CONFIG, getPaymentAccount } from '../config/payment';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -19,25 +19,25 @@ const THEATRE_NAME    = PAYMENT_CONFIG.receiverName;
 const THEATRE_ADDRESS = PAYMENT_CONFIG.address;
 const THEATRE_EMAIL   = PAYMENT_CONFIG.paymentEmail;
 const THEATRE_PHONE   = PAYMENT_CONFIG.paymentPhone;
-const THEATRE_IBAN    = PAYMENT_CONFIG.iban;
-const THEATRE_BIC     = PAYMENT_CONFIG.bic;
-const THEATRE_MAPS    = 'https://maps.app.goo.gl/...';
+const PAY_REF_PREFIX  = PAYMENT_CONFIG.paymentReferencePrefix;
+const THEATRE_MAPS    = PAYMENT_CONFIG.googleMapsUrl;
 
 // ── Data types ────────────────────────────────────────────────────────────────
 
 export interface BookingEmailData {
-  userEmail:     string;
-  userName:      string;
-  showTitle:     string;
-  showTitleFR?:  string;
-  showDate:      string;
-  showTime:      string;
-  ticketsCount:  number;
-  ticketType:    string;
-  totalAmount:   number;
-  ticketCode:    string;
-  paymentMethod: 'on_site' | 'bank_transfer';
-  lang:          'RU' | 'FR';
+  userEmail:        string;
+  userName:         string;
+  showTitle:        string;
+  showTitleFR?:     string;
+  showDate:         string;
+  showTime:         string;
+  ticketsCount:     number;
+  ticketType:       string;
+  totalAmount:      number;
+  ticketCode:       string;
+  paymentMethod:    'on_site' | 'bank_transfer';
+  paymentAccountId?: string;
+  lang:             'RU' | 'FR';
 }
 
 export interface BookingStatusEmailData {
@@ -195,10 +195,10 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
 
   const payNote = isRU
     ? (isBankTransfer
-        ? 'Для подтверждения бронирования переведите указанную сумму по реквизитам ниже. В назначении платежа укажите код брони.'
+        ? 'Для подтверждения бронирования переведите указанную сумму по реквизитам ниже. В назначении платежа обязательно укажите референс платежа. Ваша бронь будет подтверждена только после проверки банковского перевода.'
         : 'Оплата — наличными в кассе театра, перед спектаклем.')
     : (isBankTransfer
-        ? 'Pour confirmer votre réservation, veuillez effectuer le virement avec les coordonnées ci-dessous. Indiquez obligatoirement le code de réservation dans le libellé du virement.'
+        ? 'Pour confirmer votre réservation, veuillez effectuer le virement bancaire avec les coordonnées ci-dessous. Indiquez obligatoirement la référence dans le libellé du virement. Votre réservation sera confirmée uniquement après vérification du virement bancaire.'
         : 'Le paiement s\'effectue en espèces à la caisse du théâtre avant le spectacle.');
 
   const rows: [string, string][] = isRU ? [
@@ -215,22 +215,40 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
     ['Montant',    `${data.totalAmount}&nbsp;€`],
   ];
 
-  // Bank transfer details block — included in the same email, no second email needed
-  const purposeTitle   = isRU ? data.showTitle : (data.showTitleFR ?? data.showTitle);
-  const paymentPurpose = `${purposeTitle} — ${dateStr} — ${data.ticketCode}`;
-  const transferRows: [string, string][] = isRU ? [
-    ['Получатель',         THEATRE_NAME],
-    ['IBAN',               THEATRE_IBAN],
-    ['BIC',                THEATRE_BIC],
-    ['Назначение платежа', paymentPurpose],
-  ] : [
-    ['Bénéficiaire', THEATRE_NAME],
-    ['IBAN',         THEATRE_IBAN],
-    ['BIC',          THEATRE_BIC],
-    ['Libellé du virement', paymentPurpose],
-  ];
+  // Bank transfer details block — uses the selected payment account
+  const paymentReference = `${PAY_REF_PREFIX}-${data.ticketCode}`;
+  const account = isBankTransfer ? getPaymentAccount(data.paymentAccountId) : null;
 
-  const transferHtml = isBankTransfer ? `
+  const buildTransferRows = (): [string, string][] => {
+    if (!account) return [];
+    const rows: [string, string][] = [];
+    if (isRU) {
+      rows.push(['Получатель', account.receiverName]);
+      if (account.bankName) rows.push(['Банк', account.bankName]);
+      if (account.type === 'iban') {
+        rows.push(['IBAN', account.iban]);
+        rows.push(['BIC / SWIFT', account.bic]);
+      } else {
+        rows.push(['Номер карты', account.cardNumber]);
+      }
+      rows.push(['Назначение платежа', paymentReference]);
+    } else {
+      rows.push(['Bénéficiaire', account.receiverName]);
+      if (account.bankName) rows.push(['Banque', account.bankName]);
+      if (account.type === 'iban') {
+        rows.push(['IBAN', account.iban]);
+        rows.push(['BIC / SWIFT', account.bic]);
+      } else {
+        rows.push(['Numéro de carte', account.cardNumber]);
+      }
+      rows.push(['Libellé du virement', paymentReference]);
+    }
+    return rows;
+  };
+
+  const transferRows = buildTransferRows();
+
+  const transferHtml = isBankTransfer && account ? `
   <div style="background:#f0ede8;border-radius:4px;padding:16px 20px;margin-top:20px;">
     <p style="margin:0 0 10px;font-size:10px;letter-spacing:3px;text-transform:uppercase;
               color:#999;font-family:Arial,sans-serif;">
@@ -249,16 +267,22 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
   const html = wrapHtml(isRU ? 'ru' : 'fr', subject, headerTitle, bodyHtml);
 
   // Plain-text version
-  const transferText = isBankTransfer
-    ? [
-        '',
-        isRU ? 'Реквизиты для перевода:' : 'Coordonnées bancaires :',
-        isRU ? `Получатель: ${THEATRE_NAME}` : `Bénéficiaire : ${THEATRE_NAME}`,
-        `IBAN: ${THEATRE_IBAN}`,
-        `BIC: ${THEATRE_BIC}`,
-        isRU ? `Назначение платежа: ${paymentPurpose}` : `Libellé du virement : ${paymentPurpose}`,
-      ]
-    : [];
+  const buildTransferText = (): string[] => {
+    if (!isBankTransfer || !account) return [];
+    const lines: string[] = ['', isRU ? 'Реквизиты для перевода:' : 'Coordonnées bancaires :'];
+    lines.push(isRU ? `Получатель: ${account.receiverName}` : `Bénéficiaire : ${account.receiverName}`);
+    if (account.bankName) lines.push(isRU ? `Банк: ${account.bankName}` : `Banque : ${account.bankName}`);
+    if (account.type === 'iban') {
+      lines.push(`IBAN: ${account.iban}`);
+      lines.push(`BIC / SWIFT: ${account.bic}`);
+    } else {
+      lines.push(isRU ? `Номер карты: ${account.cardNumber}` : `Numéro de carte : ${account.cardNumber}`);
+    }
+    lines.push(isRU ? `Назначение платежа: ${paymentReference}` : `Libellé du virement : ${paymentReference}`);
+    return lines;
+  };
+
+  const transferText = buildTransferText();
 
   const text = isRU
     ? [
