@@ -6,7 +6,7 @@ import {
   updateDoc,
   query,
   where,
-  orderBy,
+  onSnapshot,
   serverTimestamp,
   type QueryConstraint,
 } from 'firebase/firestore';
@@ -24,29 +24,57 @@ export async function createBooking(data: NewBooking): Promise<string> {
 }
 
 export async function getUserBookings(userId: string): Promise<Booking[]> {
-  const q = query(
-    collection(db, COLLECTION),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc'),
+  const q = query(collection(db, COLLECTION), where('userId', '==', userId));
+  const sorted = snapshotToBookings(await getDocs(q)).sort((a, b) => {
+    const ta = (a.createdAt as { seconds?: number })?.seconds ?? 0;
+    const tb = (b.createdAt as { seconds?: number })?.seconds ?? 0;
+    return tb - ta;
+  });
+  return sorted;
+}
+
+// Realtime subscription — no composite index required (sorts client-side).
+// Returns an unsubscribe function; call it when the component unmounts.
+export function subscribeToUserBookings(
+  userId: string,
+  onUpdate: (bookings: Booking[]) => void,
+  onError: (err: unknown) => void,
+): () => void {
+  const q = query(collection(db, COLLECTION), where('userId', '==', userId));
+  return onSnapshot(
+    q,
+    snap => {
+      const sorted = snapshotToBookings(snap).sort((a, b) => {
+        const ta = (a.createdAt as { seconds?: number })?.seconds ?? 0;
+        const tb = (b.createdAt as { seconds?: number })?.seconds ?? 0;
+        return tb - ta;
+      });
+      onUpdate(sorted);
+    },
+    onError,
   );
-  return snapshotToBookings(await getDocs(q));
 }
 
 export async function getShowBookings(showId: string): Promise<Booking[]> {
-  const q = query(
-    collection(db, COLLECTION),
-    where('showId', '==', showId),
-    orderBy('createdAt', 'desc'),
-  );
-  return snapshotToBookings(await getDocs(q));
+  const q = query(collection(db, COLLECTION), where('showId', '==', showId));
+  const sorted = snapshotToBookings(await getDocs(q)).sort((a, b) => {
+    const ta = (a.createdAt as { seconds?: number })?.seconds ?? 0;
+    const tb = (b.createdAt as { seconds?: number })?.seconds ?? 0;
+    return tb - ta;
+  });
+  return sorted;
 }
 
 export async function getAllBookings(filters: { showId?: string } = {}): Promise<Booking[]> {
-  const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
-  if (filters.showId) constraints.unshift(where('showId', '==', filters.showId));
-
+  const constraints: QueryConstraint[] = [];
+  if (filters.showId) constraints.push(where('showId', '==', filters.showId));
   const q = query(collection(db, COLLECTION), ...constraints);
-  return snapshotToBookings(await getDocs(q));
+  const sorted = snapshotToBookings(await getDocs(q)).sort((a, b) => {
+    const ta = (a.createdAt as { seconds?: number })?.seconds ?? 0;
+    const tb = (b.createdAt as { seconds?: number })?.seconds ?? 0;
+    return tb - ta;
+  });
+  return sorted;
 }
 
 export async function updateBookingStatus(bookingId: string, status: BookingStatus): Promise<void> {

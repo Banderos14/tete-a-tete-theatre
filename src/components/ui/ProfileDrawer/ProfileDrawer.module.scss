@@ -465,6 +465,15 @@
   font-style: italic;
 }
 
+.historyError {
+  font-size: 12px;
+  color: var(--error, #e53e3e);
+  background: color-mix(in srgb, var(--error, #e53e3e) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error, #e53e3e) 30%, transparent);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
 // ── Visit counter ────────────────────────────────────────────────────────────
 
 .visitCounter {

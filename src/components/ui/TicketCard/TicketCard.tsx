@@ -8,10 +8,15 @@ interface Props {
 }
 
 export function TicketCard({ booking: b }: Props) {
-  const [qrSrc, setQrSrc] = useState('');
+  const [qrSrc,    setQrSrc]    = useState('');
+  const [qrLoaded, setQrLoaded] = useState(false);
 
   useEffect(() => {
-    generateTicketQR(b.ticketCode).then(setQrSrc).catch(() => {});
+    setQrSrc('');
+    setQrLoaded(false);
+    generateTicketQR(b.ticketCode)
+      .then(src => { setQrSrc(src); setQrLoaded(true); })
+      .catch(() => { setQrLoaded(true); });
   }, [b.ticketCode]);
 
   return (
@@ -21,11 +26,12 @@ export function TicketCard({ booking: b }: Props) {
         <p className={styles.meta}>{b.showDate} · {b.showTime}</p>
         <p className={styles.code}>{b.ticketCode}</p>
       </div>
-      {qrSrc && (
-        <div className={styles.qrWrap}>
-          <img className={styles.qr} src={qrSrc} alt="QR-код билета" width={88} height={88} />
-        </div>
-      )}
+      <div className={styles.qrWrap}>
+        {qrSrc
+          ? <img className={styles.qr} src={qrSrc} alt="QR-код билета" width={88} height={88} />
+          : <div className={`${styles.qr} ${qrLoaded ? styles.qrError : styles.qrLoading}`} />
+        }
+      </div>
     </div>
   );
 }

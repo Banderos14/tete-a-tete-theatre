@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
-import { getUserBookings } from '../../../services/bookingService';
+import { subscribeToUserBookings } from '../../../services/bookingService';
 import { markEligibleBookingsAsAttended } from '../../../services/attendanceService';
 import type { Booking, BookingStatus } from '../../../types/booking';
 import type { Messenger } from '../../../context/AuthContext';
@@ -103,6 +103,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   // ── booking history ──
   const [bookings,        setBookings]        = useState<Booking[]>([]);
   const [historyLoading,  setHistoryLoading]  = useState(false);
+  const [historyError,    setHistoryError]    = useState<string | null>(null);
 
   // ── sync from Firestore ──
   useEffect(() => {
@@ -132,24 +133,50 @@ export function ProfileDrawer({ open, onClose }: Props) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  // ── load booking history when drawer opens ──
+  // ── realtime booking subscription (active while drawer is open) ──
   useEffect(() => {
     if (!open || !user) return;
     setHistoryLoading(true);
-    getUserBookings(user.uid)
-      .then(data => {
+    setHistoryError(null);
+
+    if (import.meta.env.DEV) {
+      console.log('[ProfileDrawer] subscribing for uid:', user.uid);
+    }
+
+    const unsub = subscribeToUserBookings(
+      user.uid,
+      (data) => {
         setBookings(data);
-        // Update Firestore for eligible attended bookings (belt-and-suspenders: AdminPage also does this)
+        setHistoryLoading(false);
+        setHistoryError(null);
+
+        if (import.meta.env.DEV) {
+          console.log('[ProfileDrawer] received', data.length, 'bookings for uid:', user.uid);
+          data.forEach(b => {
+            const isAtt = computedIsAttended(b);
+            const showsTicket = b.paymentStatus === 'paid' && b.status === 'confirmed' && !isAtt && !!b.ticketCode;
+            console.log(`  booking ${b.id}: userId=${b.userId} matchesUser=${b.userId === user.uid}` +
+              ` status=${b.status} pay=${b.paymentStatus} hasCode=${!!b.ticketCode}` +
+              ` attended=${isAtt} → showsTicketCard=${showsTicket}`);
+          });
+        }
+
+        // Write attended status to Firestore for eligible bookings
         markEligibleBookingsAsAttended(data, (id) => {
           setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
         }).catch(() => {});
-      })
-      .catch((err) => {
-        console.error('[ProfileDrawer] getUserBookings failed:', err);
+      },
+      (err) => {
+        console.error('[ProfileDrawer] Firestore subscription failed:', err);
         setBookings([]);
-      })
-      .finally(() => setHistoryLoading(false));
-  }, [open, user]);
+        setHistoryLoading(false);
+        setHistoryError(lang === 'FR'
+          ? 'Impossible de charger les billets. Vérifiez votre connexion.'
+          : 'Не удалось загрузить билеты. Проверьте доступ к базе.');
+      },
+    );
+    return unsub;
+  }, [open, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── helpers ──
   const markDirty = useCallback(() => setIsDirty(true), []);
@@ -214,6 +241,15 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const missingCount     = Object.keys(validate(displayName, birthday, phone, t.profile.required)).length;
   const activeBookings   = bookings.filter(b => !computedIsAttended(b));
   const attendedBookings = bookings.filter(computedIsAttended);
+
+  if (import.meta.env.DEV && bookings.length > 0) {
+    bookings.forEach(b => {
+      const isAtt = computedIsAttended(b);
+      const showsTicket = b.paymentStatus === 'paid' && !isAtt && b.status === 'confirmed' && !!b.ticketCode;
+      console.log(`[ProfileDrawer] booking ${b.id}: status=${b.status} pay=${b.paymentStatus} ` +
+        `attended=${isAtt} hasCode=${!!b.ticketCode} showsTicketCard=${showsTicket}`);
+    });
+  }
 
   // ── loading skeleton ──
   if (open && loading) {
@@ -417,6 +453,8 @@ export function ProfileDrawer({ open, onClose }: Props) {
               <div className={styles.historyLoading}>
                 {[1, 2].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonField}`} />)}
               </div>
+            ) : historyError ? (
+              <p className={styles.historyError}>{historyError}</p>
             ) : activeBookings.length === 0 ? (
               <p className={styles.emptyText}>{t.profile.noHistory}</p>
             ) : (
@@ -635,7 +673,7 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
           )}
         </div>
       </div>
-      {payStatus === 'paid' && displayStatus === 'confirmed' && !isAttended && (
+      {payStatus === 'paid' && displayStatus === 'confirmed' && !isAttended && b.ticketCode && (
         <TicketCard booking={b} />
       )}
     </div>

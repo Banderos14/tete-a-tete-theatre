@@ -108,7 +108,8 @@
 
 -+- /admin защищён на уровне клиента
 -+- firestore.rules — рекомендованный файл создан (развернуть вручную)
---- Развернуть firestore.rules: firebase deploy --only firestore:rules
+-!- Развернуть firestore.rules: firebase deploy --only firestore:rules
+    (rules написаны, но не задеплоены — если тест-режим истёк, reads будут blocked)
 --- Content Security Policy (vercel.json)
 
 ## Email / Уведомления

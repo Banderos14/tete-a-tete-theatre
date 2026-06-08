@@ -72,7 +72,10 @@ function LandingPage({
 
 export default function App() {
   const [theme,       setTheme]       = useState<Theme>('dark');
-  const [lang,        setLang]        = useState<Lang>('RU');
+  const [lang,        setLang]        = useState<Lang>(() => {
+    const stored = localStorage.getItem('lang');
+    return stored === 'FR' ? 'FR' : 'RU';
+  });
   const [introState,  setIntroState]  = useState<IntroState>(IS_MOBILE ? 'done' : 'closed');
   const [authOpen,    setAuthOpen]    = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -113,7 +116,10 @@ export default function App() {
   }, [introState]);
 
   const handleThemeChange = useCallback((t: Theme) => setTheme(t), []);
-  const handleLangChange  = useCallback((l: Lang)  => setLang(l),  []);
+  const handleLangChange  = useCallback((l: Lang)  => {
+    setLang(l);
+    localStorage.setItem('lang', l);
+  }, []);
   const handleBook        = useCallback((show: Show) => setBookingShow(show), []);
 
   const langCtx = useMemo(() => ({ lang, t: translations[lang] }), [lang]);
