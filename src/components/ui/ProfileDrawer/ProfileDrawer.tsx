@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
-import { subscribeToUserBookings } from '../../../services/bookingService';
+import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from '../../../services/bookingService';
 import { markEligibleBookingsAsAttended } from '../../../services/attendanceService';
+import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Booking, BookingStatus } from '../../../types/booking';
 import type { Messenger } from '../../../context/AuthContext';
 import styles from './ProfileDrawer.module.scss';
@@ -166,6 +167,12 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
         markEligibleBookingsAsAttended(data, (id) => {
           setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
+        }).catch(() => {});
+
+        expireOverdueBookings(data, (id) => {
+          setBookings(prev => prev.map(b =>
+            b.id === id ? { ...b, paymentStatus: 'expired', status: 'cancelled' } : b,
+          ));
         }).catch(() => {});
       },
       (err) => {
@@ -777,14 +784,17 @@ function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
 
 // BookingCard — for non-QR active bookings (cancelled, pending, awaiting, etc.)
 function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: Show }) {
+  const { lang } = useLang();
+  const isFR = lang === 'FR';
+
   const isAttended     = computedIsAttended(b);
   const displayStatus: BookingStatus = isAttended ? 'attended' : b.status;
   const statusKey      = STATUS_LABEL_KEY[displayStatus] as keyof typeof t.profile;
   const statusLabel    = t.profile[statusKey] as string;
 
   const payStatus = b.paymentStatus ?? 'not_paid';
-  const isPendingTransfer =
-    b.paymentMethod === 'bank_transfer' && (payStatus === 'not_paid' || payStatus === 'awaiting_transfer');
+  const isAwaitingTransfer = payStatus === 'awaiting_transfer';
+  const isExpiredTransfer  = payStatus === 'expired';
 
   const payMethodLabel = b.paymentMethod === 'bank_transfer'
     ? t.profile.payMethodTransfer
@@ -793,7 +803,12 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
   const payStatusLabel =
     payStatus === 'paid'              ? t.profile.payStatusPaid      :
     payStatus === 'awaiting_transfer' ? t.profile.payStatusAwaiting  :
+    payStatus === 'expired'           ? t.profile.payStatusExpired   :
                                         t.profile.payStatusNotPaid;
+
+  const hoursLeft  = isAwaitingTransfer ? hoursUntilExpiry(b) : null;
+  const paymentRef = b.paymentReference ?? `${PAYMENT_CONFIG.paymentReferencePrefix}-${b.ticketCode}`;
+  const account    = getPaymentAccount(b.paymentAccountId);
 
   return (
     <div className={`${styles.bookingCard} ${styles[`bookingCard_${displayStatus}`] ?? ''}`}>
@@ -820,22 +835,75 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
             <span className={`${styles.bookingPayStatus} ${styles[`bookingPayStatus_${payStatus}`]}`}>
               {payStatusLabel}
             </span>
+            {/* Countdown for awaiting transfers */}
+            {isAwaitingTransfer && hoursLeft !== null && (
+              <span className={hoursLeft <= 0 ? styles.countdownExpired : styles.countdownHours}>
+                {hoursLeft <= 0
+                  ? (isFR ? 'Expiré' : 'Истёкло')
+                  : `${hoursLeft} ${isFR ? 'h' : 'ч.'}`}
+              </span>
+            )}
           </div>
+
           {b.ticketCode && (
             <div className={styles.bookingTicketCode}>
               <span>{t.profile.ticketCode}:</span>
               <code>{b.ticketCode}</code>
             </div>
           )}
-          {isPendingTransfer && b.ticketCode && (
-            <p className={styles.bookingTransferReminder}>
-              {t.profile.payTransferReminder(b.ticketCode)}
-            </p>
+
+          {/* Transfer details block — only for awaiting_transfer */}
+          {isAwaitingTransfer && b.ticketCode && (
+            <div className={styles.transferMiniBox}>
+              <p className={styles.transferMiniLabel}>
+                {isFR
+                  ? `${account.label} · ${account.description}`
+                  : `${account.label} · ${account.description}`}
+              </p>
+              <dl className={styles.transferMiniList}>
+                <div className={styles.transferMiniRow}>
+                  <dt>{isFR ? 'Bénéficiaire' : 'Получатель'}</dt>
+                  <dd>{account.receiverName}</dd>
+                </div>
+                {account.bankName && (
+                  <div className={styles.transferMiniRow}>
+                    <dt>{isFR ? 'Banque' : 'Банк'}</dt>
+                    <dd>{account.bankName}</dd>
+                  </div>
+                )}
+                {account.type === 'iban' ? (
+                  <>
+                    <div className={styles.transferMiniRow}>
+                      <dt>IBAN</dt>
+                      <dd>{account.iban}</dd>
+                    </div>
+                    <div className={styles.transferMiniRow}>
+                      <dt>BIC / SWIFT</dt>
+                      <dd>{account.bic}</dd>
+                    </div>
+                  </>
+                ) : (
+                  <div className={styles.transferMiniRow}>
+                    <dt>{isFR ? 'Numéro de carte' : 'Номер карты'}</dt>
+                    <dd>{account.cardNumber}</dd>
+                  </div>
+                )}
+                <div className={`${styles.transferMiniRow} ${styles.transferMiniRowRef}`}>
+                  <dt>{isFR ? 'Référence' : 'Назначение'}</dt>
+                  <dd><strong>{paymentRef}</strong></dd>
+                </div>
+              </dl>
+            </div>
           )}
+
+          {/* Notes */}
           {!isAttended && displayStatus === 'confirmed' && (
             <p className={styles.bookingNoteOk}>{t.profile.bookingNoteConfirmed}</p>
           )}
-          {!isAttended && displayStatus === 'cancelled' && (
+          {!isAttended && isExpiredTransfer && (
+            <p className={styles.bookingNoteBad}>{t.profile.bookingNoteExpired}</p>
+          )}
+          {!isAttended && displayStatus === 'cancelled' && !isExpiredTransfer && (
             <p className={styles.bookingNoteBad}>{t.profile.bookingNoteCancelled}</p>
           )}
           {!isAttended && payStatus === 'paid' && displayStatus === 'pending' && (

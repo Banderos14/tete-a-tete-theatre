@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLang } from '../../i18n/LangContext';
-import { getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPaid } from '../../services/bookingService';
+import { getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPaid, expireOverdueBookings, hoursUntilExpiry } from '../../services/bookingService';
+import { getPaymentAccount, PAYMENT_CONFIG } from '../../config/payment';
 import { markEligibleBookingsAsAttended } from '../../services/attendanceService';
 import { getAllUsers, getUsersForNewsletter } from '../../services/userService';
 import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail, sendNewShowAnnouncementEmail } from '../../services/emailService';
@@ -31,14 +32,16 @@ function formatTimestamp(ts: unknown): string {
 
 const PAY_STATUS_LABELS: Record<PaymentStatus, string> = {
   not_paid:          'Не оплачено',
-  awaiting_transfer: 'Ожидает перевода',
+  awaiting_transfer: 'En attente de virement',
   paid:              'Оплачено',
+  expired:           'Истекла',
 };
 
 const PAY_STATUS_STYLE: Record<PaymentStatus, string> = {
   not_paid:          styles.payNotPaid,
   awaiting_transfer: styles.payAwaiting,
   paid:              styles.payPaid,
+  expired:           styles.payExpired,
 };
 
 export function AdminPage() {
@@ -78,6 +81,13 @@ export function AdminPage() {
       // Non-blocking: auto-mark attended for confirmed+paid shows that ended 2+ hours ago
       markEligibleBookingsAsAttended(bData, (id) => {
         setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
+      }).catch(() => {/* non-blocking */});
+
+      // Non-blocking: expire overdue awaiting_transfer bookings
+      expireOverdueBookings(bData, (id) => {
+        setBookings(prev => prev.map(b =>
+          b.id === id ? { ...b, paymentStatus: 'expired', status: 'cancelled' } : b,
+        ));
       }).catch(() => {/* non-blocking */});
     } finally {
       setFetching(false);
@@ -400,9 +410,34 @@ export function AdminPage() {
                           <span className={`${styles.payBadge} ${PAY_STATUS_STYLE[payStatus]}`}>
                             {PAY_STATUS_LABELS[payStatus]}
                           </span>
+                          {/* Payment account label */}
+                          {b.paymentMethod === 'bank_transfer' && (() => {
+                            const acc = getPaymentAccount(b.paymentAccountId);
+                            return (
+                              <span className={styles.payAccountLabel} title={acc.description}>
+                                {acc.label}
+                              </span>
+                            );
+                          })()}
+                          {/* Payment reference */}
+                          {b.paymentMethod === 'bank_transfer' && (
+                            <span className={styles.payRef}>
+                              {b.paymentReference ?? `${PAYMENT_CONFIG.paymentReferencePrefix}-${b.ticketCode}`}
+                            </span>
+                          )}
+                          {/* Countdown / expiry indicator for bank transfers */}
+                          {payStatus === 'awaiting_transfer' && (() => {
+                            const h = hoursUntilExpiry(b);
+                            if (h === null) return null;
+                            return (
+                              <span className={h <= 0 ? styles.payExpiredTag : styles.payCountdown}>
+                                {h <= 0 ? 'Истекла' : `${h} ч.`}
+                              </span>
+                            );
+                          })()}
                           {bStatus !== 'cancelled' && (
                             <div className={styles.payActions}>
-                              {payStatus !== 'paid' && (
+                              {payStatus !== 'paid' && payStatus !== 'expired' && (
                                 <button
                                   className={styles.actionPaid}
                                   disabled={isBusy}

@@ -70,10 +70,7 @@
 -+- transferCodeWarning: заметное предупреждение о коде брони в назначении платежа
 -+- ticketCode используется для связи платежа и брони
 -+- QR использует production URL (VITE_PUBLIC_SITE_URL), не localhost
---- Stripe / онлайн-оплата
---- Автоматическая проверка поступления платежей
---- PDF-билет: архитектура готова в ticketService.ts (jspdf, закомментировано)
---- QR-код билета (следующий этап)
+
 
 ## Личный кабинет
 
@@ -180,8 +177,9 @@
 -+- PDF всегда на латинице/французском: кириллица транслитерируется, "???" исключены
 -+- TicketCard: плавное раскрытие и закрытие (grid-template-rows + opacity)
 -+- ProfileDrawer: плавное открытие и закрытие (visibility + opacity на overlay и modal)
---- Apple Wallet
---- Google Wallet
+
+-?- Apple Wallet
+-?- Google Wallet
 
 ## i18n
 
