@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, type FormEvent } from 'react'
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { getUserBookings } from '../../../services/bookingService';
+import { markEligibleBookingsAsAttended } from '../../../services/attendanceService';
 import type { Booking, BookingStatus } from '../../../types/booking';
 import type { Messenger } from '../../../context/AuthContext';
 import styles from './ProfileDrawer.module.scss';
@@ -136,8 +137,17 @@ export function ProfileDrawer({ open, onClose }: Props) {
     if (!open || !user) return;
     setHistoryLoading(true);
     getUserBookings(user.uid)
-      .then(setBookings)
-      .catch(() => setBookings([]))
+      .then(data => {
+        setBookings(data);
+        // Update Firestore for eligible attended bookings (belt-and-suspenders: AdminPage also does this)
+        markEligibleBookingsAsAttended(data, (id) => {
+          setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
+        }).catch(() => {});
+      })
+      .catch((err) => {
+        console.error('[ProfileDrawer] getUserBookings failed:', err);
+        setBookings([]);
+      })
       .finally(() => setHistoryLoading(false));
   }, [open, user]);
 
