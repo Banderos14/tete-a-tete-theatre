@@ -72,7 +72,7 @@
 --- Stripe / онлайн-оплата
 --- Автоматическая проверка поступления платежей
 --- PDF-билет: архитектура готова в ticketService.ts (jspdf, закомментировано)
---- QR-код билета
+--- QR-код билета (следующий этап)
 
 ## Личный кабинет
 
@@ -127,6 +127,10 @@
 -+- Все письма от администратора отправляются на FR (язык театра и аудитории)
 -+- FR копии обновлены: «Réservation reçue», «Merci pour votre réservation !»,
     «Paiement reçu · votre place est confirmée», тёплая отмена
+-+- Confirmation email полностью переведён на FR: «Libellé du virement», «obligatoirement»
+-+- isRU = data.lang === 'RU' во всех builder-функциях; FR — fallback по умолчанию
+-+- paymentPurpose использует FR-название спектакля + FR-отформатированную дату
+-+- AdminPage: длинный комментарий не вылезает за кнопки (word-break, overflow-wrap, flex-shrink)
 -+- Рассылка нового спектакля подписчикам (ручной запуск из AdminPage → вкладка «Рассылка»)
 -+- getUsersForNewsletter(): только пользователи с notifications=true, не admin
 -+- AdminPage: выбор спектакля, подтверждение, результат (sent / errors)
@@ -152,7 +156,17 @@
 -+- ticketCode хранится в Firestore вместе с бронью
 -+- ticketCode отображается в истории бронирований (личный кабинет)
 -+- ticketService.ts: архитектура PDF готова (jspdf, закомментировано)
---- QR-code биллета для проверки при входе, если оплата была заранее онлайн.
+
+## QR Ticket System
+
+-+- Генерация QR (qrService.ts: generateTicketQR → payload { ticketCode })
+-+- TicketCard (src/components/ui/TicketCard/): название, дата, код, QR-код
+-+- Страница сканирования (/admin/checkin: html5-qrcode, только admin)
+-+- Проверка билета (paid+confirmed → зелёный; cancelled/not_paid/attended → ошибка)
+-+- Отметка посещения (кнопка "Отметить посещение" → status = attended)
+--- PDF-билет
+--- Apple Wallet
+--- Google Wallet
 
 ## i18n
 

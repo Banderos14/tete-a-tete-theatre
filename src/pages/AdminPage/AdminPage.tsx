@@ -247,9 +247,14 @@ export function AdminPage() {
       {/* Top bar */}
       <div className={styles.topBar}>
         <h1 className={styles.pageTitle}>{t.admin.title}</h1>
-        <button className={styles.backBtn} onClick={() => navigate('/')}>
-          {t.admin.backToSite}
-        </button>
+        <div className={styles.topBarActions}>
+          <button className={styles.checkinBtn} onClick={() => navigate('/admin/checkin')}>
+            Проверка билетов
+          </button>
+          <button className={styles.backBtn} onClick={() => navigate('/')}>
+            {t.admin.backToSite}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
