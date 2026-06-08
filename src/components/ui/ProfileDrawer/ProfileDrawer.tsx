@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type FormEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { subscribeToUserBookings } from '../../../services/bookingService';
@@ -37,8 +37,8 @@ function getInitials(name: string | null | undefined): string {
 }
 
 function mapFbError(err: unknown, lang: 'RU' | 'FR'): string {
-  const code  = (err as { code?: string })?.code ?? '';
-  const isFR  = lang === 'FR';
+  const code = (err as { code?: string })?.code ?? '';
+  const isFR = lang === 'FR';
   const map: Record<string, string> = {
     'auth/popup-closed-by-user':        isFR ? 'Fenêtre fermée'                          : 'Окно закрыто',
     'auth/cancelled-popup-request':     isFR ? 'Requête annulée'                         : 'Запрос отменён',
@@ -60,18 +60,23 @@ interface ValidationErrors {
 
 function validate(displayName: string, birthday: string, phone: string, required: string): ValidationErrors {
   const errors: ValidationErrors = {};
-  if (!displayName.trim())  errors.displayName = required;
-  if (!birthday)            errors.birthday    = required;
-  if (!phone.trim())        errors.phone       = required;
+  if (!displayName.trim()) errors.displayName = required;
+  if (!birthday)           errors.birthday    = required;
+  if (!phone.trim())       errors.phone       = required;
   return errors;
 }
 
-// ── component ──────────────────────────────────────────────────────────────────
+// ── types ──────────────────────────────────────────────────────────────────────
+
+type Section = 'personal' | 'contacts' | 'socials' | 'notifications' | 'tickets' | 'shows';
+const FORM_SECTIONS: Section[] = ['personal', 'contacts', 'socials', 'notifications'];
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
+
+// ── component ──────────────────────────────────────────────────────────────────
 
 export function ProfileDrawer({ open, onClose }: Props) {
   const { lang, t } = useLang();
@@ -86,10 +91,10 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const [notify,      setNotify]      = useState(true);
 
   // ── form state ──
-  const [saving,      setSaving]      = useState(false);
-  const [savedMsg,    setSavedMsg]    = useState(false);
-  const [errors,      setErrors]      = useState<ValidationErrors>({});
-  const [submitted,   setSubmitted]   = useState(false); // track first submit attempt
+  const [saving,    setSaving]    = useState(false);
+  const [savedMsg,  setSavedMsg]  = useState(false);
+  const [errors,    setErrors]    = useState<ValidationErrors>({});
+  const [submitted, setSubmitted] = useState(false);
 
   // ── unsaved guard ──
   const [isDirty,     setIsDirty]     = useState(false);
@@ -101,26 +106,25 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const [fbError,   setFbError]   = useState('');
 
   // ── booking history ──
-  const [bookings,        setBookings]        = useState<Booking[]>([]);
-  const [historyLoading,  setHistoryLoading]  = useState(false);
-  const [historyError,    setHistoryError]    = useState<string | null>(null);
+  const [bookings,       setBookings]       = useState<Booking[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError,   setHistoryError]   = useState<string | null>(null);
+
+  // ── navigation + UI ──
+  const [activeSection,    setActiveSection]    = useState<Section>('personal');
+  const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
 
   // ── sync from Firestore ──
   useEffect(() => {
     if (!userProfile) return;
-
-    // Firestore displayName might be empty on first login — fall back to Firebase Auth
     setDisplayName(userProfile.displayName || user?.displayName || '');
     setBirthday(userProfile.birthday ?? '');
     setPhone(userProfile.phone ?? '');
     setMessenger(userProfile.phoneMessenger ?? 'whatsapp');
-
-    // Clear malformed social link from old code (access token was saved as URL)
     const social = userProfile.socialLink ?? '';
     const isBadUrl = social.startsWith('https://facebook.com/EAA');
     setSocialLink(isBadUrl ? '' : social);
     if (isBadUrl) saveProfile({ socialLink: '' });
-
     setNotify(userProfile.notifications ?? true);
     setIsDirty(false);
     setErrors({});
@@ -133,7 +137,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  // ── realtime booking subscription (active while drawer is open) ──
+  // ── realtime booking subscription ──
   useEffect(() => {
     if (!open || !user) return;
     setHistoryLoading(true);
@@ -155,13 +159,11 @@ export function ProfileDrawer({ open, onClose }: Props) {
           data.forEach(b => {
             const isAtt = computedIsAttended(b);
             const showsTicket = b.paymentStatus === 'paid' && b.status === 'confirmed' && !isAtt && !!b.ticketCode;
-            console.log(`  booking ${b.id}: userId=${b.userId} matchesUser=${b.userId === user.uid}` +
-              ` status=${b.status} pay=${b.paymentStatus} hasCode=${!!b.ticketCode}` +
-              ` attended=${isAtt} → showsTicketCard=${showsTicket}`);
+            console.log(`  booking ${b.id}: status=${b.status} pay=${b.paymentStatus}` +
+              ` attended=${isAtt} hasCode=${!!b.ticketCode} showsTicketCard=${showsTicket}`);
           });
         }
 
-        // Write attended status to Firestore for eligible bookings
         markEligibleBookingsAsAttended(data, (id) => {
           setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
         }).catch(() => {});
@@ -178,6 +180,14 @@ export function ProfileDrawer({ open, onClose }: Props) {
     return unsub;
   }, [open, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── reset expanded ticket on section change ──
+  useEffect(() => { setExpandedTicketId(null); }, [activeSection]);
+
+  // ── live validate after first submit ──
+  useEffect(() => {
+    if (submitted) setErrors(validate(displayName, birthday, phone, t.profile.required));
+  }, [displayName, birthday, phone, submitted, t.profile.required]);
+
   // ── helpers ──
   const markDirty = useCallback(() => setIsDirty(true), []);
 
@@ -191,19 +201,17 @@ export function ProfileDrawer({ open, onClose }: Props) {
     }
   }
 
-  // Live-validate after first submit attempt
-  useEffect(() => {
-    if (submitted) setErrors(validate(displayName, birthday, phone, t.profile.required));
-  }, [displayName, birthday, phone, submitted, t.profile.required]);
-
   // ── save ──
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSubmitted(true);
     const errs = validate(displayName, birthday, phone, t.profile.required);
     setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-
+    if (Object.keys(errs).length > 0) {
+      if (errs.displayName || errs.birthday) setActiveSection('personal');
+      else if (errs.phone)                   setActiveSection('contacts');
+      return;
+    }
     setSaving(true);
     await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, socialLink, notifications: notify });
     setSaving(false);
@@ -225,7 +233,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     } finally {
       setFbLoading(false);
     }
-  }, [linkFacebook, markDirty]);
+  }, [linkFacebook, markDirty, lang]);
 
   async function handleLogout() {
     onClose();
@@ -233,280 +241,375 @@ export function ProfileDrawer({ open, onClose }: Props) {
   }
 
   // ── derived ──
-  const headerName    = displayName || user?.displayName || userProfile?.displayName || '';
-  const email         = user?.email ?? userProfile?.email ?? '';
-  const photoURL      = user?.photoURL ?? null;
-  const fbLinked      = userProfile?.facebookLinked ?? false;
-  const birthdayFromFb = userProfile?.birthdayFromFb ?? false;
+  const headerName       = displayName || user?.displayName || userProfile?.displayName || '';
+  const email            = user?.email ?? userProfile?.email ?? '';
+  const photoURL         = user?.photoURL ?? null;
+  const fbLinked         = userProfile?.facebookLinked ?? false;
+  const birthdayFromFb   = userProfile?.birthdayFromFb ?? false;
   const missingCount     = Object.keys(validate(displayName, birthday, phone, t.profile.required)).length;
   const activeBookings   = bookings.filter(b => !computedIsAttended(b));
   const attendedBookings = bookings.filter(computedIsAttended);
+  const ticketCount      = activeBookings.filter(b =>
+    b.paymentStatus === 'paid' && b.status === 'confirmed' && !!b.ticketCode
+  ).length;
 
-  if (import.meta.env.DEV && bookings.length > 0) {
-    bookings.forEach(b => {
-      const isAtt = computedIsAttended(b);
-      const showsTicket = b.paymentStatus === 'paid' && !isAtt && b.status === 'confirmed' && !!b.ticketCode;
-      console.log(`[ProfileDrawer] booking ${b.id}: status=${b.status} pay=${b.paymentStatus} ` +
-        `attended=${isAtt} hasCode=${!!b.ticketCode} showsTicketCard=${showsTicket}`);
-    });
-  }
+  // ── nav items ──
+  const navItems: { id: Section; label: string; icon: ReactNode; badge?: number }[] = [
+    { id: 'personal',      label: t.profile.sectionPersonal,      icon: <PersonIcon />  },
+    { id: 'contacts',      label: t.profile.sectionContacts,      icon: <PhoneIcon />   },
+    { id: 'socials',       label: t.profile.sectionSocials,       icon: <LinkIcon />    },
+    { id: 'notifications', label: t.profile.sectionNotifications, icon: <BellIcon />    },
+    { id: 'tickets',       label: t.profile.history,              icon: <TicketIcon />, badge: ticketCount || undefined },
+    { id: 'shows',         label: t.profile.historyAttended,      icon: <StarIcon />    },
+  ];
 
   // ── loading skeleton ──
   if (open && loading) {
     return (
-      <>
-        <div className={`${styles.overlay} ${styles.overlayVisible}`} onClick={tryClose} />
-        <aside className={`${styles.drawer} ${styles.drawerOpen}`} aria-label="Личный кабинет">
-          <div className={styles.skeletonWrap}>
-            <div className={`${styles.skeleton} ${styles.skeletonAvatar}`} />
-            <div className={styles.skeletonLines}>
-              <div className={`${styles.skeleton} ${styles.skeletonLine}`} />
-              <div className={`${styles.skeleton} ${styles.skeletonLineShort}`} />
+      <div className={`${styles.modalWrap} ${styles.modalWrapOpen}`} aria-label="Личный кабинет" aria-modal>
+        <div className={styles.modal} onClick={e => e.stopPropagation()}>
+          <div className={styles.sidebar}>
+            <div className={styles.sidebarTop}>
+              <div className={`${styles.skeleton} ${styles.skeletonAvatar}`} />
+              <div className={`${styles.skeleton} ${styles.skeletonName}`} />
+              <div className={`${styles.skeleton} ${styles.skeletonEmail}`} />
             </div>
           </div>
-          {[1, 2, 3].map(i => (
-            <div key={i} className={styles.skeletonBlock}>
-              <div className={`${styles.skeleton} ${styles.skeletonTitle}`} />
-              <div className={`${styles.skeleton} ${styles.skeletonField}`} />
+          <div className={styles.mainContent}>
+            <div className={styles.contentScroll}>
+              <div className={styles.section}>
+                {[1, 2, 3].map(i => (
+                  <div key={i} className={styles.skeletonBlock}>
+                    <div className={`${styles.skeleton} ${styles.skeletonLabel}`} />
+                    <div className={`${styles.skeleton} ${styles.skeletonField}`} />
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </aside>
-      </>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <>
-      {/* Overlay */}
-      <div
-        className={`${styles.overlay} ${open ? styles.overlayVisible : ''}`}
-        onClick={tryClose}
+    <div
+      className={`${styles.modalWrap} ${open ? styles.modalWrapOpen : ''}`}
+      onClick={tryClose}
+      aria-hidden={!open}
+    >
+      {/* Unsaved toast */}
+      {warnVisible && (
+        <div className={styles.unsavedToast} onClick={e => e.stopPropagation()}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
+            <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+          {t.profile.unsavedWarning}
+        </div>
+      )}
+
+      {/* Modal */}
+      <form
+        className={styles.modal}
+        onSubmit={handleSave}
+        noValidate
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-label="Личный кабинет"
+        aria-modal
       >
-        {warnVisible && (
-          <div className={styles.unsavedToast} onClick={e => e.stopPropagation()}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-              <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            </svg>
-            {t.profile.unsavedWarning}
-          </div>
-        )}
-      </div>
 
-      {/* Drawer */}
-      <aside className={`${styles.drawer} ${open ? styles.drawerOpen : ''}`} aria-label="Личный кабинет">
+        {/* ── Sidebar ──────────────────────────────────────────────────────── */}
+        <aside className={styles.sidebar}>
 
-        {/* ── Header ── */}
-        <div className={styles.drawerHeader}>
-          <div className={styles.avatar}>
-            {photoURL
-              ? <img src={photoURL} alt={headerName} referrerPolicy="no-referrer" />
-              : <span>{getInitials(headerName)}</span>
-            }
+          {/* Avatar + identity */}
+          <div className={styles.sidebarTop}>
+            <div className={styles.avatar}>
+              {photoURL
+                ? <img src={photoURL} alt={headerName} referrerPolicy="no-referrer" />
+                : <span>{getInitials(headerName)}</span>
+              }
+            </div>
+            <p className={styles.sidebarName}>{headerName || '—'}</p>
+            <p className={styles.sidebarEmail}>{email}</p>
+            {missingCount > 0 && (
+              <div className={styles.incompleteBadge}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="11" height="11">
+                  <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+                </svg>
+                {t.profile.incomplete(missingCount)}
+              </div>
+            )}
           </div>
-          <div className={styles.userInfo}>
-            <p className={styles.userName}>{headerName || '—'}</p>
-            <p className={styles.userEmail}>{email}</p>
+
+          {/* Nav */}
+          <nav className={styles.sidebarNav}>
+            {navItems.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                className={`${styles.navItem} ${activeSection === item.id ? styles.navItemActive : ''}`}
+                onClick={() => setActiveSection(item.id)}
+              >
+                {item.icon}
+                <span className={styles.navLabel}>{item.label}</span>
+                {item.badge !== undefined && (
+                  <span className={styles.navBadge}>{item.badge}</span>
+                )}
+              </button>
+            ))}
+
+            {/* Logout — shown inside nav on mobile only */}
+            <button
+              type="button"
+              className={`${styles.navItem} ${styles.navItemLogout}`}
+              onClick={handleLogout}
+            >
+              <LogoutIcon />
+              <span className={styles.navLabel}>{t.profile.logout}</span>
+            </button>
+          </nav>
+
+          {/* Sidebar footer — logout desktop */}
+          <div className={styles.sidebarFooter}>
+            <button type="button" className={styles.logoutBtn} onClick={handleLogout}>
+              <LogoutIcon />
+              {t.profile.logout}
+            </button>
           </div>
-          <button className={styles.closeBtn} onClick={tryClose} aria-label="Закрыть">
+        </aside>
+
+        {/* ── Main content ──────────────────────────────────────────────────── */}
+        <div className={styles.mainContent}>
+
+          {/* Close button */}
+          <button
+            type="button"
+            className={styles.closeBtn}
+            onClick={tryClose}
+            aria-label="Закрыть"
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>
           </button>
-        </div>
 
-        {/* ── Profile incomplete banner ── */}
-        {missingCount > 0 && (
-          <div className={styles.incompleteBanner}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-              <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
-            </svg>
-            {t.profile.incomplete(missingCount)}
-          </div>
-        )}
-
-        {/* ── Content ── */}
-        <div className={styles.content}>
-          <form onSubmit={handleSave} noValidate>
+          {/* Scrollable content area */}
+          <div className={styles.contentScroll}>
 
             {/* ── ЛИЧНЫЕ ДАННЫЕ ── */}
-            <div className={styles.formSection}>
-              <p className={styles.sectionLabel}>{t.profile.sectionPersonal}</p>
+            {activeSection === 'personal' && (
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>{t.profile.sectionPersonal}</h2>
 
-              <Field
-                label={
+                <Field label={
                   <>
                     {t.profile.displayName}
-                    {fbLinked && <span className={styles.fbBadgeInline}><FacebookIcon size={10} /> Facebook</span>}
+                    {fbLinked && (
+                      <span className={styles.fbBadgeInline}>
+                        <FacebookIcon size={10} /> Facebook
+                      </span>
+                    )}
                   </>
-                }
-                error={errors.displayName}
-              >
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={e => { setDisplayName(e.target.value); markDirty(); }}
-                  placeholder={t.auth.nameLabel}
-                  autoComplete="name"
-                  className={errors.displayName ? styles.inputError : ''}
-                />
-              </Field>
+                } error={errors.displayName}>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={e => { setDisplayName(e.target.value); markDirty(); }}
+                    placeholder={t.auth.nameLabel}
+                    autoComplete="name"
+                    className={errors.displayName ? styles.inputError : ''}
+                  />
+                </Field>
 
-              <Field label={t.profile.birthday} error={errors.birthday}>
-                {birthdayFromFb && birthday
-                  ? <div className={styles.autoFilled}>
-                      <span>{birthday}</span>
-                      <span className={styles.fbBadge}><FacebookIcon size={11} /> Facebook</span>
-                    </div>
-                  : <input
-                      type="date"
-                      value={birthday}
-                      onChange={e => { setBirthday(e.target.value); markDirty(); }}
-                      className={`${styles.dateInput} ${errors.birthday ? styles.inputError : ''}`}
-                    />
-                }
-              </Field>
-            </div>
+                <Field label="Email">
+                  <input
+                    type="email"
+                    value={email}
+                    readOnly
+                    className={styles.readonlyInput}
+                  />
+                </Field>
+
+                <Field label={t.profile.birthday} error={errors.birthday}>
+                  {birthdayFromFb && birthday
+                    ? (
+                      <div className={styles.autoFilled}>
+                        <span>{birthday}</span>
+                        <span className={styles.fbBadge}><FacebookIcon size={11} /> Facebook</span>
+                      </div>
+                    ) : (
+                      <input
+                        type="date"
+                        value={birthday}
+                        onChange={e => { setBirthday(e.target.value); markDirty(); }}
+                        className={`${styles.dateInput} ${errors.birthday ? styles.inputError : ''}`}
+                      />
+                    )
+                  }
+                </Field>
+              </div>
+            )}
 
             {/* ── КОНТАКТЫ ── */}
-            <div className={styles.formSection}>
-              <p className={styles.sectionLabel}>{t.profile.sectionContacts}</p>
+            {activeSection === 'contacts' && (
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>{t.profile.sectionContacts}</h2>
 
-              <Field label={t.profile.phone} error={errors.phone}>
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  value={phone}
-                  onChange={e => { setPhone(formatPhone(e.target.value)); markDirty(); }}
-                  placeholder="+33 6 00 00 00 00"
-                  autoComplete="tel"
-                  className={errors.phone ? styles.inputError : ''}
-                />
-              </Field>
+                <Field label={t.profile.phone} error={errors.phone}>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={phone}
+                    onChange={e => { setPhone(formatPhone(e.target.value)); markDirty(); }}
+                    placeholder="+33 6 00 00 00 00"
+                    autoComplete="tel"
+                    className={errors.phone ? styles.inputError : ''}
+                  />
+                </Field>
 
-              <div className={styles.messengerRow}>
-                <span className={styles.messengerLabel}>{t.profile.messengerLabel}</span>
-                <div className={styles.messengerOptions}>
-                  {(['whatsapp', 'telegram'] as Messenger[]).map(m => (
-                    <button
-                      key={m}
-                      type="button"
-                      className={`${styles.messengerBtn} ${messenger === m ? styles.active : ''}`}
-                      onClick={() => { setMessenger(m); markDirty(); }}
-                    >
-                      {m === 'whatsapp' ? <WhatsAppIcon /> : <TelegramIcon />}
-                      {m === 'whatsapp' ? t.profile.messengerWhatsapp : t.profile.messengerTelegram}
-                    </button>
-                  ))}
+                <div className={styles.messengerRow}>
+                  <span className={styles.messengerLabel}>{t.profile.messengerLabel}</span>
+                  <div className={styles.messengerOptions}>
+                    {(['whatsapp', 'telegram'] as Messenger[]).map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        className={`${styles.messengerBtn} ${messenger === m ? styles.active : ''}`}
+                        onClick={() => { setMessenger(m); markDirty(); }}
+                      >
+                        {m === 'whatsapp' ? <WhatsAppIcon /> : <TelegramIcon />}
+                        {m === 'whatsapp' ? t.profile.messengerWhatsapp : t.profile.messengerTelegram}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* ── СОЦСЕТИ ── */}
-            <div className={styles.formSection}>
-              <p className={styles.sectionLabel}>{t.profile.sectionSocials}</p>
+            {activeSection === 'socials' && (
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>{t.profile.sectionSocials}</h2>
 
-              <button
-                type="button"
-                className={`${styles.fbBtn} ${fbLinked ? styles.fbConnected : ''}`}
-                onClick={handleLinkFacebook}
-                disabled={fbLoading || fbLinked}
-              >
-                <FacebookIcon size={16} />
-                {fbLoading ? '…' : fbLinked ? t.profile.facebookConnected : t.profile.connectFacebook}
-              </button>
-              {fbError && <p className={styles.fieldError}>{fbError}</p>}
+                <button
+                  type="button"
+                  className={`${styles.fbBtn} ${fbLinked ? styles.fbConnected : ''}`}
+                  onClick={handleLinkFacebook}
+                  disabled={fbLoading || fbLinked}
+                >
+                  <FacebookIcon size={16} />
+                  {fbLoading ? '…' : fbLinked ? t.profile.facebookConnected : t.profile.connectFacebook}
+                </button>
+                {fbError && <p className={styles.fieldError}>{fbError}</p>}
 
-              <Field label={t.profile.socialLink} style={{ marginTop: 14 }}>
-                <input
-                  type="url"
-                  value={socialLink}
-                  onChange={e => { setSocialLink(e.target.value); markDirty(); }}
-                  placeholder={t.profile.socialLinkPlaceholder}
-                />
-              </Field>
-            </div>
+                <Field label={t.profile.socialLink} style={{ marginTop: 16 }}>
+                  <input
+                    type="url"
+                    value={socialLink}
+                    onChange={e => { setSocialLink(e.target.value); markDirty(); }}
+                    placeholder={t.profile.socialLinkPlaceholder}
+                  />
+                </Field>
+              </div>
+            )}
 
             {/* ── УВЕДОМЛЕНИЯ ── */}
-            <div className={styles.formSection}>
-              <p className={styles.sectionLabel}>{t.profile.sectionNotifications}</p>
-              <Toggle
-                label={t.profile.notifyShows}
-                checked={notify}
-                onChange={v => { setNotify(v); markDirty(); }}
-              />
+            {activeSection === 'notifications' && (
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>{t.profile.sectionNotifications}</h2>
+                <Toggle
+                  label={t.profile.notifyShows}
+                  checked={notify}
+                  onChange={v => { setNotify(v); markDirty(); }}
+                />
+              </div>
+            )}
+
+            {/* ── МОИ БИЛЕТЫ ── */}
+            {activeSection === 'tickets' && (
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>{t.profile.history}</h2>
+                {historyLoading ? (
+                  <div className={styles.skeletonList}>
+                    {[1, 2].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonTicket}`} />)}
+                  </div>
+                ) : historyError ? (
+                  <p className={styles.historyError}>{historyError}</p>
+                ) : activeBookings.length === 0 ? (
+                  <p className={styles.emptyText}>{t.profile.noHistory}</p>
+                ) : (
+                  <div className={styles.ticketList}>
+                    {activeBookings.map(b => {
+                      const isQrTicket = b.paymentStatus === 'paid' && b.status === 'confirmed' && !!b.ticketCode;
+                      return isQrTicket ? (
+                        <TicketCardSlot
+                          key={b.id}
+                          booking={b}
+                          isExpanded={expandedTicketId === b.id}
+                          onToggle={() => setExpandedTicketId(prev => prev === b.id ? null : b.id)}
+                        />
+                      ) : (
+                        <BookingCard key={b.id} booking={b} t={t} show={SHOW_MAP.get(b.showId)} />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── МОИ СПЕКТАКЛИ ── */}
+            {activeSection === 'shows' && (
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>{t.profile.historyAttended}</h2>
+                <VisitCounter bookings={bookings} t={t} />
+                {historyLoading ? (
+                  <div className={styles.skeletonList}>
+                    {[1].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonTicket}`} />)}
+                  </div>
+                ) : attendedBookings.length === 0 && !historyLoading ? (
+                  <p className={styles.emptyText}>
+                    {lang === 'FR' ? 'Aucun spectacle visité pour le moment.' : 'Вы ещё не посетили ни одного спектакля.'}
+                  </p>
+                ) : (
+                  <div className={styles.ticketList}>
+                    {attendedBookings.map(b => (
+                      <AttendedCard key={b.id} booking={b} show={SHOW_MAP.get(b.showId)} t={t} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+
+          {/* ── Save button — only for form sections ── */}
+          {FORM_SECTIONS.includes(activeSection) && (
+            <div className={styles.saveRow}>
+              <button
+                type="submit"
+                className={`${styles.saveBtn} ${savedMsg ? styles.savedBtn : ''}`}
+                disabled={saving}
+              >
+                {saving ? '…' : savedMsg ? `✓ ${t.profile.saved}` : t.profile.save}
+              </button>
             </div>
+          )}
 
-            <button
-              type="submit"
-              className={`${styles.saveBtn} ${savedMsg ? styles.savedBtn : ''}`}
-              disabled={saving}
-            >
-              {saving ? '…' : savedMsg ? `✓ ${t.profile.saved}` : t.profile.save}
-            </button>
-
-          </form>
-
-          {/* ── МОИ БИЛЕТЫ (active / future) ── */}
-          <div className={styles.historySection}>
-            <p className={styles.sectionLabel}>{t.profile.history}</p>
-            {historyLoading ? (
-              <div className={styles.historyLoading}>
-                {[1, 2].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonField}`} />)}
-              </div>
-            ) : historyError ? (
-              <p className={styles.historyError}>{historyError}</p>
-            ) : activeBookings.length === 0 ? (
-              <p className={styles.emptyText}>{t.profile.noHistory}</p>
-            ) : (
-              <div className={styles.bookingList}>
-                {activeBookings.map(b => (
-                  <BookingCard key={b.id} booking={b} t={t} show={SHOW_MAP.get(b.showId)} />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* ── МОИ СПЕКТАКЛИ (attended) ── */}
-          <div className={styles.historySection}>
-            <p className={styles.sectionLabel}>{t.profile.historyAttended}</p>
-            <VisitCounter bookings={bookings} t={t} />
-            {historyLoading ? (
-              <div className={styles.historyLoading}>
-                {[1].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonField}`} />)}
-              </div>
-            ) : attendedBookings.length > 0 && (
-              <div className={styles.bookingList}>
-                {attendedBookings.map(b => (
-                  <BookingCard key={b.id} booking={b} t={t} show={SHOW_MAP.get(b.showId)} />
-                ))}
-              </div>
-            )}
-          </div>
         </div>
-
-        {/* ── Footer ── */}
-        <div className={styles.drawerFooter}>
-          <button className={styles.logoutBtn} onClick={handleLogout}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="15" height="15">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-            </svg>
-            {t.profile.logout}
-          </button>
-        </div>
-
-      </aside>
-    </>
+      </form>
+    </div>
   );
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// ── Field ──────────────────────────────────────────────────────────────────────
 
 function Field({
   label, error, children, style,
 }: {
-  label: React.ReactNode;
+  label: ReactNode;
   error?: string;
-  children: React.ReactNode;
+  children: ReactNode;
   style?: React.CSSProperties;
 }) {
   return (
@@ -517,6 +620,8 @@ function Field({
     </div>
   );
 }
+
+// ── Toggle ─────────────────────────────────────────────────────────────────────
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -535,6 +640,8 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
     </label>
   );
 }
+
+// ── Icons ──────────────────────────────────────────────────────────────────────
 
 function FacebookIcon({ size = 16 }: { size?: number }) {
   return (
@@ -560,7 +667,63 @@ function TelegramIcon() {
   );
 }
 
-// ── Booking history sub-components ────────────────────────────────────────────
+function PersonIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+    </svg>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>
+    </svg>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+  );
+}
+
+function TicketIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/>
+    </svg>
+  );
+}
+
+function StarIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14" aria-hidden>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+    </svg>
+  );
+}
+
+// ── Booking history sub-components ─────────────────────────────────────────────
 
 import type { T } from '../../../i18n/translations';
 import type { Show } from '../../../types';
@@ -569,7 +732,6 @@ import { computedIsAttended } from '../../../services/attendanceService';
 import { TicketCard } from '../TicketCard';
 
 const SHOW_MAP = new Map<string, Show>(SHOWS.map(s => [s.id, s]));
-
 const BONUS_EVERY = 5;
 
 const STATUS_LABEL_KEY: Record<BookingStatus, keyof T['profile']> = {
@@ -579,8 +741,15 @@ const STATUS_LABEL_KEY: Record<BookingStatus, keyof T['profile']> = {
   attended:  'statusAttended',
 };
 
+// Thin wrapper so the parent can pass isExpanded/onToggle to TicketCard
+function TicketCardSlot({
+  booking, isExpanded, onToggle,
+}: { booking: Booking; isExpanded: boolean; onToggle: () => void }) {
+  return <TicketCard booking={booking} isExpanded={isExpanded} onToggle={onToggle} />;
+}
+
 function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
-  const attended = bookings.filter(computedIsAttended).length;
+  const attended  = bookings.filter(computedIsAttended).length;
   const remaining = attended === 0 ? BONUS_EVERY : BONUS_EVERY - (attended % BONUS_EVERY);
   const isBonusReady = attended > 0 && attended % BONUS_EVERY === 0;
 
@@ -606,11 +775,12 @@ function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
   );
 }
 
+// BookingCard — for non-QR active bookings (cancelled, pending, awaiting, etc.)
 function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: Show }) {
-  const isAttended  = computedIsAttended(b);
+  const isAttended     = computedIsAttended(b);
   const displayStatus: BookingStatus = isAttended ? 'attended' : b.status;
-  const statusKey   = STATUS_LABEL_KEY[displayStatus] as keyof typeof t.profile;
-  const statusLabel = t.profile[statusKey] as string;
+  const statusKey      = STATUS_LABEL_KEY[displayStatus] as keyof typeof t.profile;
+  const statusLabel    = t.profile[statusKey] as string;
 
   const payStatus = b.paymentStatus ?? 'not_paid';
   const isPendingTransfer =
@@ -673,9 +843,24 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
           )}
         </div>
       </div>
-      {payStatus === 'paid' && displayStatus === 'confirmed' && !isAttended && b.ticketCode && (
-        <TicketCard booking={b} />
+    </div>
+  );
+}
+
+// AttendedCard — compact card for the Shows section
+function AttendedCard({ booking: b, show, t }: { booking: Booking; show?: Show; t: T }) {
+  return (
+    <div className={styles.attendedCard}>
+      {show && (
+        <div className={styles.attendedGlyph} style={{ background: show.palette }}>
+          {show.glyph}
+        </div>
       )}
+      <div className={styles.attendedInfo}>
+        <p className={styles.attendedTitle}>{b.showTitle}</p>
+        <p className={styles.attendedMeta}>{b.showDate} · {b.showTime}</p>
+      </div>
+      <span className={styles.attendedBadge}>{t.profile.statusAttended}</span>
     </div>
   );
 }

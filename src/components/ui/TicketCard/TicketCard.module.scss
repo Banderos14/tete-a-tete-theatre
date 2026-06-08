@@ -1,74 +1,321 @@
-.card {
+@use '../../../styles/mixins';
+
+// ── Ticket container ──────────────────────────────────────────────────────────
+.ticket {
+  background: var(--bg-3);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--line-strong);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    border-color: rgba(184, 0, 0, 0.45);
+    border-left-color: var(--accent);
+  }
+
+  &.expanded {
+    border-color: rgba(184, 0, 0, 0.5);
+    border-left-color: var(--accent);
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35);
+    cursor: default;
+  }
+}
+
+// ── Collapsed header ──────────────────────────────────────────────────────────
+.header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: var(--bg-3);
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
   padding: 14px 16px;
-  margin-top: 10px;
+  min-height: 76px;
+  outline: none;
+
+  &:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
 }
 
-.info {
+.headerLeft {
   flex: 1;
   min-width: 0;
 }
 
-.title {
-  font-size: 13px;
+.showTitle {
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
-.meta {
-  font-size: 11px;
+.showMeta {
+  font-size: 12px;
   color: var(--fg-mute);
   margin-bottom: 6px;
 }
 
-.code {
+.ticketCode {
+  display: inline-block;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.12em;
   color: var(--fg-dim);
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 3px;
+  padding: 2px 7px;
+}
+
+.headerRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+.statusBadge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   padding: 3px 8px;
-  display: inline-block;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.paid {
+  background: rgba(76, 175, 80, 0.12);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.confirmed {
+  background: rgba(184, 0, 0, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(184, 0, 0, 0.25);
+}
+
+// ── QR toggle button ──────────────────────────────────────────────────────────
+.qrBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--fg-mute);
+  transition: color 0.2s;
+
+  .ticket:hover & { color: var(--fg-dim); }
+
+  &.qrBtnOpen { color: var(--accent); }
+}
+
+.chevron {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &.chevronUp { transform: rotate(180deg); }
+}
+
+// ── Expanded body ─────────────────────────────────────────────────────────────
+// grid-template-rows 0fr→1fr animates the height; opacity fades content in/out.
+.body {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease;
+
+  &.bodyExpanded {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+.bodyInner {
+  overflow: hidden; // required: collapses to 0 when grid row is 0fr
+  min-height: 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 20px;
+  padding: 18px 18px 16px;
+
+  @include mixins.small {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+}
+
+// ── QR column ─────────────────────────────────────────────────────────────────
+.qrCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .qrWrap {
-  flex-shrink: 0;
   background: #fff;
-  border-radius: 4px;
-  padding: 4px;
+  border-radius: 6px;
+  padding: 6px;
   line-height: 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
-.qr {
+.qrImg {
   display: block;
-  border-radius: 2px;
-  width: 88px;
-  height: 88px;
+  width: 148px;
+  height: 148px;
+  border-radius: 3px;
+
+  @include mixins.small {
+    width: 168px;
+    height: 168px;
+  }
 }
 
 .qrLoading {
-  background: var(--bg-2);
+  background: #e8e8e8;
   animation: qrPulse 1.2s ease-in-out infinite;
 }
 
 .qrError {
-  background: var(--bg-2);
+  background: #e8e8e8;
   opacity: 0.4;
 }
 
 @keyframes qrPulse {
   0%, 100% { opacity: 0.4; }
-  50%       { opacity: 0.9; }
+  50%       { opacity: 0.85; }
+}
+
+.qrHint {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  text-align: center;
+}
+
+// ── Details column ────────────────────────────────────────────────────────────
+.details {
+  flex: 1;
+  min-width: 0;
+}
+
+.detailTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.detailVenue {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+
+.detailList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+
+  dt {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-mute);
+    flex-shrink: 0;
+  }
+
+  dd {
+    color: var(--fg-dim);
+    text-align: right;
+  }
+}
+
+// ── PDF button ────────────────────────────────────────────────────────────────
+.pdfBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 9px 14px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  width: 100%;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(184, 0, 0, 0.05);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+// ── Code block ────────────────────────────────────────────────────────────────
+.codeBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 8px 12px;
+}
+
+.codeLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  flex-shrink: 0;
+}
+
+.codeValue {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  color: var(--fg);
+  font-weight: 600;
 }

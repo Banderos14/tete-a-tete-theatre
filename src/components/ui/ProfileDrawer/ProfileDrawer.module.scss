@@ -1,25 +1,73 @@
 @use '../../../styles/mixins';
 
-// ── Overlay ──────────────────────────────────────────────────────────────────
-.overlay {
+// ── Modal backdrop + wrapper ─────────────────────────────────────────────────
+.modalWrap {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
   z-index: 400;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  visibility: hidden;
+  // visibility delayed: becomes hidden only after opacity finishes
+  transition: opacity 0.28s ease, visibility 0s linear 0.28s;
 
-  &.overlayVisible {
+  &.modalWrapOpen {
     opacity: 1;
     pointer-events: auto;
+    visibility: visible;
+    transition: opacity 0.28s ease;
+  }
+
+  @include mixins.small {
+    padding: 0;
+    align-items: flex-end;
+  }
+}
+
+// ── Modal box ────────────────────────────────────────────────────────────────
+.modal {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 1050px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  transform: scale(0.96) translateY(10px);
+  opacity: 0;
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.26s ease;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+
+  .modalWrapOpen & {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+
+  @include mixins.mobile {
+    flex-direction: column;
+    max-height: 92vh;
+    max-width: 100%;
+  }
+
+  @include mixins.small {
+    border-radius: 14px 14px 0 0;
+    max-height: 96vh;
   }
 }
 
 // ── Unsaved toast ────────────────────────────────────────────────────────────
 .unsavedToast {
   position: absolute;
-  top: 20px;
+  top: 28px;
   left: 50%;
   transform: translateX(-50%);
   background: var(--bg-2);
@@ -28,16 +76,15 @@
   font-size: 12px;
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
-  padding: 8px 16px;
+  padding: 9px 18px;
   border-radius: 4px;
   white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 7px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  animation: toastIn 0.2s ease;
-  pointer-events: none;
-  z-index: 1;
+  gap: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  animation: toastIn 0.22s ease;
+  z-index: 410;
 }
 
 @keyframes toastIn {
@@ -45,55 +92,51 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-// ── Drawer ───────────────────────────────────────────────────────────────────
-.drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 400px;
-  background: var(--bg-2);
-  border-left: 1px solid var(--line);
-  z-index: 401;
+// ── Sidebar ──────────────────────────────────────────────────────────────────
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  background: var(--bg);
   overflow: hidden;
 
-  &.drawerOpen { transform: translateX(0); }
-
-  @include mixins.small {
+  @include mixins.mobile {
     width: 100%;
-    border-left: none;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    flex-direction: column;
+    overflow: visible;
   }
 }
 
-// ── Header ───────────────────────────────────────────────────────────────────
-.drawerHeader {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 28px 24px 22px;
+// ── Sidebar top (avatar + identity) ─────────────────────────────────────────
+.sidebarTop {
+  padding: 28px 20px 20px;
   border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   flex-shrink: 0;
-  background: var(--bg-2);
-}
 
-.avatarWrap {
-  position: relative;
-  flex-shrink: 0;
+  @include mixins.mobile {
+    display: none;
+  }
 }
 
 .avatar {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent) 0%, #6b1a1a 100%);
   display: grid;
   place-items: center;
   overflow: hidden;
   border: 2px solid var(--line-strong);
+  margin-bottom: 12px;
+  flex-shrink: 0;
 
   img {
     width: 100%;
@@ -103,46 +146,216 @@
 
   span {
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: 22px;
     color: #fff;
     letter-spacing: 0.04em;
     font-weight: 500;
   }
 }
 
-.userInfo {
-  flex: 1;
-  min-width: 0;
-}
-
-.userName {
-  font-size: 16px;
+.sidebarName {
+  font-size: 15px;
   font-weight: 600;
   color: var(--fg);
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: -0.01em;
+  max-width: 100%;
 }
 
-.userEmail {
+.sidebarEmail {
   font-size: 11px;
   color: var(--fg-mute);
   font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 3px;
+  max-width: 100%;
+  margin-bottom: 10px;
+}
+
+.incompleteBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(184, 0, 0, 0.1);
+  border: 1px solid rgba(184, 0, 0, 0.25);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 10px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-align: left;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+// ── Sidebar nav ──────────────────────────────────────────────────────────────
+.sidebarNav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  &::-webkit-scrollbar { width: 3px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
+
+  @include mixins.mobile {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 12px;
+    gap: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar { display: none; }
+  }
+}
+
+// ── Nav item ─────────────────────────────────────────────────────────────────
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--fg-mute);
+  font-family: var(--font-body);
+  transition: background 0.15s ease, color 0.15s ease;
+  text-align: left;
+  width: 100%;
+  position: relative;
+
+  &:hover {
+    background: var(--bg-2);
+    color: var(--fg);
+  }
+
+  &.navItemActive {
+    background: var(--bg-2);
+    color: var(--fg);
+
+    svg { color: var(--accent); }
+  }
+
+  svg { flex-shrink: 0; opacity: 0.7; transition: opacity 0.15s; }
+  &:hover svg, &.navItemActive svg { opacity: 1; }
+
+  @include mixins.mobile {
+    flex-shrink: 0;
+    width: auto;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    background: var(--bg-3);
+    border: 1px solid var(--line);
+
+    svg { display: none; }
+
+    &.navItemActive {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+  }
+}
+
+.navLabel {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navBadge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 9px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0;
+
+  @include mixins.mobile {
+    min-width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
+}
+
+// Logout item — only visible in nav on mobile
+.navItemLogout {
+  display: none;
+  color: var(--fg-mute);
+
+  @include mixins.mobile {
+    display: flex;
+    svg { display: block; }
+  }
+}
+
+// ── Sidebar footer ───────────────────────────────────────────────────────────
+.sidebarFooter {
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+
+  @include mixins.mobile {
+    display: none;
+  }
+}
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  font-family: var(--font-mono);
+  transition: color 0.2s ease;
+
+  &:hover { color: var(--accent); }
+}
+
+// ── Main content area ────────────────────────────────────────────────────────
+.mainContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
 .closeBtn {
-  width: 34px;
-  height: 34px;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   color: var(--fg-mute);
   transition: color 0.2s ease, background 0.2s ease;
+  z-index: 2;
   flex-shrink: 0;
 
   &:hover {
@@ -150,42 +363,46 @@
     background: var(--bg-3);
   }
 
-  svg { width: 16px; height: 16px; }
+  svg { width: 15px; height: 15px; }
 }
 
 // ── Scrollable content ───────────────────────────────────────────────────────
-.content {
+.contentScroll {
   flex: 1;
   overflow-y: auto;
   padding: 0 0 8px;
-  display: flex;
-  flex-direction: column;
 
   &::-webkit-scrollbar { width: 3px; }
   &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
 }
 
-// ── Form sections ────────────────────────────────────────────────────────────
-.formSection {
-  padding: 22px 24px 4px;
-  border-bottom: 1px solid var(--line);
+// ── Section ──────────────────────────────────────────────────────────────────
+.section {
+  padding: 32px 32px 20px;
 
-  &:last-of-type { border-bottom: none; }
+  @include mixins.mobile {
+    padding: 24px 20px 16px;
+  }
+
+  @include mixins.small {
+    padding: 20px 16px 14px;
+  }
 }
 
-.sectionLabel {
+.sectionTitle {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--fg-mute);
-  margin-bottom: 18px;
+  margin-bottom: 24px;
+  font-weight: 400;
 }
 
-// ── Fields ───────────────────────────────────────────────────────────────────
+// ── Form fields ──────────────────────────────────────────────────────────────
 .field {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 
   label {
     display: block;
@@ -201,8 +418,8 @@
     width: 100%;
     background: var(--bg-3);
     border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 10px 13px;
+    border-radius: 5px;
+    padding: 11px 14px;
     font-size: 14px;
     color: var(--fg);
     outline: none;
@@ -220,77 +437,13 @@
   }
 }
 
-.fieldMt { margin-top: 14px; }
+.readonlyInput {
+  opacity: 0.55 !important;
+  cursor: default !important;
+}
 
 .dateInput {
   color-scheme: dark;
-}
-
-// ── Phone row ────────────────────────────────────────────────────────────────
-.phoneRow {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-
-  input { flex: 1; }
-}
-
-.verifyBtn {
-  flex-shrink: 0;
-  padding: 0 14px;
-  background: transparent;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
-  white-space: nowrap;
-  transition: border-color 0.2s ease, color 0.2s ease;
-  font-family: var(--font-mono);
-
-  &:hover:not(:disabled) {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
-}
-
-.verifiedBadge {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: #4caf50;
-  font-family: var(--font-mono);
-  background: rgba(76, 175, 80, 0.08);
-  border: 1px solid rgba(76, 175, 80, 0.3);
-  border-radius: 4px;
-}
-
-.otpRow {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.otpInput {
-  flex: 1;
-  background: var(--bg-3);
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  padding: 9px 13px;
-  font-size: 16px;
-  letter-spacing: 0.2em;
-  color: var(--fg);
-  outline: none;
-  text-align: center;
-  font-family: var(--font-mono);
-
-  &::placeholder { letter-spacing: 0.05em; font-size: 12px; }
 }
 
 .fieldError {
@@ -300,9 +453,14 @@
   font-family: var(--font-mono);
 }
 
+.inputError {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(184, 0, 0, 0.12) !important;
+}
+
 // ── Messenger choice ─────────────────────────────────────────────────────────
 .messengerRow {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .messengerLabel {
@@ -326,7 +484,7 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   background: var(--bg-3);
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -347,14 +505,14 @@
   }
 }
 
-// ── Facebook button ──────────────────────────────────────────────────────────
+// ── Facebook ─────────────────────────────────────────────────────────────────
 .fbBtn {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 11px 16px;
+  padding: 12px 16px;
   background: #1877f2;
   color: #fff;
   border-radius: 6px;
@@ -365,7 +523,6 @@
   margin-bottom: 4px;
 
   &:hover:not(:disabled) { background: #166fe5; }
-
   &:disabled { opacity: 0.7; cursor: not-allowed; }
 
   &.fbConnected {
@@ -375,7 +532,53 @@
   }
 }
 
-// ── Notifications toggle ─────────────────────────────────────────────────────
+.fbBadgeInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: #1877f2;
+  font-family: var(--font-mono);
+  background: rgba(24, 119, 242, 0.1);
+  border: 1px solid rgba(24, 119, 242, 0.2);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 8px;
+  vertical-align: middle;
+  text-transform: none;
+}
+
+.fbBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #1877f2;
+  font-family: var(--font-mono);
+  background: rgba(24, 119, 242, 0.1);
+  border: 1px solid rgba(24, 119, 242, 0.25);
+  border-radius: 3px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.autoFilled {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 11px 14px;
+  font-size: 14px;
+  color: var(--fg);
+}
+
+// ── Toggle ───────────────────────────────────────────────────────────────────
 .toggle {
   display: flex;
   align-items: center;
@@ -385,7 +588,7 @@
   cursor: pointer;
 
   span:first-child {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--fg-dim);
     line-height: 1.4;
   }
@@ -421,11 +624,24 @@
   .toggleOn & { transform: translateX(18px); }
 }
 
-// ── Save button ──────────────────────────────────────────────────────────────
+// ── Save button row ──────────────────────────────────────────────────────────
+.saveRow {
+  padding: 16px 32px 20px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+
+  @include mixins.mobile {
+    padding: 12px 20px 16px;
+  }
+
+  @include mixins.small {
+    padding: 10px 16px 14px;
+  }
+}
+
 .saveBtn {
   display: block;
-  width: calc(100% - 48px);
-  margin: 20px 24px;
+  width: 100%;
   padding: 13px 16px;
   background: var(--accent);
   color: #fff;
@@ -452,10 +668,11 @@
   }
 }
 
-// ── History section ──────────────────────────────────────────────────────────
-.historySection {
-  padding: 22px 24px 16px;
-  border-top: 1px solid var(--line);
+// ── Ticket list ───────────────────────────────────────────────────────────────
+.ticketList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-top: 4px;
 }
 
@@ -474,12 +691,11 @@
   padding: 10px 12px;
 }
 
-// ── Visit counter ────────────────────────────────────────────────────────────
-
+// ── Visit counter ─────────────────────────────────────────────────────────────
 .visitCounter {
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  background: var(--bg-2);
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  background: var(--bg);
   border-radius: 8px;
   border: 1px solid var(--line);
 }
@@ -522,7 +738,20 @@
   }
 }
 
-// ── Booking card row layout ───────────────────────────────────────────────────
+// ── Booking card (non-QR active bookings) ─────────────────────────────────────
+.bookingCard {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+
+  &.bookingCard_attended {
+    border-color: #4caf50;
+    background: rgba(76, 175, 80, 0.06);
+  }
+
+  &.bookingCard_cancelled { opacity: 0.6; }
+}
 
 .bookingCardRow {
   display: flex;
@@ -542,40 +771,7 @@
   line-height: 1;
 }
 
-.bookingCardContent {
-  flex: 1;
-  min-width: 0;
-}
-
-// ── Booking history list ──────────────────────────────────────────────────────
-
-.historyLoading {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.bookingList {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.bookingCard {
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--bg-2);
-
-  &.bookingCard_attended {
-    border-color: #4caf50;
-    background: rgba(76, 175, 80, 0.06);
-  }
-
-  &.bookingCard_cancelled {
-    opacity: 0.6;
-  }
-}
+.bookingCardContent { flex: 1; min-width: 0; }
 
 .bookingCardTop {
   display: flex;
@@ -594,7 +790,7 @@
 
 .bookingStatus {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 10px;
   font-family: var(--font-mono);
   letter-spacing: 0.06em;
   padding: 2px 8px;
@@ -603,10 +799,10 @@
   background: var(--line);
   color: var(--fg-mute);
 
-  &.bookingStatus_confirmed  { background: #e3f2fd; color: #1565c0; }
-  &.bookingStatus_pending    { background: #fff8e1; color: #f57f17; }
-  &.bookingStatus_attended   { background: #e8f5e9; color: #2e7d32; }
-  &.bookingStatus_cancelled  { background: var(--line); color: var(--fg-mute); }
+  &.bookingStatus_confirmed { background: #e3f2fd; color: #1565c0; }
+  &.bookingStatus_pending   { background: #fff8e1; color: #f57f17; }
+  &.bookingStatus_attended  { background: #e8f5e9; color: #2e7d32; }
+  &.bookingStatus_cancelled { background: var(--line); color: var(--fg-mute); }
 }
 
 .bookingCardMeta {
@@ -716,101 +912,66 @@
   border-radius: 3px;
 }
 
-// ── Footer ───────────────────────────────────────────────────────────────────
-.drawerFooter {
-  padding: 14px 24px;
-  border-top: 1px solid var(--line);
-  flex-shrink: 0;
-  background: var(--bg-2);
-}
-
-.logoutBtn {
+// ── Attended card ─────────────────────────────────────────────────────────────
+.attendedCard {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--fg-mute);
-  font-family: var(--font-mono);
-  transition: color 0.2s ease;
-
-  &:hover { color: var(--accent); }
-}
-
-// ── Incomplete profile banner ────────────────────────────────────────────────
-.incompleteBanner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 24px;
-  background: rgba(184, 0, 0, 0.07);
-  border-bottom: 1px solid rgba(184, 0, 0, 0.2);
-  font-size: 12px;
-  color: var(--accent);
-  font-family: var(--font-mono);
-  letter-spacing: 0.04em;
-  flex-shrink: 0;
-}
-
-// ── Input error state ────────────────────────────────────────────────────────
-.inputError {
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 3px rgba(184, 0, 0, 0.12) !important;
-}
-
-// ── Facebook badge inline (next to label) ───────────────────────────────────
-.fbBadgeInline {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  color: #1877f2;
-  font-family: var(--font-mono);
-  background: rgba(24, 119, 242, 0.1);
-  border: 1px solid rgba(24, 119, 242, 0.2);
-  border-radius: 3px;
-  padding: 1px 5px;
-  margin-left: 8px;
-  vertical-align: middle;
-  text-transform: none;
-}
-
-// ── Auto-filled from Facebook ────────────────────────────────────────────────
-.autoFilled {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: var(--bg-3);
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
   border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 10px 13px;
-  font-size: 14px;
-  color: var(--fg);
+  background: var(--bg-3);
 }
 
-.fbBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: #1877f2;
-  font-family: var(--font-mono);
-  background: rgba(24, 119, 242, 0.1);
-  border: 1px solid rgba(24, 119, 242, 0.25);
-  border-radius: 3px;
-  padding: 2px 7px;
-  white-space: nowrap;
+.attendedGlyph {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
   flex-shrink: 0;
+  opacity: 0.85;
+  line-height: 1;
 }
 
-// ── Loading skeleton ─────────────────────────────────────────────────────────
+.attendedInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.attendedTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attendedMeta {
+  font-size: 12px;
+  color: var(--fg-mute);
+}
+
+.attendedBadge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(76, 175, 80, 0.12);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 20px;
+  padding: 3px 9px;
+}
+
+// ── Loading skeleton ──────────────────────────────────────────────────────────
 @keyframes shimmer {
-  from { background-position: -400px 0; }
-  to   { background-position:  400px 0; }
+  from { background-position: -600px 0; }
+  to   { background-position:  600px 0; }
 }
 
 .skeleton {
@@ -820,44 +981,36 @@
     var(--line-strong) 50%,
     var(--bg-3) 75%
   );
-  background-size: 800px 100%;
+  background-size: 1200px 100%;
   animation: shimmer 1.4s infinite linear;
   border-radius: 4px;
 }
 
-.skeletonWrap {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 28px 24px 22px;
-  border-bottom: 1px solid var(--line);
-}
-
 .skeletonAvatar {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  flex-shrink: 0;
+  margin: 0 auto 12px;
 }
 
-.skeletonLines {
-  flex: 1;
+.skeletonName  { height: 16px; width: 70%; margin: 0 auto 8px; }
+.skeletonEmail { height: 11px; width: 50%; margin: 0 auto; }
+
+.skeletonBlock {
+  margin-bottom: 20px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.skeletonLine      { height: 16px; width: 60%; }
-.skeletonLineShort { height: 11px; width: 40%; }
+.skeletonLabel { height: 10px; width: 35%; }
+.skeletonField { height: 42px; width: 100%; border-radius: 5px; }
 
-.skeletonBlock {
-  padding: 22px 24px;
-  border-bottom: 1px solid var(--line);
+.skeletonList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  margin-top: 4px;
 }
 
-.skeletonTitle { height: 10px; width: 30%; }
-.skeletonField { height: 40px; width: 100%; border-radius: 4px; }
-
+.skeletonTicket { height: 76px; border-radius: 8px; }
