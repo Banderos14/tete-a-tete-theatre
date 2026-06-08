@@ -29,7 +29,7 @@ export const FR: T = {
     num:     '01 / Affiche',
     title:   'Prochaines',
     titleIt: 'premières',
-    meta:    'Mai — Juin\n2026',
+    meta:    'Juin — Juillet\n2026',
     book:    'Réserver',
   },
   socials: {

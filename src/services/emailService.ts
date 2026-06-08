@@ -29,6 +29,7 @@ export interface BookingEmailData {
   userEmail:     string;
   userName:      string;
   showTitle:     string;
+  showTitleFR?:  string;
   showDate:      string;
   showTime:      string;
   ticketsCount:  number;
@@ -178,7 +179,7 @@ function noteBlock(text: string): string {
 // ── Booking confirmation email ─────────────────────────────────────────────────
 
 function buildConfirmationEmail(data: BookingEmailData): { subject: string; html: string; text: string } {
-  const isRU           = data.lang !== 'FR';
+  const isRU           = data.lang === 'RU';
   const isBankTransfer = data.paymentMethod === 'bank_transfer';
   const dateStr        = localeDate(data.showDate, data.lang);
 
@@ -197,7 +198,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
         ? 'Для подтверждения бронирования переведите указанную сумму по реквизитам ниже. В назначении платежа укажите код брони.'
         : 'Оплата — наличными в кассе театра, перед спектаклем.')
     : (isBankTransfer
-        ? 'Pour confirmer votre réservation, veuillez effectuer le virement avec les coordonnées ci-dessous. Indiquez le code de réservation dans le libellé du paiement.'
+        ? 'Pour confirmer votre réservation, veuillez effectuer le virement avec les coordonnées ci-dessous. Indiquez obligatoirement le code de réservation dans le libellé du virement.'
         : 'Le paiement s\'effectue en espèces à la caisse du théâtre avant le spectacle.');
 
   const rows: [string, string][] = isRU ? [
@@ -215,7 +216,8 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
   ];
 
   // Bank transfer details block — included in the same email, no second email needed
-  const paymentPurpose = `${data.showTitle} — ${data.showDate} — ${data.ticketCode}`;
+  const purposeTitle   = isRU ? data.showTitle : (data.showTitleFR ?? data.showTitle);
+  const paymentPurpose = `${purposeTitle} — ${dateStr} — ${data.ticketCode}`;
   const transferRows: [string, string][] = isRU ? [
     ['Получатель',         THEATRE_NAME],
     ['IBAN',               THEATRE_IBAN],
@@ -225,7 +227,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
     ['Bénéficiaire', THEATRE_NAME],
     ['IBAN',         THEATRE_IBAN],
     ['BIC',          THEATRE_BIC],
-    ['Libellé',      paymentPurpose],
+    ['Libellé du virement', paymentPurpose],
   ];
 
   const transferHtml = isBankTransfer ? `
@@ -254,7 +256,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
         isRU ? `Получатель: ${THEATRE_NAME}` : `Bénéficiaire : ${THEATRE_NAME}`,
         `IBAN: ${THEATRE_IBAN}`,
         `BIC: ${THEATRE_BIC}`,
-        isRU ? `Назначение платежа: ${paymentPurpose}` : `Libellé : ${paymentPurpose}`,
+        isRU ? `Назначение платежа: ${paymentPurpose}` : `Libellé du virement : ${paymentPurpose}`,
       ]
     : [];
 
@@ -302,7 +304,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
 // ── Status update email ───────────────────────────────────────────────────────
 
 function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html: string; text: string } {
-  const isRU    = data.lang !== 'FR';
+  const isRU    = data.lang === 'RU';
   const dateStr = localeDate(data.showDate, data.lang);
 
   const STATUS_COPY: Record<
@@ -380,7 +382,7 @@ function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html
 // ── Payment paid email ────────────────────────────────────────────────────────
 
 function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: string; html: string; text: string } {
-  const isRU               = data.lang !== 'FR';
+  const isRU               = data.lang === 'RU';
   const isAlreadyConfirmed = data.bookingStatus === 'confirmed';
   const dateStr            = localeDate(data.showDate, data.lang);
 
@@ -454,7 +456,7 @@ export interface NewShowEmailData {
 }
 
 function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: string; text: string } {
-  const isRU    = data.lang !== 'FR';
+  const isRU    = data.lang === 'RU';
   const dateStr = localeDate(data.showDate, data.lang);
 
   const subject = isRU

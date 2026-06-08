@@ -67,6 +67,14 @@ export async function markBookingPaid(bookingId: string): Promise<void> {
   });
 }
 
+export async function getBookingByTicketCode(ticketCode: string): Promise<Booking | null> {
+  const q = query(collection(db, COLLECTION), where('ticketCode', '==', ticketCode));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...(d.data() as object) } as Booking;
+}
+
 function snapshotToBookings(snapshot: Awaited<ReturnType<typeof getDocs>>): Booking[] {
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as object) } as Booking));
 }

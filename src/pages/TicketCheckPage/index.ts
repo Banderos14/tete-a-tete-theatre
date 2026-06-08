@@ -1,0 +1,1 @@
+export { TicketCheckPage } from './TicketCheckPage';

@@ -170,6 +170,7 @@ export function BookingModal({ show, onClose }: Props) {
         userEmail,
         userName,
         showTitle:    show.title,
+        showTitleFR:  show.titleFR,
         showDate,
         showTime:     show.time,
         ticketsCount: tickets,

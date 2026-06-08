@@ -29,7 +29,7 @@ export const RU: T = {
     num:     '01 / Афиша',
     title:   'Ближайшие',
     titleIt: 'премьеры',
-    meta:    'Май — Июнь\n2026',
+    meta:    'Июнь — Июль\n2026',
     book:    'Забронировать',
   },
   socials: {

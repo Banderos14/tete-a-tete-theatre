@@ -17,10 +17,11 @@ import { Repertoire }    from './components/Repertoire';
 import { Team }          from './components/Team';
 import { Contacts }      from './components/Contacts';
 import { Footer }        from './components/Footer';
-const AdminPage     = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
-const AuthModal     = lazy(() => import('./components/ui/AuthModal').then(m => ({ default: m.AuthModal })));
-const ProfileDrawer = lazy(() => import('./components/ui/ProfileDrawer').then(m => ({ default: m.ProfileDrawer })));
-const BookingModal  = lazy(() => import('./components/ui/BookingModal').then(m => ({ default: m.BookingModal })));
+const AdminPage       = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const TicketCheckPage = lazy(() => import('./pages/TicketCheckPage').then(m => ({ default: m.TicketCheckPage })));
+const AuthModal       = lazy(() => import('./components/ui/AuthModal').then(m => ({ default: m.AuthModal })));
+const ProfileDrawer   = lazy(() => import('./components/ui/ProfileDrawer').then(m => ({ default: m.ProfileDrawer })));
+const BookingModal    = lazy(() => import('./components/ui/BookingModal').then(m => ({ default: m.BookingModal })));
 
 type Theme = 'dark' | 'light';
 type IntroState = 'closed' | 'opening' | 'done';
@@ -136,6 +137,7 @@ export default function App() {
             }
           />
           <Route path="/admin" element={<Suspense fallback={null}><AdminPage /></Suspense>} />
+          <Route path="/admin/checkin" element={<Suspense fallback={null}><TicketCheckPage /></Suspense>} />
         </Routes>
 
         {/* Global modals — lazy-loaded, rendered outside Routes so they persist across navigation */}

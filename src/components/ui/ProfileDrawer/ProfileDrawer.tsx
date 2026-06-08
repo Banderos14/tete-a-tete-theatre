@@ -528,6 +528,7 @@ import type { T } from '../../../i18n/translations';
 import type { Show } from '../../../types';
 import { SHOWS } from '../../../data/shows';
 import { computedIsAttended } from '../../../services/attendanceService';
+import { TicketCard } from '../TicketCard';
 
 const SHOW_MAP = new Map<string, Show>(SHOWS.map(s => [s.id, s]));
 
@@ -634,6 +635,9 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
           )}
         </div>
       </div>
+      {payStatus === 'paid' && displayStatus === 'confirmed' && !isAttended && (
+        <TicketCard booking={b} />
+      )}
     </div>
   );
 }
