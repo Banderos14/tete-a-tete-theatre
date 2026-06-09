@@ -127,6 +127,7 @@ export default async function handler(
   }
 
   // ── Send via Resend ──────────────────────────────────────────────────────────
+  console.log('[EMAIL] FROM =', fromAddr);
   const resendBody: Record<string, string> = {
     from:    fromAddr,
     to:      String(to),
