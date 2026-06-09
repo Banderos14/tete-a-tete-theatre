@@ -19,11 +19,27 @@ const MAX_HTML_LEN    = 120_000; // ~120 KB — well above any normal email
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function respond(res: ServerResponse, status: number, body: object): void {
+// Restrict CORS to the known Vercel deployments + custom domain.
+// VITE_PUBLIC_SITE_URL is a frontend build var and is NOT available here at runtime;
+// use ALLOWED_ORIGIN (plain server-side env var) in Vercel Dashboard instead.
+const ALLOWED_ORIGINS = new Set([
+  process.env.ALLOWED_ORIGIN,
+  'https://tete-a-tete-theatre.vercel.app',
+].filter(Boolean) as string[]);
+
+function getCorsOrigin(req: IncomingMessage): string {
+  const origin = req.headers['origin'] ?? '';
+  if (ALLOWED_ORIGINS.has(origin)) return origin;
+  // Allow all *.vercel.app preview URLs
+  if (typeof origin === 'string' && origin.endsWith('.vercel.app')) return origin;
+  return 'https://tete-a-tete-theatre.vercel.app';
+}
+
+function respond(res: ServerResponse, status: number, body: object, req?: IncomingMessage): void {
   const payload = JSON.stringify(body);
   res.writeHead(status, {
     'Content-Type':                'application/json',
-    'Access-Control-Allow-Origin': '*', // same-origin in prod, permissive for curl tests
+    'Access-Control-Allow-Origin': req ? getCorsOrigin(req) : 'https://tete-a-tete-theatre.vercel.app',
   });
   res.end(payload);
 }
@@ -53,13 +69,12 @@ export default async function handler(
 
   // ── Method guard ────────────────────────────────────────────────────────────
   if (req.method === 'OPTIONS') {
-    // Pre-flight — not needed for same-origin, but harmless
-    respond(res, 204, {});
+    respond(res, 204, {}, req);
     return;
   }
 
   if (req.method !== 'POST') {
-    respond(res, 405, { error: 'Method not allowed' });
+    respond(res, 405, { error: 'Method not allowed' }, req);
     return;
   }
 
@@ -69,7 +84,7 @@ export default async function handler(
     const raw = await readBody(req);
     body = JSON.parse(raw) as Record<string, unknown>;
   } catch {
-    respond(res, 400, { error: 'Invalid JSON body' });
+    respond(res, 400, { error: 'Invalid JSON body' }, req);
     return;
   }
 
@@ -77,7 +92,7 @@ export default async function handler(
 
   // ── Validate fields ──────────────────────────────────────────────────────────
   if (!isValidEmail(String(to ?? ''))) {
-    respond(res, 400, { error: 'Missing or invalid recipient email' });
+    respond(res, 400, { error: 'Missing or invalid recipient email' }, req);
     return;
   }
 
@@ -86,7 +101,7 @@ export default async function handler(
     !subject.trim() ||
     subject.length > MAX_SUBJECT_LEN
   ) {
-    respond(res, 400, { error: 'Missing or invalid subject' });
+    respond(res, 400, { error: 'Missing or invalid subject' }, req);
     return;
   }
 
@@ -95,7 +110,7 @@ export default async function handler(
     !html.trim() ||
     html.length > MAX_HTML_LEN
   ) {
-    respond(res, 400, { error: 'Missing or invalid html body' });
+    respond(res, 400, { error: 'Missing or invalid html body' }, req);
     return;
   }
 
@@ -107,7 +122,7 @@ export default async function handler(
     // Env not configured — return 200 so the booking is never blocked.
     // The booking is already saved in Firestore at this point.
     console.warn('[send-email] RESEND_API_KEY or EMAIL_FROM not set — email skipped');
-    respond(res, 200, { ok: true, skipped: true, reason: 'Email provider not configured' });
+    respond(res, 200, { ok: true, skipped: true, reason: 'Email provider not configured' }, req);
     return;
   }
 
@@ -133,17 +148,17 @@ export default async function handler(
     });
 
     if (resendRes.ok) {
-      respond(res, 200, { ok: true });
+      respond(res, 200, { ok: true }, req);
       return;
     }
 
     // Resend returned an error — log details server-side, send safe message client-side
     const errData = await resendRes.json().catch(() => ({})) as Record<string, unknown>;
     console.error('[send-email] Resend responded with error', resendRes.status, errData);
-    respond(res, 500, { error: 'Email provider error' });
+    respond(res, 500, { error: 'Email provider error' }, req);
 
   } catch (err) {
     console.error('[send-email] Network error calling Resend:', err);
-    respond(res, 500, { error: 'Internal server error' });
+    respond(res, 500, { error: 'Internal server error' }, req);
   }
 }

@@ -82,25 +82,28 @@ export function BookingModal({ show, onClose }: Props) {
   const maxTickets   = activeTicket?.available ?? 10;
 
   useEffect(() => {
+    // Переходим на форму сразу после авторизации, не дожидаясь следующего рендера
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user && step === 'auth') setStep('form');
   }, [user, step]);
 
   useEffect(() => {
+    // Подставляем телефон из профиля, если он сохранён
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (userProfile?.phone) setPhone(userProfile.phone);
   }, [userProfile]);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    // Сбрасываем все поля при открытии для нового спектакля
     if (!show) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
     setStep(user ? 'form' : 'auth');
     setTickets(1); setSelectedTicket(null); setPayment('on_site');
     setSelectedAccountId(PAYMENT_CONFIG.paymentAccounts[0].id);
     setComment(''); setSubmitError('');
     setAuthEmail(''); setAuthPassword(''); setAuthName(''); setAuthError('');
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (show) document.body.style.overflow = 'hidden';
@@ -144,15 +147,6 @@ export function BookingModal({ show, onClose }: Props) {
       const userName  = user.displayName ?? userProfile?.displayName ?? '';
       const userEmail = user.email ?? userProfile?.email ?? '';
       const showDate  = `${show.day} ${show.month} ${show.year}`;
-
-      if (import.meta.env.DEV) {
-        console.log('[BookingModal] booking recipient debug', {
-          uid:          user.uid,
-          authEmail:    user.email,
-          profileEmail: userProfile?.email,
-          bookingEmail: userEmail,
-        });
-      }
 
       const isBankTransfer   = payment === 'bank_transfer';
       const paymentExpiresAt = isBankTransfer

@@ -31,16 +31,6 @@ export async function createBooking(data: NewBooking): Promise<string> {
   return ref.id;
 }
 
-export async function getUserBookings(userId: string): Promise<Booking[]> {
-  const q = query(collection(db, COLLECTION), where('userId', '==', userId));
-  const sorted = snapshotToBookings(await getDocs(q)).sort((a, b) => {
-    const ta = (a.createdAt as { seconds?: number })?.seconds ?? 0;
-    const tb = (b.createdAt as { seconds?: number })?.seconds ?? 0;
-    return tb - ta;
-  });
-  return sorted;
-}
-
 // Realtime subscription — no composite index required (sorts client-side).
 // Returns an unsubscribe function; call it when the component unmounts.
 export function subscribeToUserBookings(
@@ -63,16 +53,6 @@ export function subscribeToUserBookings(
   );
 }
 
-export async function getShowBookings(showId: string): Promise<Booking[]> {
-  const q = query(collection(db, COLLECTION), where('showId', '==', showId));
-  const sorted = snapshotToBookings(await getDocs(q)).sort((a, b) => {
-    const ta = (a.createdAt as { seconds?: number })?.seconds ?? 0;
-    const tb = (b.createdAt as { seconds?: number })?.seconds ?? 0;
-    return tb - ta;
-  });
-  return sorted;
-}
-
 export async function getAllBookings(filters: { showId?: string } = {}): Promise<Booking[]> {
   const constraints: QueryConstraint[] = [];
   if (filters.showId) constraints.push(where('showId', '==', filters.showId));
@@ -93,8 +73,9 @@ export async function updatePaymentStatus(bookingId: string, paymentStatus: Paym
   await updateDoc(doc(db, COLLECTION, bookingId), { paymentStatus, updatedAt: serverTimestamp() });
 }
 
-// Marks payment as received AND confirms the booking in a single write.
-// Use this instead of calling updatePaymentStatus + updateBookingStatus separately.
+// Одна запись в Firestore: сразу ставит paid + confirmed.
+// Важно: не вызывать updatePaymentStatus и updateBookingStatus по отдельности —
+// иначе два события могут отправить два письма.
 export async function markBookingPaid(bookingId: string): Promise<void> {
   await updateDoc(doc(db, COLLECTION, bookingId), {
     paymentStatus: 'paid',
@@ -104,8 +85,8 @@ export async function markBookingPaid(bookingId: string): Promise<void> {
   });
 }
 
-// Expires a booking: sets paymentStatus='expired', status='cancelled'.
-// Does NOT delete the booking document.
+// Истекшая бронь: paymentStatus='expired', status='cancelled'.
+// Документ не удаляется — история сохраняется.
 export async function expireBooking(bookingId: string): Promise<void> {
   await updateDoc(doc(db, COLLECTION, bookingId), {
     paymentStatus: 'expired',
@@ -114,8 +95,8 @@ export async function expireBooking(bookingId: string): Promise<void> {
   });
 }
 
-// Scans a list of bookings and expires any awaiting_transfer bookings
-// whose paymentExpiresAt has passed. Calls onExpired(id) for each expired booking.
+// Проверяет список броней: если время bank_transfer истекло — аннулирует.
+// onExpired вызывается для каждой аннулированной брони, чтобы обновить локальный стейт.
 export async function expireOverdueBookings(
   bookings: Booking[],
   onExpired: (id: string) => void,
@@ -132,17 +113,12 @@ export async function expireOverdueBookings(
   }
 }
 
-// Returns hours remaining until paymentExpiresAt (floored).
-// Returns null if paymentExpiresAt is not set.
-// Returns a negative number if already expired.
+// Часы до истечения срока оплаты (округлено вниз).
+// null — если срок не задан; отрицательное число — уже истекло.
 export function hoursUntilExpiry(booking: Booking): number | null {
   const expiresMs = getTimestampMs(booking.paymentExpiresAt);
   if (!expiresMs) return null;
   return Math.floor((expiresMs - Date.now()) / (1000 * 60 * 60));
-}
-
-export async function forceBookingPaymentMethod(bookingId: string): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, bookingId), { paymentMethod: 'on_site', updatedAt: serverTimestamp() });
 }
 
 export async function getBookingByTicketCode(ticketCode: string): Promise<Booking | null> {

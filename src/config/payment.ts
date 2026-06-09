@@ -69,4 +69,3 @@ export function getPaymentAccount(id: string | undefined): PaymentAccount {
     ?? PAYMENT_CONFIG.paymentAccounts[0];
 }
 
-export type ManualPaymentMethod = 'bank_transfer' | 'on_site';

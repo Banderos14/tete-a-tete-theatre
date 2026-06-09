@@ -10,6 +10,7 @@ function getPublicSiteUrl(): string {
 
 export async function generateTicketQR(ticketCode: string): Promise<string> {
   const base = getPublicSiteUrl();
+  // Формат /#/ — HashRouter: без него Vercel отдаст 404 при прямом переходе.
   const url = `${base}/#/admin/checkin?ticket=${encodeURIComponent(ticketCode)}`;
   return QRCode.toDataURL(url, {
     width: 280,
