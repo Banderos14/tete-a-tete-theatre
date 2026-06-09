@@ -112,8 +112,10 @@
 
 -+- /admin защищён на уровне клиента
 -+- firestore.rules — рекомендованный файл создан (развернуть вручную)
+-+- Firebase Auth → Authorized domains: добавлены theatre-teteatete.fr и www.theatre-teteatete.fr
 -?- Развернуть firestore.rules: firebase deploy --only firestore:rules
     (rules написаны, но не задеплоены — если тест-режим истёк, reads будут blocked)
+-?- Проверить Google Sign In и Email/Password на production-домене theatre-teteatete.fr
 --- Content Security Policy (vercel.json)
 
 ## Email / Уведомления
