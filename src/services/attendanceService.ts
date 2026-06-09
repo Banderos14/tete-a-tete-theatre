@@ -35,7 +35,8 @@ export function shouldMarkAsAttended(booking: Booking): boolean {
   return end < new Date();
 }
 
-// Pure computed status — use this in UI to show attended even before Firestore is updated.
+// Вычисленный статус — используется в UI, чтобы сразу показать "посещено"
+// без ожидания обновления Firestore (AdminPage пишет async, ProfileDrawer считает сам).
 export function computedIsAttended(booking: Booking): boolean {
   return booking.status === 'attended' || shouldMarkAsAttended(booking);
 }

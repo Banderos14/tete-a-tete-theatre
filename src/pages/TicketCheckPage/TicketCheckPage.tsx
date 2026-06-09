@@ -10,8 +10,6 @@ import styles from './TicketCheckPage.module.scss';
 
 type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'error';
 
-const IS_DEV = import.meta.env.DEV;
-
 export function TicketCheckPage() {
   const navigate       = useNavigate();
   const [searchParams] = useSearchParams();
@@ -42,12 +40,12 @@ export function TicketCheckPage() {
   }, [loading, isAdmin, navigate]);
 
   // ── Auto-lookup when ?ticket= is present in the URL ────────────────────────
+  // urlLookupDone защищает от двойного запроса при StrictMode (двойной mount в dev).
   useEffect(() => {
     if (loading || !isAdmin || !ticketFromUrl || urlLookupDone.current) return;
     urlLookupDone.current = true;
 
     const code = parseTicketCodeFromScan(ticketFromUrl);
-    if (IS_DEV) console.log('[TicketCheck] url raw:', ticketFromUrl, '→ parsed:', code);
 
     if (!code) {
       setErrorMsg('QR-код не похож на билет Théâtre Tête-à-Tête.');
@@ -63,7 +61,6 @@ export function TicketCheckPage() {
           setScanState('error');
           return;
         }
-        if (IS_DEV) console.log('[TicketCheck] booking', { id: found.id, paymentMethod: found.paymentMethod, paymentStatus: found.paymentStatus, status: found.status });
         setBooking(found);
         setScanState('found');
       })
@@ -98,10 +95,7 @@ export function TicketCheckPage() {
           }
           setScanState('loading');
 
-          if (IS_DEV) console.log('[TicketCheck] raw scan:', text);
-
           const code = parseTicketCodeFromScan(text);
-          if (IS_DEV) console.log('[TicketCheck] parsed:', code);
 
           if (!code) {
             setErrorMsg('QR-код не похож на билет Théâtre Tête-à-Tête.');
@@ -115,7 +109,6 @@ export function TicketCheckPage() {
             setScanState('error');
             return;
           }
-          if (IS_DEV) console.log('[TicketCheck] booking', { id: found.id, paymentMethod: found.paymentMethod, paymentStatus: found.paymentStatus, status: found.status });
           setBooking(found);
           setScanState('found');
         } catch {
@@ -125,7 +118,6 @@ export function TicketCheckPage() {
       },
       () => {},
     ).catch((err) => {
-      if (IS_DEV) console.log('[TicketCheck] camera error:', err);
       scannerRef.current = null;
       scanner.clear();
       const msg = String(err).toLowerCase();
@@ -158,8 +150,6 @@ export function TicketCheckPage() {
       const text = await scanner.scanFile(file, false);
       scanner.clear();
 
-      if (IS_DEV) console.log('[TicketCheck] file scan result:', text);
-
       const code = parseTicketCodeFromScan(text);
       if (!code) {
         setErrorMsg('QR-код не похож на билет Théâtre Tête-à-Tête.');
@@ -173,7 +163,6 @@ export function TicketCheckPage() {
         setScanState('error');
         return;
       }
-      if (IS_DEV) console.log('[TicketCheck] booking', { id: found.id, paymentMethod: found.paymentMethod, paymentStatus: found.paymentStatus, status: found.status });
       setBooking(found);
       setScanState('found');
     } catch {
@@ -242,7 +231,12 @@ export function TicketCheckPage() {
     );
   }
 
-  // ── Derived booking flags ─────────────────────────────────────────────────────
+  // ── Производные флаги билета ─────────────────────────────────────────────────
+  // 4 сценария при показе найденной брони:
+  //  1. isAttended       — билет уже использован
+  //  2. isOnSiteUnpaid   — on_site, оплата наличными на входе
+  //  3. isPaidValid      — оплачен + подтверждён, разрешить вход
+  //  4. остальное        — билет недействителен
   const b = booking;
 
   const isOnSiteUnpaid       = b?.paymentMethod === 'on_site'       && b.paymentStatus === 'not_paid';

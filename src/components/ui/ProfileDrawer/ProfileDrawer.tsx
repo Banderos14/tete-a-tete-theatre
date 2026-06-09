@@ -123,6 +123,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setPhone(userProfile.phone ?? '');
     setMessenger(userProfile.phoneMessenger ?? 'whatsapp');
     const social = userProfile.socialLink ?? '';
+    // Старый баг: Facebook access token сохранялся как socialLink — чистим.
     const isBadUrl = social.startsWith('https://facebook.com/EAA');
     setSocialLink(isBadUrl ? '' : social);
     if (isBadUrl) saveProfile({ socialLink: '' });
@@ -144,26 +145,12 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setHistoryLoading(true);
     setHistoryError(null);
 
-    if (import.meta.env.DEV) {
-      console.log('[ProfileDrawer] subscribing for uid:', user.uid);
-    }
-
     const unsub = subscribeToUserBookings(
       user.uid,
       (data) => {
         setBookings(data);
         setHistoryLoading(false);
         setHistoryError(null);
-
-        if (import.meta.env.DEV) {
-          console.log('[ProfileDrawer] received', data.length, 'bookings for uid:', user.uid);
-          data.forEach(b => {
-            const isAtt = computedIsAttended(b);
-            const showsTicket = b.paymentStatus === 'paid' && b.status === 'confirmed' && !isAtt && !!b.ticketCode;
-            console.log(`  booking ${b.id}: status=${b.status} pay=${b.paymentStatus}` +
-              ` attended=${isAtt} hasCode=${!!b.ticketCode} showsTicketCard=${showsTicket}`);
-          });
-        }
 
         markEligibleBookingsAsAttended(data, (id) => {
           setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
@@ -548,12 +535,14 @@ export function ProfileDrawer({ open, onClose }: Props) {
                 ) : (
                   <div className={styles.ticketList}>
                     {activeBookings.map(b => {
+                      // on_site-билет показывается сразу, даже без оплаты:
+                      // деньги берут на месте, QR нужен уже при входе.
                       const isQrTicket = (
                         (b.paymentStatus === 'paid' && b.status === 'confirmed') ||
                         (b.paymentMethod === 'on_site' && b.paymentStatus === 'not_paid')
                       ) && !!b.ticketCode;
                       return isQrTicket ? (
-                        <TicketCardSlot
+                        <TicketCard
                           key={b.id}
                           booking={b}
                           isExpanded={expandedTicketId === b.id}
@@ -750,13 +739,6 @@ const STATUS_LABEL_KEY: Record<BookingStatus, keyof T['profile']> = {
   cancelled: 'statusCancelled',
   attended:  'statusAttended',
 };
-
-// Thin wrapper so the parent can pass isExpanded/onToggle to TicketCard
-function TicketCardSlot({
-  booking, isExpanded, onToggle,
-}: { booking: Booking; isExpanded: boolean; onToggle: () => void }) {
-  return <TicketCard booking={booking} isExpanded={isExpanded} onToggle={onToggle} />;
-}
 
 function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
   const attended  = bookings.filter(computedIsAttended).length;

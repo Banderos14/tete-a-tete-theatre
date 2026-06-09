@@ -87,12 +87,12 @@
 -+- Код брони в карточке
 -+- Прогресс-бар: каждое 5-е посещение — подарок (5 точек, заполняются)
 -+- Явные статусные сообщения: «Бронь подтверждена», «Бронь отменена», «Оплата получена»
--+- ProfileDrawer redesigned as dashboard modal (centered, max-width 1050px, 88vh)
--+- Sidebar: avatar, name, email, nav sections (Личные данные / Контакты / Соцсети / Уведомления / Мои билеты / Мои спектакли / Выход)
--+- TicketCard compact/expanded: collapsed header (title + date + code + status) → expanded (QR + venue details)
--+- QR visible only on expanded ticket (lazy-loaded on first expand)
--+- One expanded ticket at a time (previous collapses on new open)
--?- Mobile profile dashboard polish (tabs work, further refinement possible)
+-+- ProfileDrawer переделан как dashboard-модал (по центру, max-width 1050px, 88vh)
+-+- Sidebar: аватар, имя, email, навигация по секциям (Личные данные / Контакты / Соцсети / Уведомления / Мои билеты / Мои спектакли / Выход)
+-+- TicketCard compact/expanded: свёрнутый заголовок (название + дата + код + статус) → раскрытый (QR + детали)
+-+- QR видно только в раскрытой карточке (lazy-loaded при первом открытии)
+-+- Одновременно раскрыта одна карточка (предыдущая сворачивается)
+-?- Мобильный вид личного кабинета — вкладки работают, полировка возможна
 --- День рождения → поздравление от театра + подарок
 --- Привязка соц сети через кнопку входа, а не вручную
 
@@ -112,7 +112,7 @@
 
 -+- /admin защищён на уровне клиента
 -+- firestore.rules — рекомендованный файл создан (развернуть вручную)
--!- Развернуть firestore.rules: firebase deploy --only firestore:rules
+-?- Развернуть firestore.rules: firebase deploy --only firestore:rules
     (rules написаны, но не задеплоены — если тест-режим истёк, reads будут blocked)
 --- Content Security Policy (vercel.json)
 
@@ -141,15 +141,11 @@
 -+- AdminPage: выбор спектакля, подтверждение, результат (sent / errors)
 -+- Защита от двойного клика: кнопка disabled пока идёт отправка
 
-Проверить вручную:
--?- Реальная отправка через Resend: добавить RESEND_API_KEY и EMAIL_FROM в Vercel Dashboard
--?- Отправка на разные email после подключения собственного домена в Resend
-    (с onboarding@resend.dev письма идут только на email владельца аккаунта Resend)
-
-Настройка Resend:
-    RESEND_API_KEY  → Resend Dashboard → API Keys → добавить в Vercel Dashboard
-    EMAIL_FROM      → onboarding@resend.dev (тест) или billets@yourdomain.fr (прод)
-    Добавлять только в Vercel Dashboard → Settings → Environment Variables (не во frontend!)
+Настройка Resend (выполнено):
+-+- RESEND_API_KEY добавлен в Vercel Dashboard → Settings → Environment Variables
+-+- EMAIL_FROM = contact@theatre-teteatete.fr (домен подтверждён в Resend, Status: Verified)
+-+- Домен theatre-teteatete.fr верифицирован в Resend: DKIM, SPF и MX настроены
+-+- Отправка идёт на любой адрес, не только на аккаунт Resend
 
 Не делать сейчас:
 --- Поздравление с днём рождения + подарок
@@ -160,7 +156,7 @@
 -+- ticketCode генерируется при бронировании (формат XXXX-XXXX)
 -+- ticketCode хранится в Firestore вместе с бронью
 -+- ticketCode отображается в истории бронирований (личный кабинет)
--+- ticketService.ts: архитектура PDF готова (jspdf, закомментировано)
+-+- PDF-билет реализован: кнопка "Скачать PDF" в expanded TicketCard (ticketPdfService.ts, jspdf, lazy chunk)
 
 ## QR Ticket System
 
@@ -172,14 +168,12 @@
 -+- QR содержит URL проверки: /admin/checkin?ticket=XXXX-XXXX (читается обычной камерой iPhone)
 -+- /admin/checkin поддерживает ?ticket= — автоматически ищет бронь, не запускает сканер
 -+- Обратная совместимость: сканер парсит и старый JSON, и новый URL, и raw-код
--+- PDF-билет: кнопка "Скачать PDF" в expanded TicketCard (ticketPdfService.ts, jspdf, lazy chunk)
 -+- PDF содержит QR, ticketCode, детали спектакля, адрес, имя зрителя
 -+- PDF всегда на латинице/французском: кириллица транслитерируется, "???" исключены
 -+- TicketCard: плавное раскрытие и закрытие (grid-template-rows + opacity)
 -+- ProfileDrawer: плавное открытие и закрытие (visibility + opacity на overlay и modal)
-
--?- Apple Wallet
--?- Google Wallet
+--- Apple Wallet
+--- Google Wallet
 
 ## i18n
 
@@ -204,4 +198,23 @@
 -+- iframe-заголовки настроены
 --- Cloudflare — DNS, безопасность, кэш, аналитика
 --- Мониторинг ошибок (Sentry)
---- Custom domain
+--- Custom domain (уже есть: theatre-teteatete.fr зарегистрирован в OVHcloud, подключён к Vercel)
+
+## Email & Domain Setup (June 2026)
+
+-+- Домен theatre-teteatete.fr зарегистрирован через OVHcloud
+-+- Домен подключён к Vercel (основной сайт)
+-+- Основной email театра: contact@theatre-teteatete.fr
+-+- Почтовый ящик создан и протестирован через OVH Zimbra Starter (15 GB)
+-+- Входящие письма: OVH Zimbra Webmail
+-+- Исходящие письма с сайта: Resend (домен theatre-teteatete.fr верифицирован)
+-+- DNS-записи Resend настроены: DKIM (resend._domainkey), SPF (send), MX (send)
+
+### Important
+
+Если в будущем потребуется сменить почтового провайдера или переносить домен,
+необходимо сохранить DNS-записи Resend (DKIM / SPF / MX), иначе перестанет работать
+отправка писем с сайта:
+  - resend._domainkey  (DKIM)
+  - send MX
+  - send SPF
