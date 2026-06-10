@@ -30,7 +30,6 @@ export function TicketCheckPage() {
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const urlLookupDone = useRef(false);
 
-  // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (loading) return;
     if (!isAdmin) {
@@ -39,8 +38,7 @@ export function TicketCheckPage() {
     }
   }, [loading, isAdmin, navigate]);
 
-  // ── Auto-lookup when ?ticket= is present in the URL ────────────────────────
-  // urlLookupDone защищает от двойного запроса при StrictMode (двойной mount в dev).
+  // Защищает от двойного запроса при StrictMode.
   useEffect(() => {
     if (loading || !isAdmin || !ticketFromUrl || urlLookupDone.current) return;
     urlLookupDone.current = true;
@@ -70,7 +68,6 @@ export function TicketCheckPage() {
       });
   }, [loading, isAdmin, ticketFromUrl]);
 
-  // ── Camera scanner lifecycle ────────────────────────────────────────────────
   function startScanning() {
     setCameraError('');
     setBooking(null);
@@ -138,7 +135,6 @@ export function TicketCheckPage() {
     };
   }, [scanState]);
 
-  // ── File-based QR scan ───────────────────────────────────────────────────────
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -171,8 +167,6 @@ export function TicketCheckPage() {
       setScanState('error');
     }
   }
-
-  // ── Actions ─────────────────────────────────────────────────────────────────
 
   async function handleCashReceived() {
     if (!booking) return;
@@ -214,7 +208,6 @@ export function TicketCheckPage() {
     }
   }
 
-  // ── Render guards ────────────────────────────────────────────────────────────
   if (loading) {
     return <div className={styles.centered}><span className={styles.spinner} /></div>;
   }
@@ -231,12 +224,7 @@ export function TicketCheckPage() {
     );
   }
 
-  // ── Производные флаги билета ─────────────────────────────────────────────────
-  // 4 сценария при показе найденной брони:
-  //  1. isAttended       — билет уже использован
-  //  2. isOnSiteUnpaid   — on_site, оплата наличными на входе
-  //  3. isPaidValid      — оплачен + подтверждён, разрешить вход
-  //  4. остальное        — билет недействителен
+  // Сценарии проверки билета: использован, оплата на месте, валиден или недействителен.
   const b = booking;
 
   const isOnSiteUnpaid       = b?.paymentMethod === 'on_site'       && b.paymentStatus === 'not_paid';
@@ -261,7 +249,7 @@ export function TicketCheckPage() {
 
   return (
     <div className={styles.page}>
-      {/* Hidden container for file-based QR scanning — must always be in DOM */}
+      {/* Контейнер нужен html5-qrcode для сканирования из файла. */}
       <div id="qr-file-scanner" style={{ display: 'none' }} />
 
       <div className={styles.topBar}>
@@ -271,7 +259,6 @@ export function TicketCheckPage() {
         </button>
       </div>
 
-      {/* ── Idle: экран до старта ─────────────────────────────────────────────── */}
       {scanState === 'idle' && !ticketFromUrl && (
         <div className={styles.idleBlock}>
           <div className={styles.qrIconWrap}>
@@ -314,7 +301,6 @@ export function TicketCheckPage() {
         </div>
       )}
 
-      {/* ── Scanner: активная камера ──────────────────────────────────────────── */}
       {scanState === 'scanning' && (
         <div className={styles.scanBlock}>
           <p className={styles.scanActiveHint}>Наведите QR-код в рамку</p>
@@ -323,12 +309,10 @@ export function TicketCheckPage() {
         </div>
       )}
 
-      {/* ── Spinner ──────────────────────────────────────────────────────────── */}
       {(scanState === 'loading' || operating) && (
         <div className={styles.centered}><span className={styles.spinner} /></div>
       )}
 
-      {/* ── Error ────────────────────────────────────────────────────────────── */}
       {scanState === 'error' && (
         <div className={styles.cardWrap}>
           <div className={`${styles.card} ${styles.cardInvalid}`}>
@@ -348,10 +332,8 @@ export function TicketCheckPage() {
         </div>
       )}
 
-      {/* ── Found ────────────────────────────────────────────────────────────── */}
       {scanState === 'found' && b && !operating && (() => {
 
-        // 1. Билет уже использован ──────────────────────────────────────────────
         if (isAttended) {
           return (
             <div className={styles.cardWrap}>
@@ -390,7 +372,6 @@ export function TicketCheckPage() {
           );
         }
 
-        // 2. on_site, не оплачено — взять наличные ──────────────────────────────
         if (isOnSiteUnpaid) {
           return (
             <div className={styles.cardWrap}>
@@ -452,7 +433,6 @@ export function TicketCheckPage() {
           );
         }
 
-        // 3. Оплачен и подтверждён — разрешить вход ─────────────────────────────
         if (isPaidValid) {
           return (
             <div className={styles.cardWrap}>
@@ -504,7 +484,6 @@ export function TicketCheckPage() {
           );
         }
 
-        // 4 + 5. Недействителен ────────────────────────────────────────────────
         return (
           <div className={styles.cardWrap}>
             <div className={`${styles.card} ${styles.cardInvalid}`}>
@@ -543,7 +522,6 @@ export function TicketCheckPage() {
           </div>
         );
       })()}
-      {/* ── Confirm: Оплачено (on_site) ── */}
       <ConfirmDialog
         isOpen={confirmType === 'cash'}
         title="Подтвердить оплату?"
@@ -558,7 +536,6 @@ export function TicketCheckPage() {
         }}
       />
 
-      {/* ── Confirm: Отметить посещение ── */}
       <ConfirmDialog
         isOpen={confirmType === 'attended'}
         title="Отметить посещение?"
@@ -575,8 +552,6 @@ export function TicketCheckPage() {
     </div>
   );
 }
-
-// ── Icons ─────────────────────────────────────────────────────────────────────
 
 function QrScanIcon() {
   return (
