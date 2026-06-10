@@ -5,8 +5,22 @@
 -+- Мобильная версия (375px–430px)
 -+- Планшеты и iPad
 -+- Hero — нормально выглядит на телефоне
+-+- Header / Navbar адаптирован под mobile
 -+- Бургер-меню с навигацией, языком, темой и входом
+-+- Burger menu содержит навигацию, язык, тему и вход/профиль
+-+- AuthModal адаптирована под mobile
+-+- BookingModal адаптирована под mobile
+-+- ProfileDrawer dashboard адаптирован под mobile
+-+- TicketCard адаптирован под mobile
+-+- TicketCheckPage адаптирована под mobile
+-+- Mobile hero polish
+-+- Mobile burger menu polish
+-+- Mobile afisha padding / carousel touch polish
+-+- Mobile show modal scroll lock
+-+- Mobile contacts padding / email wrap / map fix
+-+- Mobile footer centered layout
 -?- Горизонтальный скролл — проверить на реальном телефоне
+-?- Проверить на реальном iPhone 375–430px
 -?- Marquee — читаемость на маленьком экране
 --- About — упростить сетку на мобильном
 --- Footer — проверить на экране 320px
@@ -249,3 +263,8 @@
 
 -+- Комментарии очищены от декоративных разделителей
 -+- Border-radius увеличен и вынесен в общую систему переменных
+-+- BookingModal разделён на BookingFormStep и BookingSuccessStep
+-+- Форма бронирования возвращена к обычному form layout
+-+- Ticket-like дизайн оставлен только для success step
+-+- Остаток мест скрыт из пользовательского UI
+-+- Success-модалка бронирования упрощена: реквизиты не дублируются, пользователь получает их по email

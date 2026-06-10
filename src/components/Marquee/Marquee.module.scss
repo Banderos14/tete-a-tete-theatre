@@ -23,10 +23,21 @@
   letter-spacing: 0.3em;
   text-transform: uppercase;
   animation: marqueeSlide 30s linear infinite;
+  will-change: transform;
 
   span {
     display: inline-flex;
     align-items: center;
     gap: 60px;
+  }
+
+  @media (max-width: 900px) {
+    gap: 36px;
+    padding: 12px 0;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    animation-duration: 16s;
+
+    span { gap: 36px; }
   }
 }

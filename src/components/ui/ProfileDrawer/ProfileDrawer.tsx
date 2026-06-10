@@ -355,6 +355,20 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
         {/* ── Main content ──────────────────────────────────────────────────── */}
         <div className={styles.mainContent}>
+          <div className={styles.mobileHeader}>
+            <div className={styles.mobileIdentity}>
+              <div className={styles.mobileAvatar}>
+                {photoURL
+                  ? <img src={photoURL} alt={headerName} referrerPolicy="no-referrer" />
+                  : <span>{getInitials(headerName)}</span>
+                }
+              </div>
+              <div className={styles.mobileIdentityText}>
+                <p className={styles.mobileName}>{headerName || '—'}</p>
+                <p className={styles.mobileEmail}>{email}</p>
+              </div>
+            </div>
+          </div>
 
           {/* Close button */}
           <button

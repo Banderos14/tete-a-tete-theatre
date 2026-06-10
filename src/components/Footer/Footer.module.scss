@@ -16,6 +16,13 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 24px;
+
+  @include mixins.mobile {
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    gap: 14px;
+  }
 }
 
 .mark {
@@ -26,6 +33,7 @@
   font-size: 22px;
   letter-spacing: 0.1em;
   text-decoration: none;
+  min-width: 0;
 
   img {
     height: 44px;
@@ -33,10 +41,31 @@
 
     [data-theme='light'] & { filter: none; }
   }
+
+  @include mixins.mobile {
+    flex-direction: column;
+    gap: 10px;
+    font-size: 20px;
+    letter-spacing: 0.08em;
+
+    img { height: 50px; }
+
+    > span:not(.mobileBrand) {
+      display: none;
+    }
+  }
 }
 
 .dot {
   color: var(--accent);
+}
+
+.mobileBrand {
+  display: none;
+
+  @include mixins.mobile {
+    display: inline;
+  }
 }
 
 // ── Center block: copyright + credit ─────────────────────────────────────────
@@ -49,12 +78,23 @@
   min-width: 0;
 
   @include mixins.mobile { align-items: flex-start; }
+
+  @include mixins.mobile {
+    align-items: center;
+    gap: 6px;
+  }
 }
 
 .meta {
   @include mixins.mono(10px, 0.18em);
   color: var(--fg-mute);
   text-transform: uppercase;
+  overflow-wrap: anywhere;
+
+  @include mixins.mobile {
+    line-height: 1.45;
+    letter-spacing: 0.12em;
+  }
 }
 
 .credit {
@@ -63,6 +103,13 @@
   letter-spacing: 0.04em;
   opacity: 0.7;
   font-family: var(--font-body);
+
+  @include mixins.mobile {
+    white-space: nowrap;
+    max-width: 100%;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
 }
 
 .backTop {
@@ -74,6 +121,17 @@
   color: var(--fg-dim);
   cursor: pointer;
   transition: color 0.25s ease;
+  min-height: 44px;
 
-  &:hover { color: var(--accent); }
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { color: var(--accent); }
+  }
+
+  @include mixins.mobile {
+    justify-content: center;
+    margin-top: 4px;
+    padding: 10px 18px;
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
+  }
 }

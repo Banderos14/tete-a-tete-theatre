@@ -2,6 +2,17 @@
 
 .contacts {
   background: var(--bg);
+  overflow-x: clip;
+
+  @include mixins.mobile {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  @include mixins.small {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
 }
 
 .grid {
@@ -12,6 +23,10 @@
   margin: 0 auto;
 
   @include mixins.mobile { grid-template-columns: 1fr; }
+
+  @include mixins.small {
+    gap: 36px;
+  }
 }
 
 .block {
@@ -31,9 +46,23 @@
   font-weight: 500;
   line-height: 1.2;
   letter-spacing: -0.01em;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 
-  a { transition: color 0.25s ease; }
-  a:hover { color: var(--accent); }
+  a {
+    transition: color 0.25s ease;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    a:hover { color: var(--accent); }
+  }
+
+  @include mixins.small {
+    font-size: clamp(21px, 6vw, 25px);
+  }
 }
 
 .secondary {
@@ -46,6 +75,11 @@
   display: flex;
   gap: 10px;
   margin-top: 24px;
+  flex-wrap: wrap;
+
+  @include mixins.mobile {
+    gap: 12px;
+  }
 }
 
 .socialIcon {
@@ -57,10 +91,17 @@
   place-items: center;
   transition: all 0.3s ease;
 
-  &:hover {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
+  @include mixins.mobile {
+    width: 48px;
+    height: 48px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
   }
 
   svg { width: 16px; height: 16px; }
@@ -74,14 +115,22 @@
   border-radius: 4px;
   overflow: hidden;
   min-height: 480px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 
-  @include mixins.mobile { min-height: 320px; }
+  @include mixins.mobile {
+    min-height: 360px;
+    border-radius: 12px;
+  }
 }
 
 .mapFrame {
   flex: 1;
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .mapOverlay {
@@ -92,12 +141,20 @@
   justify-content: space-between;
   border-top: 1px solid var(--line);
   flex-shrink: 0;
+
+  @include mixins.small {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
 }
 
 .mapAddr {
   @include mixins.mono(11px, 0.12em);
   color: var(--fg-dim);
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .mapLink {
@@ -108,6 +165,9 @@
   align-items: center;
   gap: 8px;
   transition: color 0.25s ease;
+  min-height: 40px;
 
-  &:hover { color: var(--accent); }
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { color: var(--accent); }
+  }
 }

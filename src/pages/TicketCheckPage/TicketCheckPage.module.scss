@@ -1,11 +1,16 @@
 @use '../../styles/mixins';
 
 .page {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   padding: 32px 40px 60px;
+  overflow-x: hidden;
 
   @include mixins.mobile { padding: 20px 16px 40px; }
+
+  @include mixins.small {
+    padding: max(16px, env(safe-area-inset-top)) 14px max(28px, env(safe-area-inset-bottom));
+  }
 }
 
 .topBar {
@@ -14,6 +19,12 @@
   justify-content: space-between;
   margin-bottom: 40px;
   gap: 16px;
+
+  @include mixins.small {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: 26px;
+  }
 }
 
 .pageTitle {
@@ -35,6 +46,11 @@
   transition: color 0.2s, border-color 0.2s;
 
   &:hover { color: var(--fg); border-color: var(--accent); }
+
+  @include mixins.small {
+    min-height: 44px;
+    padding: 10px 18px;
+  }
 }
 
 .centered {
@@ -45,12 +61,17 @@
 
 .idleBlock {
   max-width: 400px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   padding-top: 24px;
+
+  @include mixins.small {
+    padding-top: 8px;
+  }
 }
 
 .qrIconWrap {
@@ -159,6 +180,7 @@
 
 .scanBlock {
   max-width: 480px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -181,12 +203,24 @@
   border: 1px solid var(--line);
   border-radius: 32px;
   overflow: hidden;
+  min-width: 0;
 
   // Прячем текст, который добавляет библиотека.
   font-size: 0;
 
   // Возвращаем нормальный размер для video и canvas.
   video, canvas { font-size: 14px; }
+
+  @include mixins.small {
+    max-width: 100%;
+    border-radius: 20px;
+
+    > div,
+    video,
+    canvas {
+      max-width: 100% !important;
+    }
+  }
 }
 
 .hint {
@@ -198,6 +232,7 @@
 
 .cardWrap {
   max-width: 520px;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -205,6 +240,10 @@
   border-radius: 32px;
   overflow: hidden;
   margin-bottom: 20px;
+
+  @include mixins.small {
+    border-radius: 22px;
+  }
 }
 
 .cardValid {
@@ -233,6 +272,12 @@
   gap: 14px;
   padding: 22px 24px 18px;
   border-bottom: 1px solid var(--line);
+
+  @include mixins.small {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 18px 16px 16px;
+  }
 }
 
 .cardIcon {
@@ -247,6 +292,12 @@
   font-weight: 600;
   letter-spacing: 0.07em;
   text-transform: uppercase;
+  line-height: 1.35;
+
+  @include mixins.small {
+    font-size: 15px;
+    overflow-wrap: anywhere;
+  }
 }
 
 .cardStatusValid   { color: #4caf50; }
@@ -259,6 +310,11 @@
   font-size: 13px;
   color: var(--fg-dim);
   line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  @include mixins.small {
+    padding: 14px 16px;
+  }
 }
 
 .cardDetails {
@@ -271,8 +327,16 @@
   gap: 16px;
   padding: 12px 24px;
   border-bottom: 1px solid var(--line);
+  min-width: 0;
 
   &:last-child { border-bottom: none; }
+
+  @include mixins.small {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 16px;
+  }
 }
 
 .cardLabel {
@@ -283,12 +347,19 @@
   color: var(--fg-mute);
   min-width: 110px;
   flex-shrink: 0;
+
+  @include mixins.small {
+    min-width: 0;
+  }
 }
 
 .cardValue {
   font-size: 14px;
   color: var(--fg);
   line-height: 1.4;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .cardValueReason {
@@ -306,6 +377,7 @@
   font-size: 12px;
   letter-spacing: 0.06em;
   color: #e08a00;
+  line-height: 1.4;
 }
 
 .mono {
@@ -330,6 +402,7 @@
   border: 1px solid rgba(33, 150, 243, 0.3);
   transition: background 0.2s;
   width: 100%;
+  min-height: 52px;
 
   &:hover:not(:disabled) { background: rgba(33, 150, 243, 0.24); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -357,6 +430,7 @@
   color: #fff;
   transition: background 0.2s;
   width: 100%;
+  min-height: 52px;
 
   &:hover { background: var(--accent-bright, #c00); }
 }
@@ -372,6 +446,7 @@
   border: 1px solid rgba(76, 175, 80, 0.3);
   transition: background 0.2s;
   width: 100%;
+  min-height: 52px;
 
   &:hover:not(:disabled) { background: rgba(76, 175, 80, 0.24); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -386,6 +461,7 @@
   border: 1px solid var(--line);
   color: var(--fg-mute);
   transition: color 0.2s, border-color 0.2s;
+  min-height: 46px;
 
   &:hover { color: var(--fg); border-color: var(--line-strong); }
 }
@@ -401,6 +477,7 @@
   transition: color 0.2s, border-color 0.2s;
   width: 100%;
   text-align: center;
+  min-height: 50px;
 
   &:hover { color: var(--fg); border-color: var(--line-strong); }
 }

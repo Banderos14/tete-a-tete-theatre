@@ -19,6 +19,14 @@
   flex-direction: column;
   gap: 14px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  @media (max-width: 600px) {
+    width: calc(100% - 32px);
+    max-width: none;
+    padding: 24px 20px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+  }
 }
 
 .title {
@@ -34,6 +42,7 @@
   font-size: 14px;
   color: var(--fg-dim);
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .actions {
@@ -41,6 +50,10 @@
   gap: 10px;
   justify-content: flex-end;
   margin-top: 6px;
+
+  @media (max-width: 600px) {
+    flex-direction: column-reverse;
+  }
 }
 
 .cancelBtn {
@@ -54,6 +67,7 @@
   color: var(--fg-mute);
   transition: color 0.2s, border-color 0.2s;
   flex-shrink: 0;
+  min-height: 44px;
 
   &:hover:not(:disabled) { color: var(--fg); border-color: var(--line-strong); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -70,6 +84,7 @@
   color: #fff;
   transition: background 0.2s, opacity 0.2s;
   flex-shrink: 0;
+  min-height: 44px;
 
   &:hover:not(:disabled) { background: var(--accent-bright, #c00); }
   &:disabled { opacity: 0.6; cursor: not-allowed; }

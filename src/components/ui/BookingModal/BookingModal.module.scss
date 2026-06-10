@@ -10,16 +10,42 @@
   display: grid;
   place-items: center;
   padding: 20px;
+  overflow: hidden;
+
+  @include mixins.small {
+    place-items: end center;
+    padding: 0;
+  }
 }
 
 .modal {
   position: relative;
   background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: 40px;
+  border-radius: 6px;
   width: 100%;
   max-width: 820px;
+  max-height: calc(100dvh - 40px);
   overflow: hidden;
+
+  @include mixins.mobile {
+    max-width: min(680px, 100%);
+    max-height: calc(100dvh - 24px);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @include mixins.small {
+    max-width: none;
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 6px 6px 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
 }
 
 .closeBtn {
@@ -37,18 +63,42 @@
 
   &:hover { color: var(--fg); }
   svg { width: 16px; height: 16px; }
+
+  @include mixins.small {
+    top: 10px;
+    right: 10px;
+    width: 44px;
+    height: 44px;
+    background: rgba(0, 0, 0, 0.22);
+    color: #fff;
+
+    [data-theme='light'] & {
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--fg);
+    }
+
+    svg { width: 18px; height: 18px; }
+  }
 }
 
-// Шаг авторизации: 280px левая панель + форма справа
+// ── Auth step ────────────────────────────────────────────────────────────
+
 .authWrap {
   display: grid;
   grid-template-columns: 280px 1fr;
   min-height: 480px;
+  max-height: inherit;
+  overflow: hidden;
 
-  @include mixins.mobile { grid-template-columns: 1fr; min-height: 0; }
+  @include mixins.mobile {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
-// Левая цветная полоса
 .authShowStrip {
   display: flex;
   flex-direction: column;
@@ -57,6 +107,13 @@
   gap: 14px;
   padding: 40px 24px;
   text-align: center;
+
+  @include mixins.mobile {
+    min-height: 132px;
+    padding: 26px 58px 22px 22px;
+    align-items: flex-start;
+    text-align: left;
+  }
 }
 
 .authGlyph {
@@ -83,7 +140,6 @@
   text-transform: uppercase;
 }
 
-// Правая форма
 .authBody {
   padding: 40px 48px;
   display: flex;
@@ -93,6 +149,8 @@
   overflow-y: auto;
 
   @include mixins.mobile { border-left: none; border-top: 1px solid var(--line); padding: 28px 24px; }
+
+  @include mixins.small { padding: 24px 20px max(24px, env(safe-area-inset-bottom)); }
 }
 
 .authTitle {
@@ -118,6 +176,7 @@
   justify-content: center;
   gap: 8px;
   padding: 11px 16px;
+  min-height: 46px;
   background: #fff;
   color: #3c4043;
   border: 1px solid #dadce0;
@@ -180,12 +239,154 @@
   gap: 10px;
 }
 
-// Шаг выбора: 310px левая панель + форма справа
+// ── Shared section / label ───────────────────────────────────────────────
+
+.section {
+  padding: 18px 24px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+
+  @include mixins.small {
+    padding: 16px 20px;
+  }
+}
+
+.sectionLabel {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  margin-bottom: 10px;
+}
+
+// ── Loyalty block ────────────────────────────────────────────────────────
+
+.loyaltyBlock {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 20px;
+}
+
+.loyaltyTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 6px;
+  letter-spacing: 0.02em;
+}
+
+.loyaltyRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--fg-mute);
+  line-height: 1.7;
+  font-family: var(--font-mono);
+  gap: 12px;
+
+  span:last-child {
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  &.loyaltyRowTotal {
+    color: var(--fg);
+    font-weight: 700;
+    font-size: 13px;
+    border-top: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    margin-top: 4px;
+    padding-top: 4px;
+  }
+}
+
+.loyaltyStrike {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+// ── Form layout ──────────────────────────────────────────────────────────
+
+.formBody {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+
+  .section {
+    padding-left: 28px;
+    padding-right: 28px;
+
+    @include mixins.small { padding-left: 20px; padding-right: 20px; }
+  }
+}
+
+.formHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+
+  @include mixins.small { padding: 16px 20px; }
+}
+
+.formHeaderGlyph {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.formHeaderInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.formHeaderTitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--fg);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.formHeaderMeta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.10em;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+}
+
 .formLayout {
   display: grid;
   grid-template-columns: 310px 1fr;
 
   @include mixins.mobile { grid-template-columns: 1fr; }
+
+  @include mixins.mobile {
+    max-height: inherit;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .formLeft {
@@ -196,13 +397,17 @@
   @include mixins.mobile { border-right: none; border-bottom: 1px solid var(--line); }
 }
 
-// Шапка спектакля (цвет берётся из show.palette)
 .showHeader {
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 30px 30px 80px;
   flex-shrink: 0;
+
+  @include mixins.mobile {
+    padding: 22px 58px 22px 20px;
+    min-height: 116px;
+  }
 }
 
 .showGlyph {
@@ -231,23 +436,6 @@
   text-transform: uppercase;
 }
 
-.section {
-  padding: 18px 24px;
-  border-top: 1px solid var(--line);
-  flex-shrink: 0;
-}
-
-.sectionLabel {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--fg-mute);
-  margin-bottom: 10px;
-}
-
-// Карточки типов билетов
 .ticketTypes {
   display: flex;
   flex-direction: column;
@@ -288,13 +476,6 @@
   color: var(--fg);
 }
 
-.ttSeats {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  color: var(--fg-mute);
-}
-
 .ttDivider {
   width: 1px;
   background: var(--line);
@@ -313,11 +494,13 @@
   align-items: center;
 }
 
-// Счётчик количества и итоговая сумма
 .qtyRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+
+  @include mixins.small { align-items: stretch; }
 }
 
 .counter {
@@ -329,6 +512,8 @@
   height: 36px;
   background: var(--bg-3);
 
+  @include mixins.small { height: 44px; }
+
   button {
     width: 36px;
     font-size: 18px;
@@ -338,6 +523,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+
+    @include mixins.small { width: 44px; }
 
     &:hover:not(:disabled) { background: var(--line); color: var(--fg); }
     &:disabled { opacity: 0.30; cursor: not-allowed; }
@@ -388,73 +575,38 @@
   margin-top: 8px;
 }
 
-// Блок скидки лояльности
-.loyaltyBlock {
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  border-radius: 20px;
-}
-
-.loyaltyTitle {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
-  margin: 0 0 6px;
-  letter-spacing: 0.02em;
-}
-
-.loyaltyRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-size: 11px;
-  color: var(--fg-mute);
-  line-height: 1.7;
-  font-family: var(--font-mono);
-
-  &.loyaltyRowTotal {
-    color: var(--fg);
-    font-weight: 700;
-    font-size: 13px;
-    border-top: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
-    margin-top: 4px;
-    padding-top: 4px;
-  }
-}
-
-.loyaltyStrike {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-
 .formRight {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 
-  // All sections inside formRight get 32px horizontal padding
   .section {
     padding-left: 32px;
     padding-right: 32px;
+
+    @include mixins.small {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
   }
 
-  // First section after header: no top border
   .formRightHeader + .section {
     border-top: none;
     padding-top: 18px;
   }
 
-  .submitBtn {
-    margin-top: auto;
-  }
+  .submitBtn { margin-top: auto; }
+
+  @include mixins.mobile { overflow: visible; }
 }
 
-// Right column header
 .formRightHeader {
   padding: 28px 32px 18px;
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
+
+  @include mixins.mobile { display: none; }
 }
 
 .formRightLabel {
@@ -478,13 +630,15 @@
   white-space: nowrap;
 }
 
-// Поля ввода
+// ── Inputs ───────────────────────────────────────────────────────────────
+
 .input {
   width: 100%;
   background: var(--bg-3);
   border: 1px solid var(--line);
   border-radius: 20px;
   padding: 10px 12px;
+  min-height: 44px;
   font-size: 14px;
   color: var(--fg);
   outline: none;
@@ -495,22 +649,35 @@
   &:disabled { opacity: 0.5; }
 }
 
+.inputUnderline {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line-strong);
+  border-radius: 0;
+  padding: 8px 0;
+  font-size: 15px;
+  color: var(--fg);
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+
+  &::placeholder { color: rgba(148,138,131,0.45); }
+  &:focus { border-bottom-color: var(--accent); }
+}
+
 .textarea {
   @extend .input;
   resize: none;
   height: 66px;
+  min-height: 84px;
+  max-width: 100%;
   line-height: 1.5;
   font-family: var(--font-body);
 }
 
-.error {
-  font-size: 12px;
-  color: var(--accent-glow);
-  padding: 0 32px;
-  line-height: 1.4;
-}
+// ── Payment cards (form) ─────────────────────────────────────────────────
 
-// Карточки оплаты
 .paymentCards {
   display: flex;
   flex-direction: row;
@@ -526,14 +693,18 @@
   gap: 10px;
   padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 12px;
   background: var(--bg-3);
   cursor: pointer;
   text-align: left;
+  min-width: 0;
+  min-height: 68px;
   transition: border-color 0.2s, background 0.2s;
 
   &:hover { border-color: var(--line-strong); }
 }
+
+.paymentCard > div { min-width: 0; }
 
 .paymentCardActive {
   border-color: var(--accent) !important;
@@ -541,7 +712,22 @@
   background: var(--bg-2) !important;
 }
 
-.paymentIcon { font-size: 15px; flex-shrink: 0; line-height: 1.3; margin-top: 1px; }
+.paymentIcon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  margin-top: 1px;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+  }
+}
 
 .paymentName {
   font-size: 12px;
@@ -556,14 +742,25 @@
   line-height: 1.4;
 }
 
-// Кнопка отправки
+.error {
+  font-size: 12px;
+  color: var(--accent-glow);
+  padding: 0 28px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+
+  @include mixins.small { padding: 0 20px; }
+}
+
+// ── Submit button ────────────────────────────────────────────────────────
+
 .submitBtn {
   width: calc(100% - 64px);
   margin: 0 32px 28px;
   padding: 14px 20px;
   background: var(--accent);
   color: #fff;
-  border-radius: 24px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.10em;
@@ -578,6 +775,16 @@
     box-shadow: 0 4px 20px rgba(184,0,0,0.35);
   }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  @include mixins.mobile {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    width: calc(100% - 40px);
+    min-height: 52px;
+    margin: auto 20px max(18px, env(safe-area-inset-bottom));
+    box-shadow: 0 -12px 26px color-mix(in srgb, var(--bg-2) 82%, transparent);
+  }
 }
 
 .submitArrow {
@@ -585,55 +792,32 @@
   opacity: 0.75;
 }
 
-// Шаг подтверждения: 240px левая панель + детали справа
+// ── Success layout ───────────────────────────────────────────────────────
+
 .successWrap {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 200px 1fr;
   min-height: 420px;
+  max-height: inherit;
+  overflow: hidden;
 
-  @include mixins.mobile { grid-template-columns: 1fr; min-height: 0; }
-}
-
-.successLeft {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-  padding: 40px 20px;
-}
-
-.successGlyph {
-  font-size: 52px;
-  opacity: 0.40;
-  line-height: 1;
-  color: #fff;
-}
-
-.successCheckWrap {
-  display: flex;
-  justify-content: center;
-}
-
-.successIcon {
-  width: 52px;
-  height: 52px;
-  background: rgba(255,255,255,0.15);
-  border: 1.5px solid rgba(255,255,255,0.40);
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-  color: #fff;
+  @include mixins.mobile {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .successRight {
-  padding: 44px;
+  padding: 36px 40px;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--line);
+  position: relative;
+  overflow-y: auto;
 
-  @include mixins.mobile { border-left: none; border-top: 1px solid var(--line); padding: 28px 24px; }
+  @include mixins.mobile { padding: 24px 20px max(24px, env(safe-area-inset-bottom)); }
 }
 
 .successTitle {
@@ -641,125 +825,19 @@
   font-size: 28px;
   font-style: italic;
   color: var(--fg);
-  margin-bottom: 12px;
+  margin-bottom: 20px;
   line-height: 1.1;
+  max-width: 280px;
 }
 
 .successText {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--fg-dim);
   line-height: 1.65;
   margin-bottom: 16px;
 }
 
-.successEmail {
-  font-size: 12px;
-  color: var(--fg-mute);
-  margin-bottom: 10px;
-
-  strong { color: var(--fg-dim); }
-}
-
-// Итоговая информация о брони
-.infoBox {
-  background: var(--bg-3);
-  border: 1px solid var(--line);
-  border-radius: 28px;
-  overflow: hidden;
-  margin-bottom: 20px;
-}
-
-.infoBoxRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 9px 14px;
-  font-size: 12px;
-  border-bottom: 1px solid var(--line);
-  gap: 12px;
-
-  &:last-child { border-bottom: none; }
-
-  span:first-child { color: var(--fg-mute); flex-shrink: 0; }
-  span:last-child  { color: var(--fg-dim); font-weight: 500; text-align: right; }
-}
-
-// Данные перевода
-.transferBox {
-  background: var(--bg-3);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  padding: 12px 14px;
-  margin-bottom: 16px;
-}
-
-.transferRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  color: var(--fg-dim);
-  margin-bottom: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-
-  strong {
-    font-family: var(--font-display);
-    font-size: 18px;
-    color: var(--fg);
-  }
-}
-
-.transferDetails {
-  font-size: 12px;
-  color: var(--fg-mute);
-  line-height: 1.8;
-
-  p { margin: 0; }
-  strong { color: var(--fg-dim); }
-}
-
-.transferDetailLabel {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-// Блок кода билета
-.ticketCodeBox {
-  background: var(--bg-3);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
-}
-
-.ticketCodeLabel {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--fg-mute);
-  margin-bottom: 6px;
-}
-
-.ticketCodeRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.ticketCodeValue {
-  font-family: var(--font-mono);
-  font-size: 18px;
-  letter-spacing: 0.15em;
-  font-weight: 700;
-  color: var(--fg);
-}
+// ── Copy buttons ─────────────────────────────────────────────────────────
 
 .copyBtn {
   flex-shrink: 0;
@@ -774,6 +852,8 @@
   background: transparent;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s, background 0.2s;
+  min-height: 34px;
+  white-space: normal;
 
   &:hover { color: var(--fg); border-color: var(--fg-mute); }
 }
@@ -784,67 +864,6 @@
   pointer-events: none;
 }
 
-.copyBtnWide {
-  width: 100%;
-  margin-top: 10px;
-  text-align: center;
-}
-
-.transferCodeWarning {
-  margin: 10px 0 0;
-  padding: 9px 12px;
-  background: rgba(var(--accent-rgb, 201, 169, 110), 0.1);
-  border-left: 3px solid var(--accent);
-  border-radius: 16px;
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--fg-mute);
-}
-
-.transferFieldRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--line);
-
-  &:last-child { border-bottom: none; }
-
-  > div {
-    font-size: 12px;
-    line-height: 1.6;
-    span   { color: var(--fg-mute); }
-    strong { color: var(--fg-dim); font-family: var(--font-mono); font-size: 11px; }
-  }
-
-  .copyBtn { flex-shrink: 0; padding: 4px 8px; font-size: 9px; }
-}
-
-.ibanCopyBtns {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.ibanHint {
-  font-size: 10px;
-  color: var(--fg-mute);
-  line-height: 1.4;
-  margin: 0 0 4px;
-  font-style: italic;
-}
-
-.transferPendingNote {
-  margin: 10px 0 0;
-  padding: 9px 12px;
-  background: rgba(255, 140, 0, 0.08);
-  border-left: 3px solid #e08a00;
-  border-radius: 16px;
-  font-size: 12px;
-  line-height: 1.55;
-  color: #c07500;
-}
 
 .closeSuccessBtn {
   align-self: flex-start;
@@ -860,4 +879,324 @@
   transition: color 0.2s, border-color 0.2s;
 
   &:hover { color: var(--fg); border-color: var(--fg-mute); }
+
+  @include mixins.small {
+    width: 100%;
+    min-height: 46px;
+  }
+}
+
+// ── Ticket stub (shared: form + success) ─────────────────────────────────
+
+.stub {
+  background: #4a1414;
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  flex-shrink: 0;
+
+  @include mixins.mobile {
+    flex-direction: row;
+    align-items: center;
+    padding: 18px 20px;
+    min-height: 100px;
+  }
+}
+
+.stubTop { display: flex; flex-direction: column; gap: 8px; }
+
+.stubEyebrow {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #d9a89a;
+}
+
+.stubTitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 19px;
+  color: #f3e7dc;
+  line-height: 1.2;
+}
+
+.stubMeta {
+  font-size: 11px;
+  color: #d9a89a;
+}
+
+.stubBottom {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  @include mixins.mobile { display: none; }
+}
+
+.stubSummaryRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #d9a89a;
+  padding: 4px 0;
+  border-top: 0.5px solid rgba(243,231,220,0.2);
+}
+
+.stubTotalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 0;
+  border-top: 0.5px solid rgba(243,231,220,0.2);
+}
+
+.stubTotalLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #b07a6c;
+}
+
+.stubTotalAmount {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 26px;
+  color: #f3e7dc;
+}
+
+.stubCodeLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #b07a6c;
+}
+
+.stubCode {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: #f3e7dc;
+}
+
+.barcode {
+  display: flex;
+  gap: 2px;
+  margin-top: 10px;
+}
+
+.perfTop, .perfBottom {
+  position: absolute;
+  right: -9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg-2);
+  z-index: 2;
+
+  @include mixins.mobile { display: none; }
+}
+.perfTop    { top: -9px; }
+.perfBottom { bottom: -9px; }
+
+.perfLine {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  right: -1px;
+  border-right: 2px dashed rgba(243,231,220,0.3);
+  z-index: 1;
+
+  @include mixins.mobile { display: none; }
+}
+
+// ── Ticket row (form) ────────────────────────────────────────────────────
+
+.ticketRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 0.5px solid var(--line);
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:last-child { border-bottom: none; }
+  &:not(.ticketRowActive) { opacity: 0.55; }
+  &:hover { opacity: 1; }
+}
+
+.ticketRowActive { opacity: 1; }
+
+.radioCircle {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  transition: border-color 0.15s, background 0.15s;
+
+  [data-theme='light'] & { border-color: rgba(0,0,0,0.25); }
+}
+
+.radioCircleActive {
+  border-color: var(--accent) !important;
+  background: var(--accent);
+}
+
+.ticketRowInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ticketRowName {
+  font-size: 14px;
+  color: var(--fg);
+}
+
+.ticketRowSeats {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--fg-mute);
+}
+
+.ticketRowPrice {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--fg);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 8px;
+
+  button {
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    border: 0.5px solid var(--line-strong);
+    background: transparent;
+    color: var(--fg-mute);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover:not(:disabled) { background: var(--line); color: var(--fg); }
+    &:disabled { opacity: 0.3; cursor: not-allowed; }
+  }
+
+  span {
+    font-size: 14px;
+    color: var(--fg);
+    min-width: 14px;
+    text-align: center;
+  }
+}
+
+// ── Payment row (form) ───────────────────────────────────────────────────
+
+.paymentRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--line);
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:last-child { border-bottom: none; }
+  &:not(.paymentRowActive) { opacity: 0.5; }
+  &:hover { opacity: 1; }
+}
+
+.paymentRowActive { opacity: 1; }
+
+.paymentRowInfo {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.paymentRowName {
+  font-size: 14px;
+  color: var(--fg);
+}
+
+.paymentRowDesc {
+  font-size: 12px;
+  color: var(--fg-mute);
+}
+
+// ── Success right panel ──────────────────────────────────────────────────
+
+.successStamp {
+  position: absolute;
+  top: 28px;
+  right: 32px;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  padding: 5px 12px;
+  transform: rotate(8deg);
+  pointer-events: none;
+
+  @include mixins.mobile {
+    position: static;
+    transform: rotate(3deg);
+    align-self: flex-start;
+    margin-bottom: 12px;
+  }
+}
+
+.successSummary {
+  margin-bottom: 20px;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: 0.5px solid var(--line);
+  font-size: 13px;
+  gap: 12px;
+
+  &:last-child { border-bottom: none; }
+
+  span:first-child { color: var(--fg-mute); }
+  span:last-child  { color: var(--fg); text-align: right; }
+}
+
+.summaryAmount {
+  font-family: var(--font-display) !important;
+  font-style: italic;
+  font-size: 18px !important;
+  color: var(--fg) !important;
+}
+
+
+.successActions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 20px;
+  flex-wrap: wrap;
 }

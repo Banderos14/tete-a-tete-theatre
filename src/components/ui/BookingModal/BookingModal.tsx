@@ -6,7 +6,7 @@ import { createBooking, subscribeToUserBookings } from '../../../services/bookin
 import { generateTicketCode } from '../../../services/ticketService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
-import { PAYMENT_CONFIG, getPaymentAccount, formatIban, normalizeIban } from '../../../config/payment';
+import { PAYMENT_CONFIG } from '../../../config/payment';
 import {
   hasAvailableLoyaltyReward,
   calculateLoyaltyDiscount,
@@ -14,6 +14,8 @@ import {
 } from '../../../services/loyaltyService';
 import type { Show, TicketType } from '../../../types';
 import type { Booking, PaymentMethod } from '../../../types/booking';
+import { BookingFormStep } from './BookingFormStep';
+import { BookingSuccessStep } from './BookingSuccessStep';
 import styles from './BookingModal.module.scss';
 
 interface Props {
@@ -68,17 +70,9 @@ export function BookingModal({ show, onClose }: Props) {
   const [submitError,      setSubmitError]      = useState('');
   const [ticketCode,       setTicketCode]       = useState('');
   const [savedAmount,      setSavedAmount]      = useState(0);
-  const [copiedDetails,    setCopiedDetails]    = useState(false);
   const [copiedCode,       setCopiedCode]       = useState(false);
-  const [copiedIban,       setCopiedIban]       = useState(false);
-  const [copiedRawIban,    setCopiedRawIban]    = useState(false);
-  const [copiedBic,        setCopiedBic]        = useState(false);
-  const [copiedCard,       setCopiedCard]       = useState(false);
-  const [copiedRef,        setCopiedRef]        = useState(false);
 
-  const [userBookings,       setUserBookings]       = useState<Booking[]>([]);
-  const [savedOriginalAmount,setSavedOriginalAmount] = useState(0);
-  const [savedDiscountAmount,setSavedDiscountAmount] = useState(0);
+  const [userBookings, setUserBookings] = useState<Booking[]>([]);
 
   const defaultTicket = useMemo(
     () => (show?.ticketTypes?.length ? show.ticketTypes[0] : null),
@@ -164,7 +158,7 @@ export function BookingModal({ show, onClose }: Props) {
     if (!user || !activeTicket || !show) return;
     setSubmitLoading(true); setSubmitError('');
     try {
-      const code     = generateTicketCode();
+      const code      = generateTicketCode();
       const userName  = user.displayName ?? userProfile?.displayName ?? '';
       const userEmail = user.email ?? userProfile?.email ?? '';
       const showDate  = `${show.day} ${show.month} ${show.year}`;
@@ -227,7 +221,7 @@ export function BookingModal({ show, onClose }: Props) {
         paymentAccountId: isBankTransfer ? PAYMENT_CONFIG.paymentAccounts[0].id : undefined,
         lang,
         ...(loyaltyAvailable ? {
-          originalAmount:        baseAmount,
+          originalAmount:         baseAmount,
           loyaltyDiscountApplied: true,
           loyaltyDiscountAmount:  discountAmount,
         } : {}),
@@ -235,8 +229,6 @@ export function BookingModal({ show, onClose }: Props) {
 
       setTicketCode(code);
       setSavedAmount(totalAmount);
-      setSavedOriginalAmount(loyaltyAvailable ? baseAmount : 0);
-      setSavedDiscountAmount(loyaltyAvailable ? discountAmount : 0);
       setStep('success');
     } catch {
       setSubmitError(t.booking.submitError);
@@ -253,9 +245,6 @@ export function BookingModal({ show, onClose }: Props) {
   const userEmail   = user?.email ?? userProfile?.email ?? '';
   const showTitle   = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
   const monthLabel  = t.months[show.month] ?? show.month;
-  const ticketLabel = (id: string | undefined) =>
-    id === 'standard' ? t.admin.ticketStandard :
-    id === 'student'  ? t.admin.ticketStudent  : (id ?? '');
 
   return (
     <div
@@ -273,7 +262,6 @@ export function BookingModal({ show, onClose }: Props) {
         {/* ── Auth step — centered single column ── */}
         {step === 'auth' && (
           <div className={styles.authWrap}>
-            {/* Show preview strip */}
             <div className={styles.authShowStrip} style={{ background: show.palette }}>
               <span className={styles.authGlyph}>{show.glyph}</span>
               <div>
@@ -338,365 +326,51 @@ export function BookingModal({ show, onClose }: Props) {
           </div>
         )}
 
-        {/* ── Form step — two-column layout ── */}
+        {/* ── Form step ── */}
         {step === 'form' && (
-          <form onSubmit={handleSubmit} className={styles.formLayout}>
-
-            {/* LEFT: show info + ticket selection */}
-            <div className={styles.formLeft}>
-              {/* Show header */}
-              <div className={styles.showHeader} style={{ background: show.palette }}>
-                <span className={styles.showGlyph}>{show.glyph}</span>
-                <div>
-                  <p className={styles.showTitle}>{showTitle}</p>
-                  <p className={styles.showMeta}>{show.day} {monthLabel} {show.year} · {show.time}</p>
-                </div>
-              </div>
-
-              {/* Ticket type */}
-              <div className={styles.section}>
-                <div className={styles.sectionLabel}>{t.booking.ticketType}</div>
-                <div className={styles.ticketTypes}>
-                  {show.ticketTypes.map(tt => (
-                    <button
-                      key={tt.id}
-                      type="button"
-                      className={`${styles.ticketTypeBtn} ${activeTicket?.id === tt.id ? styles.ticketTypeActive : ''}`}
-                      onClick={() => { setSelectedTicket(tt); setTickets(1); }}
-                    >
-                      <div className={styles.ttLeft}>
-                        <span className={styles.ttName}>{ticketLabel(tt.id)}</span>
-                        <span className={styles.ttSeats}>{t.booking.seatsLeft}: {tt.available}</span>
-                      </div>
-                      <div className={styles.ttDivider} />
-                      <span className={styles.ttPrice}>{tt.price}&nbsp;€</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quantity + total */}
-              <div className={styles.section}>
-                <div className={styles.sectionLabel}>{t.booking.tickets}</div>
-                <div className={styles.qtyRow}>
-                  <div className={styles.counter}>
-                    <button
-                      type="button"
-                      onClick={() => setTickets(v => Math.max(1, v - 1))}
-                      disabled={tickets <= 1}
-                    >−</button>
-                    <span>{tickets}</span>
-                    <button
-                      type="button"
-                      onClick={() => setTickets(v => Math.min(maxTickets, v + 1))}
-                      disabled={tickets >= maxTickets}
-                    >+</button>
-                  </div>
-                  {activeTicket && (
-                    <div className={styles.totalBox}>
-                      <span className={styles.totalLabel}>{t.booking.total}</span>
-                      <span className={styles.totalAmount}>{totalAmount}&nbsp;€</span>
-                    </div>
-                  )}
-                </div>
-                {activeTicket && !loyaltyAvailable && (
-                  <p className={styles.priceHint}>
-                    {activeTicket.price}&nbsp;€ × {tickets} = {totalAmount}&nbsp;€
-                  </p>
-                )}
-                {activeTicket && loyaltyAvailable && (
-                  <div className={styles.loyaltyBlock}>
-                    <p className={styles.loyaltyTitle}>{t.booking.loyaltyGift}</p>
-                    <div className={styles.loyaltyRow}>
-                      <span>{t.booking.loyaltyOriginal}</span>
-                      <span className={styles.loyaltyStrike}>{baseAmount}&nbsp;€</span>
-                    </div>
-                    <div className={styles.loyaltyRow}>
-                      <span>{t.booking.loyaltyDiscount}</span>
-                      <span>−{discountAmount}&nbsp;€</span>
-                    </div>
-                    <div className={`${styles.loyaltyRow} ${styles.loyaltyRowTotal}`}>
-                      <span>{t.booking.loyaltyTotal}</span>
-                      <span>{totalAmount}&nbsp;€</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* RIGHT: contact + payment + submit */}
-            <div className={styles.formRight}>
-              {/* Header */}
-              <div className={styles.formRightHeader}>
-                <div className={styles.formRightLabel}>
-                  {lang === 'FR' ? 'RÉSERVATION' : 'БРОНИРОВАНИЕ'}
-                </div>
-                <p className={styles.formRightShowTitle}>{showTitle}</p>
-              </div>
-
-              {/* Phone */}
-              <div className={styles.section}>
-                <label className={styles.sectionLabel} htmlFor="bk-phone">{t.booking.phone}</label>
-                <input
-                  id="bk-phone" className={styles.input} type="tel"
-                  inputMode="tel"
-                  value={phone} onChange={e => setPhone(formatPhone(e.target.value))}
-                  placeholder="+33 6 00 00 00 00"
-                />
-              </div>
-
-              {/* Payment */}
-              <div className={styles.section}>
-                <div className={styles.sectionLabel}>{t.booking.paymentMethod}</div>
-                <div className={styles.paymentCards}>
-                  <button
-                    type="button"
-                    className={`${styles.paymentCard} ${payment === 'on_site' ? styles.paymentCardActive : ''}`}
-                    onClick={() => setPayment('on_site')}
-                  >
-                    <span className={styles.paymentIcon}>🏠</span>
-                    <div>
-                      <div className={styles.paymentName}>{t.booking.payOnSite}</div>
-                      <div className={styles.paymentDesc}>{t.booking.payOnSiteDesc}</div>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.paymentCard} ${payment === 'bank_transfer' ? styles.paymentCardActive : ''}`}
-                    onClick={() => setPayment('bank_transfer')}
-                  >
-                    <span className={styles.paymentIcon}>🏦</span>
-                    <div>
-                      <div className={styles.paymentName}>{t.booking.payTransfer}</div>
-                      <div className={styles.paymentDesc}>{t.booking.payTransferDesc}</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Comment */}
-              <div className={styles.section}>
-                <label className={styles.sectionLabel} htmlFor="bk-comment">{t.booking.comment}</label>
-                <textarea
-                  id="bk-comment" className={styles.textarea}
-                  value={comment} onChange={e => setComment(e.target.value)}
-                  placeholder={t.booking.commentPlaceholder} rows={3}
-                />
-              </div>
-
-              {submitError && <p className={styles.error}>{submitError}</p>}
-
-              <button
-                type="submit"
-                className={styles.submitBtn}
-                disabled={submitLoading || !activeTicket}
-              >
-                {submitLoading ? '…' : t.booking.submit}
-                {!submitLoading && <span className={styles.submitArrow}>→</span>}
-              </button>
-            </div>
-          </form>
+          <BookingFormStep
+            show={show}
+            lang={lang}
+            t={t}
+            tickets={tickets}
+            selectedTicket={selectedTicket}
+            payment={payment}
+            phone={phone}
+            comment={comment}
+            submitLoading={submitLoading}
+            submitError={submitError}
+            activeTicket={activeTicket}
+            baseAmount={baseAmount}
+            totalAmount={totalAmount}
+            discountAmount={discountAmount}
+            loyaltyAvailable={loyaltyAvailable}
+            maxTickets={maxTickets}
+            onTicketsChange={setTickets}
+            onSelectedTicketChange={tt => { setSelectedTicket(tt); setTickets(1); }}
+            onPaymentChange={setPayment}
+            onPhoneChange={v => setPhone(formatPhone(v))}
+            onCommentChange={setComment}
+            onSubmit={handleSubmit}
+          />
         )}
 
         {/* ── Success step ── */}
-        {step === 'success' && (() => {
-          const paymentRef  = `${PAYMENT_CONFIG.paymentReferencePrefix}-${ticketCode}`;
-          const account     = getPaymentAccount(undefined);
-          const isIban      = account.type === 'iban';
-          const copyRows: string[] = [
-            `${t.booking.transferReceiver}: ${account.receiverName}`,
-            ...(account.bankName ? [`${lang === 'FR' ? 'Banque' : 'Банк'}: ${account.bankName}`] : []),
-            ...(isIban
-              ? [
-                  `IBAN: ${formatIban(account.iban)}`,
-                  `${t.booking.ibanNoSpacesLabel}: ${normalizeIban(account.iban)}`,
-                  `BIC / SWIFT: ${account.bic}`,
-                ]
-              : [`${lang === 'FR' ? 'Numéro de carte' : 'Номер карты'}: ${account.cardNumber}`]
-            ),
-            `${t.booking.successAmount}: ${savedAmount} €`,
-            `${t.booking.transferPurpose}: ${paymentRef}`,
-          ];
-          const detailsText = copyRows.join('\n');
-
-          return (
-            <div className={styles.successWrap}>
-              <div className={styles.successLeft} style={{ background: show.palette }}>
-                <span className={styles.successGlyph}>{show.glyph}</span>
-                <div className={styles.successCheckWrap}>
-                  <div className={styles.successIcon}>✓</div>
-                </div>
-              </div>
-
-              <div className={styles.successRight}>
-                <h3 className={styles.successTitle}>{t.booking.successTitle}</h3>
-
-                {/* Booking summary */}
-                <div className={styles.infoBox}>
-                  {([
-                    [t.booking.labelShow,    showTitle],
-                    [t.booking.labelDate,    `${show.day} ${monthLabel} ${show.year} · ${show.time}`],
-                    [t.booking.labelTickets, `${tickets} × ${ticketLabel(activeTicket?.id)}`],
-                    ...(savedDiscountAmount > 0 ? [
-                      [t.booking.loyaltyOriginal, `${savedOriginalAmount} €`],
-                      [t.booking.loyaltyDiscount, `−${savedDiscountAmount} €`],
-                      [t.booking.loyaltyTotal,    `${savedAmount} €`],
-                    ] : [
-                      [t.booking.labelAmount, `${savedAmount} €`],
-                    ]),
-                  ] as [string, string][]).map(([label, value]) => (
-                    <div key={label} className={styles.infoBoxRow}>
-                      <span>{label}</span>
-                      <span>{value}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Ticket code */}
-                <div className={styles.ticketCodeBox}>
-                  <span className={styles.ticketCodeLabel}>{lang === 'FR' ? 'Code de réservation' : 'Код брони'}</span>
-                  <div className={styles.ticketCodeRow}>
-                    <code className={styles.ticketCodeValue}>{ticketCode}</code>
-                    <button
-                      className={`${styles.copyBtn} ${copiedCode ? styles.copyBtnDone : ''}`}
-                      onClick={() => copyToClipboard(ticketCode, setCopiedCode)}
-                    >
-                      {copiedCode ? t.booking.copied : t.booking.copyCode}
-                    </button>
-                  </div>
-                </div>
-
-                {payment === 'on_site' ? (
-                  <p className={styles.successText}>{t.booking.successOnSite}</p>
-                ) : (
-                  <>
-                    <p className={styles.successText}>{t.booking.successTransfer}</p>
-
-                    <div className={styles.transferBox}>
-                      {/* Amount row */}
-                      <div className={styles.transferRow}>
-                        <span>{t.booking.successAmount}</span>
-                        <strong>{savedAmount}&nbsp;€</strong>
-                      </div>
-
-                      {/* Bank details with individual copy buttons */}
-                      <div className={styles.transferDetails}>
-                        <p className={styles.transferDetailLabel}>
-                          {account.label} · {account.description}
-                        </p>
-
-                        <div className={styles.transferFieldRow}>
-                          <div>
-                            <span>{t.booking.transferReceiver}: </span>
-                            <strong>{account.receiverName}</strong>
-                          </div>
-                        </div>
-
-                        {account.bankName && (
-                          <div className={styles.transferFieldRow}>
-                            <div>
-                              <span>{lang === 'FR' ? 'Banque' : 'Банк'}: </span>
-                              <strong>{account.bankName}</strong>
-                            </div>
-                          </div>
-                        )}
-
-                        {isIban ? (
-                          <>
-                            <div className={styles.transferFieldRow}>
-                              <div>
-                                <span>IBAN: </span>
-                                <strong>{formatIban(account.iban)}</strong>
-                              </div>
-                              <div className={styles.ibanCopyBtns}>
-                                <button
-                                  className={`${styles.copyBtn} ${copiedIban ? styles.copyBtnDone : ''}`}
-                                  onClick={() => copyToClipboard(formatIban(account.iban), setCopiedIban)}
-                                >
-                                  {copiedIban ? t.booking.copied : t.booking.copyIban}
-                                </button>
-                                <button
-                                  className={`${styles.copyBtn} ${copiedRawIban ? styles.copyBtnDone : ''}`}
-                                  onClick={() => copyToClipboard(normalizeIban(account.iban), setCopiedRawIban)}
-                                >
-                                  {copiedRawIban ? t.booking.copied : t.booking.copyRawIban}
-                                </button>
-                              </div>
-                            </div>
-                            <p className={styles.ibanHint}>{t.booking.ibanNoSpacesHint}</p>
-
-                            <div className={styles.transferFieldRow}>
-                              <div>
-                                <span>BIC / SWIFT: </span>
-                                <strong>{account.bic}</strong>
-                              </div>
-                              <button
-                                className={`${styles.copyBtn} ${copiedBic ? styles.copyBtnDone : ''}`}
-                                onClick={() => copyToClipboard(account.bic, setCopiedBic)}
-                              >
-                                {copiedBic ? t.booking.copied : (lang === 'FR' ? 'Copier' : 'Копировать')}
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <div className={styles.transferFieldRow}>
-                            <div>
-                              <span>{lang === 'FR' ? 'Numéro de carte' : 'Номер карты'}: </span>
-                              <strong>{account.cardNumber}</strong>
-                            </div>
-                            <button
-                              className={`${styles.copyBtn} ${copiedCard ? styles.copyBtnDone : ''}`}
-                              onClick={() => copyToClipboard(account.cardNumber, setCopiedCard)}
-                            >
-                              {copiedCard ? t.booking.copied : (lang === 'FR' ? 'Copier' : 'Копировать')}
-                            </button>
-                          </div>
-                        )}
-
-                        <div className={styles.transferFieldRow}>
-                          <div>
-                            <span>{t.booking.transferPurpose}: </span>
-                            <strong>{paymentRef}</strong>
-                          </div>
-                          <button
-                            className={`${styles.copyBtn} ${copiedRef ? styles.copyBtnDone : ''}`}
-                            onClick={() => copyToClipboard(paymentRef, setCopiedRef)}
-                          >
-                            {copiedRef ? t.booking.copied : (lang === 'FR' ? 'Copier' : 'Копировать')}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Copy all */}
-                      <button
-                        className={`${styles.copyBtn} ${styles.copyBtnWide} ${copiedDetails ? styles.copyBtnDone : ''}`}
-                        onClick={() => copyToClipboard(detailsText, setCopiedDetails)}
-                      >
-                        {copiedDetails ? t.booking.copied : t.booking.copyDetails}
-                      </button>
-
-                      {/* Pending confirmation warning */}
-                      <p className={styles.transferPendingNote}>
-                        ⚠&nbsp;
-                        {lang === 'FR'
-                          ? 'Votre réservation sera confirmée uniquement après vérification du virement bancaire.'
-                          : 'Ваша бронь будет подтверждена только после проверки банковского перевода.'}
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                <p className={styles.successEmail}>
-                  {t.booking.successEmailHint} <strong>{userEmail}</strong>
-                </p>
-
-                <button className={styles.closeSuccessBtn} onClick={onClose}>
-                  {t.booking.close}
-                </button>
-              </div>
-            </div>
-          );
-        })()}
+        {step === 'success' && (
+          <BookingSuccessStep
+            show={show}
+            lang={lang}
+            t={t}
+            tickets={tickets}
+            activeTicket={activeTicket}
+            savedAmount={savedAmount}
+            ticketCode={ticketCode}
+            payment={payment}
+            userEmail={userEmail}
+            copiedCode={copiedCode}
+            onCopyCode={() => copyToClipboard(ticketCode, setCopiedCode)}
+            onClose={onClose}
+          />
+        )}
 
       </div>
     </div>

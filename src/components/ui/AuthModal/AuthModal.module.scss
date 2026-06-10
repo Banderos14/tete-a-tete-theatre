@@ -13,10 +13,17 @@
   opacity: 0;
   transition: opacity 0.25s ease;
   pointer-events: none;
+  overflow: hidden;
 
   &.overlayVisible {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  @include mixins.small {
+    align-items: end;
+    place-items: end center;
+    padding: 0;
   }
 }
 
@@ -28,6 +35,10 @@
   padding: 40px 36px 32px;
   width: 100%;
   max-width: 400px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   transform: translateY(16px) scale(0.97);
   opacity: 0;
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
@@ -39,7 +50,15 @@
   }
 
   @include mixins.small {
-    padding: 32px 24px 24px;
+    max-width: none;
+    max-height: 100dvh;
+    min-height: min(100dvh, 560px);
+    border-radius: 24px 24px 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding: 36px 20px max(24px, env(safe-area-inset-bottom));
+    transform: translateY(28px);
   }
 }
 
@@ -58,6 +77,16 @@
   &:hover { color: var(--fg); }
 
   svg { width: 16px; height: 16px; }
+
+  @include mixins.small {
+    top: 12px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    background: var(--bg-3);
+
+    svg { width: 18px; height: 18px; }
+  }
 }
 
 .brand {
@@ -67,6 +96,11 @@
   color: var(--fg);
   margin-bottom: 24px;
   text-align: center;
+  padding: 0 44px;
+
+  @include mixins.small {
+    margin-bottom: 22px;
+  }
 }
 
 .tabs {
@@ -77,7 +111,8 @@
 
   button {
     flex: 1;
-    padding: 8px 0;
+    min-height: 44px;
+    padding: 10px 6px;
     font-size: 12px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -102,6 +137,7 @@
   justify-content: center;
   gap: 10px;
   padding: 11px 16px;
+  min-height: 46px;
   background: #fff;
   color: #3c4043;
   border: 1px solid #dadce0;
@@ -149,6 +185,7 @@
     border: none;
     border-bottom: 1px solid var(--line-strong);
     padding: 14px 0 6px;
+    min-height: 44px;
     font-size: 15px;
     color: var(--fg);
     outline: none;
@@ -184,6 +221,7 @@
   color: var(--accent-glow);
   margin-bottom: 12px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .info {
@@ -197,6 +235,7 @@
   width: 100%;
   margin-top: 8px;
   padding: 13px 16px;
+  min-height: 48px;
   background: var(--accent);
   color: var(--fg);
   border-radius: 16px;
@@ -226,6 +265,8 @@
   font-size: 12px;
   color: var(--fg-mute);
   text-align: center;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .textBtn {
@@ -236,4 +277,8 @@
   transition: color 0.2s ease;
 
   &:hover { color: var(--fg); }
+
+  @include mixins.small {
+    min-height: 32px;
+  }
 }

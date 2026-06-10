@@ -21,6 +21,7 @@
   position: relative;
   min-height: 100svh;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 1fr auto;
   justify-items: center;
   align-items: center;
@@ -30,7 +31,7 @@
   border-top: none !important;
 
   @include mixins.mobile {
-    padding: 96px 24px 0;
+    padding: 92px 18px 0;
     // Static background for mobile — canvas is disabled
     background:
       radial-gradient(ellipse 80% 45% at 50% 0%, rgba(184, 0, 0, 0.11) 0%, transparent 60%),
@@ -38,7 +39,7 @@
   }
 
   @include mixins.small {
-    padding: 84px 16px 0;
+    padding: 82px 12px 0;
   }
 }
 
@@ -101,6 +102,14 @@
   position: relative;
   z-index: 3;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+
+  @include mixins.small {
+    width: calc(100vw - 24px);
+    justify-self: center;
+  }
 }
 
 .eyebrow {
@@ -112,17 +121,18 @@
   margin-bottom: 36px;
 
   @include mixins.mobile {
-    letter-spacing: 0.07em;
+    letter-spacing: 0.09em;
     font-size: 11px;
     gap: 10px;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
   }
 
   @include mixins.small {
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     font-size: 10px;
     flex-wrap: wrap;
     justify-content: center;
+    line-height: 1.45;
   }
 }
 
@@ -142,6 +152,7 @@
   align-items: center;
   gap: clamp(8px, 1.4vw, 20px);
   max-width: 100%;
+  min-width: 0;
   margin: 0 auto;
 }
 
@@ -157,6 +168,8 @@
   text-transform: uppercase;
   font-weight: 200;
   line-height: 1;
+  max-width: 100%;
+  min-width: 0;
 
   @include mixins.mobile {
     font-size: clamp(50px, 13vw, 200px);
@@ -164,8 +177,11 @@
   }
 
   @include mixins.small {
-    font-size: clamp(42px, 11.5vw, 200px);
-    gap: clamp(6px, 3vw, 40px);
+    width: 100%;
+    justify-content: center;
+    font-size: clamp(38px, 11vw, 48px);
+    gap: clamp(5px, 2.2vw, 10px);
+    letter-spacing: 0;
   }
 }
 
@@ -205,8 +221,8 @@
   }
 
   @include mixins.small {
-    font-size: clamp(28px, 5vw, 84px);
-    margin-top: 28px;
+    font-size: clamp(26px, 7.8vw, 34px);
+    margin-top: 22px;
   }
 }
 
@@ -218,6 +234,7 @@
   justify-content: center;
   gap: clamp(0.6em, 1.4vw, 1.4em);
   min-width: 0;
+  max-width: 100%;
   font-family: var(--font-display);
   letter-spacing: var(--font-display-spacing);
   font-size: clamp(22px, 2.6vw, 34px);
@@ -230,7 +247,12 @@
     align-items: center;
     white-space: normal;
     gap: 4px;
-    font-size: clamp(14px, 3.5vw, 24px);
+    font-size: clamp(15px, 3.8vw, 24px);
+  }
+
+  @include mixins.small {
+    overflow: visible;
+    padding: 0 4px;
   }
 }
 
@@ -243,11 +265,13 @@
   color: var(--accent);
 
   @include mixins.mobile {
-    font-size: clamp(28px, 7.5vw, 56px);
+    font-size: clamp(30px, 8.4vw, 56px);
   }
 
   @include mixins.small {
-    font-size: clamp(24px, 6.5vw, 48px);
+    max-width: 100%;
+    font-size: clamp(30px, 11vw, 42px);
+    overflow-wrap: anywhere;
   }
 }
 
@@ -262,12 +286,31 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--fg-mute);
+  max-width: 100%;
+  min-width: 0;
 
   @include mixins.mobile {
     gap: 16px;
     margin-top: 24px;
     font-size: 10px;
     letter-spacing: 0.12em;
+  }
+
+  @include mixins.small {
+    justify-content: center;
+    gap: 7px;
+    font-size: 9px;
+    letter-spacing: 0.07em;
+    line-height: 1.5;
+
+    span {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    span:not(.sep) {
+      min-width: 0;
+    }
   }
 }
 
@@ -286,14 +329,19 @@
     gap: 12px;
     margin-top: 36px;
     width: 100%;
-    max-width: 320px;
+    max-width: min(320px, 100%);
     margin-left: auto;
     margin-right: auto;
 
     // Make all buttons fill the column
     :global(.btn) {
       width: 100%;
+      min-width: 0;
       justify-content: center;
+      padding-left: 16px;
+      padding-right: 16px;
+      border-radius: 14px;
+      text-align: center;
     }
   }
 }

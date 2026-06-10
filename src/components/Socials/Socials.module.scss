@@ -12,6 +12,17 @@
     background: radial-gradient(ellipse at 30% 50%, rgba(200, 16, 46, 0.08) 0%, transparent 60%);
     pointer-events: none;
   }
+
+  @include mixins.mobile {
+    :global(.section-head) {
+      h2 { text-align: center; }
+
+      .meta {
+        justify-self: end;
+        text-align: right;
+      }
+    }
+  }
 }
 
 .grid {
@@ -28,9 +39,15 @@
     grid-template-columns: 1fr;
     gap: 48px;
   }
+
+  @include mixins.small {
+    gap: 34px;
+  }
 }
 
 .text {
+  min-width: 0;
+
   h3 {
     font-family: var(--font-display);
     font-size: clamp(36px, 5vw, 64px);
@@ -46,6 +63,16 @@
     line-height: 1.6;
     max-width: 480px;
     margin-bottom: 36px;
+    overflow-wrap: anywhere;
+  }
+
+  @include mixins.mobile {
+    text-align: center;
+
+    p {
+      margin-left: auto;
+      margin-right: auto;
+    }
   }
 }
 
@@ -58,6 +85,26 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+
+  @include mixins.mobile {
+    justify-content: center;
+
+    :global(.btn) {
+      min-height: 48px;
+      min-width: min(150px, 100%);
+      justify-content: center;
+      border-radius: 14px;
+    }
+  }
+
+  @include mixins.small {
+    flex-direction: column;
+    align-items: stretch;
+
+    :global(.btn) {
+      width: 100%;
+    }
+  }
 }
 
 .mosaic {
@@ -74,6 +121,10 @@
   transition: transform 0.4s ease;
 
   &:hover { transform: scale(0.98); }
+
+  @media (hover: none), (pointer: coarse) {
+    &:hover { transform: none; }
+  }
 
   &::after {
     content: '';
