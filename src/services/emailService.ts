@@ -11,7 +11,7 @@
 // email is best-effort.
 
 import type { BookingStatus } from '../types/booking';
-import { PAYMENT_CONFIG, getPaymentAccount } from '../config/payment';
+import { PAYMENT_CONFIG, getPaymentAccount, normalizeIban } from '../config/payment';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -247,6 +247,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
       if (account.bankName) rows.push(['Банк', account.bankName]);
       if (account.type === 'iban') {
         rows.push(['IBAN', account.iban]);
+        rows.push(['IBAN без пробелов', normalizeIban(account.iban)]);
         rows.push(['BIC / SWIFT', account.bic]);
       } else {
         rows.push(['Номер карты', account.cardNumber]);
@@ -257,6 +258,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
       if (account.bankName) rows.push(['Banque', account.bankName]);
       if (account.type === 'iban') {
         rows.push(['IBAN', account.iban]);
+        rows.push(['IBAN sans espaces', normalizeIban(account.iban)]);
         rows.push(['BIC / SWIFT', account.bic]);
       } else {
         rows.push(['Numéro de carte', account.cardNumber]);
@@ -268,6 +270,14 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
 
   const transferRows = buildTransferRows();
 
+  const ibanWarning = account?.type === 'iban'
+    ? `<p style="margin:8px 0 0;font-size:11px;color:#888;line-height:1.5;font-family:Arial,sans-serif;">
+        ${isRU
+          ? 'Если ваш банк не принимает IBAN с пробелами, вставьте IBAN без пробелов — это тот же самый счёт.'
+          : 'Si votre banque n\'accepte pas l\'IBAN avec espaces, collez l\'IBAN sans espaces — il s\'agit du même compte.'}
+       </p>`
+    : '';
+
   const transferHtml = isBankTransfer && account ? `
   <div style="background:#f0ede8;border-radius:4px;padding:16px 20px;margin-top:20px;">
     <p style="margin:0 0 10px;font-size:10px;letter-spacing:3px;text-transform:uppercase;
@@ -275,6 +285,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
       ${isRU ? 'Реквизиты для перевода' : 'Coordonnées bancaires'}
     </p>
     ${infoTable(transferRows)}
+    ${ibanWarning}
   </div>` : '';
 
   const bodyHtml = `
@@ -294,6 +305,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
     if (account.bankName) lines.push(isRU ? `Банк: ${account.bankName}` : `Banque : ${account.bankName}`);
     if (account.type === 'iban') {
       lines.push(`IBAN: ${account.iban}`);
+      lines.push(isRU ? `IBAN без пробелов: ${normalizeIban(account.iban)}` : `IBAN sans espaces : ${normalizeIban(account.iban)}`);
       lines.push(`BIC / SWIFT: ${account.bic}`);
     } else {
       lines.push(isRU ? `Номер карты: ${account.cardNumber}` : `Numéro de carte : ${account.cardNumber}`);

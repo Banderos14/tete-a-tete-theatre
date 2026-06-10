@@ -12,6 +12,7 @@ export function Footer() {
           <span>
             ТЕТ <span className={styles.dot}>·</span> А <span className={styles.dot}>·</span> ТЕТ
           </span>
+          <span className={styles.mobileBrand}>Tête-à-Tête</span>
         </a>
 
         <div className={styles.center}>

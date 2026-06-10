@@ -85,17 +85,17 @@ export function AdminPage() {
       const [bData, uData] = await Promise.all([getAllBookings(), getAllUsers()]);
       setBookings(bData);
       setUsers(uData);
-      // Non-blocking: auto-mark attended for confirmed+paid shows that ended 2+ hours ago
+      // Автоматически отмечаем прошедшие оплаченные спектакли, не блокируя загрузку.
       markEligibleBookingsAsAttended(bData, (id) => {
         setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
-      }).catch(() => {/* non-blocking */});
+      }).catch(() => {});
 
-      // Non-blocking: expire overdue awaiting_transfer bookings
+      // Просроченные банковские переводы отменяются фоном.
       expireOverdueBookings(bData, (id) => {
         setBookings(prev => prev.map(b =>
           b.id === id ? { ...b, paymentStatus: 'expired', status: 'cancelled' } : b,
         ));
-      }).catch(() => {/* non-blocking */});
+      }).catch(() => {});
     } finally {
       setFetching(false);
     }
@@ -103,7 +103,7 @@ export function AdminPage() {
 
   async function handleStatus(bookingId: string, status: BookingStatus) {
     const booking = bookings.find(b => b.id === bookingId);
-    // Guard: skip if status did not change (prevents duplicate emails)
+    // Если статус не изменился, письмо повторно не отправляем.
     if (!booking || booking.status === status) return;
 
     setUpdatingId(bookingId);
@@ -111,8 +111,7 @@ export function AdminPage() {
       await updateBookingStatus(bookingId, status);
       setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
 
-      // confirmed (manual, on_site) and cancelled send email.
-      // attended is set automatically and never sends email.
+      // Письма отправляются только для ручного подтверждения и отмены.
       if (status === 'confirmed' || status === 'cancelled') {
         sendBookingStatusUpdateEmail({
           userEmail:    booking.userEmail,
@@ -125,25 +124,25 @@ export function AdminPage() {
           ticketCode:   booking.ticketCode,
           newStatus:    status,
           lang:         booking.lang ?? 'FR',
-        }).catch(() => {/* non-blocking */});
+        }).catch(() => {});
       }
     } finally { setUpdatingId(null); }
   }
 
   async function handlePaymentStatus(bookingId: string, paymentStatus: PaymentStatus) {
     const booking = bookings.find(b => b.id === bookingId);
-    // Guard: skip if paymentStatus did not change (prevents duplicate emails)
+    // Если статус оплаты не изменился, письмо повторно не отправляем.
     if (!booking || (booking.paymentStatus ?? 'not_paid') === paymentStatus) return;
 
     setUpdatingId(bookingId);
     try {
       if (paymentStatus === 'paid') {
-        // Single write: paid + confirmed together
+        // Оплата и подтверждение должны записываться одним обновлением.
         await markBookingPaid(bookingId);
         setBookings(prev => prev.map(b =>
           b.id === bookingId ? { ...b, paymentStatus: 'paid', status: 'confirmed' } : b
         ));
-        // One email: "Оплата получена. Место подтверждено."
+        // Одно письмо на получение оплаты.
         sendPaymentPaidEmail({
           userEmail:     booking.userEmail,
           userName:      booking.userName,
@@ -153,11 +152,11 @@ export function AdminPage() {
           ticketsCount:  booking.ticketsCount,
           totalAmount:   booking.totalAmount,
           ticketCode:    booking.ticketCode,
-          bookingStatus: 'confirmed', // always confirmed after payment
+          bookingStatus: 'confirmed',
           lang:          booking.lang ?? 'FR',
-        }).catch(() => {/* non-blocking */});
+        }).catch(() => {});
       } else {
-        // "Не оплачено" — revert payment status only, no email
+        // Снятие оплаты меняет только paymentStatus и не отправляет письмо.
         await updatePaymentStatus(bookingId, paymentStatus);
         setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, paymentStatus } : b));
       }
@@ -209,8 +208,6 @@ export function AdminPage() {
     setNlResult({ sent, errors });
   }
 
-  // ── Access control ──────────────────────────────────────────────────────────
-
   if (loading) {
     return <div className={styles.centered}><span className={styles.spinner} /></div>;
   }
@@ -226,13 +223,9 @@ export function AdminPage() {
     );
   }
 
-  // ── Filtered bookings ───────────────────────────────────────────────────────
-
   const filtered = bookings
     .filter(b => filterShow  === 'all' || b.showId === filterShow)
     .filter(b => filterStatus === 'all' || b.status === filterStatus);
-
-  // ── Per-show stats ──────────────────────────────────────────────────────────
 
   const statsByShow = SHOWS.map(show => {
     const sb = bookings.filter(b => b.showId === show.id);
@@ -256,12 +249,9 @@ export function AdminPage() {
     { value: 'cancelled', label: t.admin.statusCancelled },
   ];
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
   return (
     <div className={styles.page}>
 
-      {/* Top bar */}
       <div className={styles.topBar}>
         <h1 className={styles.pageTitle}>{t.admin.title}</h1>
         <div className={styles.topBarActions}>
@@ -274,7 +264,6 @@ export function AdminPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className={styles.tabs}>
         <button
           className={`${styles.tabBtn} ${tab === 'bookings' ? styles.tabActive : ''}`}
@@ -290,10 +279,8 @@ export function AdminPage() {
         >Рассылка</button>
       </div>
 
-      {/* ── BOOKINGS TAB ── */}
       {tab === 'bookings' && (
         <>
-          {/* Summary cards */}
           <div className={styles.summaryRow}>
             <div className={styles.summaryCard}>
               <span className={styles.summaryNum}>{totalBookings}</span>
@@ -309,7 +296,6 @@ export function AdminPage() {
             </div>
           </div>
 
-          {/* Per-show stats */}
           <div className={styles.showStats}>
             {statsByShow.map(({ show, count, tickets, revenue }) => (
               <button
@@ -330,7 +316,6 @@ export function AdminPage() {
             ))}
           </div>
 
-          {/* Filters row */}
           <div className={styles.filtersRow}>
             <div className={styles.filterGroup}>
               {filterShow !== 'all' && (
@@ -354,7 +339,6 @@ export function AdminPage() {
             </div>
           </div>
 
-          {/* Bookings table */}
           {fetching ? (
             <div className={styles.centered}><span className={styles.spinner} /></div>
           ) : filtered.length === 0 ? (
@@ -426,7 +410,6 @@ export function AdminPage() {
                           <span className={`${styles.payBadge} ${PAY_STATUS_STYLE[payStatus]}`}>
                             {PAY_STATUS_LABELS[payStatus]}
                           </span>
-                          {/* Payment account label */}
                           {b.paymentMethod === 'bank_transfer' && (() => {
                             const acc = getPaymentAccount(b.paymentAccountId);
                             return (
@@ -435,13 +418,11 @@ export function AdminPage() {
                               </span>
                             );
                           })()}
-                          {/* Payment reference */}
                           {b.paymentMethod === 'bank_transfer' && (
                             <span className={styles.payRef}>
                               {b.paymentReference ?? `${PAYMENT_CONFIG.paymentReferencePrefix}-${b.ticketCode}`}
                             </span>
                           )}
-                          {/* Countdown / expiry indicator for bank transfers */}
                           {payStatus === 'awaiting_transfer' && (() => {
                             const h = hoursUntilExpiry(b);
                             if (h === null) return null;
@@ -509,7 +490,6 @@ export function AdminPage() {
         </>
       )}
 
-      {/* ── USERS TAB ── */}
       {tab === 'users' && (
         <>
           <div className={styles.summaryRow}>
@@ -558,7 +538,6 @@ export function AdminPage() {
         </>
       )}
 
-      {/* ── NEWSLETTER TAB ── */}
       {tab === 'newsletter' && (
         <div className={styles.newsletterWrap}>
           <h2 className={styles.newsletterTitle}>Рассылка нового спектакля</h2>
@@ -614,7 +593,6 @@ export function AdminPage() {
         </div>
       )}
 
-      {/* ── Confirm: Оплачено ── */}
       <ConfirmDialog
         isOpen={confirmAction?.type === 'paid'}
         title="Подтвердить оплату?"
@@ -631,7 +609,6 @@ export function AdminPage() {
         }}
       />
 
-      {/* ── Confirm: Не оплачено ── */}
       <ConfirmDialog
         isOpen={confirmAction?.type === 'unpaid'}
         title="Снять оплату?"
@@ -648,7 +625,6 @@ export function AdminPage() {
         }}
       />
 
-      {/* ── Confirm: Отменить бронь ── */}
       <ConfirmDialog
         isOpen={confirmAction?.type === 'cancel'}
         title="Отменить бронь?"

@@ -16,7 +16,6 @@
   to   { opacity: 1; }
 }
 
-// ── Backdrop ──────────────────────────────────────────────────────────────────
 .backdrop {
   position: fixed;
   inset: 0;
@@ -28,11 +27,18 @@
   justify-content: center;
   padding: 24px;
   animation: fadeIn 0.3s ease both;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
 
   &.backdropOut { animation: fadeOut 0.28s ease both; }
+
+  @include mixins.small {
+    align-items: stretch;
+    padding: 0;
+  }
 }
 
-// ── Panel ─────────────────────────────────────────────────────────────────────
 .panel {
   position: relative;
   display: flex;
@@ -41,20 +47,30 @@
   height: min(76vh, 580px);
   background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 40px;
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: auto;
   animation: slideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 
   &.panelOut { animation: slideDown 0.28s cubic-bezier(0.4, 0, 1, 1) both; }
 
   @include mixins.mobile {
     flex-direction: column;
-    height: auto;
-    max-height: 90vh;
+    height: min(92dvh, 760px);
+    max-height: 92dvh;
+    border-radius: 28px;
+  }
+
+  @include mixins.small {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border: none;
   }
 }
 
-// ── Gallery ───────────────────────────────────────────────────────────────────
 .gallery {
   width: 340px;
   flex-shrink: 0;
@@ -66,10 +82,18 @@
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--line);
+    height: 42dvh;
+    min-height: 250px;
+    max-height: 360px;
+    flex-shrink: 0;
+  }
+
+  @include mixins.small {
+    height: 38dvh;
+    min-height: 230px;
   }
 }
 
-// ── Main photo ────────────────────────────────────────────────────────────────
 .mainPhoto {
   flex: 1;
   position: relative;
@@ -109,7 +133,6 @@
   user-select: none;
 }
 
-// ── Main photo navigation ─────────────────────────────────────────────────────
 .navBtn {
   position: absolute;
   top: 50%;
@@ -152,7 +175,6 @@
   pointer-events: none;
 }
 
-// ── Thumbnail strip ───────────────────────────────────────────────────────────
 .thumbRow {
   display: flex;
   align-items: center;
@@ -164,7 +186,7 @@
   background: var(--bg-3);
 }
 
-// Slim circular arrows for scroll — conditionally rendered so no phantom spacing
+// Круговые кнопки прокрутки — рендерятся по условию, без лишних отступов
 .thumbNav {
   flex-shrink: 0;
   width: 26px;
@@ -192,7 +214,7 @@
   position: relative;
   background-size: cover;
   background-position: center;
-  border-radius: 6px;
+  border-radius: 20px;
   overflow: hidden;
   cursor: pointer;
   height: 100%;
@@ -201,7 +223,7 @@
   &:hover { opacity: 0.78; }
 }
 
-// Active thumbnail — accent inset border
+// Активная миниатюра — акцентная рамка
 .thumbActive {
   cursor: default;
   opacity: 1 !important;
@@ -211,13 +233,13 @@
     position: absolute;
     inset: 0;
     box-shadow: inset 0 0 0 2px var(--accent);
-    border-radius: 6px;
+    border-radius: 20px;
     z-index: 3;
     pointer-events: none;
   }
 }
 
-// "+N" more overlay on last visible thumbnail
+// "+N" оверлей на последней миниатюре
 .thumbMore {
   position: absolute;
   inset: 0;
@@ -234,7 +256,6 @@
   pointer-events: none;
 }
 
-// ── Info panel ────────────────────────────────────────────────────────────────
 .info {
   flex: 1;
   padding: 32px 28px;
@@ -246,6 +267,10 @@
 
   @include mixins.mobile {
     padding: 24px 20px 28px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 }
 
@@ -289,7 +314,6 @@
   margin-top: -4px;
 }
 
-// ── Meta table ────────────────────────────────────────────────────────────────
 .metaTable {
   display: flex;
   flex-direction: column;
@@ -303,6 +327,12 @@
   border-bottom: 1px solid var(--line);
 
   &:first-child { border-top: 1px solid var(--line); }
+
+  @include mixins.small {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
 }
 
 .metaLabel {
@@ -317,9 +347,9 @@
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--fg-dim);
+  overflow-wrap: anywhere;
 }
 
-// ── Description ───────────────────────────────────────────────────────────────
 .desc {
   font-size: 13px;
   line-height: 1.78;
@@ -327,16 +357,24 @@
   flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+
+  @include mixins.mobile {
+    flex: 0 0 auto;
+    max-height: 30dvh;
+  }
 }
 
-// ── CTA ───────────────────────────────────────────────────────────────────────
 .bookBtn {
   width: 100%;
   justify-content: center;
   margin-top: auto;
+  min-height: 48px;
+  flex-shrink: 0;
 }
 
-// ── Close button ──────────────────────────────────────────────────────────────
 .close {
   position: absolute;
   top: 14px;
@@ -354,4 +392,15 @@
   svg { width: 16px; height: 16px; }
 
   &:hover { color: var(--fg); }
+
+  @include mixins.small {
+    top: calc(12px + env(safe-area-inset-top));
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+
+    svg { width: 18px; height: 18px; }
+  }
 }

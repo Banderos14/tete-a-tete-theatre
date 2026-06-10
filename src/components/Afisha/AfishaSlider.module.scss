@@ -14,6 +14,7 @@
   margin-left: calc(-50vw + 50%);
   overflow: clip;
   overflow-clip-margin: 48px;
+  overscroll-behavior-x: contain;
 
   &::before,
   &::after {
@@ -34,7 +35,23 @@
   }
 
   @include mixins.mobile {
-    --card-w: clamp(200px, 72vw, 260px);
+    --card-w: clamp(220px, 74vw, 280px);
+    width: 100%;
+    margin-left: 0;
+    padding: 0 16px;
+    overflow-x: auto;
+    overflow-y: visible;
+    overflow-clip-margin: 0;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar { display: none; }
+
+    &::before,
+    &::after {
+      width: 28px;
+    }
   }
 }
 
@@ -42,10 +59,17 @@
 .track {
   display: flex;
   width: max-content;
-  animation: slideLeft calc(var(--slide-count) * 8s) linear infinite;
+  animation: slideLeft calc(var(--slide-count) * 6s) linear infinite;
+  will-change: transform;
 
-  .outer:hover & {
-    animation-play-state: paused;
+  @media (hover: hover) and (pointer: fine) {
+    .outer:hover & {
+      animation-play-state: paused;
+    }
+  }
+
+  @include mixins.mobile {
+    animation-duration: calc(var(--slide-count) * 4.6s);
   }
 }
 
@@ -72,7 +96,22 @@
     .openHint { opacity: 1; transform: translateY(0); }
   }
 
-  @include mixins.mobile { height: clamp(300px, 55vh, 380px); }
+  @include mixins.mobile {
+    height: clamp(320px, 56vh, 420px);
+    scroll-snap-align: center;
+    touch-action: pan-x pan-y;
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    &:hover {
+      transform: none;
+      box-shadow: none;
+
+      .poster { opacity: 0.65; transform: none; }
+      .overlay { opacity: 0.9; }
+      .openHint { opacity: 1; transform: none; }
+    }
+  }
 }
 
 // ── Poster image ──────────────────────────────────────────────────────────────
@@ -227,6 +266,11 @@
   opacity: 0;
   transform: translateY(4px);
   transition: opacity 0.35s ease, transform 0.35s ease;
+
+  @include mixins.mobile {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .hintText {

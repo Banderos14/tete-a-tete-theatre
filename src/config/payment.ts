@@ -1,4 +1,4 @@
-// ── Types ──
+// Типы
 
 export type PaymentAccountType = 'iban' | 'card';
 
@@ -25,7 +25,7 @@ export interface CardPaymentAccount extends PaymentAccountBase {
 
 export type PaymentAccount = IbanPaymentAccount | CardPaymentAccount;
 
-// ── Config ──
+// Конфигурация
 
 export const PAYMENT_CONFIG = {
   receiverName:           'Théâtre Tête-à-Tête',
@@ -51,11 +51,20 @@ export const PAYMENT_CONFIG = {
   ] as PaymentAccount[],
 };
 
-// ── Helper ──
+// Вспомогательные функции
 
 export function getPaymentAccount(id: string | undefined): PaymentAccount {
   if (!id) return PAYMENT_CONFIG.paymentAccounts[0];
   return PAYMENT_CONFIG.paymentAccounts.find(a => a.id === id)
     ?? PAYMENT_CONFIG.paymentAccounts[0];
+}
+
+export function formatIban(iban: string): string {
+  const raw = iban.replace(/\s/g, '');
+  return raw.match(/.{1,4}/g)?.join(' ') ?? iban;
+}
+
+export function normalizeIban(iban: string): string {
+  return iban.replace(/\s/g, '');
 }
 

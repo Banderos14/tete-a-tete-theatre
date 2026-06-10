@@ -73,6 +73,8 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
   return (
     <>
       <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}>
+        <div className={styles.mobileSpacer} aria-hidden="true" />
+
         {/* Desktop nav left */}
         <ul className={`${styles.nav} ${styles.left}`}>
           {navLinks.map(({ label, id }) => (
@@ -145,20 +147,6 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
           ) : (
             <button className={`${styles.signInBtn} ${styles.desktopOnly}`} onClick={onAuthOpen}>
               {t.auth.headerBtn}
-            </button>
-          )}
-
-          {/* Avatar visible on mobile too (quick profile access) */}
-          {user && (
-            <button
-              className={`${styles.avatarBtn} ${styles.mobileOnly}`}
-              onClick={onProfileOpen}
-              aria-label="Личный кабинет"
-            >
-              {user.photoURL
-                ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" />
-                : <span>{getInitials(user.displayName)}</span>
-              }
             </button>
           )}
 

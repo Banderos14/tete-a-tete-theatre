@@ -66,6 +66,34 @@
   gap: 24px;
   padding-top: 36px;
   border-top: 1px solid var(--line);
+
+  @include mixins.mobile {
+    gap: 12px;
+  }
+
+  @include mixins.small {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.stat {
+  min-width: 0;
+
+  @include mixins.mobile {
+    min-height: 112px;
+    padding: 16px 14px;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  @include mixins.small {
+    min-height: 96px;
+    text-align: center;
+  }
 }
 
 .statNum {
@@ -74,6 +102,10 @@
   line-height: 1;
   color: var(--accent-glow);
   font-weight: 500;
+
+  @include mixins.mobile {
+    font-size: clamp(38px, 10vw, 50px);
+  }
 }
 
 .it {
@@ -85,6 +117,13 @@
   text-transform: uppercase;
   color: var(--fg-mute);
   margin-top: 8px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+
+  @include mixins.mobile {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
 }
 
 .imagery {
@@ -92,6 +131,15 @@
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 200px 200px 200px;
   gap: 12px;
+
+  @include mixins.mobile {
+    grid-template-rows: 180px 180px 180px;
+  }
+
+  @include mixins.small {
+    grid-template-rows: 150px 150px 150px;
+    gap: 8px;
+  }
 }
 
 .img {
@@ -130,4 +178,6 @@
   z-index: 2;
   display: flex;
   justify-content: space-between;
+  gap: 8px;
+  overflow-wrap: anywhere;
 }

@@ -5,6 +5,18 @@
   border-top: none;
   padding: 0;
   isolation: isolate;
+  overflow-x: clip;
+
+  @include mixins.mobile {
+    padding-left: 0;
+    padding-right: 0;
+
+    :global(.section-head) {
+      width: calc(100% - 32px);
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
 }
 
 .grid {

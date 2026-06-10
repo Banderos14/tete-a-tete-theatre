@@ -1,14 +1,14 @@
 @use '../../../styles/mixins';
 
-// ── Ticket container ──────────────────────────────────────────────────────────
 .ticket {
   background: var(--bg-3);
   border: 1px solid var(--line-strong);
   border-left: 3px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: 28px;
   overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
+  min-width: 0;
 
   &:hover {
     border-color: rgba(184, 0, 0, 0.45);
@@ -23,7 +23,6 @@
   }
 }
 
-// ── Collapsed header ──────────────────────────────────────────────────────────
 .header {
   display: flex;
   align-items: center;
@@ -32,6 +31,13 @@
   padding: 14px 16px;
   min-height: 76px;
   outline: none;
+
+  @include mixins.small {
+    align-items: stretch;
+    flex-direction: column;
+    min-height: 0;
+    padding: 14px;
+  }
 
   &:focus-visible {
     box-shadow: inset 0 0 0 2px var(--accent);
@@ -52,6 +58,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -0.01em;
+
+  @include mixins.small {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 
 .showMeta {
@@ -68,8 +79,10 @@
   color: var(--fg-dim);
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: 12px;
   padding: 2px 7px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .headerRight {
@@ -78,9 +91,15 @@
   align-items: flex-end;
   gap: 8px;
   flex-shrink: 0;
+
+  @include mixins.small {
+    align-items: stretch;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 8px;
+  }
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────────
 .statusBadge {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -108,6 +127,10 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
+
+  @include mixins.small {
+    align-items: flex-start;
+  }
 }
 
 .onSite {
@@ -122,7 +145,6 @@
   border: 1px solid rgba(255, 160, 0, 0.28);
 }
 
-// ── QR toggle button ──────────────────────────────────────────────────────────
 .qrBtn {
   display: flex;
   align-items: center;
@@ -132,6 +154,7 @@
   letter-spacing: 0.08em;
   color: var(--fg-mute);
   transition: color 0.2s;
+  min-height: 34px;
 
   .ticket:hover & { color: var(--fg-dim); }
 
@@ -144,7 +167,6 @@
   &.chevronUp { transform: rotate(180deg); }
 }
 
-// ── Expanded body ─────────────────────────────────────────────────────────────
 // grid-template-rows 0fr→1fr animates the height; opacity fades content in/out.
 .body {
   display: grid;
@@ -172,10 +194,10 @@
     flex-direction: column;
     align-items: center;
     gap: 16px;
+    padding: 18px 14px 16px;
   }
 }
 
-// ── QR column ─────────────────────────────────────────────────────────────────
 .qrCol {
   display: flex;
   flex-direction: column;
@@ -186,7 +208,7 @@
 
 .qrWrap {
   background: #fff;
-  border-radius: 6px;
+  border-radius: 20px;
   padding: 6px;
   line-height: 0;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
@@ -196,11 +218,13 @@
   display: block;
   width: 148px;
   height: 148px;
-  border-radius: 3px;
+  border-radius: 12px;
 
   @include mixins.small {
-    width: 168px;
-    height: 168px;
+    width: min(220px, calc(100vw - 96px));
+    height: min(220px, calc(100vw - 96px));
+    min-width: 180px;
+    min-height: 180px;
   }
 }
 
@@ -228,10 +252,13 @@
   text-align: center;
 }
 
-// ── Details column ────────────────────────────────────────────────────────────
 .details {
   flex: 1;
   min-width: 0;
+
+  @include mixins.small {
+    width: 100%;
+  }
 }
 
 .detailTitle {
@@ -265,6 +292,12 @@
   gap: 10px;
   font-size: 12px;
 
+  @include mixins.small {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
   dt {
     font-family: var(--font-mono);
     font-size: 10px;
@@ -277,10 +310,14 @@
   dd {
     color: var(--fg-dim);
     text-align: right;
+    overflow-wrap: anywhere;
+
+    @include mixins.small {
+      text-align: left;
+    }
   }
 }
 
-// ── PDF button ────────────────────────────────────────────────────────────────
 .pdfBtn {
   display: flex;
   align-items: center;
@@ -289,7 +326,7 @@
   padding: 9px 14px;
   background: transparent;
   border: 1px solid var(--line-strong);
-  border-radius: 5px;
+  border-radius: 20px;
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.1em;
@@ -311,15 +348,21 @@
   }
 }
 
-// ── Code block ────────────────────────────────────────────────────────────────
 .codeBox {
   display: flex;
   align-items: center;
   gap: 10px;
   background: var(--bg);
   border: 1px solid var(--line-strong);
-  border-radius: 5px;
+  border-radius: 20px;
   padding: 8px 12px;
+  min-width: 0;
+
+  @include mixins.small {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
 }
 
 .codeLabel {
@@ -337,4 +380,6 @@
   letter-spacing: 0.16em;
   color: var(--fg);
   font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
