@@ -398,6 +398,47 @@
   margin-top: 8px;
 }
 
+// ── Loyalty discount block ────────────────────────────────────────────────────
+.loyaltyBlock {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 6px;
+}
+
+.loyaltyTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 6px;
+  letter-spacing: 0.02em;
+}
+
+.loyaltyRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--fg-mute);
+  line-height: 1.7;
+  font-family: var(--font-mono);
+
+  &.loyaltyRowTotal {
+    color: var(--fg);
+    font-weight: 700;
+    font-size: 13px;
+    border-top: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    margin-top: 4px;
+    padding-top: 4px;
+  }
+}
+
+.loyaltyStrike {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
 // ── Right column ──────────────────────────────────────────────────────────────
 .formRight {
   display: flex;

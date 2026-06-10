@@ -2,13 +2,18 @@ import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
-import { createBooking } from '../../../services/bookingService';
+import { createBooking, getUserBookingsOnce } from '../../../services/bookingService';
 import { generateTicketCode } from '../../../services/ticketService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
+import {
+  hasAvailableLoyaltyReward,
+  calculateLoyaltyDiscount,
+  getUserAttendedCount,
+} from '../../../services/loyaltyService';
 import type { Show, TicketType } from '../../../types';
-import type { PaymentMethod } from '../../../types/booking';
+import type { Booking, PaymentMethod } from '../../../types/booking';
 import styles from './BookingModal.module.scss';
 
 interface Props {
@@ -57,8 +62,6 @@ export function BookingModal({ show, onClose }: Props) {
   const [tickets,          setTickets]          = useState(1);
   const [selectedTicket,   setSelectedTicket]   = useState<TicketType | null>(null);
   const [payment,          setPayment]          = useState<PaymentMethod>('on_site');
-  const [selectedAccountId,setSelectedAccountId]= useState<string>(PAYMENT_CONFIG.paymentAccounts[0].id);
-  const [savedAccountId,   setSavedAccountId]   = useState<string>(PAYMENT_CONFIG.paymentAccounts[0].id);
   const [phone,            setPhone]            = useState('');
   const [comment,          setComment]          = useState('');
   const [submitLoading,    setSubmitLoading]    = useState(false);
@@ -72,14 +75,35 @@ export function BookingModal({ show, onClose }: Props) {
   const [copiedCard,       setCopiedCard]       = useState(false);
   const [copiedRef,        setCopiedRef]        = useState(false);
 
+  const [userBookings,       setUserBookings]       = useState<Booking[]>([]);
+  const [savedOriginalAmount,setSavedOriginalAmount] = useState(0);
+  const [savedDiscountAmount,setSavedDiscountAmount] = useState(0);
+
   const defaultTicket = useMemo(
     () => (show?.ticketTypes?.length ? show.ticketTypes[0] : null),
     [show],
   );
 
-  const activeTicket = selectedTicket ?? defaultTicket;
-  const totalAmount  = (activeTicket?.price ?? 0) * tickets;
-  const maxTickets   = activeTicket?.available ?? 10;
+  const activeTicket  = selectedTicket ?? defaultTicket;
+  const baseAmount    = (activeTicket?.price ?? 0) * tickets;
+  const maxTickets    = activeTicket?.available ?? 10;
+
+  const loyaltyAvailable = useMemo(
+    () => hasAvailableLoyaltyReward(userBookings),
+    [userBookings],
+  );
+  const attendedCount = useMemo(
+    () => getUserAttendedCount(userBookings),
+    [userBookings],
+  );
+  const discountAmount = loyaltyAvailable ? calculateLoyaltyDiscount(baseAmount) : 0;
+  const totalAmount    = baseAmount - discountAmount;
+
+  // Загружаем историю броней один раз — нужно для расчёта loyalty reward.
+  useEffect(() => {
+    if (!user) return;
+    getUserBookingsOnce(user.uid).then(setUserBookings).catch(() => {});
+  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Переходим на форму сразу после авторизации, не дожидаясь следующего рендера
@@ -99,7 +123,6 @@ export function BookingModal({ show, onClose }: Props) {
     /* eslint-disable react-hooks/set-state-in-effect */
     setStep(user ? 'form' : 'auth');
     setTickets(1); setSelectedTicket(null); setPayment('on_site');
-    setSelectedAccountId(PAYMENT_CONFIG.paymentAccounts[0].id);
     setComment(''); setSubmitError('');
     setAuthEmail(''); setAuthPassword(''); setAuthName(''); setAuthError('');
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -156,6 +179,10 @@ export function BookingModal({ show, onClose }: Props) {
         ? `${PAYMENT_CONFIG.paymentReferencePrefix}-${code}`
         : undefined;
 
+      const priceInfo = loyaltyAvailable
+        ? `${activeTicket.label} · ${activeTicket.price}€ × ${tickets} = ${baseAmount}€, скидка 50% = ${totalAmount}€`
+        : `${activeTicket.label} · ${activeTicket.price}€ × ${tickets} = ${totalAmount}€`;
+
       await createBooking({
         showId:        show.id,
         showTitle:     show.title,
@@ -167,7 +194,7 @@ export function BookingModal({ show, onClose }: Props) {
         userPhone:     phone,
         ticketsCount:  tickets,
         ticketType:    activeTicket.id,
-        priceInfo:     `${activeTicket.label} · ${activeTicket.price}€ × ${tickets} = ${totalAmount}€`,
+        priceInfo,
         totalAmount,
         ticketCode:    code,
         status:        'pending',
@@ -175,9 +202,15 @@ export function BookingModal({ show, onClose }: Props) {
         paymentStatus: isBankTransfer ? 'awaiting_transfer' : 'not_paid',
         comment,
         lang,
-        ...(isBankTransfer ? { paymentAccountId: selectedAccountId } : {}),
+        ...(isBankTransfer ? { paymentAccountId: PAYMENT_CONFIG.paymentAccounts[0].id } : {}),
         ...(paymentReference ? { paymentReference } : {}),
         ...(paymentExpiresAt ? { paymentExpiresAt } : {}),
+        ...(loyaltyAvailable ? {
+          originalAmount:                  baseAmount,
+          loyaltyDiscountApplied:          true,
+          loyaltyDiscountAmount:           discountAmount,
+          loyaltyRewardUsedFromVisitCount: attendedCount,
+        } : {}),
       });
 
       // Non-blocking — booking is already saved if email fails
@@ -193,13 +226,19 @@ export function BookingModal({ show, onClose }: Props) {
         totalAmount,
         ticketCode:       code,
         paymentMethod:    payment,
-        paymentAccountId: isBankTransfer ? selectedAccountId : undefined,
+        paymentAccountId: isBankTransfer ? PAYMENT_CONFIG.paymentAccounts[0].id : undefined,
         lang,
+        ...(loyaltyAvailable ? {
+          originalAmount:        baseAmount,
+          loyaltyDiscountApplied: true,
+          loyaltyDiscountAmount:  discountAmount,
+        } : {}),
       }).catch(() => {/* silently ignored */});
 
       setTicketCode(code);
       setSavedAmount(totalAmount);
-      setSavedAccountId(selectedAccountId);
+      setSavedOriginalAmount(loyaltyAvailable ? baseAmount : 0);
+      setSavedDiscountAmount(loyaltyAvailable ? discountAmount : 0);
       setStep('success');
     } catch {
       setSubmitError(t.booking.submitError);
@@ -366,10 +405,27 @@ export function BookingModal({ show, onClose }: Props) {
                     </div>
                   )}
                 </div>
-                {activeTicket && (
+                {activeTicket && !loyaltyAvailable && (
                   <p className={styles.priceHint}>
                     {activeTicket.price}&nbsp;€ × {tickets} = {totalAmount}&nbsp;€
                   </p>
+                )}
+                {activeTicket && loyaltyAvailable && (
+                  <div className={styles.loyaltyBlock}>
+                    <p className={styles.loyaltyTitle}>{t.booking.loyaltyGift}</p>
+                    <div className={styles.loyaltyRow}>
+                      <span>{t.booking.loyaltyOriginal}</span>
+                      <span className={styles.loyaltyStrike}>{baseAmount}&nbsp;€</span>
+                    </div>
+                    <div className={styles.loyaltyRow}>
+                      <span>{t.booking.loyaltyDiscount}</span>
+                      <span>−{discountAmount}&nbsp;€</span>
+                    </div>
+                    <div className={`${styles.loyaltyRow} ${styles.loyaltyRowTotal}`}>
+                      <span>{t.booking.loyaltyTotal}</span>
+                      <span>{totalAmount}&nbsp;€</span>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -424,33 +480,6 @@ export function BookingModal({ show, onClose }: Props) {
                 </div>
               </div>
 
-              {/* Account selection — only for bank_transfer */}
-              {payment === 'bank_transfer' && (
-                <div className={styles.section}>
-                  <div className={styles.sectionLabel}>
-                    {lang === 'FR' ? 'Région de paiement' : 'Регион оплаты'}
-                  </div>
-                  <div className={styles.paymentCards}>
-                    {PAYMENT_CONFIG.paymentAccounts.map(acc => (
-                      <button
-                        key={acc.id}
-                        type="button"
-                        className={`${styles.paymentCard} ${selectedAccountId === acc.id ? styles.paymentCardActive : ''}`}
-                        onClick={() => setSelectedAccountId(acc.id)}
-                      >
-                        <span className={styles.paymentIcon}>
-                          {acc.type === 'iban' ? '🇪🇺' : '🇺🇦'}
-                        </span>
-                        <div>
-                          <div className={styles.paymentName}>{acc.label}</div>
-                          <div className={styles.paymentDesc}>{acc.description}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Comment */}
               <div className={styles.section}>
                 <label className={styles.sectionLabel} htmlFor="bk-comment">{t.booking.comment}</label>
@@ -478,7 +507,7 @@ export function BookingModal({ show, onClose }: Props) {
         {/* ── Success step ── */}
         {step === 'success' && (() => {
           const paymentRef  = `${PAYMENT_CONFIG.paymentReferencePrefix}-${ticketCode}`;
-          const account     = getPaymentAccount(savedAccountId);
+          const account     = getPaymentAccount(undefined);
           const isIban      = account.type === 'iban';
           const copyRows: string[] = [
             `${t.booking.transferReceiver}: ${account.receiverName}`,
@@ -510,7 +539,13 @@ export function BookingModal({ show, onClose }: Props) {
                     [t.booking.labelShow,    showTitle],
                     [t.booking.labelDate,    `${show.day} ${monthLabel} ${show.year} · ${show.time}`],
                     [t.booking.labelTickets, `${tickets} × ${ticketLabel(activeTicket?.id)}`],
-                    [t.booking.labelAmount,  `${savedAmount} €`],
+                    ...(savedDiscountAmount > 0 ? [
+                      [t.booking.loyaltyOriginal, `${savedOriginalAmount} €`],
+                      [t.booking.loyaltyDiscount, `−${savedDiscountAmount} €`],
+                      [t.booking.loyaltyTotal,    `${savedAmount} €`],
+                    ] : [
+                      [t.booking.labelAmount, `${savedAmount} €`],
+                    ]),
                   ] as [string, string][]).map(([label, value]) => (
                     <div key={label} className={styles.infoBoxRow}>
                       <span>{label}</span>

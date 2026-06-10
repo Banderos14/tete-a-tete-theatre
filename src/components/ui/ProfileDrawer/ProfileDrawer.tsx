@@ -728,6 +728,13 @@ import type { T } from '../../../i18n/translations';
 import type { Show } from '../../../types';
 import { SHOWS } from '../../../data/shows';
 import { computedIsAttended } from '../../../services/attendanceService';
+import {
+  hasAvailableLoyaltyReward,
+  getUserAttendedCount,
+  getUsedRewardCount,
+  nextRewardThreshold,
+  cycleProgress,
+} from '../../../services/loyaltyService';
 import { TicketCard } from '../TicketCard';
 
 const SHOW_MAP = new Map<string, Show>(SHOWS.map(s => [s.id, s]));
@@ -741,24 +748,30 @@ const STATUS_LABEL_KEY: Record<BookingStatus, keyof T['profile']> = {
 };
 
 function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
-  const attended  = bookings.filter(computedIsAttended).length;
-  const remaining = attended === 0 ? BONUS_EVERY : BONUS_EVERY - (attended % BONUS_EVERY);
-  const isBonusReady = attended > 0 && attended % BONUS_EVERY === 0;
+  const attended         = getUserAttendedCount(bookings);
+  const isRewardAvailable = hasAvailableLoyaltyReward(bookings);
+  const usedCount        = getUsedRewardCount(bookings);
+  const nextThreshold    = nextRewardThreshold(bookings);
+  const filled           = cycleProgress(bookings);
+
+  const hasEverEarned = attended >= BONUS_EVERY;
 
   return (
     <div className={styles.visitCounter}>
       <p className={styles.visitText}>{t.profile.visitCount(attended)}</p>
       {attended > 0 && (
-        isBonusReady
+        isRewardAvailable
           ? <p className={styles.visitBonus}>{t.profile.bonusComplete}</p>
-          : <p className={styles.visitProgress}>{t.profile.bonusProgress(remaining)}</p>
+          : hasEverEarned && usedCount > 0
+            ? <p className={styles.visitProgress}>{t.profile.loyaltyUsed(nextThreshold)}</p>
+            : <p className={styles.visitProgress}>{t.profile.bonusProgress(nextThreshold - attended)}</p>
       )}
       {attended > 0 && (
         <div className={styles.visitBar}>
           {Array.from({ length: BONUS_EVERY }, (_, i) => (
             <div
               key={i}
-              className={`${styles.visitDot} ${i < (attended % BONUS_EVERY || BONUS_EVERY) ? styles.visitDotFilled : ''}`}
+              className={`${styles.visitDot} ${i < filled ? styles.visitDotFilled : ''}`}
             />
           ))}
         </div>

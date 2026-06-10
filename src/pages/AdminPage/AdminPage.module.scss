@@ -254,6 +254,27 @@
   padding: 3px 7px;
 }
 
+.loyaltyBadge {
+  display: inline-block;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 3px;
+  padding: 2px 6px;
+  margin-top: 4px;
+}
+
+.loyaltyOrig {
+  display: block;
+  font-size: 10px;
+  color: var(--fg-mute);
+  text-decoration: line-through;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+}
+
 .statusOk {
   background: rgba(76, 175, 80, 0.15);
   color: #4caf50;

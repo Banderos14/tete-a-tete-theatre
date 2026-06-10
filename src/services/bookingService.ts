@@ -31,6 +31,16 @@ export async function createBooking(data: NewBooking): Promise<string> {
   return ref.id;
 }
 
+// Одноразовый запрос истории броней пользователя (для проверки loyalty).
+export async function getUserBookingsOnce(userId: string): Promise<Booking[]> {
+  const q = query(collection(db, COLLECTION), where('userId', '==', userId));
+  return snapshotToBookings(await getDocs(q)).sort((a, b) => {
+    const ta = (a.createdAt as { seconds?: number })?.seconds ?? 0;
+    const tb = (b.createdAt as { seconds?: number })?.seconds ?? 0;
+    return tb - ta;
+  });
+}
+
 // Realtime subscription — no composite index required (sorts client-side).
 // Returns an unsubscribe function; call it when the component unmounts.
 export function subscribeToUserBookings(

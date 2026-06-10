@@ -76,6 +76,7 @@ export interface T {
     visitCount: (n: number) => string;
     bonusProgress: (remaining: number) => string;
     bonusComplete: string;
+    loyaltyUsed: (next: number) => string;
     ticketCode: string;
     statusPending: string;
     statusConfirmed: string;
@@ -130,6 +131,10 @@ export interface T {
     transferReceiver: string;
     transferPurpose: string;
     transferCodeWarning: string;
+    loyaltyGift: string;
+    loyaltyOriginal: string;
+    loyaltyDiscount: string;
+    loyaltyTotal: string;
   };
   admin: {
     title: string;
