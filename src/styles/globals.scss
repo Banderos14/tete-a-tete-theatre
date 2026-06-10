@@ -6,7 +6,7 @@
   50%       { transform: scale(1.8); opacity: 1; }
 }
 
-// ── Reset ──────────────────────────────────────────────────────────────────────
+// Сброс стилей браузера
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
@@ -30,7 +30,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 ::selection { background: var(--accent); color: #fff; }
 
-// ── Scroll reveal ──────────────────────────────────────────────────────────────
 // All elements with class "reveal" start hidden and fade+slide up into view
 // IntersectionObserver in App.tsx adds ".visible" when element enters viewport
 .reveal {
@@ -46,7 +45,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   }
 }
 
-// ── Shared section chrome ──────────────────────────────────────────────────────
+// Заголовок секции
 .section-head {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -100,7 +99,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   }
 }
 
-// ── Shared section wrapper ─────────────────────────────────────────────────────
+// Обёртка секций
 section {
   position: relative;
   padding: 0 40px 140px;
@@ -110,7 +109,7 @@ section {
   @include mixins.small  { padding: 0 16px 64px; }
 }
 
-// ── Grain overlay ──────────────────────────────────────────────────────────────
+// Зернистая текстура
 .grain {
   position: fixed;
   inset: 0;
@@ -121,7 +120,7 @@ section {
   @include mixins.grain-overlay;
 }
 
-// ── Shared button ──────────────────────────────────────────────────────────────
+// Кнопки
 .btn {
   display: inline-flex;
   align-items: center;
@@ -134,7 +133,7 @@ section {
   text-transform: uppercase;
   font-weight: 500;
   border: 1px solid var(--line-strong);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -160,7 +159,7 @@ section {
   }
 
   &.btn-primary {
-    border-radius: 7px;
+    border-radius: var(--radius-md);
     background: var(--accent);
     color: #fff;
     border-color: var(--accent);

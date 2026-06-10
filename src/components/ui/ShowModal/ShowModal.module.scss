@@ -16,7 +16,6 @@
   to   { opacity: 1; }
 }
 
-// ── Backdrop ──────────────────────────────────────────────────────────────────
 .backdrop {
   position: fixed;
   inset: 0;
@@ -32,7 +31,6 @@
   &.backdropOut { animation: fadeOut 0.28s ease both; }
 }
 
-// ── Panel ─────────────────────────────────────────────────────────────────────
 .panel {
   position: relative;
   display: flex;
@@ -41,7 +39,7 @@
   height: min(76vh, 580px);
   background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 40px;
   overflow: hidden;
   animation: slideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 
@@ -54,7 +52,6 @@
   }
 }
 
-// ── Gallery ───────────────────────────────────────────────────────────────────
 .gallery {
   width: 340px;
   flex-shrink: 0;
@@ -69,7 +66,6 @@
   }
 }
 
-// ── Main photo ────────────────────────────────────────────────────────────────
 .mainPhoto {
   flex: 1;
   position: relative;
@@ -109,7 +105,6 @@
   user-select: none;
 }
 
-// ── Main photo navigation ─────────────────────────────────────────────────────
 .navBtn {
   position: absolute;
   top: 50%;
@@ -152,7 +147,6 @@
   pointer-events: none;
 }
 
-// ── Thumbnail strip ───────────────────────────────────────────────────────────
 .thumbRow {
   display: flex;
   align-items: center;
@@ -164,7 +158,7 @@
   background: var(--bg-3);
 }
 
-// Slim circular arrows for scroll — conditionally rendered so no phantom spacing
+// Круговые кнопки прокрутки — рендерятся по условию, без лишних отступов
 .thumbNav {
   flex-shrink: 0;
   width: 26px;
@@ -192,7 +186,7 @@
   position: relative;
   background-size: cover;
   background-position: center;
-  border-radius: 6px;
+  border-radius: 20px;
   overflow: hidden;
   cursor: pointer;
   height: 100%;
@@ -201,7 +195,7 @@
   &:hover { opacity: 0.78; }
 }
 
-// Active thumbnail — accent inset border
+// Активная миниатюра — акцентная рамка
 .thumbActive {
   cursor: default;
   opacity: 1 !important;
@@ -211,13 +205,13 @@
     position: absolute;
     inset: 0;
     box-shadow: inset 0 0 0 2px var(--accent);
-    border-radius: 6px;
+    border-radius: 20px;
     z-index: 3;
     pointer-events: none;
   }
 }
 
-// "+N" more overlay on last visible thumbnail
+// "+N" оверлей на последней миниатюре
 .thumbMore {
   position: absolute;
   inset: 0;
@@ -234,7 +228,6 @@
   pointer-events: none;
 }
 
-// ── Info panel ────────────────────────────────────────────────────────────────
 .info {
   flex: 1;
   padding: 32px 28px;
@@ -289,7 +282,6 @@
   margin-top: -4px;
 }
 
-// ── Meta table ────────────────────────────────────────────────────────────────
 .metaTable {
   display: flex;
   flex-direction: column;
@@ -319,7 +311,6 @@
   color: var(--fg-dim);
 }
 
-// ── Description ───────────────────────────────────────────────────────────────
 .desc {
   font-size: 13px;
   line-height: 1.78;
@@ -329,14 +320,12 @@
   overflow-y: auto;
 }
 
-// ── CTA ───────────────────────────────────────────────────────────────────────
 .bookBtn {
   width: 100%;
   justify-content: center;
   margin-top: auto;
 }
 
-// ── Close button ──────────────────────────────────────────────────────────────
 .close {
   position: absolute;
   top: 14px;

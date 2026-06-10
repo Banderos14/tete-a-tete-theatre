@@ -29,8 +29,6 @@ type IntroState = 'closed' | 'opening' | 'done';
 const IS_MOBILE = typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches;
 const INTRO_SPEED = IS_MOBILE ? 0 : 2.2;
 
-// ── Landing page ───
-
 function LandingPage({
   theme, lang, introState,
   onThemeChange, onLangChange,
@@ -67,8 +65,6 @@ function LandingPage({
     </>
   );
 }
-
-// ── Root App ──
 
 export default function App() {
   const [theme,       setTheme]       = useState<Theme>('dark');

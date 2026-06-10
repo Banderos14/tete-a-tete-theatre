@@ -8,8 +8,6 @@ import type { Booking, BookingStatus } from '../../../types/booking';
 import type { Messenger } from '../../../context/AuthContext';
 import styles from './ProfileDrawer.module.scss';
 
-// ── helpers ────────────────────────────────────────────────────────────────────
-
 function formatPhone(raw: string): string {
   const hasPlus = raw.startsWith('+');
   const digits  = raw.replace(/\D/g, '');
@@ -51,7 +49,7 @@ function mapFbError(err: unknown, lang: 'RU' | 'FR'): string {
   return map[code] ?? (err instanceof Error ? err.message : (isFR ? 'Erreur de connexion' : 'Ошибка подключения'));
 }
 
-// ── validation ─────────────────────────────────────────────────────────────────
+// Валидация
 
 interface ValidationErrors {
   displayName?: string;
@@ -67,8 +65,6 @@ function validate(displayName: string, birthday: string, phone: string, required
   return errors;
 }
 
-// ── types ──────────────────────────────────────────────────────────────────────
-
 type Section = 'personal' | 'contacts' | 'socials' | 'notifications' | 'tickets' | 'shows';
 const FORM_SECTIONS: Section[] = ['personal', 'contacts', 'socials', 'notifications'];
 
@@ -77,13 +73,10 @@ interface Props {
   onClose: () => void;
 }
 
-// ── component ──────────────────────────────────────────────────────────────────
-
 export function ProfileDrawer({ open, onClose }: Props) {
   const { lang, t } = useLang();
   const { user, userProfile, loading, logout, saveProfile, linkFacebook } = useAuth();
 
-  // ── form fields ──
   const [displayName, setDisplayName] = useState('');
   const [birthday,    setBirthday]    = useState('');
   const [phone,       setPhone]       = useState('');
@@ -91,31 +84,26 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const [socialLink,  setSocialLink]  = useState('');
   const [notify,      setNotify]      = useState(true);
 
-  // ── form state ──
   const [saving,    setSaving]    = useState(false);
   const [savedMsg,  setSavedMsg]  = useState(false);
   const [errors,    setErrors]    = useState<ValidationErrors>({});
   const [submitted, setSubmitted] = useState(false);
 
-  // ── unsaved guard ──
   const [isDirty,     setIsDirty]     = useState(false);
   const [warnVisible, setWarnVisible] = useState(false);
   const warnTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // ── facebook ──
   const [fbLoading, setFbLoading] = useState(false);
   const [fbError,   setFbError]   = useState('');
 
-  // ── booking history ──
   const [bookings,       setBookings]       = useState<Booking[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError,   setHistoryError]   = useState<string | null>(null);
 
-  // ── navigation + UI ──
   const [activeSection,    setActiveSection]    = useState<Section>('personal');
   const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
 
-  // ── sync from Firestore ──
+  // Синхронизация полей формы из Firestore
   useEffect(() => {
     if (!userProfile) return;
     setDisplayName(userProfile.displayName || user?.displayName || '');
@@ -133,13 +121,12 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setSubmitted(false);
   }, [userProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── body scroll lock ──
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  // ── realtime booking subscription ──
+  // Realtime-подписка на брони пользователя
   useEffect(() => {
     if (!open || !user) return;
     setHistoryLoading(true);
@@ -174,15 +161,13 @@ export function ProfileDrawer({ open, onClose }: Props) {
     return unsub;
   }, [open, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── reset expanded ticket on section change ──
+  // Сворачиваем раскрытый билет при смене раздела
   useEffect(() => { setExpandedTicketId(null); }, [activeSection]);
 
-  // ── live validate after first submit ──
   useEffect(() => {
     if (submitted) setErrors(validate(displayName, birthday, phone, t.profile.required));
   }, [displayName, birthday, phone, submitted, t.profile.required]);
 
-  // ── helpers ──
   const markDirty = useCallback(() => setIsDirty(true), []);
 
   function tryClose() {
@@ -195,7 +180,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
     }
   }
 
-  // ── save ──
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSubmitted(true);
@@ -214,7 +198,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setTimeout(() => setSavedMsg(false), 2500);
   }
 
-  // ── Facebook link ──
   const handleLinkFacebook = useCallback(async () => {
     setFbError('');
     setFbLoading(true);
@@ -234,7 +217,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
     await logout();
   }
 
-  // ── derived ──
   const headerName       = displayName || user?.displayName || userProfile?.displayName || '';
   const email            = user?.email ?? userProfile?.email ?? '';
   const photoURL         = user?.photoURL ?? null;
@@ -247,7 +229,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
     b.paymentStatus === 'paid' && b.status === 'confirmed' && !!b.ticketCode
   ).length;
 
-  // ── nav items ──
   const navItems: { id: Section; label: string; icon: ReactNode; badge?: number }[] = [
     { id: 'personal',      label: t.profile.sectionPersonal,      icon: <PersonIcon />  },
     { id: 'contacts',      label: t.profile.sectionContacts,      icon: <PhoneIcon />   },
@@ -257,7 +238,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
     { id: 'shows',         label: t.profile.historyAttended,      icon: <StarIcon />    },
   ];
 
-  // ── loading skeleton ──
   if (open && loading) {
     return (
       <div className={`${styles.modalWrap} ${styles.modalWrapOpen}`} aria-label="Личный кабинет" aria-modal>

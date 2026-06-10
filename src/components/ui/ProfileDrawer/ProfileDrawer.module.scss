@@ -1,6 +1,5 @@
 @use '../../../styles/mixins';
 
-// ── Modal backdrop + wrapper ─────────────────────────────────────────────────
 .modalWrap {
   position: fixed;
   inset: 0;
@@ -29,11 +28,10 @@
   }
 }
 
-// ── Modal box ────────────────────────────────────────────────────────────────
 .modal {
   background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 20px;
   width: 100%;
   max-width: 1050px;
   max-height: 88vh;
@@ -59,12 +57,11 @@
   }
 
   @include mixins.small {
-    border-radius: 14px 14px 0 0;
+    border-radius: 20px 20px 0 0;
     max-height: 96vh;
   }
 }
 
-// ── Unsaved toast ────────────────────────────────────────────────────────────
 .unsavedToast {
   position: absolute;
   top: 28px;
@@ -77,7 +74,7 @@
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
   padding: 9px 18px;
-  border-radius: 4px;
+  border-radius: 8px;
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -92,7 +89,6 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-// ── Sidebar ──────────────────────────────────────────────────────────────────
 .sidebar {
   width: 240px;
   flex-shrink: 0;
@@ -111,7 +107,6 @@
   }
 }
 
-// ── Sidebar top (avatar + identity) ─────────────────────────────────────────
 .sidebarTop {
   padding: 28px 20px 20px;
   border-bottom: 1px solid var(--line);
@@ -182,7 +177,7 @@
   gap: 6px;
   background: rgba(184, 0, 0, 0.1);
   border: 1px solid rgba(184, 0, 0, 0.25);
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 5px 10px;
   font-size: 10px;
   color: var(--accent);
@@ -193,7 +188,6 @@
   line-height: 1.4;
 }
 
-// ── Sidebar nav ──────────────────────────────────────────────────────────────
 .sidebarNav {
   flex: 1;
   overflow-y: auto;
@@ -219,13 +213,12 @@
   }
 }
 
-// ── Nav item ─────────────────────────────────────────────────────────────────
 .navItem {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: 7px;
+  border-radius: 12px;
   font-size: 13px;
   color: var(--fg-mute);
   font-family: var(--font-body);
@@ -309,7 +302,6 @@
   }
 }
 
-// ── Sidebar footer ───────────────────────────────────────────────────────────
 .sidebarFooter {
   padding: 14px 16px;
   border-top: 1px solid var(--line);
@@ -334,7 +326,6 @@
   &:hover { color: var(--accent); }
 }
 
-// ── Main content area ────────────────────────────────────────────────────────
 .mainContent {
   flex: 1;
   min-width: 0;
@@ -366,7 +357,6 @@
   svg { width: 15px; height: 15px; }
 }
 
-// ── Scrollable content ───────────────────────────────────────────────────────
 .contentScroll {
   flex: 1;
   overflow-y: auto;
@@ -377,7 +367,6 @@
   &::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
 }
 
-// ── Section ──────────────────────────────────────────────────────────────────
 .section {
   padding: 32px 32px 20px;
 
@@ -400,7 +389,6 @@
   font-weight: 400;
 }
 
-// ── Form fields ──────────────────────────────────────────────────────────────
 .field {
   margin-bottom: 20px;
 
@@ -418,7 +406,7 @@
     width: 100%;
     background: var(--bg-3);
     border: 1px solid var(--line);
-    border-radius: 5px;
+    border-radius: 8px;
     padding: 11px 14px;
     font-size: 14px;
     color: var(--fg);
@@ -458,7 +446,6 @@
   box-shadow: 0 0 0 3px rgba(184, 0, 0, 0.12) !important;
 }
 
-// ── Messenger choice ─────────────────────────────────────────────────────────
 .messengerRow {
   margin-bottom: 20px;
 }
@@ -487,7 +474,7 @@
   padding: 10px 12px;
   background: var(--bg-3);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 12px;
   letter-spacing: 0.05em;
   color: var(--fg-mute);
@@ -505,7 +492,6 @@
   }
 }
 
-// ── Facebook ─────────────────────────────────────────────────────────────────
 .fbBtn {
   width: 100%;
   display: flex;
@@ -515,7 +501,7 @@
   padding: 12px 16px;
   background: #1877f2;
   color: #fff;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.04em;
@@ -542,7 +528,7 @@
   font-family: var(--font-mono);
   background: rgba(24, 119, 242, 0.1);
   border: 1px solid rgba(24, 119, 242, 0.2);
-  border-radius: 3px;
+  border-radius: 6px;
   padding: 1px 5px;
   margin-left: 8px;
   vertical-align: middle;
@@ -559,7 +545,7 @@
   font-family: var(--font-mono);
   background: rgba(24, 119, 242, 0.1);
   border: 1px solid rgba(24, 119, 242, 0.25);
-  border-radius: 3px;
+  border-radius: 6px;
   padding: 2px 7px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -572,13 +558,12 @@
   gap: 10px;
   background: var(--bg-3);
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: 8px;
   padding: 11px 14px;
   font-size: 14px;
   color: var(--fg);
 }
 
-// ── Toggle ───────────────────────────────────────────────────────────────────
 .toggle {
   display: flex;
   align-items: center;
@@ -597,7 +582,7 @@
 .toggleTrack {
   width: 40px;
   height: 22px;
-  border-radius: 11px;
+  border-radius: 18px;
   background: var(--bg-3);
   border: 1px solid var(--line-strong);
   position: relative;
@@ -624,7 +609,6 @@
   .toggleOn & { transform: translateX(18px); }
 }
 
-// ── Save button row ──────────────────────────────────────────────────────────
 .saveRow {
   padding: 16px 32px 20px;
   border-top: 1px solid var(--line);
@@ -645,7 +629,7 @@
   padding: 13px 16px;
   background: var(--accent);
   color: #fff;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -668,7 +652,6 @@
   }
 }
 
-// ── Ticket list ───────────────────────────────────────────────────────────────
 .ticketList {
   display: flex;
   flex-direction: column;
@@ -687,16 +670,15 @@
   color: var(--error, #e53e3e);
   background: color-mix(in srgb, var(--error, #e53e3e) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--error, #e53e3e) 30%, transparent);
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 10px 12px;
 }
 
-// ── Visit counter ─────────────────────────────────────────────────────────────
 .visitCounter {
   margin-bottom: 20px;
   padding: 16px 18px;
   background: var(--bg);
-  border-radius: 8px;
+  border-radius: 14px;
   border: 1px solid var(--line);
 }
 
@@ -738,10 +720,9 @@
   }
 }
 
-// ── Booking card (non-QR active bookings) ─────────────────────────────────────
 .bookingCard {
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: 14px;
   border: 1px solid var(--line);
   background: var(--bg-3);
 
@@ -762,7 +743,7 @@
 .showGlyphBox {
   width: 36px;
   height: 36px;
-  border-radius: 6px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
   font-size: 18px;
@@ -827,7 +808,7 @@
     color: var(--fg);
     background: var(--bg);
     padding: 1px 6px;
-    border-radius: 4px;
+    border-radius: 8px;
     border: 1px solid var(--line);
   }
 }
@@ -848,7 +829,7 @@
   color: var(--fg-mute);
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: 4px;
   padding: 2px 6px;
 }
 
@@ -857,7 +838,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-family: var(--font-mono);
-  border-radius: 2px;
+  border-radius: 4px;
   padding: 2px 6px;
 }
 
@@ -892,7 +873,7 @@
   color: #e08a00;
   padding: 2px 6px;
   background: rgba(255, 160, 0, 0.08);
-  border-radius: 2px;
+  border-radius: 4px;
   border: 1px solid rgba(255, 160, 0, 0.25);
   flex-shrink: 0;
 }
@@ -904,7 +885,7 @@
   color: #b04040;
   padding: 2px 6px;
   background: rgba(176, 64, 64, 0.08);
-  border-radius: 2px;
+  border-radius: 4px;
   border: 1px solid rgba(176, 64, 64, 0.2);
   flex-shrink: 0;
 }
@@ -914,7 +895,7 @@
   padding: 10px 12px;
   background: rgba(255, 160, 0, 0.05);
   border: 1px solid rgba(255, 160, 0, 0.2);
-  border-radius: 6px;
+  border-radius: 10px;
 }
 
 .transferMiniLabel {
@@ -970,7 +951,7 @@
   padding: 6px 10px;
   background: rgba(255, 160, 0, 0.08);
   border-left: 2px solid #e08a00;
-  border-radius: 3px;
+  border-radius: 6px;
 }
 
 .bookingNoteOk {
@@ -981,7 +962,7 @@
   padding: 5px 10px;
   background: rgba(42, 138, 74, 0.08);
   border-left: 2px solid #2a8a4a;
-  border-radius: 3px;
+  border-radius: 6px;
 }
 
 .bookingNoteBad {
@@ -992,16 +973,15 @@
   padding: 5px 10px;
   background: rgba(176, 64, 64, 0.08);
   border-left: 2px solid #b04040;
-  border-radius: 3px;
+  border-radius: 6px;
 }
 
-// ── Attended card ─────────────────────────────────────────────────────────────
 .attendedCard {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: 14px;
   border: 1px solid var(--line);
   background: var(--bg-3);
 }
@@ -1009,7 +989,7 @@
 .attendedGlyph {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   font-size: 20px;
@@ -1051,7 +1031,6 @@
   padding: 3px 9px;
 }
 
-// ── Loading skeleton ──────────────────────────────────────────────────────────
 @keyframes shimmer {
   from { background-position: -600px 0; }
   to   { background-position:  600px 0; }
@@ -1066,7 +1045,7 @@
   );
   background-size: 1200px 100%;
   animation: shimmer 1.4s infinite linear;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .skeletonAvatar {
@@ -1087,7 +1066,7 @@
 }
 
 .skeletonLabel { height: 10px; width: 35%; }
-.skeletonField { height: 42px; width: 100%; border-radius: 5px; }
+.skeletonField { height: 42px; width: 100%; border-radius: 8px; }
 
 .skeletonList {
   display: flex;
@@ -1096,4 +1075,4 @@
   margin-top: 4px;
 }
 
-.skeletonTicket { height: 76px; border-radius: 8px; }
+.skeletonTicket { height: 76px; border-radius: 12px; }

@@ -24,7 +24,6 @@
   font-display: swap;
 }
 
-// ── Colour tokens ─────────────────────────────────────────────────────────────
 :root {
   --bg:           #0a0908;
   --bg-2:         #14100e;
@@ -55,6 +54,12 @@
   --font-body: 'Inter', -apple-system, system-ui, sans-serif;
   // --font-mono: ui-monospace, 'Courier New', monospace;
   --font-mono: "Dela Gothic One", sans-serif;
+
+  --radius-xs:  8px;
+  --radius-sm: 16px;
+  --radius-md: 24px;
+  --radius-lg: 32px;
+  --radius-xl: 40px;
 }
 
 [data-theme='light'] {

@@ -54,8 +54,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// ── Firestore helpers ──────────────────────────────────────────────────────────
-
 // Always writes updatedAt — never exposes API key to frontend
 async function upsertProfile(uid: string, data: Partial<UserProfile> & Record<string, unknown>) {
   await setDoc(
@@ -128,8 +126,6 @@ function parseFbBirthday(fb: string): string {
   return '';
 }
 
-// ── Provider ──────────────────────────────────────────────────────────────────
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,        setUser]        = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -148,14 +144,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // ── Save (merge into Firestore + local state) ──────────────────────────────
   async function saveProfile(data: Partial<UserProfile>) {
     if (!user) return;
     await upsertProfile(user.uid, data as Record<string, unknown>);
     setUserProfile(prev => (prev ? { ...prev, ...data } : defaultProfile(data)));
   }
 
-  // ── Google sign-in ─────────────────────────────────────────────────────────
   async function signInWithGoogle() {
     const provider = new GoogleAuthProvider();
     // Always prompt account selection so users can switch accounts
@@ -165,14 +159,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserProfile(profile);
   }
 
-  // ── Email sign-in ──────────────────────────────────────────────────────────
   async function signInWithEmail(email: string, password: string) {
     const result  = await signInWithEmailAndPassword(auth, email, password);
     const profile = await ensureUserDocument(result.user);
     setUserProfile(profile);
   }
 
-  // ── Email sign-up ──────────────────────────────────────────────────────────
   // Explicit write here (not ensureUserDocument) to guarantee the correct
   // displayName from the form field lands in Firestore before onAuthStateChanged
   // fires and potentially reads a still-null displayName from Auth.
@@ -188,17 +180,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserProfile(profile);
   }
 
-  // ── Logout ─────────────────────────────────────────────────────────────────
   async function logout() {
     await firebaseSignOut(auth);
   }
 
-  // ── Reset password ─────────────────────────────────────────────────────────
   async function resetPassword(email: string) {
     await sendPasswordResetEmail(auth, email);
   }
 
-  // ── Link Facebook + fetch name & birthday ─────────────────────────────────
+  // Привязка Facebook — получаем имя и дату рождения из Graph API
   async function linkFacebook(): Promise<{ name?: string; birthday?: string }> {
     if (!user) throw new Error('Not authenticated');
 

@@ -1,11 +1,10 @@
 @use '../../../styles/mixins';
 
-// ── Ticket container ──────────────────────────────────────────────────────────
 .ticket {
   background: var(--bg-3);
   border: 1px solid var(--line-strong);
   border-left: 3px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: 28px;
   overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
@@ -23,7 +22,6 @@
   }
 }
 
-// ── Collapsed header ──────────────────────────────────────────────────────────
 .header {
   display: flex;
   align-items: center;
@@ -68,7 +66,7 @@
   color: var(--fg-dim);
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: 12px;
   padding: 2px 7px;
 }
 
@@ -80,7 +78,6 @@
   flex-shrink: 0;
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────────
 .statusBadge {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -122,7 +119,6 @@
   border: 1px solid rgba(255, 160, 0, 0.28);
 }
 
-// ── QR toggle button ──────────────────────────────────────────────────────────
 .qrBtn {
   display: flex;
   align-items: center;
@@ -144,7 +140,6 @@
   &.chevronUp { transform: rotate(180deg); }
 }
 
-// ── Expanded body ─────────────────────────────────────────────────────────────
 // grid-template-rows 0fr→1fr animates the height; opacity fades content in/out.
 .body {
   display: grid;
@@ -175,7 +170,6 @@
   }
 }
 
-// ── QR column ─────────────────────────────────────────────────────────────────
 .qrCol {
   display: flex;
   flex-direction: column;
@@ -186,7 +180,7 @@
 
 .qrWrap {
   background: #fff;
-  border-radius: 6px;
+  border-radius: 20px;
   padding: 6px;
   line-height: 0;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
@@ -196,7 +190,7 @@
   display: block;
   width: 148px;
   height: 148px;
-  border-radius: 3px;
+  border-radius: 12px;
 
   @include mixins.small {
     width: 168px;
@@ -228,7 +222,6 @@
   text-align: center;
 }
 
-// ── Details column ────────────────────────────────────────────────────────────
 .details {
   flex: 1;
   min-width: 0;
@@ -280,7 +273,6 @@
   }
 }
 
-// ── PDF button ────────────────────────────────────────────────────────────────
 .pdfBtn {
   display: flex;
   align-items: center;
@@ -289,7 +281,7 @@
   padding: 9px 14px;
   background: transparent;
   border: 1px solid var(--line-strong);
-  border-radius: 5px;
+  border-radius: 20px;
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.1em;
@@ -311,14 +303,13 @@
   }
 }
 
-// ── Code block ────────────────────────────────────────────────────────────────
 .codeBox {
   display: flex;
   align-items: center;
   gap: 10px;
   background: var(--bg);
   border: 1px solid var(--line-strong);
-  border-radius: 5px;
+  border-radius: 20px;
   padding: 8px 12px;
 }
 

@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
-import { createBooking, getUserBookingsOnce } from '../../../services/bookingService';
+import { createBooking, subscribeToUserBookings } from '../../../services/bookingService';
 import { generateTicketCode } from '../../../services/ticketService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
-import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
+import { PAYMENT_CONFIG, getPaymentAccount, formatIban, normalizeIban } from '../../../config/payment';
 import {
   hasAvailableLoyaltyReward,
   calculateLoyaltyDiscount,
@@ -71,6 +71,7 @@ export function BookingModal({ show, onClose }: Props) {
   const [copiedDetails,    setCopiedDetails]    = useState(false);
   const [copiedCode,       setCopiedCode]       = useState(false);
   const [copiedIban,       setCopiedIban]       = useState(false);
+  const [copiedRawIban,    setCopiedRawIban]    = useState(false);
   const [copiedBic,        setCopiedBic]        = useState(false);
   const [copiedCard,       setCopiedCard]       = useState(false);
   const [copiedRef,        setCopiedRef]        = useState(false);
@@ -99,11 +100,12 @@ export function BookingModal({ show, onClose }: Props) {
   const discountAmount = loyaltyAvailable ? calculateLoyaltyDiscount(baseAmount) : 0;
   const totalAmount    = baseAmount - discountAmount;
 
-  // Загружаем историю броней один раз — нужно для расчёта loyalty reward.
+  // Realtime subscription — обновляет loyalty reward без refresh.
+  // Запускается только пока модалка открыта (show != null), чистится при закрытии.
   useEffect(() => {
-    if (!user) return;
-    getUserBookingsOnce(user.uid).then(setUserBookings).catch(() => {});
-  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!user || !show) return;
+    return subscribeToUserBookings(user.uid, setUserBookings, () => {});
+  }, [user?.uid, show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Переходим на форму сразу после авторизации, не дожидаясь следующего рендера
@@ -136,8 +138,6 @@ export function BookingModal({ show, onClose }: Props) {
 
   if (!show) return null;
 
-  // ── Auth handlers ───────────────────────────────────────────────────────────
-
   async function handleGoogle() {
     setAuthLoading(true); setAuthError('');
     try { await signInWithGoogle(); }
@@ -158,8 +158,6 @@ export function BookingModal({ show, onClose }: Props) {
       setAuthError(mapAuthError(e, t.auth.errors));
     } finally { setAuthLoading(false); }
   }
-
-  // ── Booking handler ─────────────────────────────────────────────────────────
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -245,8 +243,6 @@ export function BookingModal({ show, onClose }: Props) {
     } finally { setSubmitLoading(false); }
   }
 
-  // ── Copy helpers ─────────────────────────────────────────────────────────────
-
   function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
@@ -260,8 +256,6 @@ export function BookingModal({ show, onClose }: Props) {
   const ticketLabel = (id: string | undefined) =>
     id === 'standard' ? t.admin.ticketStandard :
     id === 'student'  ? t.admin.ticketStudent  : (id ?? '');
-
-  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div
@@ -513,7 +507,11 @@ export function BookingModal({ show, onClose }: Props) {
             `${t.booking.transferReceiver}: ${account.receiverName}`,
             ...(account.bankName ? [`${lang === 'FR' ? 'Banque' : 'Банк'}: ${account.bankName}`] : []),
             ...(isIban
-              ? [`IBAN: ${account.iban}`, `BIC / SWIFT: ${account.bic}`]
+              ? [
+                  `IBAN: ${formatIban(account.iban)}`,
+                  `${t.booking.ibanNoSpacesLabel}: ${normalizeIban(account.iban)}`,
+                  `BIC / SWIFT: ${account.bic}`,
+                ]
               : [`${lang === 'FR' ? 'Numéro de carte' : 'Номер карты'}: ${account.cardNumber}`]
             ),
             `${t.booking.successAmount}: ${savedAmount} €`,
@@ -608,15 +606,24 @@ export function BookingModal({ show, onClose }: Props) {
                             <div className={styles.transferFieldRow}>
                               <div>
                                 <span>IBAN: </span>
-                                <strong>{account.iban}</strong>
+                                <strong>{formatIban(account.iban)}</strong>
                               </div>
-                              <button
-                                className={`${styles.copyBtn} ${copiedIban ? styles.copyBtnDone : ''}`}
-                                onClick={() => copyToClipboard(account.iban, setCopiedIban)}
-                              >
-                                {copiedIban ? t.booking.copied : (lang === 'FR' ? 'Copier' : 'Копировать')}
-                              </button>
+                              <div className={styles.ibanCopyBtns}>
+                                <button
+                                  className={`${styles.copyBtn} ${copiedIban ? styles.copyBtnDone : ''}`}
+                                  onClick={() => copyToClipboard(formatIban(account.iban), setCopiedIban)}
+                                >
+                                  {copiedIban ? t.booking.copied : t.booking.copyIban}
+                                </button>
+                                <button
+                                  className={`${styles.copyBtn} ${copiedRawIban ? styles.copyBtnDone : ''}`}
+                                  onClick={() => copyToClipboard(normalizeIban(account.iban), setCopiedRawIban)}
+                                >
+                                  {copiedRawIban ? t.booking.copied : t.booking.copyRawIban}
+                                </button>
+                              </div>
                             </div>
+                            <p className={styles.ibanHint}>{t.booking.ibanNoSpacesHint}</p>
 
                             <div className={styles.transferFieldRow}>
                               <div>

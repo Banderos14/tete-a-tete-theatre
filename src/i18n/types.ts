@@ -135,6 +135,11 @@ export interface T {
     loyaltyOriginal: string;
     loyaltyDiscount: string;
     loyaltyTotal: string;
+    copyIban: string;
+    copyRawIban: string;
+    ibanNoSpacesHint: string;
+    ibanNoSpacesLabel: string;
+    bankIbanSpacesWarning: string;
   };
   admin: {
     title: string;

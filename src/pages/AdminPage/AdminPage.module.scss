@@ -8,7 +8,6 @@
   @include mixins.mobile { padding: 20px 16px 40px; }
 }
 
-// ── Top bar ──────────────────────────────────────────────────────────────────
 .topBar {
   display: flex;
   align-items: center;
@@ -59,7 +58,6 @@
   &:hover { color: var(--fg); border-color: var(--accent); }
 }
 
-// ── Summary ──────────────────────────────────────────────────────────────────
 .summaryRow {
   display: flex;
   gap: 16px;
@@ -70,7 +68,7 @@
 .summaryCard {
   background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 16px;
   padding: 16px 24px;
   display: flex;
   flex-direction: column;
@@ -93,7 +91,6 @@
   font-family: var(--font-mono);
 }
 
-// ── Show stats ───────────────────────────────────────────────────────────────
 .showStats {
   display: flex;
   flex-direction: column;
@@ -107,7 +104,7 @@
   gap: 14px;
   background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 16px;
   padding: 12px 16px;
   text-align: left;
   transition: border-color 0.2s;
@@ -123,7 +120,7 @@
 .showCardGlyph {
   width: 40px;
   height: 40px;
-  border-radius: 3px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   font-size: 18px;
@@ -149,7 +146,6 @@
   letter-spacing: 0.06em;
 }
 
-// ── Table header ─────────────────────────────────────────────────────────────
 .tableHeader {
   display: flex;
   align-items: center;
@@ -180,11 +176,10 @@
   padding: 24px 0;
 }
 
-// ── Table ────────────────────────────────────────────────────────────────────
 .tableWrap {
   overflow-x: auto;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 16px;
 }
 
 .table {
@@ -241,7 +236,7 @@
   font-family: var(--font-mono);
   color: var(--fg-mute);
   background: var(--bg-3);
-  border-radius: 2px;
+  border-radius: 8px;
   padding: 3px 7px;
 }
 
@@ -250,7 +245,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-family: var(--font-mono);
-  border-radius: 2px;
+  border-radius: 8px;
   padding: 3px 7px;
 }
 
@@ -261,7 +256,7 @@
   letter-spacing: 0.05em;
   background: var(--accent);
   color: #fff;
-  border-radius: 3px;
+  border-radius: 12px;
   padding: 2px 6px;
   margin-top: 4px;
 }
@@ -310,7 +305,7 @@
 .actionConfirm {
   font-size: 11px;
   padding: 4px 8px;
-  border-radius: 2px;
+  border-radius: 8px;
   background: rgba(76, 175, 80, 0.12);
   color: #4caf50;
   border: 1px solid rgba(76, 175, 80, 0.25);
@@ -324,7 +319,7 @@
 .actionConfirmSecondary {
   font-size: 11px;
   padding: 4px 8px;
-  border-radius: 2px;
+  border-radius: 8px;
   background: transparent;
   color: var(--fg-mute);
   border: 1px solid var(--line);
@@ -338,7 +333,7 @@
 .actionCancel {
   font-size: 11px;
   padding: 4px 8px;
-  border-radius: 2px;
+  border-radius: 8px;
   background: rgba(184, 0, 0, 0.1);
   color: var(--accent-glow);
   border: 1px solid rgba(184, 0, 0, 0.2);
@@ -349,14 +344,13 @@
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
-// ── Payment status badge + quick buttons ─────────────────────────────────────
 .payBadge {
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  border-radius: 2px;
+  border-radius: 8px;
   padding: 3px 7px;
   border: 1px solid var(--line);
 }
@@ -370,7 +364,7 @@
 .actionPaid {
   font-size: 10px;
   padding: 3px 7px;
-  border-radius: 2px;
+  border-radius: 8px;
   background: rgba(76, 175, 80, 0.12);
   color: #4caf50;
   border: 1px solid rgba(76, 175, 80, 0.25);
@@ -385,7 +379,7 @@
 .actionUnpaid {
   font-size: 10px;
   padding: 3px 7px;
-  border-radius: 2px;
+  border-radius: 8px;
   background: rgba(100, 100, 100, 0.1);
   color: var(--fg-mute);
   border: 1px solid var(--line);
@@ -397,13 +391,12 @@
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
-// ── Payment status select (kept for reference) ────────────────────────────────
 .paySelect {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  border-radius: 2px;
+  border-radius: 8px;
   padding: 3px 6px;
   border: 1px solid var(--line);
   background: var(--bg-3);
@@ -447,7 +440,7 @@
   color: #e08a00;
   background: rgba(255, 160, 0, 0.08);
   border: 1px solid rgba(255, 160, 0, 0.3);
-  border-radius: 3px;
+  border-radius: 12px;
   padding: 1px 5px;
 }
 
@@ -459,7 +452,7 @@
   color: #b04040;
   background: rgba(176, 64, 64, 0.08);
   border: 1px solid rgba(176, 64, 64, 0.2);
-  border-radius: 3px;
+  border-radius: 12px;
   padding: 1px 5px;
 }
 
@@ -479,8 +472,6 @@
   letter-spacing: 0.04em;
   word-break: break-all;
 }
-
-// ── Tabs ─────────────────────────────────────────────────────────────────────
 
 .tabs {
   display: flex;
@@ -506,8 +497,6 @@
   color: var(--fg);
   border-bottom-color: var(--accent);
 }
-
-// ── Filter row ────────────────────────────────────────────────────────────────
 
 .filtersRow {
   display: flex;
@@ -537,7 +526,7 @@
   font-family: var(--font-mono);
   letter-spacing: 0.04em;
   padding: 3px 10px;
-  border-radius: 2px;
+  border-radius: 8px;
   border: 1px solid var(--line);
   color: var(--fg-mute);
   background: transparent;
@@ -560,7 +549,6 @@
   &:hover { color: var(--fg); }
 }
 
-// ── States ───────────────────────────────────────────────────────────────────
 .centered {
   display: grid;
   place-items: center;
@@ -590,7 +578,6 @@
 }
 
 
-// ── Newsletter tab ───────────────────────────────────────────────────────────
 .newsletterWrap {
   max-width: 540px;
   padding: 8px 0 40px;
@@ -614,7 +601,7 @@
   background: rgba(var(--accent-rgb, 201, 169, 110), 0.08);
   border-left: 3px solid var(--accent);
   padding: 10px 14px;
-  border-radius: 4px;
+  border-radius: 16px;
   font-size: 12px;
   color: var(--fg-mute);
   margin-bottom: 24px;
@@ -625,7 +612,7 @@
   margin-top: 20px;
   padding: 14px 16px;
   background: var(--card-bg, #f8f8f8);
-  border-radius: 6px;
+  border-radius: 20px;
   font-size: 13px;
   color: var(--fg);
   line-height: 1.6;
@@ -652,7 +639,7 @@
   width: 100%;
   padding: 9px 12px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 16px;
   font-size: 13px;
   color: var(--fg);
   background: var(--bg);
@@ -660,8 +647,6 @@
 
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
-
-// ── Confirm dialog overlay ────────────────────────────────────────────────────
 
 .confirmOverlay {
   position: fixed;
@@ -675,7 +660,7 @@
 .confirmDialog {
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 28px;
   padding: 28px 32px;
   max-width: 360px;
   width: 90%;
@@ -712,7 +697,7 @@
   font-family: var(--font-mono);
   letter-spacing: 0.06em;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 16px;
   color: var(--fg-mute);
   transition: color 0.2s, border-color 0.2s;
 
@@ -724,7 +709,7 @@
   font-size: 12px;
   font-family: var(--font-mono);
   letter-spacing: 0.06em;
-  border-radius: 4px;
+  border-radius: 16px;
   background: var(--accent);
   color: #fff;
   transition: background 0.2s;

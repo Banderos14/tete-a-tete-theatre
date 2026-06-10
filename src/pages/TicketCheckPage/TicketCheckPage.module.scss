@@ -8,7 +8,7 @@
   @include mixins.mobile { padding: 20px 16px 40px; }
 }
 
-// ── Top bar ──────────────────────────────────────────────────────────────────
+// Верхняя панель
 .topBar {
   display: flex;
   align-items: center;
@@ -38,14 +38,13 @@
   &:hover { color: var(--fg); border-color: var(--accent); }
 }
 
-// ── Layout helpers ────────────────────────────────────────────────────────────
 .centered {
   display: grid;
   place-items: center;
   min-height: 60vh;
 }
 
-// ── Idle: pre-scan screen ─────────────────────────────────────────────────────
+// Экран до старта сканирования
 .idleBlock {
   max-width: 400px;
   margin: 0 auto;
@@ -61,7 +60,7 @@
   height: 88px;
   background: rgba(184, 0, 0, 0.07);
   border: 1px solid rgba(184, 0, 0, 0.18);
-  border-radius: 18px;
+  border-radius: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -93,7 +92,7 @@
   gap: 8px;
   background: rgba(184, 0, 0, 0.07);
   border: 1px solid rgba(184, 0, 0, 0.22);
-  border-radius: 6px;
+  border-radius: 12px;
   padding: 12px 14px;
   font-size: 13px;
   color: var(--accent-glow, #b80000);
@@ -128,7 +127,7 @@
   text-transform: uppercase;
   background: var(--accent);
   color: #fff;
-  border-radius: 4px;
+  border-radius: 8px;
   width: 100%;
   transition: background 0.18s;
 
@@ -149,7 +148,7 @@
   background: transparent;
   color: var(--fg-dim);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 8px;
   width: 100%;
   transition: background 0.18s, border-color 0.18s, color 0.18s;
 
@@ -160,7 +159,7 @@
   }
 }
 
-// ── Scanner: active camera view ───────────────────────────────────────────────
+// Активный режим камеры
 .scanBlock {
   max-width: 480px;
   margin: 0 auto;
@@ -183,7 +182,7 @@
   max-width: 420px;
   background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
 
   // Suppress any library-injected text nodes
@@ -193,7 +192,7 @@
   video, canvas { font-size: 14px; }
 }
 
-// ── Deprecated (kept for safety, unused in new UI) ────────────────────────────
+// Устаревший стиль — не используется в новом UI
 .hint {
   font-size: 15px;
   color: var(--fg-mute);
@@ -201,14 +200,14 @@
   line-height: 1.5;
 }
 
-// ── Theatrical result card ────────────────────────────────────────────────────
+// Карточка результата
 .cardWrap {
   max-width: 520px;
   margin: 0 auto;
 }
 
 .card {
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
   margin-bottom: 20px;
 }
@@ -233,7 +232,6 @@
   border: 1px solid rgba(33, 150, 243, 0.3);
 }
 
-// ── Card header ───────────────────────────────────────────────────────────────
 .cardHeader {
   display: flex;
   align-items: center;
@@ -268,7 +266,6 @@
   line-height: 1.5;
 }
 
-// ── Card details table ────────────────────────────────────────────────────────
 .cardDetails {
   padding: 0;
 }
@@ -321,7 +318,6 @@
   letter-spacing: 0.08em;
 }
 
-// ── Actions ───────────────────────────────────────────────────────────────────
 .actions {
   display: flex;
   flex-direction: column;
@@ -333,7 +329,7 @@
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
   padding: 13px 28px;
-  border-radius: 4px;
+  border-radius: 8px;
   background: rgba(33, 150, 243, 0.12);
   color: #1976d2;
   border: 1px solid rgba(33, 150, 243, 0.3);
@@ -351,7 +347,7 @@
   color: #4caf50;
   background: rgba(76, 175, 80, 0.1);
   border: 1px solid rgba(76, 175, 80, 0.3);
-  border-radius: 6px;
+  border-radius: 12px;
   padding: 14px 20px;
   text-align: center;
 }
@@ -361,7 +357,7 @@
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
   padding: 13px 28px;
-  border-radius: 4px;
+  border-radius: 8px;
   background: var(--accent);
   color: #fff;
   transition: background 0.2s;
@@ -375,7 +371,7 @@
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
   padding: 13px 28px;
-  border-radius: 4px;
+  border-radius: 8px;
   background: rgba(76, 175, 80, 0.12);
   color: #4caf50;
   border: 1px solid rgba(76, 175, 80, 0.3);
@@ -391,7 +387,7 @@
   letter-spacing: 0.08em;
   font-family: var(--font-mono);
   padding: 12px 20px;
-  border-radius: 4px;
+  border-radius: 8px;
   border: 1px solid var(--line);
   color: var(--fg-mute);
   transition: color 0.2s, border-color 0.2s;
@@ -404,7 +400,7 @@
   letter-spacing: 0.08em;
   font-family: var(--font-mono);
   padding: 12px 20px;
-  border-radius: 4px;
+  border-radius: 8px;
   border: 1px solid var(--line);
   color: var(--fg-mute);
   transition: color 0.2s, border-color 0.2s;
@@ -414,7 +410,6 @@
   &:hover { color: var(--fg); border-color: var(--line-strong); }
 }
 
-// ── Misc ──────────────────────────────────────────────────────────────────────
 .accessDenied {
   font-size: 18px;
   color: var(--fg-dim);

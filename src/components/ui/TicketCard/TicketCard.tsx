@@ -41,7 +41,6 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
   return (
     <div className={`${styles.ticket} ${isExpanded ? styles.expanded : ''}`}>
 
-      {/* ── Collapsed header ─────────────────────────────────────────────── */}
       <div
         className={styles.header}
         onClick={onToggle}
@@ -86,7 +85,6 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
         </div>
       </div>
 
-      {/* ── Expanded body ─────────────────────────────────────────────────── */}
       <div className={`${styles.body} ${isExpanded ? styles.bodyExpanded : ''}`} aria-hidden={!isExpanded}>
         <div className={styles.bodyInner}>
 
@@ -150,7 +148,7 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
   );
 }
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
+// Иконки
 
 function QrIcon() {
   return (

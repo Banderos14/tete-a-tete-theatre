@@ -13,7 +13,7 @@ export function parseTicketCodeFromScan(raw: string): string | null {
   const text = raw.trim();
   if (!text) return null;
 
-  // ── URL formats (hash-based or regular) ───────────────────────────────────
+  // URL форматы: hash (#/admin/checkin?ticket=CODE) и обычный (/admin/checkin?ticket=CODE)
   try {
     const url = new URL(text);
 
@@ -36,7 +36,7 @@ export function parseTicketCodeFromScan(raw: string): string | null {
     // Not a URL — continue
   }
 
-  // ── JSON legacy: {"ticketCode":"RU3R-HZJF"} ──────────────────────────────
+  // Старый JSON-формат: {"ticketCode":"RU3R-HZJF"}
   try {
     const obj = JSON.parse(text) as { ticketCode?: string };
     if (typeof obj.ticketCode === 'string' && obj.ticketCode) return obj.ticketCode;
@@ -44,6 +44,5 @@ export function parseTicketCodeFromScan(raw: string): string | null {
     // Not JSON — continue
   }
 
-  // ── Raw ticket code ───────────────────────────────────────────────────────
   return text;
 }

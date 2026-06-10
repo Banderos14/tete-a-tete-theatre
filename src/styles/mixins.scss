@@ -1,11 +1,11 @@
-// ── Breakpoints ───────────────────────────────────────────────────────────────
+// Медиа-запросы
 @mixin mobile  { @media (max-width: 900px)  { @content; } }
 @mixin tablet  { @media (max-width: 1100px) { @content; } }
 @mixin small   { @media (max-width: 600px)  { @content; } }
 @mixin tiny    { @media (max-width: 500px)  { @content; } }
 @mixin tinyXS  { @media (max-width: 720px)  { @content; } }
 
-// ── Typography helpers ─────────────────────────────────────────────────────────
+// Типографика
 @mixin mono($size: 11px, $tracking: 0.18em) {
   font-family: var(--font-mono);
   font-size: $size;
@@ -19,7 +19,7 @@
   line-height: 0.95;
 }
 
-// ── Utilities ──────────────────────────────────────────────────────────────────
+// Утилиты
 @mixin absolute-fill {
   position: absolute;
   inset: 0;
