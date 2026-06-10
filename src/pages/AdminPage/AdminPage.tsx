@@ -407,6 +407,15 @@ export function AdminPage() {
                         </td>
                         <td className={styles.cellCenter}>
                           <strong>{b.totalAmount ?? '—'}&nbsp;€</strong>
+                          {b.loyaltyDiscountApplied && (
+                            <>
+                              <br />
+                              <span className={styles.loyaltyBadge}>−50% скидка</span>
+                              {b.originalAmount && (
+                                <span className={styles.loyaltyOrig}>{b.originalAmount}&nbsp;€</span>
+                              )}
+                            </>
+                          )}
                         </td>
                         <td>
                           <span className={styles.badge}>

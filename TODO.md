@@ -70,6 +70,7 @@
 -+- transferCodeWarning: заметное предупреждение о коде брони в назначении платежа
 -+- ticketCode используется для связи платежа и брони
 -+- QR использует production URL (VITE_PUBLIC_SITE_URL), не localhost
+-+- Регион оплаты удалён: банковский перевод всегда через французский IBAN / SEPA
 
 
 ## Личный кабинет
@@ -95,6 +96,27 @@
 -?- Мобильный вид личного кабинета — вкладки работают, полировка возможна
 --- День рождения → поздравление от театра + подарок
 --- Привязка соц сети через кнопку входа, а не вручную
+
+## Loyalty (система лояльности)
+
+-+- 1 посещение = 1 attended booking, независимо от ticketsCount
+-+- Каждые 5 посещений — скидка 50% на следующий спектакль
+-+- Скидка применяется автоматически в BookingModal (пользователь ничего не вводит)
+-+- Скидка использует правило: Math.floor(attended / 5) > usedRewardCount
+-+- После использования скидки новая доступна через 5 следующих посещений (10 / 15 / 20...)
+-+- loyaltyService.ts: чистые функции без side effects
+    (getUserAttendedCount, getUsedRewardCount, hasAvailableLoyaltyReward,
+     calculateLoyaltyDiscount, nextRewardThreshold, cycleProgress)
+-+- Booking хранит: originalAmount, loyaltyDiscountApplied, loyaltyDiscountAmount,
+    loyaltyRewardUsedFromVisitCount
+-+- BookingModal: блок "🎁 Ваш подарок: −50%" с разбивкой Исходная / Скидка / К оплате
+-+- Success step показывает строки скидки в сводке брони
+-+- ProfileDrawer: VisitCounter различает три состояния:
+    бонус доступен / бонус использован (следующий после N) / прогресс до первого
+-+- Прогресс-бар учитывает использованные бонусы (не застревает на 5/5 после использования)
+-+- Email: confirmation показывает Исходная / Скидка / К оплате при loyaltyDiscountApplied
+-+- AdminPage: badge «−50% скидка» + зачёркнутая исходная сумма в колонке суммы
+-?- Проверить вручную: сценарий A–G (4 / 5 / использован / 10 посещений, ticketsCount=5)
 
 ## Администратор
 
@@ -174,8 +196,6 @@
 -+- PDF всегда на латинице/французском: кириллица транслитерируется, "???" исключены
 -+- TicketCard: плавное раскрытие и закрытие (grid-template-rows + opacity)
 -+- ProfileDrawer: плавное открытие и закрытие (visibility + opacity на overlay и modal)
---- Apple Wallet
---- Google Wallet
 
 ## i18n
 

@@ -38,6 +38,9 @@ export interface BookingEmailData {
   paymentMethod:    'on_site' | 'bank_transfer';
   paymentAccountId?: string;
   lang:             'RU' | 'FR';
+  originalAmount?:        number;
+  loyaltyDiscountApplied?: boolean;
+  loyaltyDiscountAmount?: number;
 }
 
 export interface BookingStatusEmailData {
@@ -201,18 +204,35 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
         ? 'Pour confirmer votre réservation, veuillez effectuer le virement bancaire avec les coordonnées ci-dessous. Indiquez obligatoirement la référence dans le libellé du virement. Votre réservation sera confirmée uniquement après vérification du virement bancaire.'
         : 'Le paiement s\'effectue en espèces à la caisse du théâtre avant le spectacle.');
 
+  const hasDiscount = data.loyaltyDiscountApplied && data.originalAmount;
+  const amountRows: [string, string][] = hasDiscount
+    ? (isRU
+        ? [
+            ['Исходная сумма',      `${data.originalAmount}&nbsp;€`],
+            ['Скидка лояльности −50%', `−${data.loyaltyDiscountAmount}&nbsp;€`],
+            ['К оплате',           `${data.totalAmount}&nbsp;€`],
+          ]
+        : [
+            ['Montant initial',       `${data.originalAmount}&nbsp;€`],
+            ['Remise fidélité −50%',  `−${data.loyaltyDiscountAmount}&nbsp;€`],
+            ['Total à payer',         `${data.totalAmount}&nbsp;€`],
+          ])
+    : (isRU
+        ? [['Сумма', `${data.totalAmount}&nbsp;€`]]
+        : [['Montant', `${data.totalAmount}&nbsp;€`]]);
+
   const rows: [string, string][] = isRU ? [
     ['Зритель',   data.userName],
     ['Спектакль', data.showTitle],
     ['Дата',      `${dateStr} · ${data.showTime}`],
     ['Билеты',    `${data.ticketsCount} шт.`],
-    ['Сумма',     `${data.totalAmount}&nbsp;€`],
+    ...amountRows,
   ] : [
     ['Spectateur', data.userName],
     ['Spectacle',  data.showTitle],
     ['Date',       `${dateStr} · ${data.showTime}`],
     ['Billets',    `${data.ticketsCount} billet${data.ticketsCount > 1 ? 's' : ''}`],
-    ['Montant',    `${data.totalAmount}&nbsp;€`],
+    ...amountRows,
   ];
 
   // Bank transfer details block — uses the selected payment account

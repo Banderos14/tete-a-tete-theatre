@@ -31,6 +31,10 @@ export interface Booking {
   paidAt?:             Timestamp;
   createdAt:           Timestamp;
   updatedAt?:          Timestamp;
+  originalAmount?:                  number;
+  loyaltyDiscountApplied?:          boolean;
+  loyaltyDiscountAmount?:           number;
+  loyaltyRewardUsedFromVisitCount?: number;
 }
 
 export type NewBooking = Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>;

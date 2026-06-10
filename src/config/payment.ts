@@ -48,16 +48,6 @@ export const PAYMENT_CONFIG = {
       bankName:     'BNP Paribas',
       currency:     'EUR',
     },
-    {
-      id:           'ua_card',
-      type:         'card' as const,
-      label:        'Ukraine',
-      description:  'Перевод на карту',
-      receiverName: 'ANTON SHYSHENKO',
-      cardNumber:   '5168 7520 8118 7158',
-      bankName:     '',
-      currency:     'EUR',
-    },
   ] as PaymentAccount[],
 };
 
