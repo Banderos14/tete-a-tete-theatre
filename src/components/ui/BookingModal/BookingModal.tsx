@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
-import { createBooking, subscribeToUserBookings } from '../../../services/bookingService';
+import { createBooking, subscribeToUserBookings, subscribeToShowBookedSeats } from '../../../services/bookingService';
 import { generateTicketCode } from '../../../services/ticketService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
 import { PAYMENT_CONFIG } from '../../../config/payment';
+import { THEATRE_CAPACITY } from '../../../config/theatre';
 import {
   hasAvailableLoyaltyReward,
   calculateLoyaltyDiscount,
@@ -71,6 +72,7 @@ export function BookingModal({ show, onClose }: Props) {
   const [ticketCode,       setTicketCode]       = useState('');
   const [savedAmount,      setSavedAmount]      = useState(0);
   const [copiedCode,       setCopiedCode]       = useState(false);
+  const [bookedSeats,      setBookedSeats]      = useState(0);
 
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
 
@@ -79,9 +81,10 @@ export function BookingModal({ show, onClose }: Props) {
     [show],
   );
 
-  const activeTicket  = selectedTicket ?? defaultTicket;
-  const baseAmount    = (activeTicket?.price ?? 0) * tickets;
-  const maxTickets    = activeTicket?.available ?? 10;
+  const activeTicket   = selectedTicket ?? defaultTicket;
+  const baseAmount     = (activeTicket?.price ?? 0) * tickets;
+  const availableSeats = Math.max(0, THEATRE_CAPACITY - bookedSeats);
+  const maxTickets     = Math.min(activeTicket?.available ?? 10, availableSeats || 1);
 
   const loyaltyAvailable = useMemo(
     () => hasAvailableLoyaltyReward(userBookings),
@@ -100,6 +103,20 @@ export function BookingModal({ show, onClose }: Props) {
     if (!user || !show) return;
     return subscribeToUserBookings(user.uid, setUserBookings, () => {});
   }, [user?.uid, show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Realtime subscription — остаток мест для текущего спектакля.
+  useEffect(() => {
+    if (!show) return;
+    return subscribeToShowBookedSeats(show.id, setBookedSeats);
+  }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clamp tickets count to availableSeats when capacity changes.
+  useEffect(() => {
+    if (availableSeats >= 1 && tickets > availableSeats) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTickets(availableSeats);
+    }
+  }, [availableSeats]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Переходим на форму сразу после авторизации, не дожидаясь следующего рендера
@@ -156,6 +173,10 @@ export function BookingModal({ show, onClose }: Props) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!user || !activeTicket || !show) return;
+    if (availableSeats < tickets) {
+      setSubmitError(t.booking.soldOut);
+      return;
+    }
     setSubmitLoading(true); setSubmitError('');
     try {
       const code      = generateTicketCode();
@@ -345,6 +366,7 @@ export function BookingModal({ show, onClose }: Props) {
             discountAmount={discountAmount}
             loyaltyAvailable={loyaltyAvailable}
             maxTickets={maxTickets}
+            availableSeats={availableSeats}
             onTicketsChange={setTickets}
             onSelectedTicketChange={tt => { setSelectedTicket(tt); setTickets(1); }}
             onPaymentChange={setPayment}

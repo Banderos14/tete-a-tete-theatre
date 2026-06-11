@@ -1,6 +1,8 @@
 import type { FormEvent } from 'react';
+import { IconBuildingBank, IconTransfer } from '@tabler/icons-react';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
+import { THEATRE_CAPACITY } from '../../../config/theatre';
 import styles from './BookingModal.module.scss';
 
 interface Props {
@@ -25,6 +27,8 @@ interface Props {
       loyaltyOriginal: string;
       loyaltyDiscount: string;
       loyaltyTotal: string;
+      seatsAvailable: (n: number, total: number) => string;
+      soldOut: string;
     };
     admin: {
       ticketStandard: string;
@@ -47,6 +51,7 @@ interface Props {
   discountAmount: number;
   loyaltyAvailable: boolean;
   maxTickets: number;
+  availableSeats: number;
 
   onTicketsChange: (v: number) => void;
   onSelectedTicketChange: (tt: TicketType) => void;
@@ -56,36 +61,21 @@ interface Props {
   onSubmit: (e: FormEvent) => void;
 }
 
-function BankIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"
-      strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 10v11M12 10v11M16 10v11" />
-    </svg>
-  );
-}
-
-function TransferIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"
-      strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 17H7M17 20l3-3-3-3M4 7h13M7 4L4 7l3 3" />
-    </svg>
-  );
-}
 
 export function BookingFormStep({
   show, lang, t,
   tickets, payment, phone, comment,
   submitLoading, submitError,
-  activeTicket, baseAmount, totalAmount, discountAmount, loyaltyAvailable, maxTickets,
+  activeTicket, baseAmount, totalAmount, discountAmount, loyaltyAvailable, maxTickets, availableSeats,
   onTicketsChange, onSelectedTicketChange, onPaymentChange, onPhoneChange, onCommentChange,
   onSubmit,
 }: Props) {
   const showTitle  = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
   const monthLabel = t.months[show.month] ?? show.month;
+  const showYearNumber = Number(show.year);
+  const seasonLabel = Number.isFinite(showYearNumber)
+    ? `СЕЗОН ${showYearNumber - 1} / ${showYearNumber} · THÉÂTRE TÊTE-À-TÊTE · NICE`
+    : 'СЕЗОН · THÉÂTRE TÊTE-À-TÊTE · NICE';
 
   function ticketLabel(id: string | undefined) {
     return id === 'standard' ? t.admin.ticketStandard
@@ -101,10 +91,12 @@ export function BookingFormStep({
 
         {/* Show header с цветным фоном show.palette */}
         <div className={styles.showHeader} style={{ background: show.palette }}>
-          <span className={styles.showGlyph}>{show.glyph}</span>
-          <div>
-            <p className={styles.showTitle}>{showTitle}</p>
-            <p className={styles.showMeta}>{show.day} {monthLabel} {show.year} · {show.time}</p>
+          <div className={styles.showHeaderTop}>
+            <span className={styles.showGlyph}>{show.glyph}</span>
+            <div className={styles.showHeaderInfo}>
+              <p className={styles.showTitle}>{showTitle}</p>
+              <p className={styles.showMeta}>{show.day} {monthLabel} {show.year} · {show.time}</p>
+            </div>
           </div>
         </div>
 
@@ -116,10 +108,8 @@ export function BookingFormStep({
               <button key={tt.id} type="button"
                 className={`${styles.ticketTypeBtn} ${activeTicket?.id === tt.id ? styles.ticketTypeActive : ''}`}
                 onClick={() => { onSelectedTicketChange(tt); onTicketsChange(1); }}>
-                <div className={styles.ttLeft}>
-                  <span className={styles.ttName}>{ticketLabel(tt.id)}</span>
-                </div>
-                <div className={styles.ttDivider} />
+                <span className={`${styles.ttRadio} ${activeTicket?.id === tt.id ? styles.ttRadioActive : ''}`} />
+                <span className={styles.ttName}>{ticketLabel(tt.id)}</span>
                 <span className={styles.ttPrice}>{tt.price}&nbsp;€</span>
               </button>
             ))}
@@ -128,12 +118,18 @@ export function BookingFormStep({
 
         {/* Qty + total */}
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>{t.booking.tickets}</div>
+          <div className={styles.sectionLabelRow}>
+            <div className={styles.sectionLabel}>{t.booking.tickets}</div>
+            {availableSeats > 0 && (
+              <span className={styles.seatsInline}>{t.booking.seatsAvailable(availableSeats, THEATRE_CAPACITY)}</span>
+            )}
+          </div>
+          {availableSeats === 0 && <p className={styles.soldOutHint}>{t.booking.soldOut}</p>}
           <div className={styles.qtyRow}>
             <div className={styles.counter}>
               <button type="button" onClick={() => onTicketsChange(Math.max(1, tickets - 1))} disabled={tickets <= 1}>−</button>
               <span>{tickets}</span>
-              <button type="button" onClick={() => onTicketsChange(Math.min(maxTickets, tickets + 1))} disabled={tickets >= maxTickets}>+</button>
+              <button type="button" onClick={() => onTicketsChange(Math.min(maxTickets, tickets + 1))} disabled={tickets >= maxTickets || availableSeats === 0}>+</button>
             </div>
             {activeTicket && (
               <div className={styles.totalBox}>
@@ -142,11 +138,12 @@ export function BookingFormStep({
               </div>
             )}
           </div>
-          {activeTicket && !loyaltyAvailable && (
-            <p className={styles.priceHint}>{activeTicket.price}&nbsp;€ × {tickets} = {totalAmount}&nbsp;€</p>
-          )}
+        </div>
+
+        {/* Loyalty summary */}
           {activeTicket && loyaltyAvailable && (
-            <div className={styles.loyaltyBlock}>
+            <div className={`${styles.section} ${styles.loyaltySection}`}>
+              <div className={styles.loyaltyBlock}>
               <p className={styles.loyaltyTitle}>{t.booking.loyaltyGift}</p>
               <div className={styles.loyaltyRow}>
                 <span>{t.booking.loyaltyOriginal}</span>
@@ -161,9 +158,13 @@ export function BookingFormStep({
                 <span>{totalAmount}&nbsp;€</span>
               </div>
             </div>
+            </div>
           )}
-        </div>
 
+      </div>
+
+      <div className={styles.formSpine} aria-hidden="true">
+        <span>{seasonLabel}</span>
       </div>
 
       {/* RIGHT */}
@@ -172,7 +173,7 @@ export function BookingFormStep({
         {/* Заголовок правой колонки */}
         <div className={styles.formRightHeader}>
           <div className={styles.formRightLabel}>{lang === 'FR' ? 'RÉSERVATION' : 'БРОНИРОВАНИЕ'}</div>
-          <p className={styles.formRightShowTitle}>{showTitle}</p>
+          <div className={styles.formRightAccentLine} />
         </div>
 
         {/* Phone */}
@@ -190,7 +191,8 @@ export function BookingFormStep({
             <button type="button"
               className={`${styles.paymentCard} ${payment === 'on_site' ? styles.paymentCardActive : ''}`}
               onClick={() => onPaymentChange('on_site')}>
-              <span className={styles.paymentIcon}><BankIcon /></span>
+              <span className={`${styles.paymentDot} ${payment === 'on_site' ? styles.paymentDotActive : ''}`} />
+              <span className={styles.paymentIcon}><IconBuildingBank size={16} stroke={1.5} /></span>
               <div>
                 <div className={styles.paymentName}>{t.booking.payOnSite}</div>
                 <div className={styles.paymentDesc}>{t.booking.payOnSiteDesc}</div>
@@ -199,7 +201,8 @@ export function BookingFormStep({
             <button type="button"
               className={`${styles.paymentCard} ${payment === 'bank_transfer' ? styles.paymentCardActive : ''}`}
               onClick={() => onPaymentChange('bank_transfer')}>
-              <span className={styles.paymentIcon}><TransferIcon /></span>
+              <span className={`${styles.paymentDot} ${payment === 'bank_transfer' ? styles.paymentDotActive : ''}`} />
+              <span className={styles.paymentIcon}><IconTransfer size={16} stroke={1.5} /></span>
               <div>
                 <div className={styles.paymentName}>{t.booking.payTransfer}</div>
                 <div className={styles.paymentDesc}>{t.booking.payTransferDesc}</div>
@@ -218,7 +221,7 @@ export function BookingFormStep({
 
         {submitError && <p className={styles.error}>{submitError}</p>}
 
-        <button type="submit" className={styles.submitBtn} disabled={submitLoading || !activeTicket}>
+        <button type="submit" className={styles.submitBtn} disabled={submitLoading || !activeTicket || availableSeats === 0}>
           {submitLoading ? '…' : t.booking.submit}
           {!submitLoading && <span className={styles.submitArrow}>→</span>}
         </button>

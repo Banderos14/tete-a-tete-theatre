@@ -716,3 +716,24 @@
 
   &:hover { background: var(--accent-bright, #c00); }
 }
+
+.cancelReasonNote {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+}
+
+.cancelByUserBadge {
+  display: inline-block;
+  background: rgba(184, 0, 0, 0.08);
+  border: 1px solid rgba(184, 0, 0, 0.2);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}

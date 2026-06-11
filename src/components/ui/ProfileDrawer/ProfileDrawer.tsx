@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent, type ReactNode } from 'react';
+import { IconLock, IconCalendarEvent } from '@tabler/icons-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from '../../../services/bookingService';
@@ -7,6 +8,14 @@ import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Booking, BookingStatus } from '../../../types/booking';
 import type { Messenger } from '../../../context/AuthContext';
 import styles from './ProfileDrawer.module.scss';
+
+function formatBirthdayDisplay(dateStr: string, lang: 'RU' | 'FR'): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  return new Intl.DateTimeFormat(lang === 'FR' ? 'fr-FR' : 'ru-RU', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  }).format(d);
+}
 
 function formatPhone(raw: string): string {
   const hasPlus = raw.startsWith('+');
@@ -68,6 +77,12 @@ function validate(displayName: string, birthday: string, phone: string, required
 type Section = 'personal' | 'contacts' | 'socials' | 'notifications' | 'tickets' | 'shows';
 const FORM_SECTIONS: Section[] = ['personal', 'contacts', 'socials', 'notifications'];
 
+// Decorative barcode: uniform 16px height, widths vary 1-4px like a real ticket barcode
+const BARCODE_WIDTHS = [
+  2,1,3,1,1,2,1,4,1,2,1,3,1,1,2,1,3,2,1,4,1,2,1,1,3,1,2,1,4,1,
+  1,3,1,2,1,1,4,2,1,3,1,2,1,1,3,1,2,4,1,1,2,1,3,1,2,1,4,1,2,3,
+] as const;
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -91,7 +106,8 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
   const [isDirty,     setIsDirty]     = useState(false);
   const [warnVisible, setWarnVisible] = useState(false);
-  const warnTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const warnTimer    = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const datePickerRef = useRef<HTMLInputElement>(null);
 
   const [fbLoading, setFbLoading] = useState(false);
   const [fbError,   setFbError]   = useState('');
@@ -195,7 +211,16 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
-    setTimeout(() => setSavedMsg(false), 2500);
+    setTimeout(() => setSavedMsg(false), 4000);
+  }
+
+  function handleBirthdayClick() {
+    if (birthdayFromFb || !datePickerRef.current) return;
+    try {
+      datePickerRef.current.showPicker();
+    } catch {
+      datePickerRef.current.click();
+    }
   }
 
   const handleLinkFacebook = useCallback(async () => {
@@ -223,19 +248,23 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const fbLinked         = userProfile?.facebookLinked ?? false;
   const birthdayFromFb   = userProfile?.birthdayFromFb ?? false;
   const missingCount     = Object.keys(validate(displayName, birthday, phone, t.profile.required)).length;
-  const activeBookings   = bookings.filter(b => !computedIsAttended(b));
+  const activeBookings   = bookings.filter(b => !computedIsAttended(b) && !isStaleCancelledOrExpired(b));
   const attendedBookings = bookings.filter(computedIsAttended);
   const ticketCount      = activeBookings.filter(b =>
     b.paymentStatus === 'paid' && b.status === 'confirmed' && !!b.ticketCode
   ).length;
+  const regYear          = user?.metadata?.creationTime
+    ? new Date(user.metadata.creationTime).getFullYear()
+    : null;
+  const isGoogleProvider = user?.providerData?.some(p => p.providerId === 'google.com') ?? false;
 
-  const navItems: { id: Section; label: string; icon: ReactNode; badge?: number }[] = [
-    { id: 'personal',      label: t.profile.sectionPersonal,      icon: <PersonIcon />  },
-    { id: 'contacts',      label: t.profile.sectionContacts,      icon: <PhoneIcon />   },
-    { id: 'socials',       label: t.profile.sectionSocials,       icon: <LinkIcon />    },
-    { id: 'notifications', label: t.profile.sectionNotifications, icon: <BellIcon />    },
-    { id: 'tickets',       label: t.profile.history,              icon: <TicketIcon />, badge: ticketCount || undefined },
-    { id: 'shows',         label: t.profile.historyAttended,      icon: <StarIcon />    },
+  const navItems: { id: Section; label: string; badge?: number }[] = [
+    { id: 'personal',      label: t.profile.sectionPersonal      },
+    { id: 'contacts',      label: t.profile.sectionContacts      },
+    { id: 'socials',       label: t.profile.sectionSocials       },
+    { id: 'notifications', label: t.profile.sectionNotifications },
+    { id: 'tickets',       label: t.profile.history,              badge: ticketCount || undefined },
+    { id: 'shows',         label: t.profile.historyAttended      },
   ];
 
   if (open && loading) {
@@ -296,7 +325,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
         {/* ── Sidebar ──────────────────────────────────────────────────────── */}
         <aside className={styles.sidebar}>
 
-          {/* Avatar + identity */}
+          {/* Burgundy user card */}
           <div className={styles.sidebarTop}>
             <div className={styles.avatar}>
               {photoURL
@@ -306,6 +335,9 @@ export function ProfileDrawer({ open, onClose }: Props) {
             </div>
             <p className={styles.sidebarName}>{headerName || '—'}</p>
             <p className={styles.sidebarEmail}>{email}</p>
+            {regYear !== null && (
+              <p className={styles.memberSinceLabel}>{t.profile.memberSince(regYear)}</p>
+            )}
             {missingCount > 0 && (
               <div className={styles.incompleteBadge}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="11" height="11">
@@ -314,6 +346,12 @@ export function ProfileDrawer({ open, onClose }: Props) {
                 {t.profile.incomplete(missingCount)}
               </div>
             )}
+            <div className={styles.barcode} aria-hidden="true">
+              {BARCODE_WIDTHS.map((w, i) => (
+                <div key={i} style={{ width: `${w}px` }} />
+              ))}
+            </div>
+            <div className={styles.cardCutouts} aria-hidden="true" />
           </div>
 
           {/* Nav */}
@@ -325,7 +363,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
                 className={`${styles.navItem} ${activeSection === item.id ? styles.navItemActive : ''}`}
                 onClick={() => setActiveSection(item.id)}
               >
-                {item.icon}
                 <span className={styles.navLabel}>{item.label}</span>
                 {item.badge !== undefined && (
                   <span className={styles.navBadge}>{item.badge}</span>
@@ -339,7 +376,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
               className={`${styles.navItem} ${styles.navItemLogout}`}
               onClick={handleLogout}
             >
-              <LogoutIcon />
               <span className={styles.navLabel}>{t.profile.logout}</span>
             </button>
           </nav>
@@ -347,8 +383,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
           {/* Sidebar footer — logout desktop */}
           <div className={styles.sidebarFooter}>
             <button type="button" className={styles.logoutBtn} onClick={handleLogout}>
-              <LogoutIcon />
-              {t.profile.logout}
+              {t.profile.logout} ↗
             </button>
           </div>
         </aside>
@@ -388,54 +423,82 @@ export function ProfileDrawer({ open, onClose }: Props) {
             {/* ── ЛИЧНЫЕ ДАННЫЕ ── */}
             {activeSection === 'personal' && (
               <div className={styles.section}>
-                <h2 className={styles.sectionTitle}>{t.profile.sectionPersonal}</h2>
+                <div className={styles.personalHeader}>
+                  <h2 className={styles.personalTitle}>{t.profile.sectionPersonal}</h2>
+                </div>
 
-                <Field label={
-                  <>
-                    {t.profile.displayName}
-                    {fbLinked && (
-                      <span className={styles.fbBadgeInline}>
-                        <FacebookIcon size={10} /> Facebook
-                      </span>
-                    )}
-                  </>
-                } error={errors.displayName}>
+                <PersonalField
+                  label={t.profile.displayName}
+                  providerLabel={
+                    fbLinked
+                      ? (lang === 'FR' ? 'via Facebook' : 'через Facebook')
+                      : isGoogleProvider
+                        ? (lang === 'FR' ? 'via Google' : 'через Google')
+                        : undefined
+                  }
+                  error={errors.displayName}
+                >
                   <input
                     type="text"
+                    className={`${styles.personalInput} ${errors.displayName ? styles.personalInputError : ''}`}
                     value={displayName}
                     onChange={e => { setDisplayName(e.target.value); markDirty(); }}
                     placeholder={t.auth.nameLabel}
                     autoComplete="name"
-                    className={errors.displayName ? styles.inputError : ''}
                   />
-                </Field>
+                </PersonalField>
 
-                <Field label="Email">
-                  <input
-                    type="email"
-                    value={email}
-                    readOnly
-                    className={styles.readonlyInput}
-                  />
-                </Field>
+                <PersonalField
+                  label="Email"
+                  providerLabel={isGoogleProvider
+                    ? (lang === 'FR' ? 'via Google' : 'через Google')
+                    : undefined}
+                >
+                  <div className={styles.emailDisplay}>{email}</div>
+                </PersonalField>
 
-                <Field label={t.profile.birthday} error={errors.birthday}>
-                  {birthdayFromFb && birthday
-                    ? (
-                      <div className={styles.autoFilled}>
-                        <span>{birthday}</span>
-                        <span className={styles.fbBadge}><FacebookIcon size={11} /> Facebook</span>
-                      </div>
-                    ) : (
+                <PersonalField label={t.profile.birthday} error={errors.birthday}>
+                  {birthdayFromFb && birthday ? (
+                    <div className={`${styles.birthdayField} ${styles.birthdayFieldReadonly}`}>
+                      <span className={styles.birthdayText}>
+                        {formatBirthdayDisplay(birthday, lang)}
+                      </span>
+                      <span className={styles.providerTagFb}>
+                        <IconLock size={11} stroke={1.5} />
+                        Facebook
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      className={`${styles.birthdayField} ${errors.birthday ? styles.birthdayFieldError : ''}`}
+                      onClick={handleBirthdayClick}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleBirthdayClick(); }}
+                    >
+                      <span className={`${styles.birthdayText} ${!birthday ? styles.birthdayPlaceholder : ''}`}>
+                        {birthday
+                          ? formatBirthdayDisplay(birthday, lang)
+                          : (lang === 'FR' ? 'Choisir une date' : 'Выбрать дату')}
+                      </span>
+                      <IconCalendarEvent size={16} stroke={1.5} className={styles.birthdayIcon} />
                       <input
+                        ref={datePickerRef}
                         type="date"
                         value={birthday}
                         onChange={e => { setBirthday(e.target.value); markDirty(); }}
-                        className={`${styles.dateInput} ${errors.birthday ? styles.inputError : ''}`}
+                        className={styles.hiddenDateInput}
+                        tabIndex={-1}
+                        aria-hidden="true"
                       />
-                    )
-                  }
-                </Field>
+                    </div>
+                  )}
+                  <p className={styles.birthdayHint}>
+                    {lang === 'FR'
+                      ? 'Le jour de votre anniversaire — une surprise du théâtre'
+                      : 'В день рождения — сюрприз от театра'}
+                  </p>
+                </PersonalField>
               </div>
             )}
 
@@ -517,7 +580,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
             {/* ── МОИ БИЛЕТЫ ── */}
             {activeSection === 'tickets' && (
               <div className={styles.section}>
-                <h2 className={styles.sectionTitle}>{t.profile.history}</h2>
+                <h2 className={styles.ticketsTitle}>{t.profile.history}</h2>
                 {historyLoading ? (
                   <div className={styles.skeletonList}>
                     {[1, 2].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonTicket}`} />)}
@@ -554,20 +617,24 @@ export function ProfileDrawer({ open, onClose }: Props) {
             {/* ── МОИ СПЕКТАКЛИ ── */}
             {activeSection === 'shows' && (
               <div className={styles.section}>
-                <h2 className={styles.sectionTitle}>{t.profile.historyAttended}</h2>
+                <h2 className={styles.ticketsTitle}>{t.profile.historyAttended}</h2>
                 <VisitCounter bookings={bookings} t={t} />
                 {historyLoading ? (
                   <div className={styles.skeletonList}>
                     {[1].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonTicket}`} />)}
                   </div>
-                ) : attendedBookings.length === 0 && !historyLoading ? (
+                ) : attendedBookings.length === 0 ? (
                   <p className={styles.emptyText}>
                     {lang === 'FR' ? 'Aucun spectacle visité pour le moment.' : 'Вы ещё не посетили ни одного спектакля.'}
                   </p>
                 ) : (
-                  <div className={styles.ticketList}>
-                    {attendedBookings.map(b => (
-                      <AttendedCard key={b.id} booking={b} show={SHOW_MAP.get(b.showId)} t={t} />
+                  <div className={styles.attendedList}>
+                    {groupAttendedBookings(attendedBookings).map((group, idx) => (
+                      <AttendedRow
+                        key={group.showId}
+                        group={group}
+                        stampAngle={STAMP_ANGLES[idx % STAMP_ANGLES.length]}
+                      />
                     ))}
                   </div>
                 )}
@@ -581,11 +648,16 @@ export function ProfileDrawer({ open, onClose }: Props) {
             <div className={styles.saveRow}>
               <button
                 type="submit"
-                className={`${styles.saveBtn} ${savedMsg ? styles.savedBtn : ''}`}
+                className={styles.saveBtn}
                 disabled={saving}
               >
-                {saving ? '…' : savedMsg ? `✓ ${t.profile.saved}` : t.profile.save}
+                {saving ? '…' : t.profile.save}
               </button>
+              {savedMsg && (
+                <span className={styles.savedStatus}>
+                  {lang === 'FR' ? 'Enregistré à l\'instant' : 'Сохранено только что'}
+                </span>
+              )}
             </div>
           )}
 
@@ -608,6 +680,33 @@ function Field({
   return (
     <div className={styles.field} style={style}>
       <label>{label}</label>
+      {children}
+      {error && <p className={styles.fieldError}>{error}</p>}
+    </div>
+  );
+}
+
+// ── PersonalField ──────────────────────────────────────────────────────────────
+
+function PersonalField({
+  label, providerLabel, error, children,
+}: {
+  label: ReactNode;
+  providerLabel?: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={styles.personalFieldWrap}>
+      <div className={styles.personalFieldLabel}>
+        <span className={styles.personalFieldLabelText}>{label}</span>
+        {providerLabel && (
+          <span className={styles.providerLabel}>
+            <IconLock size={10} stroke={1.5} />
+            {providerLabel}
+          </span>
+        )}
+      </div>
       {children}
       {error && <p className={styles.fieldError}>{error}</p>}
     </div>
@@ -660,62 +759,6 @@ function TelegramIcon() {
   );
 }
 
-function PersonIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>
-    </svg>
-  );
-}
-
-function LinkIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-    </svg>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>
-    </svg>
-  );
-}
-
-function TicketIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/>
-    </svg>
-  );
-}
-
-function StarIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-    </svg>
-  );
-}
-
-function LogoutIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14" aria-hidden>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-    </svg>
-  );
-}
-
 // ── Booking history sub-components ─────────────────────────────────────────────
 
 import type { T } from '../../../i18n/translations';
@@ -729,104 +772,216 @@ import {
   nextRewardThreshold,
   cycleProgress,
 } from '../../../services/loyaltyService';
-import { TicketCard } from '../TicketCard';
+import { cancelBookingByUser } from '../../../services/bookingService';
+import { TicketCard, StampBadge } from '../TicketCard';
 
 const SHOW_MAP = new Map<string, Show>(SHOWS.map(s => [s.id, s]));
 const BONUS_EVERY = 5;
 
-const STATUS_LABEL_KEY: Record<BookingStatus, keyof T['profile']> = {
-  pending:   'statusPending',
-  confirmed: 'statusConfirmed',
-  cancelled: 'statusCancelled',
-  attended:  'statusAttended',
+// 25-bar decorative barcode — uniform height, varying width
+const BOOKING_BARCODE_WIDTHS = [2,1,3,1,1,2,1,4,1,2,1,3,1,1,2,1,3,2,1,4,1,2,1,1,3] as const;
+
+// Hides cancelled/expired bookings 12 hours after they were cancelled/expired
+function isStaleCancelledOrExpired(b: Booking): boolean {
+  const isTerminal = b.status === 'cancelled' || b.paymentStatus === 'expired';
+  if (!isTerminal) return false;
+  const ts = b.cancelledAt ?? b.updatedAt;
+  if (!ts) return false;
+  return Date.now() - ts.toMillis() > 12 * 60 * 60 * 1000;
+}
+
+// Month map RU→FR for stub date display
+const MONTH_FR_MAP_BC: Record<string, string> = {
+  'Янв': 'Jan', 'Фев': 'Fév', 'Мар': 'Mar', 'Апр': 'Avr',
+  'Май': 'Mai', 'Июн': 'Juin', 'Июл': 'Juil', 'Авг': 'Août',
+  'Сен': 'Sep', 'Окт': 'Oct', 'Ноя': 'Nov', 'Дек': 'Déc',
 };
 
-function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
-  const attended         = getUserAttendedCount(bookings);
-  const isRewardAvailable = hasAvailableLoyaltyReward(bookings);
-  const usedCount        = getUsedRewardCount(bookings);
-  const nextThreshold    = nextRewardThreshold(bookings);
-  const filled           = cycleProgress(bookings);
+function parseBookingDate(showDate: string, isFR: boolean): { day: string; monthAbbrev: string } {
+  const parts = showDate.trim().split(/\s+/);
+  const day = parts[0] ?? '—';
+  const monthRu = parts[1] ?? '';
+  const monthAbbrev = isFR
+    ? (MONTH_FR_MAP_BC[monthRu] ?? monthRu.toLowerCase())
+    : monthRu.toLowerCase();
+  return { day, monthAbbrev };
+}
 
-  const hasEverEarned = attended >= BONUS_EVERY;
+
+function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
+  const { lang } = useLang();
+  const isFR = lang === 'FR';
+
+  const attended          = getUserAttendedCount(bookings);
+  const isRewardAvailable = hasAvailableLoyaltyReward(bookings);
+  const usedCount         = getUsedRewardCount(bookings);
+  const nextThreshold     = nextRewardThreshold(bookings);
+  const filled            = cycleProgress(bookings);
+  const hasEverEarned     = attended >= BONUS_EVERY;
+
+  const visitSuffix = isFR
+    ? `spectacle${attended !== 1 ? 's' : ''}`
+    : (attended === 1 ? 'спектакль' : attended >= 2 && attended <= 4 ? 'спектакля' : 'спектаклей');
+  const visitPrefix = isFR ? 'Vous avez assisté à' : 'Вы посетили';
+
+  const captionText = isRewardAvailable
+    ? (isFR
+        ? 'Votre cadeau est prêt : −50% sur le prochain spectacle !'
+        : 'Ваш подарок готов: скидка −50% на следующий спектакль!')
+    : (hasEverEarned && usedCount > 0)
+      ? t.profile.loyaltyUsed(nextThreshold)
+      : t.profile.bonusProgress(nextThreshold - attended);
 
   return (
     <div className={styles.visitCounter}>
-      <p className={styles.visitText}>{t.profile.visitCount(attended)}</p>
-      {attended > 0 && (
-        isRewardAvailable
-          ? <p className={styles.visitBonus}>{t.profile.bonusComplete}</p>
-          : hasEverEarned && usedCount > 0
-            ? <p className={styles.visitProgress}>{t.profile.loyaltyUsed(nextThreshold)}</p>
-            : <p className={styles.visitProgress}>{t.profile.bonusProgress(nextThreshold - attended)}</p>
-      )}
-      {attended > 0 && (
-        <div className={styles.visitBar}>
-          {Array.from({ length: BONUS_EVERY }, (_, i) => (
-            <div
-              key={i}
-              className={`${styles.visitDot} ${i < filled ? styles.visitDotFilled : ''}`}
-            />
-          ))}
-        </div>
-      )}
+      <div className={styles.visitCounterHeader}>
+        <p className={styles.visitCounterTitle}>
+          {visitPrefix}{' '}
+          <span className={styles.visitCounterN}>{attended}</span>
+          {' '}{visitSuffix}
+        </p>
+        <span className={styles.visitCounterLabel}>
+          {isFR ? 'Loyauté' : 'Лояльность'}
+        </span>
+      </div>
+      <div
+        className={styles.visitSeats}
+        role="img"
+        aria-label={isFR
+          ? `Progression de fidélité : ${filled} sur ${BONUS_EVERY} visites`
+          : `Прогресс лояльности: ${filled} из ${BONUS_EVERY} посещений`}
+      >
+        {Array.from({ length: BONUS_EVERY }, (_, i) => (
+          <div
+            key={i}
+            className={`${styles.visitSeat} ${i < filled ? styles.visitSeatFilled : ''}`}
+          />
+        ))}
+      </div>
+      <p className={styles.visitCaption}>{captionText}</p>
     </div>
   );
 }
 
 // BookingCard — for non-QR active bookings (cancelled, pending, awaiting, etc.)
-function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: Show }) {
+function BookingCard({ booking: b, t, show: _show }: { booking: Booking; t: T; show?: Show }) {
   const { lang } = useLang();
   const isFR = lang === 'FR';
 
+  const [cancelOpen,    setCancelOpen]    = useState(false);
+  const [cancelReason,  setCancelReason]  = useState('');
+  const [cancelComment, setCancelComment] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError,   setCancelError]   = useState('');
+
   const isAttended     = computedIsAttended(b);
   const displayStatus: BookingStatus = isAttended ? 'attended' : b.status;
-  const statusKey      = STATUS_LABEL_KEY[displayStatus] as keyof typeof t.profile;
-  const statusLabel    = t.profile[statusKey] as string;
 
   const payStatus = b.paymentStatus ?? 'not_paid';
   const isAwaitingTransfer = payStatus === 'awaiting_transfer';
   const isExpiredTransfer  = payStatus === 'expired';
 
-  const payMethodLabel = b.paymentMethod === 'bank_transfer'
-    ? t.profile.payMethodTransfer
-    : t.profile.payMethodOnSite;
-
-  const payStatusLabel =
-    payStatus === 'paid'              ? t.profile.payStatusPaid      :
-    payStatus === 'awaiting_transfer' ? t.profile.payStatusAwaiting  :
-    payStatus === 'expired'           ? t.profile.payStatusExpired   :
-                                        t.profile.payStatusNotPaid;
+  const canCancel = !isAttended && b.status !== 'cancelled' && b.status !== 'attended';
 
   const hoursLeft  = isAwaitingTransfer ? hoursUntilExpiry(b) : null;
   const paymentRef = b.paymentReference ?? `${PAYMENT_CONFIG.paymentReferencePrefix}-${b.ticketCode}`;
   const account    = getPaymentAccount(b.paymentAccountId);
 
+  // Stub colour — same priority as TicketCard: grey > paid(burgundy) > pending/amber
+  const stubVariant: 'burgundy' | 'amber' | 'grey' =
+    (b.status === 'cancelled' || payStatus === 'expired')  ? 'grey'     :
+    payStatus === 'paid'                                   ? 'burgundy' :
+    payStatus === 'awaiting_transfer'                      ? 'amber'    :
+    (b.paymentMethod === 'on_site' && payStatus === 'not_paid') ? 'amber' :
+    'burgundy';
+
+  // Date parsing
+  const { day, monthAbbrev } = parseBookingDate(b.showDate, isFR);
+  const timeLabel = `${monthAbbrev} · ${b.showTime}`;
+
+  // Ticket type label
+  const ticketTypeLabel =
+    b.ticketType === 'student'
+      ? (isFR ? 'Étudiant' : 'Студент')
+      : (isFR ? 'Standard' : 'Стандарт');
+
+  // Contextual action text
+  let actionText = '';
+  let actionClass = styles.bookingActionMuted;
+  if (payStatus === 'paid' && b.status === 'confirmed') {
+    actionText = isFR ? 'Montrer à l\'entrée →' : 'Показать на входе →';
+    actionClass = styles.bookingActionMuted;
+  } else if (payStatus === 'awaiting_transfer') {
+    actionText = isFR ? 'Détails du virement →' : 'Реквизиты для перевода →';
+    actionClass = styles.bookingActionAmber;
+  } else if (b.paymentMethod === 'on_site' && payStatus === 'not_paid' && b.status !== 'cancelled') {
+    actionText = isFR ? 'Paiement sur place' : 'Оплата на месте';
+    actionClass = styles.bookingActionAmber;
+  }
+
+  const REASON_OPTIONS = [
+    { value: 'time',    label: t.booking.cancelReasonTime    },
+    { value: 'plans',   label: t.booking.cancelReasonPlans   },
+    { value: 'mistake', label: t.booking.cancelReasonMistake },
+    { value: 'other',   label: t.booking.cancelReasonOther   },
+  ];
+
+  async function handleCancelSubmit() {
+    if (!cancelReason) { setCancelError(t.booking.cancelReasonRequired); return; }
+    setCancelLoading(true);
+    setCancelError('');
+    try {
+      await cancelBookingByUser(b.id, cancelReason, cancelComment || undefined);
+      setCancelOpen(false);
+    } catch {
+      setCancelError(isFR ? 'Erreur lors de l\'annulation.' : 'Ошибка при отмене. Попробуйте ещё раз.');
+    } finally {
+      setCancelLoading(false);
+    }
+  }
+
   return (
-    <div className={`${styles.bookingCard} ${styles[`bookingCard_${displayStatus}`] ?? ''}`}>
-      <div className={styles.bookingCardRow}>
-        {show && (
-          <div className={styles.showGlyphBox} style={{ background: show.palette }}>
-            {show.glyph}
+    <div className={`${styles.bookingCard} ${displayStatus === 'cancelled' ? styles.bookingCardCancelled : ''}`}>
+      {/* ── Mini-ticket row ── */}
+      <div className={styles.bookingTicketRow}>
+
+        {/* LEFT STUB */}
+        <div className={`${styles.bookingStub} ${stubVariant === 'amber' ? styles.bookingStubAmber : stubVariant === 'grey' ? styles.bookingStubGrey : styles.bookingStubBurgundy}`}>
+          <div className={styles.bookingStubDay}>{day}</div>
+          <div className={`${styles.bookingStubMonth} ${stubVariant === 'amber' ? styles.bookingStubMonthAmber : stubVariant === 'grey' ? styles.bookingStubMonthGrey : ''}`}>{timeLabel}</div>
+          <div className={styles.bookingStubBarcode} aria-hidden="true">
+            {BOOKING_BARCODE_WIDTHS.map((w, i) => (
+              <div key={i} style={{ width: `${w}px` }} />
+            ))}
           </div>
-        )}
+          <div className={styles.bookingStubCutoutTop} aria-hidden="true" />
+          <div className={styles.bookingStubCutoutBottom} aria-hidden="true" />
+        </div>
+
+        {/* RIGHT CONTENT */}
         <div className={styles.bookingCardContent}>
+          {/* Row 1: title + stamp */}
           <div className={styles.bookingCardTop}>
             <span className={styles.bookingShowTitle}>{b.showTitle}</span>
-            <span className={`${styles.bookingStatus} ${styles[`bookingStatus_${displayStatus}`]}`}>
-              {statusLabel}
-            </span>
+            <StampBadge booking={b} isFR={isFR} />
           </div>
-          <div className={styles.bookingCardMeta}>
-            <span>{b.showDate} · {b.showTime}</span>
-            <span>{b.ticketsCount} {b.ticketsCount === 1 ? 'билет' : 'билета'}</span>
-            {b.totalAmount > 0 && <span>{b.totalAmount}&nbsp;€</span>}
-          </div>
-          <div className={styles.bookingPayInfo}>
-            <span className={styles.bookingPayMethod}>{payMethodLabel}</span>
-            <span className={`${styles.bookingPayStatus} ${styles[`bookingPayStatus_${payStatus}`]}`}>
-              {payStatusLabel}
-            </span>
+
+          {/* Row 2: composition line */}
+          <p className={styles.bookingCompositionLine}>
+            <span>{b.ticketsCount} × {ticketTypeLabel}</span>
+            {b.totalAmount > 0 && (
+              <>
+                <span className={styles.bookingCompositionSep}> · </span>
+                <span className={styles.bookingCompositionAmount}>{b.totalAmount} €</span>
+              </>
+            )}
+          </p>
+
+          {/* Row 3: code + action */}
+          <div className={styles.bookingCardRow3}>
+            {b.ticketCode && (
+              <code className={styles.bookingCode}>{b.ticketCode}</code>
+            )}
             {/* Countdown for awaiting transfers */}
             {isAwaitingTransfer && hoursLeft !== null && (
               <span className={hoursLeft <= 0 ? styles.countdownExpired : styles.countdownHours}>
@@ -835,22 +990,16 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
                   : `${hoursLeft} ${isFR ? 'h' : 'ч.'}`}
               </span>
             )}
+            {actionText && (
+              <span className={`${styles.bookingActionText} ${actionClass}`}>{actionText}</span>
+            )}
           </div>
-
-          {b.ticketCode && (
-            <div className={styles.bookingTicketCode}>
-              <span>{t.profile.ticketCode}:</span>
-              <code>{b.ticketCode}</code>
-            </div>
-          )}
 
           {/* Transfer details block — only for awaiting_transfer */}
           {isAwaitingTransfer && b.ticketCode && (
             <div className={styles.transferMiniBox}>
               <p className={styles.transferMiniLabel}>
-                {isFR
-                  ? `${account.label} · ${account.description}`
-                  : `${account.label} · ${account.description}`}
+                {`${account.label} · ${account.description}`}
               </p>
               <dl className={styles.transferMiniList}>
                 <div className={styles.transferMiniRow}>
@@ -901,26 +1050,161 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
           {!isAttended && payStatus === 'paid' && displayStatus === 'pending' && (
             <p className={styles.bookingNoteOk}>{t.profile.bookingNotePaid}</p>
           )}
+
+          {/* Cancel button — only for active bookings */}
+          {canCancel && !cancelOpen && (
+            <button
+              type="button"
+              className={styles.cancelBookingBtn}
+              onClick={() => { setCancelOpen(true); setCancelReason(''); setCancelComment(''); setCancelError(''); }}
+            >
+              {t.booking.cancelBooking}
+            </button>
+          )}
+
+          {/* Inline cancel reason dialog */}
+          {cancelOpen && (
+            <div className={styles.cancelDialog}>
+              <p className={styles.cancelDialogTitle}>{t.booking.cancelBookingTitle}</p>
+              <p className={styles.cancelDialogText}>{t.booking.cancelBookingText}</p>
+              <div className={styles.cancelReasonList}>
+                {REASON_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`${styles.cancelReasonBtn} ${cancelReason === opt.value ? styles.cancelReasonActive : ''}`}
+                    onClick={() => setCancelReason(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {cancelReason === 'other' && (
+                <textarea
+                  className={styles.cancelCommentArea}
+                  value={cancelComment}
+                  onChange={e => setCancelComment(e.target.value)}
+                  placeholder={t.booking.cancelCommentPlaceholder}
+                  rows={2}
+                />
+              )}
+              {cancelError && <p className={styles.cancelDialogError}>{cancelError}</p>}
+              <div className={styles.cancelDialogActions}>
+                <button
+                  type="button"
+                  className={styles.cancelDialogConfirm}
+                  onClick={handleCancelSubmit}
+                  disabled={cancelLoading}
+                >
+                  {cancelLoading ? '…' : t.booking.cancelConfirm}
+                </button>
+                <button
+                  type="button"
+                  className={styles.cancelDialogAbort}
+                  onClick={() => setCancelOpen(false)}
+                  disabled={cancelLoading}
+                >
+                  {isFR ? 'Retour' : 'Назад'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// AttendedCard — compact card for the Shows section
-function AttendedCard({ booking: b, show, t }: { booking: Booking; show?: Show; t: T }) {
+// ── Attended shows — grouped list ──────────────────────────────────────────────
+
+interface GroupedShow {
+  showId:    string;
+  show:      Show | undefined;
+  showTitle: string;
+  count:     number;
+  lastDate:  string;
+  lastTime:  string;
+}
+
+function pluralRaz(n: number): string {
+  if (n >= 11 && n <= 19) return 'раз';
+  const last = n % 10;
+  if (last >= 2 && last <= 4) return 'раза';
+  return 'раз';
+}
+
+function showInitials(title: string): string {
+  const clean = title.replace(/[«»""'']/g, '').trim();
+  const words = clean.split(/\s+/).filter(w => w.length > 2);
+  if (words.length === 0) return (title[0] ?? '?').toUpperCase();
+  return words.slice(0, 2).map(w => w[0].toUpperCase()).join('');
+}
+
+function groupAttendedBookings(bookings: Booking[]): GroupedShow[] {
+  const map = new Map<string, {
+    count: number; lastDate: string; lastTime: string; lastTs: number; showTitle: string;
+  }>();
+  for (const b of bookings) {
+    const ts    = b.createdAt.toMillis();
+    const entry = map.get(b.showId);
+    if (!entry) {
+      map.set(b.showId, { count: 1, lastDate: b.showDate, lastTime: b.showTime, lastTs: ts, showTitle: b.showTitle });
+    } else {
+      entry.count += 1;
+      if (ts > entry.lastTs) {
+        entry.lastDate  = b.showDate;
+        entry.lastTime  = b.showTime;
+        entry.lastTs    = ts;
+      }
+    }
+  }
+  return Array.from(map.entries()).map(([showId, d]) => ({
+    showId,
+    show:      SHOW_MAP.get(showId),
+    showTitle: d.showTitle,
+    count:     d.count,
+    lastDate:  d.lastDate,
+    lastTime:  d.lastTime,
+  }));
+}
+
+const STAMP_ANGLES = [3, -4, 2, -5, 3, -3, 4, -2] as const;
+
+function AttendedRow({ group, stampAngle }: { group: GroupedShow; stampAngle: number }) {
+  const { lang } = useLang();
+  const isFR = lang === 'FR';
+  const { show, showTitle, count, lastDate, lastTime } = group;
+  const title = show ? (isFR && show.titleFR ? show.titleFR : show.title) : showTitle;
+  const thumbBg = show?.palette ?? '#2a1f1a';
+  const thumbGlyph = show?.glyph ?? showInitials(title);
+  const repeatText = count > 1
+    ? (isFR ? `· ${count} fois` : `· были ${count} ${pluralRaz(count)}`)
+    : '';
+  const stampText = isFR
+    ? (count > 1 ? `VU ×${count}` : 'VU')
+    : (count > 1 ? `ПОСЕЩЕНО ×${count}` : 'ПОСЕЩЕНО');
+
   return (
-    <div className={styles.attendedCard}>
-      {show && (
-        <div className={styles.attendedGlyph} style={{ background: show.palette }}>
-          {show.glyph}
-        </div>
-      )}
-      <div className={styles.attendedInfo}>
-        <p className={styles.attendedTitle}>{b.showTitle}</p>
-        <p className={styles.attendedMeta}>{b.showDate} · {b.showTime}</p>
+    <div className={styles.attendedRow}>
+      <div className={styles.attendedThumb}>
+        {show?.image ? (
+          <img src={show.image} alt="" className={styles.attendedThumbImg} />
+        ) : (
+          <div className={styles.attendedThumbPlaceholder} style={{ background: thumbBg }}>
+            <span className={styles.attendedThumbGlyph}>{thumbGlyph}</span>
+          </div>
+        )}
       </div>
-      <span className={styles.attendedBadge}>{t.profile.statusAttended}</span>
+      <div className={styles.attendedRowInfo}>
+        <p className={styles.attendedRowTitle}>{title}</p>
+        <p className={styles.attendedRowMeta}>
+          {lastDate} · {lastTime}
+          {repeatText && <span className={styles.attendedRowRepeat}> {repeatText}</span>}
+        </p>
+      </div>
+      <div className={styles.attendedStamp} aria-hidden="true" style={{ transform: `rotate(${stampAngle}deg)` }}>
+        {stampText}
+      </div>
     </div>
   );
 }

@@ -1,1 +1,1 @@
-export { TicketCard } from './TicketCard';
+export { TicketCard, StampBadge } from './TicketCard';

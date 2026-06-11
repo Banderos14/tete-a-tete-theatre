@@ -11,6 +11,34 @@ interface Props {
   onToggle: () => void;
 }
 
+// 25-bar decorative barcode — uniform height, varying width
+const STUB_BARCODE_WIDTHS = [2,1,3,1,1,2,1,4,1,2,1,3,1,1,2,1,3,2,1,4,1,2,1,1,3] as const;
+
+const MONTH_FR_MAP: Record<string, string> = {
+  'Янв': 'Jan', 'Фев': 'Fév', 'Мар': 'Mar', 'Апр': 'Avr',
+  'Май': 'Mai', 'Июн': 'Juin', 'Июл': 'Juil', 'Авг': 'Août',
+  'Сен': 'Sep', 'Окт': 'Oct', 'Ноя': 'Nov', 'Дек': 'Déc',
+};
+
+function parseShowDate(showDate: string, isFR: boolean): { day: string; monthAbbrev: string } {
+  const parts = showDate.trim().split(/\s+/);
+  const day = parts[0] ?? '—';
+  const monthRu = parts[1] ?? '';
+  const monthAbbrev = isFR
+    ? (MONTH_FR_MAP[monthRu] ?? monthRu.toLowerCase())
+    : monthRu.toLowerCase();
+  return { day, monthAbbrev };
+}
+
+function getStubVariant(b: Booking): 'burgundy' | 'amber' | 'grey' {
+  const payStatus = b.paymentStatus ?? 'not_paid';
+  if (b.status === 'cancelled' || payStatus === 'expired') return 'grey';
+  if (payStatus === 'paid') return 'burgundy';
+  if (payStatus === 'awaiting_transfer') return 'amber';
+  if (b.paymentMethod === 'on_site' && payStatus === 'not_paid') return 'amber';
+  return 'burgundy';
+}
+
 export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
   const { lang } = useLang();
   const [qrSrc,      setQrSrc]      = useState('');
@@ -29,64 +57,119 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
   async function handleDownloadPdf() {
     if (!qrSrc || pdfLoading) return;
     setPdfLoading(true);
-    try {
-      await generateTicketPdf(b, qrSrc, lang);
-    } finally {
-      setPdfLoading(false);
+    try { await generateTicketPdf(b, qrSrc, lang); }
+    finally { setPdfLoading(false); }
+  }
+
+  const isFR       = lang === 'FR';
+  const stubVariant = getStubVariant(b);
+  const payStatus  = b.paymentStatus ?? 'not_paid';
+
+  const { day, monthAbbrev } = parseShowDate(b.showDate, isFR);
+  const timeLabel = `${monthAbbrev} · ${b.showTime}`;
+
+  const ticketTypeLabel =
+    b.ticketType === 'student'
+      ? (isFR ? 'Étudiant' : 'Студент')
+      : (isFR ? 'Standard' : 'Стандарт');
+
+  // CTA text changes between collapsed / expanded
+  let ctaCollapsed = '';
+  let ctaExpanded  = isFR ? 'Masquer ↑' : 'Скрыть ↑';
+  let ctaClass     = styles.actionMuted;
+
+  if (b.status !== 'cancelled' && payStatus !== 'expired') {
+    if (payStatus === 'paid') {
+      ctaCollapsed = isFR ? 'Afficher QR →' : 'Показать QR →';
+      ctaExpanded  = isFR ? 'Masquer QR ↑'  : 'Скрыть QR ↑';
+      ctaClass     = styles.actionMuted;
+    } else if (payStatus === 'awaiting_transfer') {
+      ctaCollapsed = isFR ? 'Détails du virement →' : 'Реквизиты перевода →';
+      ctaExpanded  = isFR ? 'Masquer ↑' : 'Скрыть ↑';
+      ctaClass     = styles.actionAmber;
+    } else if (b.paymentMethod === 'on_site' && payStatus === 'not_paid') {
+      ctaCollapsed = isFR ? 'Afficher QR →' : 'Показать QR →';
+      ctaExpanded  = isFR ? 'Masquer QR ↑'  : 'Скрыть QR ↑';
+      ctaClass     = styles.actionAmber;
     }
   }
 
-  const isFR = lang === 'FR';
+  const ctaText = isExpanded ? ctaExpanded : ctaCollapsed;
 
   return (
-    <div className={`${styles.ticket} ${isExpanded ? styles.expanded : ''}`}>
+    <div className={styles.ticketRoot}>
 
+      {/* ── Mini-ticket card — clean, no inner blocks ── */}
       <div
-        className={styles.header}
+        className={`${styles.ticket} ${isExpanded ? styles.ticketOpen : ''}`}
         onClick={onToggle}
         role="button"
         tabIndex={0}
         aria-expanded={isExpanded}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
       >
-        <div className={styles.headerLeft}>
-          <p className={styles.showTitle}>{b.showTitle}</p>
-          <p className={styles.showMeta}>{b.showDate} · {b.showTime}</p>
-          <code className={styles.ticketCode}>{b.ticketCode}</code>
+        {/* LEFT STUB */}
+        <div className={`${styles.stub} ${
+          stubVariant === 'amber' ? styles.stubAmber :
+          stubVariant === 'grey'  ? styles.stubGrey  :
+          styles.stubBurgundy
+        }`}>
+          <div className={styles.stubDay}>{day}</div>
+          <div className={`${styles.stubMonth} ${
+            stubVariant === 'amber' ? styles.stubMonthAmber :
+            stubVariant === 'grey'  ? styles.stubMonthGrey  : ''
+          }`}>{timeLabel}</div>
+          <div className={styles.stubBarcode} aria-hidden="true">
+            {STUB_BARCODE_WIDTHS.map((w, i) => (
+              <div key={i} style={{ width: `${w}px` }} />
+            ))}
+          </div>
+          <div className={styles.stubCutoutTop}    aria-hidden="true" />
+          <div className={styles.stubCutoutBottom} aria-hidden="true" />
         </div>
-        <div className={styles.headerRight}>
-          {b.paymentMethod === 'on_site' && b.paymentStatus === 'not_paid' ? (
-            <div className={styles.onSiteBadges}>
-              <span className={`${styles.statusBadge} ${styles.onSite}`}>
-                {isFR ? 'Sur place' : 'Оплата на месте'}
-              </span>
-              <span className={`${styles.statusBadge} ${styles.notPaid}`}>
-                {isFR ? 'Non payé' : 'Не оплачено'}
-              </span>
-            </div>
-          ) : (
-            <span className={`${styles.statusBadge} ${b.paymentStatus === 'paid' ? styles.paid : styles.confirmed}`}>
-              {b.paymentStatus === 'paid'
-                ? (isFR ? 'Payé' : 'Оплачено')
-                : (isFR ? 'Confirmé' : 'Подтверждено')}
-            </span>
-          )}
-          <div className={`${styles.qrBtn} ${isExpanded ? styles.qrBtnOpen : ''}`}>
-            <QrIcon />
-            <span>{isExpanded ? (isFR ? 'Masquer' : 'Скрыть') : 'QR'}</span>
-            <svg
-              className={`${styles.chevron} ${isExpanded ? styles.chevronUp : ''}`}
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-              width="10" height="10" aria-hidden
-            >
-              <path d="M6 9l6 6 6-6"/>
-            </svg>
+
+        {/* RIGHT CONTENT */}
+        <div className={styles.headerContent}>
+          {/* Row 1: title + stamp */}
+          <div className={styles.headerRow1}>
+            <p className={styles.showTitle}>{b.showTitle}</p>
+            <StampBadge booking={b} isFR={isFR} />
+          </div>
+
+          {/* Row 2: composition */}
+          <p className={styles.compositionLine}>
+            <span className={styles.compositionCount}>{b.ticketsCount} × {ticketTypeLabel}</span>
+            {b.totalAmount > 0 && <>
+              <span className={styles.compositionSep}> · </span>
+              <span className={styles.compositionAmount}>{b.totalAmount} €</span>
+            </>}
+          </p>
+
+          {/* Row 3: code + CTA */}
+          <div className={styles.headerRow3}>
+            <code className={styles.ticketCode}>{b.ticketCode}</code>
+            {ctaText && (
+              <span className={`${styles.actionText} ${ctaClass}`}>{ctaText}</span>
+            )}
           </div>
         </div>
       </div>
 
-      <div className={`${styles.body} ${isExpanded ? styles.bodyExpanded : ''}`} aria-hidden={!isExpanded}>
-        <div className={styles.bodyInner}>
+      {/* ── Expanded coupon panel — sibling, not nested inside ticket ── */}
+      <div
+        className={`${styles.panel} ${isExpanded ? styles.panelOpen : ''}`}
+        aria-hidden={!isExpanded}
+      >
+        <div className={styles.panelInner}>
+
+          {/* Tear-off perforation line */}
+          <div className={styles.tearOff} aria-hidden="true">
+            <div className={styles.tearOffLeft} aria-hidden="true" />
+            <div className={styles.tearOffRight} aria-hidden="true" />
+          </div>
+
+          {/* Paper body */}
+          <div className={styles.paperBody}>
 
             {/* QR column */}
             <div className={styles.qrCol}>
@@ -97,69 +180,101 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
                 }
               </div>
               <p className={styles.qrHint}>
-                {isFR ? "Présentez à l'entrée" : 'Предъявите при входе'}
+                {isFR ? "À présenter à l'entrée" : 'Предъявите при входе'}
               </p>
             </div>
 
             {/* Details column */}
             <div className={styles.details}>
-              <p className={styles.detailTitle}>{b.showTitle}</p>
-              <p className={styles.detailVenue}>Théâtre Tête-à-Tête</p>
+              <p className={styles.detailTheatre}>Théâtre Tête-à-Tête</p>
               <dl className={styles.detailList}>
                 <div className={styles.detailRow}>
-                  <dt>{isFR ? 'Date'     : 'Дата'   }</dt>
+                  <dt>{isFR ? 'Date'    : 'Дата'   }</dt>
                   <dd>{b.showDate}</dd>
                 </div>
                 <div className={styles.detailRow}>
-                  <dt>{isFR ? 'Heure'    : 'Время'  }</dt>
+                  <dt>{isFR ? 'Heure'   : 'Время'  }</dt>
                   <dd>{b.showTime}</dd>
                 </div>
                 <div className={styles.detailRow}>
-                  <dt>{isFR ? 'Lieu'     : 'Адрес'  }</dt>
+                  <dt>{isFR ? 'Lieu'    : 'Адрес'  }</dt>
                   <dd>24 Rue Rossini, Nice</dd>
                 </div>
                 <div className={styles.detailRow}>
-                  <dt>{isFR ? 'Billets'  : 'Билеты' }</dt>
-                  <dd>{b.ticketsCount}{b.totalAmount > 0 && ` · ${b.totalAmount} €`}</dd>
+                  <dt>{isFR ? 'Billets' : 'Билеты' }</dt>
+                  <dd>
+                    {b.ticketsCount}
+                    {b.totalAmount > 0 && (
+                      <> · <span>{b.totalAmount} €</span></>
+                    )}
+                  </dd>
                 </div>
               </dl>
-              <div className={styles.codeBox}>
-                <span className={styles.codeLabel}>Code</span>
-                <code className={styles.codeValue}>{b.ticketCode}</code>
-              </div>
 
-              {/* PDF download */}
-              <button
-                type="button"
-                className={styles.pdfBtn}
-                onClick={handleDownloadPdf}
-                disabled={!qrSrc || pdfLoading}
-              >
-                <DownloadIcon />
-                {pdfLoading
-                  ? '…'
-                  : (isFR ? 'Télécharger PDF' : 'Скачать PDF')}
-              </button>
+              <div className={styles.codeRow}>
+                <div className={styles.codeTextPart}>
+                  <span className={styles.codeLabel}>
+                    {isFR ? 'Réservation' : 'Код брони'}
+                  </span>
+                  <code className={styles.codeValue}>{b.ticketCode}</code>
+                  <button
+                    type="button"
+                    className={styles.pdfLink}
+                    onClick={handleDownloadPdf}
+                    disabled={!qrSrc || pdfLoading}
+                  >
+                    <DownloadIcon />
+                    {pdfLoading ? '…' : (isFR ? 'Télécharger PDF' : 'Скачать PDF')}
+                  </button>
+                </div>
+              </div>
             </div>
 
           </div>
         </div>
       </div>
+
+    </div>
   );
 }
 
-// Иконки
+// ── Status stamp ──────────────────────────────────────────────────────────────
 
-function QrIcon() {
+export function StampBadge({ booking: b, isFR }: { booking: Booking; isFR: boolean }) {
+  const payStatus = b.paymentStatus ?? 'not_paid';
+  const status    = b.status;
+
+  let rotation = 'rotate(4deg)';
+  if (payStatus === 'expired')                                         rotation = 'rotate(2deg)';
+  else if (status === 'cancelled')                                     rotation = 'rotate(-6deg)';
+  else if (b.paymentMethod === 'on_site' && payStatus === 'not_paid') rotation = 'rotate(7deg)';
+  else if (payStatus === 'awaiting_transfer' || status === 'pending')  rotation = 'rotate(-3deg)';
+
+  let stampClass: string;
+  let label: string;
+
+  if (status === 'cancelled' || payStatus === 'expired') {
+    stampClass = styles.stampMuted;
+    label = isFR ? 'ANNULÉ' : 'ОТМЕНЕНО';
+  } else if (payStatus === 'awaiting_transfer') {
+    stampClass = styles.stampAmber;
+    label = isFR ? 'EN ATTENTE' : 'ОЖИДАЕТ ОПЛАТЫ';
+  } else if (b.paymentMethod === 'on_site' && payStatus === 'not_paid') {
+    stampClass = styles.stampAmber;
+    label = isFR ? 'SUR PLACE' : 'ОПЛАТА НА МЕСТЕ';
+  } else {
+    stampClass = styles.stampGreen;
+    label = isFR ? 'CONFIRMÉ' : 'ПОДТВЕРЖДЕНО';
+  }
+
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-      <rect x="3" y="3" width="7" height="7" rx="1"/>
-      <rect x="14" y="3" width="7" height="7" rx="1"/>
-      <rect x="3" y="14" width="7" height="7" rx="1"/>
-      <path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M18 18v2"/>
-    </svg>
+    <span className={`${styles.stamp} ${stampClass}`} style={{ transform: rotation }}>
+      {label}
+    </span>
   );
 }
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
 
 function DownloadIcon() {
   return (

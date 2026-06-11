@@ -35,6 +35,10 @@ export interface Booking {
   loyaltyDiscountApplied?:          boolean;
   loyaltyDiscountAmount?:           number;
   loyaltyRewardUsedFromVisitCount?: number;
+  cancelledBy?:   'user' | 'admin';
+  cancelReason?:  string;
+  cancelComment?: string;
+  cancelledAt?:   import('firebase/firestore').Timestamp;
 }
 
 export type NewBooking = Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>;
