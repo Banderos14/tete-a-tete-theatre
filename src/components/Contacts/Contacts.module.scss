@@ -40,7 +40,7 @@
 }
 
 .label {
-  @include mixins.mono(9px, 2px);
+  @include mixins.mono(10px, 2px);
   text-transform: uppercase;
   color: #9c938a;
   margin-bottom: 10px;
@@ -96,20 +96,19 @@
 .secondary {
   display: flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   color: #9c938a;
   margin-top: 8px;
 }
 
 .hoursBlock {
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 14px;
   color: #9c938a;
   line-height: 1.8;
 }
 
 .emailLink {
-  font-size: 12px;
+  font-size: 14px;
   color: #9c938a;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -134,7 +133,7 @@
   align-items: center;
   gap: 6px;
   padding: 12px 22px;
-  border-radius: 22px;
+  border-radius: var(--radius-s);
   border: 0.5px solid rgba(243, 231, 220, 0.16);
   font-family: var(--font-mono);
   font-size: 10px;
@@ -159,7 +158,7 @@
 
 .socials {
   display: flex;
-  gap: 10px;
+  gap: 15px;
   flex-wrap: wrap;
 
   @include mixins.mobile {
@@ -183,7 +182,7 @@
   display: flex;
   flex-direction: column;
   border: 0.5px solid rgba(243, 231, 220, 0.15);
-  border-radius: 20px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   min-height: 480px;
   width: 100%;

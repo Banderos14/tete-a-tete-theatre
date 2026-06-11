@@ -265,16 +265,22 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  gap: 10px;
   margin-bottom: 10px;
 
-  .sectionLabel { margin-bottom: 0; }
+  .sectionLabel {
+    margin-bottom: 0;
+    min-width: 0;
+  }
 }
 
 .seatsInline {
+  flex-shrink: 0;
   font-family: var(--font-body);
   font-size: 13px;
   color: #6e675f;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 // ── Loyalty block ────────────────────────────────────────────────────────
@@ -413,11 +419,25 @@
 }
 
 .showHeader {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 24px;
   padding: 30px 30px 80px;
   flex-shrink: 0;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(8, 5, 4, 0.78), rgba(8, 5, 4, 0.38)),
+      linear-gradient(180deg, rgba(8, 5, 4, 0.20), rgba(8, 5, 4, 0.70));
+    pointer-events: none;
+  }
 
   @include mixins.mobile {
     padding: 22px 58px 22px 20px;
@@ -427,19 +447,13 @@
 }
 
 .showHeaderTop {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 14px;
   min-width: 0;
   width: 100%;
-}
-
-.showGlyph {
-  font-size: 42px;
-  opacity: 0.70;
-  flex-shrink: 0;
-  line-height: 1;
-  color: #fff;
 }
 
 .showHeaderInfo {
@@ -504,7 +518,7 @@
   gap: 10px;
   padding: 12px 14px;
   border: 0.5px solid transparent;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   background: transparent;
   cursor: pointer;
   text-align: left;
@@ -691,7 +705,7 @@
   width: 100%;
   background: #26211c;
   border: 0.5px solid rgba(243,231,220,0.16);
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   padding: 13px 17px;
   min-height: 44px;
   font-size: 14px;
@@ -749,7 +763,7 @@
   gap: 10px;
   padding: 12px 14px;
   border: 0.5px solid transparent;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   background: transparent;
   opacity: 0.55;
   cursor: pointer;
@@ -915,6 +929,10 @@
 // ── Copy buttons ─────────────────────────────────────────────────────────
 
 .copyBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   flex-shrink: 0;
   padding: 6px 12px;
   border: 1px solid var(--line-strong);
@@ -931,6 +949,35 @@
   white-space: normal;
 
   &:hover { color: var(--fg); border-color: var(--fg-mute); }
+}
+
+.copyIcon {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border: 2px solid currentColor;
+    border-radius: 1px;
+    box-sizing: border-box;
+  }
+
+  &::before {
+    left: 3px;
+    top: 3px;
+    opacity: 0.65;
+  }
+
+  &::after {
+    right: 2px;
+    top: -1px;
+  }
 }
 
 .copyBtnDone {
@@ -1234,6 +1281,7 @@
   padding: 5px 12px;
   transform: rotate(8deg);
   pointer-events: none;
+  border-radius: 4px;
 
   @include mixins.mobile {
     position: static;
