@@ -1,4 +1,5 @@
 import type { FormEvent } from 'react';
+import { IconBuildingBank, IconTransfer } from '@tabler/icons-react';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
 import { THEATRE_CAPACITY } from '../../../config/theatre';
@@ -60,25 +61,6 @@ interface Props {
   onSubmit: (e: FormEvent) => void;
 }
 
-function BankIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"
-      strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 10v11M12 10v11M16 10v11" />
-    </svg>
-  );
-}
-
-function TransferIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"
-      strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 17H7M17 20l3-3-3-3M4 7h13M7 4L4 7l3 3" />
-    </svg>
-  );
-}
 
 export function BookingFormStep({
   show, lang, t,
@@ -120,10 +102,8 @@ export function BookingFormStep({
               <button key={tt.id} type="button"
                 className={`${styles.ticketTypeBtn} ${activeTicket?.id === tt.id ? styles.ticketTypeActive : ''}`}
                 onClick={() => { onSelectedTicketChange(tt); onTicketsChange(1); }}>
-                <div className={styles.ttLeft}>
-                  <span className={styles.ttName}>{ticketLabel(tt.id)}</span>
-                </div>
-                <div className={styles.ttDivider} />
+                <span className={`${styles.ttRadio} ${activeTicket?.id === tt.id ? styles.ttRadioActive : ''}`} />
+                <span className={styles.ttName}>{ticketLabel(tt.id)}</span>
                 <span className={styles.ttPrice}>{tt.price}&nbsp;€</span>
               </button>
             ))}
@@ -132,11 +112,13 @@ export function BookingFormStep({
 
         {/* Qty + total */}
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>{t.booking.tickets}</div>
-          {availableSeats === 0
-            ? <p className={styles.soldOutHint}>{t.booking.soldOut}</p>
-            : <p className={styles.seatsHint}>{t.booking.seatsAvailable(availableSeats, THEATRE_CAPACITY)}</p>
-          }
+          <div className={styles.sectionLabelRow}>
+            <div className={styles.sectionLabel}>{t.booking.tickets}</div>
+            {availableSeats > 0 && (
+              <span className={styles.seatsInline}>{t.booking.seatsAvailable(availableSeats, THEATRE_CAPACITY)}</span>
+            )}
+          </div>
+          {availableSeats === 0 && <p className={styles.soldOutHint}>{t.booking.soldOut}</p>}
           <div className={styles.qtyRow}>
             <div className={styles.counter}>
               <button type="button" onClick={() => onTicketsChange(Math.max(1, tickets - 1))} disabled={tickets <= 1}>−</button>
@@ -150,9 +132,6 @@ export function BookingFormStep({
               </div>
             )}
           </div>
-          {activeTicket && !loyaltyAvailable && (
-            <p className={styles.priceHint}>{activeTicket.price}&nbsp;€ × {tickets} = {totalAmount}&nbsp;€</p>
-          )}
           {activeTicket && loyaltyAvailable && (
             <div className={styles.loyaltyBlock}>
               <p className={styles.loyaltyTitle}>{t.booking.loyaltyGift}</p>
@@ -180,7 +159,7 @@ export function BookingFormStep({
         {/* Заголовок правой колонки */}
         <div className={styles.formRightHeader}>
           <div className={styles.formRightLabel}>{lang === 'FR' ? 'RÉSERVATION' : 'БРОНИРОВАНИЕ'}</div>
-          <p className={styles.formRightShowTitle}>{showTitle}</p>
+          <div className={styles.formRightAccentLine} />
         </div>
 
         {/* Phone */}
@@ -198,7 +177,8 @@ export function BookingFormStep({
             <button type="button"
               className={`${styles.paymentCard} ${payment === 'on_site' ? styles.paymentCardActive : ''}`}
               onClick={() => onPaymentChange('on_site')}>
-              <span className={styles.paymentIcon}><BankIcon /></span>
+              <span className={`${styles.paymentDot} ${payment === 'on_site' ? styles.paymentDotActive : ''}`} />
+              <span className={styles.paymentIcon}><IconBuildingBank size={16} stroke={1.5} /></span>
               <div>
                 <div className={styles.paymentName}>{t.booking.payOnSite}</div>
                 <div className={styles.paymentDesc}>{t.booking.payOnSiteDesc}</div>
@@ -207,7 +187,8 @@ export function BookingFormStep({
             <button type="button"
               className={`${styles.paymentCard} ${payment === 'bank_transfer' ? styles.paymentCardActive : ''}`}
               onClick={() => onPaymentChange('bank_transfer')}>
-              <span className={styles.paymentIcon}><TransferIcon /></span>
+              <span className={`${styles.paymentDot} ${payment === 'bank_transfer' ? styles.paymentDotActive : ''}`} />
+              <span className={styles.paymentIcon}><IconTransfer size={16} stroke={1.5} /></span>
               <div>
                 <div className={styles.paymentName}>{t.booking.payTransfer}</div>
                 <div className={styles.paymentDesc}>{t.booking.payTransferDesc}</div>
