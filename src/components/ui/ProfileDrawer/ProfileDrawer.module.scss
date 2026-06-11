@@ -206,9 +206,12 @@
   display: flex;
   align-items: stretch;
   gap: 1.5px;
-  margin-top: 14px;
+  margin: 14px auto 0;
   justify-content: center;
-  height: 16px;
+  width: 48%;
+  max-width: 92px;
+  height: 14px;
+  overflow: hidden;
 
   > div {
     background: #f3e7dc;
