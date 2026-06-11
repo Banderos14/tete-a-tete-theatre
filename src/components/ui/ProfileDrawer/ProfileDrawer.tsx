@@ -729,6 +729,7 @@ import {
   nextRewardThreshold,
   cycleProgress,
 } from '../../../services/loyaltyService';
+import { cancelBookingByUser } from '../../../services/bookingService';
 import { TicketCard } from '../TicketCard';
 
 const SHOW_MAP = new Map<string, Show>(SHOWS.map(s => [s.id, s]));
@@ -779,6 +780,12 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
   const { lang } = useLang();
   const isFR = lang === 'FR';
 
+  const [cancelOpen,    setCancelOpen]    = useState(false);
+  const [cancelReason,  setCancelReason]  = useState('');
+  const [cancelComment, setCancelComment] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError,   setCancelError]   = useState('');
+
   const isAttended     = computedIsAttended(b);
   const displayStatus: BookingStatus = isAttended ? 'attended' : b.status;
   const statusKey      = STATUS_LABEL_KEY[displayStatus] as keyof typeof t.profile;
@@ -787,6 +794,8 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
   const payStatus = b.paymentStatus ?? 'not_paid';
   const isAwaitingTransfer = payStatus === 'awaiting_transfer';
   const isExpiredTransfer  = payStatus === 'expired';
+
+  const canCancel = !isAttended && b.status !== 'cancelled' && b.status !== 'attended';
 
   const payMethodLabel = b.paymentMethod === 'bank_transfer'
     ? t.profile.payMethodTransfer
@@ -801,6 +810,27 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
   const hoursLeft  = isAwaitingTransfer ? hoursUntilExpiry(b) : null;
   const paymentRef = b.paymentReference ?? `${PAYMENT_CONFIG.paymentReferencePrefix}-${b.ticketCode}`;
   const account    = getPaymentAccount(b.paymentAccountId);
+
+  const REASON_OPTIONS = [
+    { value: 'time',    label: t.booking.cancelReasonTime    },
+    { value: 'plans',   label: t.booking.cancelReasonPlans   },
+    { value: 'mistake', label: t.booking.cancelReasonMistake },
+    { value: 'other',   label: t.booking.cancelReasonOther   },
+  ];
+
+  async function handleCancelSubmit() {
+    if (!cancelReason) { setCancelError(t.booking.cancelReasonRequired); return; }
+    setCancelLoading(true);
+    setCancelError('');
+    try {
+      await cancelBookingByUser(b.id, cancelReason, cancelComment || undefined);
+      setCancelOpen(false);
+    } catch {
+      setCancelError(isFR ? 'Erreur lors de l\'annulation.' : 'Ошибка при отмене. Попробуйте ещё раз.');
+    } finally {
+      setCancelLoading(false);
+    }
+  }
 
   return (
     <div className={`${styles.bookingCard} ${styles[`bookingCard_${displayStatus}`] ?? ''}`}>
@@ -900,6 +930,65 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
           )}
           {!isAttended && payStatus === 'paid' && displayStatus === 'pending' && (
             <p className={styles.bookingNoteOk}>{t.profile.bookingNotePaid}</p>
+          )}
+
+          {/* Cancel button — only for active bookings */}
+          {canCancel && !cancelOpen && (
+            <button
+              type="button"
+              className={styles.cancelBookingBtn}
+              onClick={() => { setCancelOpen(true); setCancelReason(''); setCancelComment(''); setCancelError(''); }}
+            >
+              {t.booking.cancelBooking}
+            </button>
+          )}
+
+          {/* Inline cancel reason dialog */}
+          {cancelOpen && (
+            <div className={styles.cancelDialog}>
+              <p className={styles.cancelDialogTitle}>{t.booking.cancelBookingTitle}</p>
+              <p className={styles.cancelDialogText}>{t.booking.cancelBookingText}</p>
+              <div className={styles.cancelReasonList}>
+                {REASON_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`${styles.cancelReasonBtn} ${cancelReason === opt.value ? styles.cancelReasonActive : ''}`}
+                    onClick={() => setCancelReason(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {cancelReason === 'other' && (
+                <textarea
+                  className={styles.cancelCommentArea}
+                  value={cancelComment}
+                  onChange={e => setCancelComment(e.target.value)}
+                  placeholder={t.booking.cancelCommentPlaceholder}
+                  rows={2}
+                />
+              )}
+              {cancelError && <p className={styles.cancelDialogError}>{cancelError}</p>}
+              <div className={styles.cancelDialogActions}>
+                <button
+                  type="button"
+                  className={styles.cancelDialogConfirm}
+                  onClick={handleCancelSubmit}
+                  disabled={cancelLoading}
+                >
+                  {cancelLoading ? '…' : t.booking.cancelConfirm}
+                </button>
+                <button
+                  type="button"
+                  className={styles.cancelDialogAbort}
+                  onClick={() => setCancelOpen(false)}
+                  disabled={cancelLoading}
+                >
+                  {isFR ? 'Retour' : 'Назад'}
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

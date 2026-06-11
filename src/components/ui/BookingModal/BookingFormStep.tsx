@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
+import { THEATRE_CAPACITY } from '../../../config/theatre';
 import styles from './BookingModal.module.scss';
 
 interface Props {
@@ -25,6 +26,8 @@ interface Props {
       loyaltyOriginal: string;
       loyaltyDiscount: string;
       loyaltyTotal: string;
+      seatsAvailable: (n: number, total: number) => string;
+      soldOut: string;
     };
     admin: {
       ticketStandard: string;
@@ -47,6 +50,7 @@ interface Props {
   discountAmount: number;
   loyaltyAvailable: boolean;
   maxTickets: number;
+  availableSeats: number;
 
   onTicketsChange: (v: number) => void;
   onSelectedTicketChange: (tt: TicketType) => void;
@@ -80,7 +84,7 @@ export function BookingFormStep({
   show, lang, t,
   tickets, payment, phone, comment,
   submitLoading, submitError,
-  activeTicket, baseAmount, totalAmount, discountAmount, loyaltyAvailable, maxTickets,
+  activeTicket, baseAmount, totalAmount, discountAmount, loyaltyAvailable, maxTickets, availableSeats,
   onTicketsChange, onSelectedTicketChange, onPaymentChange, onPhoneChange, onCommentChange,
   onSubmit,
 }: Props) {
@@ -129,11 +133,15 @@ export function BookingFormStep({
         {/* Qty + total */}
         <div className={styles.section}>
           <div className={styles.sectionLabel}>{t.booking.tickets}</div>
+          {availableSeats === 0
+            ? <p className={styles.soldOutHint}>{t.booking.soldOut}</p>
+            : <p className={styles.seatsHint}>{t.booking.seatsAvailable(availableSeats, THEATRE_CAPACITY)}</p>
+          }
           <div className={styles.qtyRow}>
             <div className={styles.counter}>
               <button type="button" onClick={() => onTicketsChange(Math.max(1, tickets - 1))} disabled={tickets <= 1}>−</button>
               <span>{tickets}</span>
-              <button type="button" onClick={() => onTicketsChange(Math.min(maxTickets, tickets + 1))} disabled={tickets >= maxTickets}>+</button>
+              <button type="button" onClick={() => onTicketsChange(Math.min(maxTickets, tickets + 1))} disabled={tickets >= maxTickets || availableSeats === 0}>+</button>
             </div>
             {activeTicket && (
               <div className={styles.totalBox}>
@@ -218,7 +226,7 @@ export function BookingFormStep({
 
         {submitError && <p className={styles.error}>{submitError}</p>}
 
-        <button type="submit" className={styles.submitBtn} disabled={submitLoading || !activeTicket}>
+        <button type="submit" className={styles.submitBtn} disabled={submitLoading || !activeTicket || availableSeats === 0}>
           {submitLoading ? '…' : t.booking.submit}
           {!submitLoading && <span className={styles.submitArrow}>→</span>}
         </button>

@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import type { Booking, NewBooking, BookingStatus, PaymentStatus } from '../types/booking';
+import { THEATRE_CAPACITY } from '../config/theatre';
 
 function getTimestampMs(ts: unknown): number {
   if (!ts) return 0;
@@ -24,6 +25,23 @@ function getTimestampMs(ts: unknown): number {
 const COLLECTION = 'bookings';
 
 export async function createBooking(data: NewBooking): Promise<string> {
+  // Check available seats before booking
+  const q = query(
+    collection(db, COLLECTION),
+    where('showId', '==', data.showId),
+  );
+  const snap = await getDocs(q);
+  let bookedSeats = 0;
+  snap.forEach((d) => {
+    const b = d.data() as Booking;
+    if (b.status !== 'cancelled') {
+      bookedSeats += (b.ticketsCount ?? 1);
+    }
+  });
+  if (bookedSeats + data.ticketsCount > THEATRE_CAPACITY) {
+    throw new Error('NOT_ENOUGH_SEATS');
+  }
+
   const ref = await addDoc(collection(db, COLLECTION), {
     ...data,
     createdAt: serverTimestamp(),
@@ -141,4 +159,48 @@ export async function getBookingByTicketCode(ticketCode: string): Promise<Bookin
 
 function snapshotToBookings(snapshot: Awaited<ReturnType<typeof getDocs>>): Booking[] {
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as object) } as Booking));
+}
+
+// Realtime subscription to the number of booked seats for a show.
+// Active statuses (pending / confirmed / attended) reserve seats; cancelled does not.
+export function subscribeToShowBookedSeats(
+  showId: string,
+  onUpdate: (bookedSeats: number) => void,
+  onError?: (err: Error) => void,
+): () => void {
+  const q = query(
+    collection(db, COLLECTION),
+    where('showId', '==', showId),
+  );
+  return onSnapshot(
+    q,
+    (snap) => {
+      let total = 0;
+      snap.forEach((d) => {
+        const b = d.data() as Booking;
+        if (b.status !== 'cancelled') {
+          total += (b.ticketsCount ?? 1);
+        }
+      });
+      onUpdate(total);
+    },
+    (err) => onError?.(err as Error),
+  );
+}
+
+// User-initiated cancellation — stores reason and optional comment.
+export async function cancelBookingByUser(
+  bookingId: string,
+  reason: string,
+  comment?: string,
+): Promise<void> {
+  const ref = doc(db, COLLECTION, bookingId);
+  await updateDoc(ref, {
+    status:      'cancelled',
+    cancelledBy: 'user',
+    cancelReason: reason,
+    ...(comment ? { cancelComment: comment } : {}),
+    cancelledAt: serverTimestamp(),
+    updatedAt:   serverTimestamp(),
+  });
 }

@@ -468,7 +468,16 @@ export function AdminPage() {
                                                       t.admin.statusCancelled}
                           </span>
                         </td>
-                        <td className={styles.cellComment}>{b.comment || '—'}</td>
+                        <td className={styles.cellComment}>
+                          {b.comment || '—'}
+                          {b.cancelledBy === 'user' && (
+                            <p className={styles.cancelReasonNote}>
+                              <span className={styles.cancelByUserBadge}>{RU.booking.cancelByUserLabel}</span>
+                              {b.cancelReason && <span> · {b.cancelReason}</span>}
+                              {b.cancelComment && <span> — {b.cancelComment}</span>}
+                            </p>
+                          )}
+                        </td>
                         <td>
                           <div className={styles.actions}>
                             {bStatus !== 'cancelled' && (

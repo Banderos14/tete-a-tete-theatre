@@ -1210,3 +1210,136 @@
 }
 
 .skeletonTicket { height: 76px; border-radius: 12px; }
+
+// ── Cancel booking inline dialog ───────────────────────────────────────────────
+
+.cancelBookingBtn {
+  margin-top: 10px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  color: var(--fg-mute);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 10px;
+  background: transparent;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+}
+
+.cancelDialog {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.cancelDialogTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 4px;
+}
+
+.cancelDialogText {
+  font-size: 12px;
+  color: var(--fg-mute);
+  margin-bottom: 10px;
+}
+
+.cancelReasonList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.cancelReasonBtn {
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+  color: var(--fg-mute);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: var(--line-strong);
+    color: var(--fg);
+  }
+
+  &.cancelReasonActive {
+    border-color: var(--accent);
+    background: rgba(184, 0, 0, 0.07);
+    color: var(--accent);
+  }
+}
+
+.cancelCommentArea {
+  width: 100%;
+  margin-bottom: 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--fg);
+  font-family: var(--font-body);
+  resize: none;
+  outline: none;
+
+  &:focus { border-color: var(--accent); }
+}
+
+.cancelDialogError {
+  font-size: 11px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  margin-bottom: 8px;
+}
+
+.cancelDialogActions {
+  display: flex;
+  gap: 8px;
+}
+
+.cancelDialogConfirm {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) { background: var(--accent-bright); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.cancelDialogAbort {
+  padding: 8px 14px;
+  background: var(--bg-3);
+  color: var(--fg-mute);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  font-family: var(--font-mono);
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover:not(:disabled) {
+    color: var(--fg);
+    border-color: var(--line-strong);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}

@@ -120,6 +120,19 @@ export interface T {
     loyaltyOriginal: string;
     loyaltyDiscount: string;
     loyaltyTotal: string;
+    seatsAvailable: (n: number, total: number) => string;
+    soldOut: string;
+    cancelBooking: string;
+    cancelBookingTitle: string;
+    cancelBookingText: string;
+    cancelReasonRequired: string;
+    cancelReasonTime: string;
+    cancelReasonPlans: string;
+    cancelReasonMistake: string;
+    cancelReasonOther: string;
+    cancelCommentPlaceholder: string;
+    cancelConfirm: string;
+    cancelByUserLabel: string;
   };
   admin: {
     title: string;
