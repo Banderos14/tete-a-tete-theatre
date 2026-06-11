@@ -265,6 +265,8 @@ export const RU: T = {
     labelDuration: 'Длительность',
     labelPrice:    'Стоимость',
     book:          'Купить билет',
+    readMore:      'Читать дальше',
+    readLess:      'Свернуть',
   },
   showTags: {
     'Поэма':    'Поэма',

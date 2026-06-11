@@ -16,6 +16,8 @@
   to   { opacity: 1; }
 }
 
+// ── Backdrop ───────────────────────────────────────────────────────────────
+
 .backdrop {
   position: fixed;
   inset: 0;
@@ -38,6 +40,8 @@
     padding: 0;
   }
 }
+
+// ── Panel ──────────────────────────────────────────────────────────────────
 
 .panel {
   position: relative;
@@ -71,17 +75,17 @@
   }
 }
 
-.gallery {
-  width: 340px;
-  flex-shrink: 0;
+// ── Carousel (left zone, ~42% of panel) ───────────────────────────────────
+
+.carousel {
+  flex: 0 0 42%;
+  min-width: 300px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--line);
 
   @include mixins.mobile {
+    flex: none;
     width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--line);
     height: 42dvh;
     min-height: 250px;
     max-height: 360px;
@@ -112,7 +116,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.38) 100%);
+    background: linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.40) 100%);
   }
 }
 
@@ -127,180 +131,208 @@
 .glyphLg {
   font-family: var(--font-display);
   font-size: 80px;
-  opacity: 0.1;
+  opacity: 0.10;
   color: var(--fg);
   pointer-events: none;
   user-select: none;
 }
+
+// ── Nav arrows ─────────────────────────────────────────────────────────────
 
 .navBtn {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   z-index: 5;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.50);
-  border: 1px solid rgba(255, 255, 255, 0.20);
-  color: rgba(255, 255, 255, 0.85);
+  background: rgba(20,18,16,0.55);
+  border: none;
+  color: rgba(255,255,255,0.85);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  transition: background 0.2s;
   padding-bottom: 4px;
 
-  &:hover {
-    background: rgba(0, 0, 0, 0.82);
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.40);
-  }
+  &:hover { background: rgba(20,18,16,0.82); color: #fff; }
 }
 
-.navPrev { left: 10px; }
-.navNext { right: 10px; }
+.navPrev { left: 8px; }
+.navNext { right: 8px; }
 
-.photoCounter {
+// ── Thumbnail strip — centered overlay at bottom of carousel ──────────────
+
+.thumbStrip {
   position: absolute;
-  bottom: 10px;
-  right: 12px;
-  z-index: 4;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.5);
-  pointer-events: none;
-}
-
-.thumbRow {
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
   display: flex;
   align-items: center;
-  height: 90px;
-  flex-shrink: 0;
-  border-top: 1px solid var(--line);
-  padding: 10px 12px;
-  gap: 8px;
-  background: var(--bg-3);
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: rgba(16,14,12,0.60);
+  border-radius: 10px;
+  max-width: calc(100% - 48px);
+  width: max-content;
 }
 
-// Круговые кнопки прокрутки — рендерятся по условию, без лишних отступов
 .thumbNav {
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: var(--line);
-  border: 1px solid var(--line-strong);
-  color: var(--fg-mute);
-  font-size: 14px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: rgba(255,255,255,0.8);
+  font-size: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s;
   padding-bottom: 1px;
 
-  &:hover {
-    background: var(--line-strong);
-    color: var(--fg);
-  }
+  &:hover { background: rgba(255,255,255,0.28); }
 }
 
 .thumb {
-  flex: 1;
+  width: 34px;
+  height: 24px;
+  flex-shrink: 0;
   position: relative;
   background-size: cover;
   background-position: center;
-  border-radius: 20px;
+  border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
-  height: 100%;
+  opacity: 0.6;
   transition: opacity 0.2s;
 
-  &:hover { opacity: 0.78; }
+  &:hover { opacity: 0.85; }
 }
 
-// Активная миниатюра — акцентная рамка
 .thumbActive {
-  cursor: default;
   opacity: 1 !important;
+  cursor: default;
 
   &::after {
     content: '';
     position: absolute;
     inset: 0;
-    box-shadow: inset 0 0 0 2px var(--accent);
-    border-radius: 20px;
+    box-shadow: inset 0 0 0 1.5px var(--accent);
+    border-radius: 6px;
     z-index: 3;
     pointer-events: none;
   }
 }
 
-// "+N" оверлей на последней миниатюре
 .thumbMore {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.58);
+  background: rgba(0,0,0,0.58);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.08em;
+  font-size: 9px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255,255,255,0.9);
   z-index: 2;
   pointer-events: none;
 }
 
+// ── Spine (34px, hidden on mobile) ─────────────────────────────────────────
+
+.spine {
+  width: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #17140f;
+  border-left: 0.5px solid rgba(255,255,255,0.08);
+  border-right: 0.5px solid rgba(255,255,255,0.08);
+
+  span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #6e675f;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  @include mixins.mobile { display: none; }
+}
+
+// ── Info (content page) ────────────────────────────────────────────────────
+
 .info {
   flex: 1;
-  padding: 32px 28px;
-  overflow: hidden;
+  padding: 28px 28px 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 
   @include mixins.mobile {
     padding: 24px 20px 28px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
   }
 }
 
-.infoHeader {
-  display: flex;
-  justify-content: flex-start;
-}
-
-.age {
-  background: var(--accent);
-  color: #fff;
+// Age — stamp in top-right corner of info
+.ageStamp {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  border: 2px solid var(--accent);
+  color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 9px;
-  padding: 4px 10px;
-  letter-spacing: 0.1em;
-  border-radius: 4px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  transform: rotate(7deg);
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+
+  @include mixins.mobile {
+    top: 16px;
+    right: 16px;
+  }
 }
 
+// Eyebrow (troupe · genre)
 .author {
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.22em;
+  font-size: 10px;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--fg-mute);
-  margin-top: -4px;
+  color: #9c938a;
+  padding-right: 50px; // avoid overlap with ageStamp
 }
 
 .title {
   font-family: var(--font-display);
-  font-size: clamp(22px, 2.8vw, 34px);
+  font-size: 26px;
   font-weight: 400;
   font-style: italic;
   line-height: 1.15;
@@ -309,15 +341,19 @@
 }
 
 .divider {
-  width: 40px;
-  height: 1px;
+  width: 44px;
+  height: 2px;
   background: var(--accent);
   margin-top: -4px;
+  flex-shrink: 0;
 }
+
+// ── Meta table ─────────────────────────────────────────────────────────────
 
 .metaTable {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
 .metaRow {
@@ -325,9 +361,9 @@
   justify-content: space-between;
   align-items: baseline;
   padding: 8px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 0.5px solid rgba(255,255,255,0.10);
 
-  &:first-child { border-top: 1px solid var(--line); }
+  &:first-child { border-top: 0.5px solid rgba(255,255,255,0.10); }
 
   @include mixins.small {
     align-items: flex-start;
@@ -351,30 +387,89 @@
   overflow-wrap: anywhere;
 }
 
+.metaValuePrice {
+  font-family: var(--font-display) !important;
+  font-style: italic;
+  font-size: 16px !important;
+  color: var(--fg) !important;
+}
+
+// ── Description with drop cap ──────────────────────────────────────────────
+
 .desc {
   font-size: 13px;
   line-height: 1.78;
   color: var(--fg-dim);
-  flex: 1 1 0;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
+  max-height: 9em;
   overflow-wrap: anywhere;
-  overscroll-behavior: contain;
+  flex-shrink: 0;
 
-  @include mixins.mobile {
-    flex: 0 0 auto;
-    max-height: 30dvh;
+  &::first-letter {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 42px;
+    float: left;
+    line-height: 0.82;
+    margin-right: 6px;
+    margin-top: 5px;
+    color: var(--fg);
   }
 }
 
-.bookBtn {
-  width: 100%;
-  justify-content: center;
+.descExpanded {
+  max-height: none;
+}
+
+.readMoreBtn {
+  font-size: 12px;
+  color: #9c938a;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  margin-top: -4px;
+  transition: color 0.2s;
+
+  &:hover { color: var(--fg-dim); }
+}
+
+// ── Book row ───────────────────────────────────────────────────────────────
+
+.bookRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   margin-top: auto;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-2);
+}
+
+.bookBtn {
+  border-radius: 22px !important;
+  padding: 13px 28px !important;
   min-height: 48px;
   flex-shrink: 0;
 }
+
+.seatsLeft {
+  font-size: 11px;
+  color: #9c938a;
+  white-space: nowrap;
+}
+
+.seatsCount {
+  color: #cdb27a;
+}
+
+// ── Close button ───────────────────────────────────────────────────────────
 
 .close {
   position: absolute;

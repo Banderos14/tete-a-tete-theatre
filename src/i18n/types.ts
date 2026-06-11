@@ -264,6 +264,8 @@ export interface T {
     labelDuration: string;
     labelPrice: string;
     book: string;
+    readMore: string;
+    readLess: string;
   };
   showTags: Record<string, string>;
   months: Record<string, string>;

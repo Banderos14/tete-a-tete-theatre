@@ -274,6 +274,8 @@ export const FR: T = {
     labelDuration: 'Durée',
     labelPrice:    'Tarif',
     book:          'Acheter un billet',
+    readMore:      'Lire la suite',
+    readLess:      'Réduire',
   },
   showTags: {
     'Поэма':    'Poème',
