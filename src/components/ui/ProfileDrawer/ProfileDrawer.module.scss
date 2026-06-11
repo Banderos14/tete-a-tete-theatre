@@ -1010,50 +1010,73 @@
   padding: 10px 12px;
 }
 
+// ── Loyalty block — shows tab ─────────────────────────────────────────────────
+
 .visitCounter {
-  margin-bottom: 20px;
-  padding: 16px 18px;
-  background: var(--bg);
-  border-radius: 14px;
-  border: 1px solid var(--line);
+  margin-bottom: 24px;
+  padding: 20px 22px;
+  background: #241a16;
+  border-radius: 20px;
+  border: 0.5px solid rgba(243, 231, 220, 0.12);
 }
 
-.visitText {
-  margin: 0 0 4px;
-  font-size: 13px;
-  color: var(--fg);
+.visitCounterHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.visitProgress {
-  margin: 0 0 10px;
-  font-size: 12px;
-  color: var(--fg-mute);
+.visitCounterTitle {
+  font-size: 14px;
+  color: #f3e7dc;
+  line-height: 1.4;
+  margin: 0;
 }
 
-.visitBonus {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: var(--accent);
-  font-weight: 600;
+.visitCounterN {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  color: #f3e7dc;
 }
 
-.visitBar {
+.visitCounterLabel {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #9c938a;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.visitSeats {
   display: flex;
   gap: 6px;
+  margin-bottom: 12px;
 }
 
-.visitDot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--line);
-  border: 1px solid var(--line);
-  transition: background 0.2s;
+.visitSeat {
+  width: 26px;
+  height: 18px;
+  border-radius: 4px 4px 9px 9px;
+  border: 1px solid rgba(243, 231, 220, 0.25);
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
 
-  &.visitDotFilled {
+  &.visitSeatFilled {
     background: var(--accent);
     border-color: var(--accent);
   }
+}
+
+.visitCaption {
+  font-size: 12px;
+  color: #9c938a;
+  line-height: 1.5;
+  margin: 0;
 }
 
 // ── BookingCard — theatre ticket aesthetic ────────────────────────────────────
@@ -1360,67 +1383,101 @@
   border-radius: 6px;
 }
 
-.attendedCard {
+// ── Attended shows list — row design ─────────────────────────────────────────
+
+.attendedList {
+  display: flex;
+  flex-direction: column;
+}
+
+.attendedRow {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: var(--bg-3);
+  padding: 12px 0;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+
+  &:last-child {
+    border-bottom: none;
+  }
 
   @include mixins.small {
-    align-items: flex-start;
-    flex-wrap: wrap;
+    padding: 10px 0;
   }
 }
 
-.attendedGlyph {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+.attendedThumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.attendedThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.attendedThumbPlaceholder {
+  width: 100%;
+  height: 100%;
   display: grid;
   place-items: center;
-  font-size: 20px;
-  flex-shrink: 0;
-  opacity: 0.85;
+}
+
+.attendedThumbGlyph {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  color: #f3e7dc;
+  opacity: 0.9;
   line-height: 1;
 }
 
-.attendedInfo {
+.attendedRowInfo {
   flex: 1;
   min-width: 0;
 }
 
-.attendedTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--fg);
-  margin-bottom: 3px;
+.attendedRowTitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+  color: #f3e7dc;
+  line-height: 1.3;
+  margin: 0 0 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.attendedMeta {
-  font-size: 12px;
-  color: var(--fg-mute);
+.attendedRowMeta {
+  font-size: 11px;
+  color: #9c938a;
+  line-height: 1.4;
+  margin: 0;
 }
 
-.attendedBadge {
+.attendedRowRepeat {
+  color: #cdb27a;
+}
+
+.attendedStamp {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 9px;
   font-family: var(--font-mono);
-  letter-spacing: 0.08em;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  background: rgba(76, 175, 80, 0.12);
-  color: #4caf50;
-  border: 1px solid rgba(76, 175, 80, 0.3);
-  border-radius: 20px;
+  color: #7fb07f;
+  border: 1.5px solid #5a8a5a;
+  border-radius: 6px;
   padding: 3px 9px;
+  white-space: nowrap;
 
   @include mixins.small {
-    margin-left: 52px;
+    display: none;
   }
 }
 

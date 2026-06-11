@@ -617,20 +617,24 @@ export function ProfileDrawer({ open, onClose }: Props) {
             {/* ── МОИ СПЕКТАКЛИ ── */}
             {activeSection === 'shows' && (
               <div className={styles.section}>
-                <h2 className={styles.sectionTitle}>{t.profile.historyAttended}</h2>
+                <h2 className={styles.ticketsTitle}>{t.profile.historyAttended}</h2>
                 <VisitCounter bookings={bookings} t={t} />
                 {historyLoading ? (
                   <div className={styles.skeletonList}>
                     {[1].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonTicket}`} />)}
                   </div>
-                ) : attendedBookings.length === 0 && !historyLoading ? (
+                ) : attendedBookings.length === 0 ? (
                   <p className={styles.emptyText}>
                     {lang === 'FR' ? 'Aucun spectacle visité pour le moment.' : 'Вы ещё не посетили ни одного спектакля.'}
                   </p>
                 ) : (
-                  <div className={styles.ticketList}>
-                    {attendedBookings.map(b => (
-                      <AttendedCard key={b.id} booking={b} show={SHOW_MAP.get(b.showId)} t={t} />
+                  <div className={styles.attendedList}>
+                    {groupAttendedBookings(attendedBookings).map((group, idx) => (
+                      <AttendedRow
+                        key={group.showId}
+                        group={group}
+                        stampAngle={STAMP_ANGLES[idx % STAMP_ANGLES.length]}
+                      />
                     ))}
                   </div>
                 )}
@@ -805,34 +809,56 @@ function parseBookingDate(showDate: string, isFR: boolean): { day: string; month
 
 
 function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
-  const attended         = getUserAttendedCount(bookings);
-  const isRewardAvailable = hasAvailableLoyaltyReward(bookings);
-  const usedCount        = getUsedRewardCount(bookings);
-  const nextThreshold    = nextRewardThreshold(bookings);
-  const filled           = cycleProgress(bookings);
+  const { lang } = useLang();
+  const isFR = lang === 'FR';
 
-  const hasEverEarned = attended >= BONUS_EVERY;
+  const attended          = getUserAttendedCount(bookings);
+  const isRewardAvailable = hasAvailableLoyaltyReward(bookings);
+  const usedCount         = getUsedRewardCount(bookings);
+  const nextThreshold     = nextRewardThreshold(bookings);
+  const filled            = cycleProgress(bookings);
+  const hasEverEarned     = attended >= BONUS_EVERY;
+
+  const visitSuffix = isFR
+    ? `spectacle${attended !== 1 ? 's' : ''}`
+    : (attended === 1 ? 'спектакль' : attended >= 2 && attended <= 4 ? 'спектакля' : 'спектаклей');
+  const visitPrefix = isFR ? 'Vous avez assisté à' : 'Вы посетили';
+
+  const captionText = isRewardAvailable
+    ? (isFR
+        ? 'Votre cadeau est prêt : −50% sur le prochain spectacle !'
+        : 'Ваш подарок готов: скидка −50% на следующий спектакль!')
+    : (hasEverEarned && usedCount > 0)
+      ? t.profile.loyaltyUsed(nextThreshold)
+      : t.profile.bonusProgress(nextThreshold - attended);
 
   return (
     <div className={styles.visitCounter}>
-      <p className={styles.visitText}>{t.profile.visitCount(attended)}</p>
-      {attended > 0 && (
-        isRewardAvailable
-          ? <p className={styles.visitBonus}>{t.profile.bonusComplete}</p>
-          : hasEverEarned && usedCount > 0
-            ? <p className={styles.visitProgress}>{t.profile.loyaltyUsed(nextThreshold)}</p>
-            : <p className={styles.visitProgress}>{t.profile.bonusProgress(nextThreshold - attended)}</p>
-      )}
-      {attended > 0 && (
-        <div className={styles.visitBar}>
-          {Array.from({ length: BONUS_EVERY }, (_, i) => (
-            <div
-              key={i}
-              className={`${styles.visitDot} ${i < filled ? styles.visitDotFilled : ''}`}
-            />
-          ))}
-        </div>
-      )}
+      <div className={styles.visitCounterHeader}>
+        <p className={styles.visitCounterTitle}>
+          {visitPrefix}{' '}
+          <span className={styles.visitCounterN}>{attended}</span>
+          {' '}{visitSuffix}
+        </p>
+        <span className={styles.visitCounterLabel}>
+          {isFR ? 'Loyauté' : 'Лояльность'}
+        </span>
+      </div>
+      <div
+        className={styles.visitSeats}
+        role="img"
+        aria-label={isFR
+          ? `Progression de fidélité : ${filled} sur ${BONUS_EVERY} visites`
+          : `Прогресс лояльности: ${filled} из ${BONUS_EVERY} посещений`}
+      >
+        {Array.from({ length: BONUS_EVERY }, (_, i) => (
+          <div
+            key={i}
+            className={`${styles.visitSeat} ${i < filled ? styles.visitSeatFilled : ''}`}
+          />
+        ))}
+      </div>
+      <p className={styles.visitCaption}>{captionText}</p>
     </div>
   );
 }
@@ -1089,20 +1115,96 @@ function BookingCard({ booking: b, t, show: _show }: { booking: Booking; t: T; s
   );
 }
 
-// AttendedCard — compact card for the Shows section
-function AttendedCard({ booking: b, show, t }: { booking: Booking; show?: Show; t: T }) {
+// ── Attended shows — grouped list ──────────────────────────────────────────────
+
+interface GroupedShow {
+  showId:    string;
+  show:      Show | undefined;
+  showTitle: string;
+  count:     number;
+  lastDate:  string;
+  lastTime:  string;
+}
+
+function pluralRaz(n: number): string {
+  if (n >= 11 && n <= 19) return 'раз';
+  const last = n % 10;
+  if (last >= 2 && last <= 4) return 'раза';
+  return 'раз';
+}
+
+function showInitials(title: string): string {
+  const clean = title.replace(/[«»""'']/g, '').trim();
+  const words = clean.split(/\s+/).filter(w => w.length > 2);
+  if (words.length === 0) return (title[0] ?? '?').toUpperCase();
+  return words.slice(0, 2).map(w => w[0].toUpperCase()).join('');
+}
+
+function groupAttendedBookings(bookings: Booking[]): GroupedShow[] {
+  const map = new Map<string, {
+    count: number; lastDate: string; lastTime: string; lastTs: number; showTitle: string;
+  }>();
+  for (const b of bookings) {
+    const ts    = b.createdAt.toMillis();
+    const entry = map.get(b.showId);
+    if (!entry) {
+      map.set(b.showId, { count: 1, lastDate: b.showDate, lastTime: b.showTime, lastTs: ts, showTitle: b.showTitle });
+    } else {
+      entry.count += 1;
+      if (ts > entry.lastTs) {
+        entry.lastDate  = b.showDate;
+        entry.lastTime  = b.showTime;
+        entry.lastTs    = ts;
+      }
+    }
+  }
+  return Array.from(map.entries()).map(([showId, d]) => ({
+    showId,
+    show:      SHOW_MAP.get(showId),
+    showTitle: d.showTitle,
+    count:     d.count,
+    lastDate:  d.lastDate,
+    lastTime:  d.lastTime,
+  }));
+}
+
+const STAMP_ANGLES = [3, -4, 2, -5, 3, -3, 4, -2] as const;
+
+function AttendedRow({ group, stampAngle }: { group: GroupedShow; stampAngle: number }) {
+  const { lang } = useLang();
+  const isFR = lang === 'FR';
+  const { show, showTitle, count, lastDate, lastTime } = group;
+  const title = show ? (isFR && show.titleFR ? show.titleFR : show.title) : showTitle;
+  const thumbBg = show?.palette ?? '#2a1f1a';
+  const thumbGlyph = show?.glyph ?? showInitials(title);
+  const repeatText = count > 1
+    ? (isFR ? `· ${count} fois` : `· были ${count} ${pluralRaz(count)}`)
+    : '';
+  const stampText = isFR
+    ? (count > 1 ? `VU ×${count}` : 'VU')
+    : (count > 1 ? `ПОСЕЩЕНО ×${count}` : 'ПОСЕЩЕНО');
+
   return (
-    <div className={styles.attendedCard}>
-      {show && (
-        <div className={styles.attendedGlyph} style={{ background: show.palette }}>
-          {show.glyph}
-        </div>
-      )}
-      <div className={styles.attendedInfo}>
-        <p className={styles.attendedTitle}>{b.showTitle}</p>
-        <p className={styles.attendedMeta}>{b.showDate} · {b.showTime}</p>
+    <div className={styles.attendedRow}>
+      <div className={styles.attendedThumb}>
+        {show?.image ? (
+          <img src={show.image} alt="" className={styles.attendedThumbImg} />
+        ) : (
+          <div className={styles.attendedThumbPlaceholder} style={{ background: thumbBg }}>
+            <span className={styles.attendedThumbGlyph}>{thumbGlyph}</span>
+          </div>
+        )}
       </div>
-      <span className={styles.attendedBadge}>{t.profile.statusAttended}</span>
+      <div className={styles.attendedRowInfo}>
+        <p className={styles.attendedRowTitle}>{title}</p>
+        <p className={styles.attendedRowMeta}>
+          {lastDate} · {lastTime}
+          {repeatText && <span className={styles.attendedRowRepeat}> {repeatText}</span>}
+        </p>
+      </div>
+      <div className={styles.attendedStamp} aria-hidden="true" style={{ transform: `rotate(${stampAngle}deg)` }}>
+        {stampText}
+      </div>
     </div>
   );
 }
