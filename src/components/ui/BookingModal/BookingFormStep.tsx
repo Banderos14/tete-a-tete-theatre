@@ -2,7 +2,6 @@ import type { FormEvent } from 'react';
 import { IconBuildingBank, IconTransfer } from '@tabler/icons-react';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
-import { THEATRE_CAPACITY } from '../../../config/theatre';
 import styles from './BookingModal.module.scss';
 
 interface Props {
@@ -72,6 +71,9 @@ export function BookingFormStep({
 }: Props) {
   const showTitle  = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
   const monthLabel = t.months[show.month] ?? show.month;
+  const seatsLeftLabel = lang === 'FR'
+    ? `Places restantes: ${availableSeats}`
+    : `Свободно мест: ${availableSeats}`;
   const showYearNumber = Number(show.year);
   const seasonLabel = Number.isFinite(showYearNumber)
     ? `СЕЗОН ${showYearNumber - 1} / ${showYearNumber} · THÉÂTRE TÊTE-À-TÊTE · NICE`
@@ -89,10 +91,15 @@ export function BookingFormStep({
       {/* LEFT — 310px */}
       <div className={styles.formLeft}>
 
-        {/* Show header с цветным фоном show.palette */}
-        <div className={styles.showHeader} style={{ background: show.palette }}>
+        {/* Show header */}
+        <div
+          className={styles.showHeader}
+          style={{
+            backgroundColor: show.palette,
+            backgroundImage: show.image ? `url(${show.image})` : undefined,
+          }}
+        >
           <div className={styles.showHeaderTop}>
-            <span className={styles.showGlyph}>{show.glyph}</span>
             <div className={styles.showHeaderInfo}>
               <p className={styles.showTitle}>{showTitle}</p>
               <p className={styles.showMeta}>{show.day} {monthLabel} {show.year} · {show.time}</p>
@@ -121,7 +128,7 @@ export function BookingFormStep({
           <div className={styles.sectionLabelRow}>
             <div className={styles.sectionLabel}>{t.booking.tickets}</div>
             {availableSeats > 0 && (
-              <span className={styles.seatsInline}>{t.booking.seatsAvailable(availableSeats, THEATRE_CAPACITY)}</span>
+              <span className={styles.seatsInline}>{seatsLeftLabel}</span>
             )}
           </div>
           {availableSeats === 0 && <p className={styles.soldOutHint}>{t.booking.soldOut}</p>}

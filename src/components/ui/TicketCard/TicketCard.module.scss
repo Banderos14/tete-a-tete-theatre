@@ -11,7 +11,7 @@
 .ticket {
   background: #1c1916;
   border: 0.5px solid rgba(243, 231, 220, 0.10);
-  border-radius: 6px;
+  border-radius: var(--radius-s);
   overflow: hidden;
   cursor: pointer;
   min-width: 0;
@@ -38,7 +38,7 @@
     cursor: default;
     opacity: 1;
     transform: none;
-    border-radius: 6px 6px 0 0;
+    border-radius: var(--radius-s) var(--radius-s) 0 0;
     border-bottom-color: transparent;
 
     &:hover {
@@ -257,6 +257,7 @@
   border: 0 solid transparent;
   border-radius: 0 0 6px 6px;
   background: #1c1916;
+  border-radius: 0 0 var(--radius-s) var(--radius-s);
 }
 
 .panelOpen > .panelInner {

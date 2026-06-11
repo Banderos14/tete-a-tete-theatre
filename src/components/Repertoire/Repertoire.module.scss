@@ -18,7 +18,20 @@
   max-width: 1500px;
   margin: 0 auto;
   background: var(--line);
-  border: 1px solid var(--line);
+  border: 0;
+  border-radius: var(--radius-xs);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--line);
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 2;
+  }
 
   @include mixins.tablet { grid-template-columns: repeat(2, 1fr); }
   @include mixins.small  { grid-template-columns: 1fr; }
@@ -38,6 +51,7 @@
   transition: background 0.4s ease;
   outline: 2px solid transparent;
   outline-offset: -2px;
+  z-index: 1;
 
   &:hover {
     background: var(--bg-3);
@@ -221,7 +235,7 @@
   color: var(--fg-mute);
   background: var(--bg-3);
   padding: 4px 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-xxs);
 }
 
 .modalAge {
@@ -229,7 +243,7 @@
   color: #fff;
   background: var(--accent);
   padding: 4px 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-xxs);
 }
 
 .modalTitle {

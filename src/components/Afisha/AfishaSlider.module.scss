@@ -186,6 +186,7 @@
   font-size: 8px;
   padding: 3px 8px;
   letter-spacing: 0.08em;
+  border-radius: 4px;
 }
 
 // ── Show title in card center ─────────────────────────────────────────────────
@@ -281,6 +282,7 @@
   color: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.22);
   padding: 7px 10px;
+  border-radius: var(--radius-xs);
 }
 
 .hintArrow {
@@ -292,4 +294,5 @@
   background: var(--accent);
   color: #fff;
   font-size: 11px;
+  border-radius: var(--radius-xs);
 }

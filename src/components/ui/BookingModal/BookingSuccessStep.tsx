@@ -115,7 +115,12 @@ export function BookingSuccessStep({
             className={`${styles.copyBtn} ${copiedCode ? styles.copyBtnDone : ''}`}
             onClick={onCopyCode}
           >
-            {copiedCode ? t.booking.copied : `□ ${lang === 'FR' ? 'Code de réservation' : 'Код брони'}`}
+            {copiedCode ? t.booking.copied : (
+              <>
+                <span className={styles.copyIcon} aria-hidden="true" />
+                {lang === 'FR' ? 'Code de réservation' : 'Код брони'}
+              </>
+            )}
           </button>
         </div>
 
