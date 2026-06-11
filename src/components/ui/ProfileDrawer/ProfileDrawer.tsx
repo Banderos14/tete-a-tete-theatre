@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent, type ReactNode } from 'react';
+import { IconLock, IconCalendarEvent } from '@tabler/icons-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from '../../../services/bookingService';
@@ -7,6 +8,14 @@ import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Booking, BookingStatus } from '../../../types/booking';
 import type { Messenger } from '../../../context/AuthContext';
 import styles from './ProfileDrawer.module.scss';
+
+function formatBirthdayDisplay(dateStr: string, lang: 'RU' | 'FR'): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  return new Intl.DateTimeFormat(lang === 'FR' ? 'fr-FR' : 'ru-RU', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  }).format(d);
+}
 
 function formatPhone(raw: string): string {
   const hasPlus = raw.startsWith('+');
@@ -68,6 +77,12 @@ function validate(displayName: string, birthday: string, phone: string, required
 type Section = 'personal' | 'contacts' | 'socials' | 'notifications' | 'tickets' | 'shows';
 const FORM_SECTIONS: Section[] = ['personal', 'contacts', 'socials', 'notifications'];
 
+// Decorative barcode: uniform 16px height, widths vary 1-4px like a real ticket barcode
+const BARCODE_WIDTHS = [
+  2,1,3,1,1,2,1,4,1,2,1,3,1,1,2,1,3,2,1,4,1,2,1,1,3,1,2,1,4,1,
+  1,3,1,2,1,1,4,2,1,3,1,2,1,1,3,1,2,4,1,1,2,1,3,1,2,1,4,1,2,3,
+] as const;
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -91,7 +106,8 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
   const [isDirty,     setIsDirty]     = useState(false);
   const [warnVisible, setWarnVisible] = useState(false);
-  const warnTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const warnTimer    = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const datePickerRef = useRef<HTMLInputElement>(null);
 
   const [fbLoading, setFbLoading] = useState(false);
   const [fbError,   setFbError]   = useState('');
@@ -195,7 +211,16 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
-    setTimeout(() => setSavedMsg(false), 2500);
+    setTimeout(() => setSavedMsg(false), 4000);
+  }
+
+  function handleBirthdayClick() {
+    if (birthdayFromFb || !datePickerRef.current) return;
+    try {
+      datePickerRef.current.showPicker();
+    } catch {
+      datePickerRef.current.click();
+    }
   }
 
   const handleLinkFacebook = useCallback(async () => {
@@ -228,14 +253,18 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const ticketCount      = activeBookings.filter(b =>
     b.paymentStatus === 'paid' && b.status === 'confirmed' && !!b.ticketCode
   ).length;
+  const regYear          = user?.metadata?.creationTime
+    ? new Date(user.metadata.creationTime).getFullYear()
+    : null;
+  const isGoogleProvider = user?.providerData?.some(p => p.providerId === 'google.com') ?? false;
 
-  const navItems: { id: Section; label: string; icon: ReactNode; badge?: number }[] = [
-    { id: 'personal',      label: t.profile.sectionPersonal,      icon: <PersonIcon />  },
-    { id: 'contacts',      label: t.profile.sectionContacts,      icon: <PhoneIcon />   },
-    { id: 'socials',       label: t.profile.sectionSocials,       icon: <LinkIcon />    },
-    { id: 'notifications', label: t.profile.sectionNotifications, icon: <BellIcon />    },
-    { id: 'tickets',       label: t.profile.history,              icon: <TicketIcon />, badge: ticketCount || undefined },
-    { id: 'shows',         label: t.profile.historyAttended,      icon: <StarIcon />    },
+  const navItems: { id: Section; label: string; badge?: number }[] = [
+    { id: 'personal',      label: t.profile.sectionPersonal      },
+    { id: 'contacts',      label: t.profile.sectionContacts      },
+    { id: 'socials',       label: t.profile.sectionSocials       },
+    { id: 'notifications', label: t.profile.sectionNotifications },
+    { id: 'tickets',       label: t.profile.history,              badge: ticketCount || undefined },
+    { id: 'shows',         label: t.profile.historyAttended      },
   ];
 
   if (open && loading) {
@@ -296,7 +325,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
         {/* ── Sidebar ──────────────────────────────────────────────────────── */}
         <aside className={styles.sidebar}>
 
-          {/* Avatar + identity */}
+          {/* Burgundy user card */}
           <div className={styles.sidebarTop}>
             <div className={styles.avatar}>
               {photoURL
@@ -306,6 +335,9 @@ export function ProfileDrawer({ open, onClose }: Props) {
             </div>
             <p className={styles.sidebarName}>{headerName || '—'}</p>
             <p className={styles.sidebarEmail}>{email}</p>
+            {regYear !== null && (
+              <p className={styles.memberSinceLabel}>{t.profile.memberSince(regYear)}</p>
+            )}
             {missingCount > 0 && (
               <div className={styles.incompleteBadge}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="11" height="11">
@@ -314,6 +346,12 @@ export function ProfileDrawer({ open, onClose }: Props) {
                 {t.profile.incomplete(missingCount)}
               </div>
             )}
+            <div className={styles.barcode} aria-hidden="true">
+              {BARCODE_WIDTHS.map((w, i) => (
+                <div key={i} style={{ width: `${w}px` }} />
+              ))}
+            </div>
+            <div className={styles.cardCutouts} aria-hidden="true" />
           </div>
 
           {/* Nav */}
@@ -325,7 +363,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
                 className={`${styles.navItem} ${activeSection === item.id ? styles.navItemActive : ''}`}
                 onClick={() => setActiveSection(item.id)}
               >
-                {item.icon}
                 <span className={styles.navLabel}>{item.label}</span>
                 {item.badge !== undefined && (
                   <span className={styles.navBadge}>{item.badge}</span>
@@ -339,7 +376,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
               className={`${styles.navItem} ${styles.navItemLogout}`}
               onClick={handleLogout}
             >
-              <LogoutIcon />
               <span className={styles.navLabel}>{t.profile.logout}</span>
             </button>
           </nav>
@@ -347,8 +383,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
           {/* Sidebar footer — logout desktop */}
           <div className={styles.sidebarFooter}>
             <button type="button" className={styles.logoutBtn} onClick={handleLogout}>
-              <LogoutIcon />
-              {t.profile.logout}
+              {t.profile.logout} ↗
             </button>
           </div>
         </aside>
@@ -388,54 +423,85 @@ export function ProfileDrawer({ open, onClose }: Props) {
             {/* ── ЛИЧНЫЕ ДАННЫЕ ── */}
             {activeSection === 'personal' && (
               <div className={styles.section}>
-                <h2 className={styles.sectionTitle}>{t.profile.sectionPersonal}</h2>
+                <div className={styles.personalHeader}>
+                  <h2 className={styles.personalTitle}>{t.profile.sectionPersonal}</h2>
+                  {regYear !== null && (
+                    <span className={styles.personalSinceLabel}>{t.profile.memberSince(regYear)}</span>
+                  )}
+                </div>
 
-                <Field label={
-                  <>
-                    {t.profile.displayName}
-                    {fbLinked && (
-                      <span className={styles.fbBadgeInline}>
-                        <FacebookIcon size={10} /> Facebook
-                      </span>
-                    )}
-                  </>
-                } error={errors.displayName}>
+                <PersonalField
+                  label={t.profile.displayName}
+                  providerLabel={
+                    fbLinked
+                      ? (lang === 'FR' ? 'via Facebook' : 'через Facebook')
+                      : isGoogleProvider
+                        ? (lang === 'FR' ? 'via Google' : 'через Google')
+                        : undefined
+                  }
+                  error={errors.displayName}
+                >
                   <input
                     type="text"
+                    className={`${styles.personalInput} ${errors.displayName ? styles.personalInputError : ''}`}
                     value={displayName}
                     onChange={e => { setDisplayName(e.target.value); markDirty(); }}
                     placeholder={t.auth.nameLabel}
                     autoComplete="name"
-                    className={errors.displayName ? styles.inputError : ''}
                   />
-                </Field>
+                </PersonalField>
 
-                <Field label="Email">
-                  <input
-                    type="email"
-                    value={email}
-                    readOnly
-                    className={styles.readonlyInput}
-                  />
-                </Field>
+                <PersonalField
+                  label="Email"
+                  providerLabel={isGoogleProvider
+                    ? (lang === 'FR' ? 'via Google' : 'через Google')
+                    : undefined}
+                >
+                  <div className={styles.emailDisplay}>{email}</div>
+                </PersonalField>
 
-                <Field label={t.profile.birthday} error={errors.birthday}>
-                  {birthdayFromFb && birthday
-                    ? (
-                      <div className={styles.autoFilled}>
-                        <span>{birthday}</span>
-                        <span className={styles.fbBadge}><FacebookIcon size={11} /> Facebook</span>
-                      </div>
-                    ) : (
+                <PersonalField label={t.profile.birthday} error={errors.birthday}>
+                  {birthdayFromFb && birthday ? (
+                    <div className={`${styles.birthdayField} ${styles.birthdayFieldReadonly}`}>
+                      <span className={styles.birthdayText}>
+                        {formatBirthdayDisplay(birthday, lang)}
+                      </span>
+                      <span className={styles.providerTagFb}>
+                        <IconLock size={11} stroke={1.5} />
+                        Facebook
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      className={`${styles.birthdayField} ${errors.birthday ? styles.birthdayFieldError : ''}`}
+                      onClick={handleBirthdayClick}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleBirthdayClick(); }}
+                    >
+                      <span className={`${styles.birthdayText} ${!birthday ? styles.birthdayPlaceholder : ''}`}>
+                        {birthday
+                          ? formatBirthdayDisplay(birthday, lang)
+                          : (lang === 'FR' ? 'Choisir une date' : 'Выбрать дату')}
+                      </span>
+                      <IconCalendarEvent size={16} stroke={1.5} className={styles.birthdayIcon} />
                       <input
+                        ref={datePickerRef}
                         type="date"
                         value={birthday}
                         onChange={e => { setBirthday(e.target.value); markDirty(); }}
-                        className={`${styles.dateInput} ${errors.birthday ? styles.inputError : ''}`}
+                        className={styles.hiddenDateInput}
+                        tabIndex={-1}
+                        aria-hidden="true"
                       />
-                    )
-                  }
-                </Field>
+                    </div>
+                  )}
+                  <p className={styles.birthdayHint}>
+                    {lang === 'FR'
+                      ? 'Le jour de votre anniversaire — une surprise du théâtre'
+                      : 'В день рождения — сюрприз от театра'}
+                  </p>
+                </PersonalField>
               </div>
             )}
 
@@ -581,11 +647,16 @@ export function ProfileDrawer({ open, onClose }: Props) {
             <div className={styles.saveRow}>
               <button
                 type="submit"
-                className={`${styles.saveBtn} ${savedMsg ? styles.savedBtn : ''}`}
+                className={styles.saveBtn}
                 disabled={saving}
               >
-                {saving ? '…' : savedMsg ? `✓ ${t.profile.saved}` : t.profile.save}
+                {saving ? '…' : t.profile.save}
               </button>
+              {savedMsg && (
+                <span className={styles.savedStatus}>
+                  {lang === 'FR' ? 'Enregistré à l\'instant' : 'Сохранено только что'}
+                </span>
+              )}
             </div>
           )}
 
@@ -608,6 +679,33 @@ function Field({
   return (
     <div className={styles.field} style={style}>
       <label>{label}</label>
+      {children}
+      {error && <p className={styles.fieldError}>{error}</p>}
+    </div>
+  );
+}
+
+// ── PersonalField ──────────────────────────────────────────────────────────────
+
+function PersonalField({
+  label, providerLabel, error, children,
+}: {
+  label: ReactNode;
+  providerLabel?: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={styles.personalFieldWrap}>
+      <div className={styles.personalFieldLabel}>
+        <span className={styles.personalFieldLabelText}>{label}</span>
+        {providerLabel && (
+          <span className={styles.providerLabel}>
+            <IconLock size={10} stroke={1.5} />
+            {providerLabel}
+          </span>
+        )}
+      </div>
       {children}
       {error && <p className={styles.fieldError}>{error}</p>}
     </div>
@@ -656,62 +754,6 @@ function TelegramIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-    </svg>
-  );
-}
-
-function PersonIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>
-    </svg>
-  );
-}
-
-function LinkIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-    </svg>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>
-    </svg>
-  );
-}
-
-function TicketIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/>
-    </svg>
-  );
-}
-
-function StarIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-    </svg>
-  );
-}
-
-function LogoutIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14" aria-hidden>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
     </svg>
   );
 }

@@ -66,6 +66,7 @@ export interface T {
     save: string;
     saved: string;
     unsavedWarning: string;
+    memberSince: (year: number) => string;
     history: string;
     historyAttended: string;
     noHistory: string;

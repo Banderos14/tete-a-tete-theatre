@@ -152,6 +152,7 @@ export const RU: T = {
     save:                  'Сохранить',
     saved:                 'Сохранено',
     unsavedWarning:        'Сохраните изменения',
+    memberSince:           (year) => `Зритель с ${year}`,
     history:               'Мои билеты',
     historyAttended:       'Мои спектакли',
     noHistory:             'Билетов пока нет',

@@ -161,6 +161,7 @@ export const FR: T = {
     save:                  'Enregistrer',
     saved:                 'Enregistré',
     unsavedWarning:        'Enregistrez les modifications',
+    memberSince:           (year) => `Spectateur depuis ${year}`,
     history:               'Mes billets',
     historyAttended:       'Mes spectacles',
     noHistory:             'Aucun billet pour l\'instant',
