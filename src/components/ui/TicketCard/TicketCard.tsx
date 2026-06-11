@@ -162,57 +162,75 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
       >
         <div className={styles.panelInner}>
 
-          {/* QR column */}
-          <div className={styles.qrCol}>
-            <div className={styles.qrWrap}>
-              {qrSrc
-                ? <img className={styles.qrImg} src={qrSrc} alt="QR" />
-                : <div className={`${styles.qrImg} ${qrLoaded ? styles.qrError : styles.qrLoading}`} />
-              }
-            </div>
-            <p className={styles.qrHint}>
-              {isFR ? "Présentez à l'entrée" : 'Предъявите при входе'}
-            </p>
+          {/* Tear-off perforation line */}
+          <div className={styles.tearOff} aria-hidden="true">
+            <div className={styles.tearOffLeft} aria-hidden="true" />
+            <div className={styles.tearOffRight} aria-hidden="true" />
           </div>
 
-          {/* Details column */}
-          <div className={styles.details}>
-            <p className={styles.detailTitle}>{b.showTitle}</p>
-            <p className={styles.detailVenue}>Théâtre Tête-à-Tête</p>
-            <dl className={styles.detailList}>
-              <div className={styles.detailRow}>
-                <dt>{isFR ? 'Date'    : 'Дата'   }</dt>
-                <dd>{b.showDate}</dd>
+          {/* Paper body */}
+          <div className={styles.paperBody}>
+
+            {/* QR column */}
+            <div className={styles.qrCol}>
+              <div className={styles.qrWrap}>
+                {qrSrc
+                  ? <img className={styles.qrImg} src={qrSrc} alt="QR" />
+                  : <div className={`${styles.qrImg} ${qrLoaded ? styles.qrError : styles.qrLoading}`} />
+                }
               </div>
-              <div className={styles.detailRow}>
-                <dt>{isFR ? 'Heure'   : 'Время'  }</dt>
-                <dd>{b.showTime}</dd>
-              </div>
-              <div className={styles.detailRow}>
-                <dt>{isFR ? 'Lieu'    : 'Адрес'  }</dt>
-                <dd>24 Rue Rossini, Nice</dd>
-              </div>
-              <div className={styles.detailRow}>
-                <dt>{isFR ? 'Billets' : 'Билеты' }</dt>
-                <dd>{b.ticketsCount}{b.totalAmount > 0 && ` · ${b.totalAmount} €`}</dd>
-              </div>
-            </dl>
-            <div className={styles.codeBox}>
-              <span className={styles.codeLabel}>Code</span>
-              <code className={styles.codeValue}>{b.ticketCode}</code>
+              <p className={styles.qrHint}>
+                {isFR ? "À présenter à l'entrée" : 'Предъявите при входе'}
+              </p>
             </div>
 
-            <button
-              type="button"
-              className={styles.pdfBtn}
-              onClick={handleDownloadPdf}
-              disabled={!qrSrc || pdfLoading}
-            >
-              <DownloadIcon />
-              {pdfLoading ? '…' : (isFR ? 'Télécharger PDF' : 'Скачать PDF')}
-            </button>
-          </div>
+            {/* Details column */}
+            <div className={styles.details}>
+              <p className={styles.detailTheatre}>Théâtre Tête-à-Tête</p>
+              <dl className={styles.detailList}>
+                <div className={styles.detailRow}>
+                  <dt>{isFR ? 'Date'    : 'Дата'   }</dt>
+                  <dd>{b.showDate}</dd>
+                </div>
+                <div className={styles.detailRow}>
+                  <dt>{isFR ? 'Heure'   : 'Время'  }</dt>
+                  <dd>{b.showTime}</dd>
+                </div>
+                <div className={styles.detailRow}>
+                  <dt>{isFR ? 'Lieu'    : 'Адрес'  }</dt>
+                  <dd>24 Rue Rossini, Nice</dd>
+                </div>
+                <div className={styles.detailRow}>
+                  <dt>{isFR ? 'Billets' : 'Билеты' }</dt>
+                  <dd>
+                    {b.ticketsCount}
+                    {b.totalAmount > 0 && (
+                      <> · <span>{b.totalAmount} €</span></>
+                    )}
+                  </dd>
+                </div>
+              </dl>
 
+              <div className={styles.codeRow}>
+                <div className={styles.codeTextPart}>
+                  <span className={styles.codeLabel}>
+                    {isFR ? 'Réservation' : 'Код брони'}
+                  </span>
+                  <code className={styles.codeValue}>{b.ticketCode}</code>
+                  <button
+                    type="button"
+                    className={styles.pdfLink}
+                    onClick={handleDownloadPdf}
+                    disabled={!qrSrc || pdfLoading}
+                  >
+                    <DownloadIcon />
+                    {pdfLoading ? '…' : (isFR ? 'Télécharger PDF' : 'Скачать PDF')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
 
