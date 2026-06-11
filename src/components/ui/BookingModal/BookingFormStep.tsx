@@ -72,6 +72,10 @@ export function BookingFormStep({
 }: Props) {
   const showTitle  = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
   const monthLabel = t.months[show.month] ?? show.month;
+  const showYearNumber = Number(show.year);
+  const seasonLabel = Number.isFinite(showYearNumber)
+    ? `СЕЗОН ${showYearNumber - 1} / ${showYearNumber} · THÉÂTRE TÊTE-À-TÊTE · NICE`
+    : 'СЕЗОН · THÉÂTRE TÊTE-À-TÊTE · NICE';
 
   function ticketLabel(id: string | undefined) {
     return id === 'standard' ? t.admin.ticketStandard
@@ -87,10 +91,12 @@ export function BookingFormStep({
 
         {/* Show header с цветным фоном show.palette */}
         <div className={styles.showHeader} style={{ background: show.palette }}>
-          <span className={styles.showGlyph}>{show.glyph}</span>
-          <div>
-            <p className={styles.showTitle}>{showTitle}</p>
-            <p className={styles.showMeta}>{show.day} {monthLabel} {show.year} · {show.time}</p>
+          <div className={styles.showHeaderTop}>
+            <span className={styles.showGlyph}>{show.glyph}</span>
+            <div className={styles.showHeaderInfo}>
+              <p className={styles.showTitle}>{showTitle}</p>
+              <p className={styles.showMeta}>{show.day} {monthLabel} {show.year} · {show.time}</p>
+            </div>
           </div>
         </div>
 
@@ -132,8 +138,12 @@ export function BookingFormStep({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Loyalty summary */}
           {activeTicket && loyaltyAvailable && (
-            <div className={styles.loyaltyBlock}>
+            <div className={`${styles.section} ${styles.loyaltySection}`}>
+              <div className={styles.loyaltyBlock}>
               <p className={styles.loyaltyTitle}>{t.booking.loyaltyGift}</p>
               <div className={styles.loyaltyRow}>
                 <span>{t.booking.loyaltyOriginal}</span>
@@ -148,9 +158,13 @@ export function BookingFormStep({
                 <span>{totalAmount}&nbsp;€</span>
               </div>
             </div>
+            </div>
           )}
-        </div>
 
+      </div>
+
+      <div className={styles.formSpine} aria-hidden="true">
+        <span>{seasonLabel}</span>
       </div>
 
       {/* RIGHT */}

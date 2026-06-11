@@ -388,10 +388,12 @@
 }
 
 .metaValuePrice {
-  font-family: var(--font-display) !important;
-  font-style: italic;
-  font-size: 16px !important;
-  color: var(--fg) !important;
+  font-family: var(--font-body) !important;
+  font-style: normal;
+  font-size: 13px !important;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--fg-dim) !important;
 }
 
 // ── Description with drop cap ──────────────────────────────────────────────
@@ -453,8 +455,8 @@
 }
 
 .bookBtn {
-  border-radius: 22px !important;
-  padding: 13px 28px !important;
+  border-radius: var(--radius-s);
+  padding: 13px 28px;
   min-height: 48px;
   flex-shrink: 0;
 }

@@ -271,8 +271,8 @@
 }
 
 .seatsInline {
-  font-family: var(--font-mono);
-  font-size: 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
   color: #6e675f;
   letter-spacing: 0.04em;
 }
@@ -393,7 +393,7 @@
 
 .formLayout {
   display: grid;
-  grid-template-columns: 310px 1fr;
+  grid-template-columns: 310px 34px 1fr;
 
   @include mixins.mobile { grid-template-columns: 1fr; }
 
@@ -408,7 +408,6 @@
 .formLeft {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--line);
 
   @include mixins.mobile { border-right: none; border-bottom: 1px solid var(--line); }
 }
@@ -416,14 +415,23 @@
 .showHeader {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 24px;
   padding: 30px 30px 80px;
   flex-shrink: 0;
 
   @include mixins.mobile {
     padding: 22px 58px 22px 20px;
     min-height: 116px;
+    gap: 14px;
   }
+}
+
+.showHeaderTop {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  width: 100%;
 }
 
 .showGlyph {
@@ -432,6 +440,10 @@
   flex-shrink: 0;
   line-height: 1;
   color: #fff;
+}
+
+.showHeaderInfo {
+  min-width: 0;
 }
 
 .showTitle {
@@ -450,6 +462,34 @@
   letter-spacing: 0.15em;
   margin-top: 4px;
   text-transform: uppercase;
+}
+
+.formSpine {
+  width: 34px;
+  min-width: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #17140f;
+  border-left: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-right: 0.5px solid rgba(255, 255, 255, 0.08);
+
+  span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #6e675f;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  @include mixins.mobile {
+    display: none;
+  }
 }
 
 .ticketTypes {
@@ -503,9 +543,10 @@
 }
 
 .ttPrice {
-  font-family: var(--font-display);
-  font-size: 19px;
-  font-style: italic;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 500;
   color: var(--fg);
   white-space: nowrap;
   display: flex;
@@ -548,9 +589,10 @@
   span {
     min-width: 24px;
     text-align: center;
-    font-family: var(--font-display);
-    font-style: italic;
-    font-size: 20px;
+    font-family: var(--font-body);
+    font-style: normal;
+    font-size: 16px;
+    font-weight: 500;
     color: var(--fg);
     display: flex;
     align-items: center;
@@ -574,11 +616,16 @@
 }
 
 .totalAmount {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-style: italic;
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 600;
   color: var(--fg);
   line-height: 1;
+}
+
+.loyaltySection {
+  border-top: 1px solid var(--line);
 }
 
 .priceHint {
@@ -788,7 +835,7 @@
   padding: 14px 20px;
   background: var(--accent);
   color: #fff;
-  border-radius: 18px;
+  border-radius: var(--radius-s);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.25em;
@@ -989,9 +1036,10 @@
 }
 
 .stubTotalAmount {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 26px;
+  font-family: var(--font-body);
+  font-style: normal;
+  font-size: 16px;
+  font-weight: 600;
   color: #f3e7dc;
 }
 
@@ -1097,9 +1145,10 @@
 }
 
 .ticketRowPrice {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 18px;
+  font-family: var(--font-body);
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--fg);
 }
 
@@ -1214,9 +1263,10 @@
 }
 
 .summaryAmount {
-  font-family: var(--font-display) !important;
-  font-style: italic;
-  font-size: 18px !important;
+  font-family: var(--font-body) !important;
+  font-style: normal;
+  font-size: 14px !important;
+  font-weight: 600;
   color: var(--fg) !important;
 }
 

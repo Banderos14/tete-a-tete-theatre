@@ -248,7 +248,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const fbLinked         = userProfile?.facebookLinked ?? false;
   const birthdayFromFb   = userProfile?.birthdayFromFb ?? false;
   const missingCount     = Object.keys(validate(displayName, birthday, phone, t.profile.required)).length;
-  const activeBookings   = bookings.filter(b => !computedIsAttended(b));
+  const activeBookings   = bookings.filter(b => !computedIsAttended(b) && !isStaleCancelledOrExpired(b));
   const attendedBookings = bookings.filter(computedIsAttended);
   const ticketCount      = activeBookings.filter(b =>
     b.paymentStatus === 'paid' && b.status === 'confirmed' && !!b.ticketCode
@@ -425,9 +425,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
               <div className={styles.section}>
                 <div className={styles.personalHeader}>
                   <h2 className={styles.personalTitle}>{t.profile.sectionPersonal}</h2>
-                  {regYear !== null && (
-                    <span className={styles.personalSinceLabel}>{t.profile.memberSince(regYear)}</span>
-                  )}
                 </div>
 
                 <PersonalField
@@ -583,7 +580,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
             {/* ── МОИ БИЛЕТЫ ── */}
             {activeSection === 'tickets' && (
               <div className={styles.section}>
-                <h2 className={styles.sectionTitle}>{t.profile.history}</h2>
+                <h2 className={styles.ticketsTitle}>{t.profile.history}</h2>
                 {historyLoading ? (
                   <div className={styles.skeletonList}>
                     {[1, 2].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonTicket}`} />)}
@@ -772,17 +769,40 @@ import {
   cycleProgress,
 } from '../../../services/loyaltyService';
 import { cancelBookingByUser } from '../../../services/bookingService';
-import { TicketCard } from '../TicketCard';
+import { TicketCard, StampBadge } from '../TicketCard';
 
 const SHOW_MAP = new Map<string, Show>(SHOWS.map(s => [s.id, s]));
 const BONUS_EVERY = 5;
 
-const STATUS_LABEL_KEY: Record<BookingStatus, keyof T['profile']> = {
-  pending:   'statusPending',
-  confirmed: 'statusConfirmed',
-  cancelled: 'statusCancelled',
-  attended:  'statusAttended',
+// 25-bar decorative barcode — uniform height, varying width
+const BOOKING_BARCODE_WIDTHS = [2,1,3,1,1,2,1,4,1,2,1,3,1,1,2,1,3,2,1,4,1,2,1,1,3] as const;
+
+// Hides cancelled/expired bookings 12 hours after they were cancelled/expired
+function isStaleCancelledOrExpired(b: Booking): boolean {
+  const isTerminal = b.status === 'cancelled' || b.paymentStatus === 'expired';
+  if (!isTerminal) return false;
+  const ts = b.cancelledAt ?? b.updatedAt;
+  if (!ts) return false;
+  return Date.now() - ts.toMillis() > 12 * 60 * 60 * 1000;
+}
+
+// Month map RU→FR for stub date display
+const MONTH_FR_MAP_BC: Record<string, string> = {
+  'Янв': 'Jan', 'Фев': 'Fév', 'Мар': 'Mar', 'Апр': 'Avr',
+  'Май': 'Mai', 'Июн': 'Juin', 'Июл': 'Juil', 'Авг': 'Août',
+  'Сен': 'Sep', 'Окт': 'Oct', 'Ноя': 'Nov', 'Дек': 'Déc',
 };
+
+function parseBookingDate(showDate: string, isFR: boolean): { day: string; monthAbbrev: string } {
+  const parts = showDate.trim().split(/\s+/);
+  const day = parts[0] ?? '—';
+  const monthRu = parts[1] ?? '';
+  const monthAbbrev = isFR
+    ? (MONTH_FR_MAP_BC[monthRu] ?? monthRu.toLowerCase())
+    : monthRu.toLowerCase();
+  return { day, monthAbbrev };
+}
+
 
 function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
   const attended         = getUserAttendedCount(bookings);
@@ -818,7 +838,7 @@ function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
 }
 
 // BookingCard — for non-QR active bookings (cancelled, pending, awaiting, etc.)
-function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: Show }) {
+function BookingCard({ booking: b, t, show: _show }: { booking: Booking; t: T; show?: Show }) {
   const { lang } = useLang();
   const isFR = lang === 'FR';
 
@@ -830,8 +850,6 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
 
   const isAttended     = computedIsAttended(b);
   const displayStatus: BookingStatus = isAttended ? 'attended' : b.status;
-  const statusKey      = STATUS_LABEL_KEY[displayStatus] as keyof typeof t.profile;
-  const statusLabel    = t.profile[statusKey] as string;
 
   const payStatus = b.paymentStatus ?? 'not_paid';
   const isAwaitingTransfer = payStatus === 'awaiting_transfer';
@@ -839,19 +857,41 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
 
   const canCancel = !isAttended && b.status !== 'cancelled' && b.status !== 'attended';
 
-  const payMethodLabel = b.paymentMethod === 'bank_transfer'
-    ? t.profile.payMethodTransfer
-    : t.profile.payMethodOnSite;
-
-  const payStatusLabel =
-    payStatus === 'paid'              ? t.profile.payStatusPaid      :
-    payStatus === 'awaiting_transfer' ? t.profile.payStatusAwaiting  :
-    payStatus === 'expired'           ? t.profile.payStatusExpired   :
-                                        t.profile.payStatusNotPaid;
-
   const hoursLeft  = isAwaitingTransfer ? hoursUntilExpiry(b) : null;
   const paymentRef = b.paymentReference ?? `${PAYMENT_CONFIG.paymentReferencePrefix}-${b.ticketCode}`;
   const account    = getPaymentAccount(b.paymentAccountId);
+
+  // Stub colour — same priority as TicketCard: grey > paid(burgundy) > pending/amber
+  const stubVariant: 'burgundy' | 'amber' | 'grey' =
+    (b.status === 'cancelled' || payStatus === 'expired')  ? 'grey'     :
+    payStatus === 'paid'                                   ? 'burgundy' :
+    payStatus === 'awaiting_transfer'                      ? 'amber'    :
+    (b.paymentMethod === 'on_site' && payStatus === 'not_paid') ? 'amber' :
+    'burgundy';
+
+  // Date parsing
+  const { day, monthAbbrev } = parseBookingDate(b.showDate, isFR);
+  const timeLabel = `${monthAbbrev} · ${b.showTime}`;
+
+  // Ticket type label
+  const ticketTypeLabel =
+    b.ticketType === 'student'
+      ? (isFR ? 'Étudiant' : 'Студент')
+      : (isFR ? 'Standard' : 'Стандарт');
+
+  // Contextual action text
+  let actionText = '';
+  let actionClass = styles.bookingActionMuted;
+  if (payStatus === 'paid' && b.status === 'confirmed') {
+    actionText = isFR ? 'Montrer à l\'entrée →' : 'Показать на входе →';
+    actionClass = styles.bookingActionMuted;
+  } else if (payStatus === 'awaiting_transfer') {
+    actionText = isFR ? 'Détails du virement →' : 'Реквизиты для перевода →';
+    actionClass = styles.bookingActionAmber;
+  } else if (b.paymentMethod === 'on_site' && payStatus === 'not_paid' && b.status !== 'cancelled') {
+    actionText = isFR ? 'Paiement sur place' : 'Оплата на месте';
+    actionClass = styles.bookingActionAmber;
+  }
 
   const REASON_OPTIONS = [
     { value: 'time',    label: t.booking.cancelReasonTime    },
@@ -875,30 +915,47 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
   }
 
   return (
-    <div className={`${styles.bookingCard} ${styles[`bookingCard_${displayStatus}`] ?? ''}`}>
-      <div className={styles.bookingCardRow}>
-        {show && (
-          <div className={styles.showGlyphBox} style={{ background: show.palette }}>
-            {show.glyph}
+    <div className={`${styles.bookingCard} ${displayStatus === 'cancelled' ? styles.bookingCardCancelled : ''}`}>
+      {/* ── Mini-ticket row ── */}
+      <div className={styles.bookingTicketRow}>
+
+        {/* LEFT STUB */}
+        <div className={`${styles.bookingStub} ${stubVariant === 'amber' ? styles.bookingStubAmber : stubVariant === 'grey' ? styles.bookingStubGrey : styles.bookingStubBurgundy}`}>
+          <div className={styles.bookingStubDay}>{day}</div>
+          <div className={`${styles.bookingStubMonth} ${stubVariant === 'amber' ? styles.bookingStubMonthAmber : stubVariant === 'grey' ? styles.bookingStubMonthGrey : ''}`}>{timeLabel}</div>
+          <div className={styles.bookingStubBarcode} aria-hidden="true">
+            {BOOKING_BARCODE_WIDTHS.map((w, i) => (
+              <div key={i} style={{ width: `${w}px` }} />
+            ))}
           </div>
-        )}
+          <div className={styles.bookingStubCutoutTop} aria-hidden="true" />
+          <div className={styles.bookingStubCutoutBottom} aria-hidden="true" />
+        </div>
+
+        {/* RIGHT CONTENT */}
         <div className={styles.bookingCardContent}>
+          {/* Row 1: title + stamp */}
           <div className={styles.bookingCardTop}>
             <span className={styles.bookingShowTitle}>{b.showTitle}</span>
-            <span className={`${styles.bookingStatus} ${styles[`bookingStatus_${displayStatus}`]}`}>
-              {statusLabel}
-            </span>
+            <StampBadge booking={b} isFR={isFR} />
           </div>
-          <div className={styles.bookingCardMeta}>
-            <span>{b.showDate} · {b.showTime}</span>
-            <span>{b.ticketsCount} {b.ticketsCount === 1 ? 'билет' : 'билета'}</span>
-            {b.totalAmount > 0 && <span>{b.totalAmount}&nbsp;€</span>}
-          </div>
-          <div className={styles.bookingPayInfo}>
-            <span className={styles.bookingPayMethod}>{payMethodLabel}</span>
-            <span className={`${styles.bookingPayStatus} ${styles[`bookingPayStatus_${payStatus}`]}`}>
-              {payStatusLabel}
-            </span>
+
+          {/* Row 2: composition line */}
+          <p className={styles.bookingCompositionLine}>
+            <span>{b.ticketsCount} × {ticketTypeLabel}</span>
+            {b.totalAmount > 0 && (
+              <>
+                <span className={styles.bookingCompositionSep}> · </span>
+                <span className={styles.bookingCompositionAmount}>{b.totalAmount} €</span>
+              </>
+            )}
+          </p>
+
+          {/* Row 3: code + action */}
+          <div className={styles.bookingCardRow3}>
+            {b.ticketCode && (
+              <code className={styles.bookingCode}>{b.ticketCode}</code>
+            )}
             {/* Countdown for awaiting transfers */}
             {isAwaitingTransfer && hoursLeft !== null && (
               <span className={hoursLeft <= 0 ? styles.countdownExpired : styles.countdownHours}>
@@ -907,22 +964,16 @@ function BookingCard({ booking: b, t, show }: { booking: Booking; t: T; show?: S
                   : `${hoursLeft} ${isFR ? 'h' : 'ч.'}`}
               </span>
             )}
+            {actionText && (
+              <span className={`${styles.bookingActionText} ${actionClass}`}>{actionText}</span>
+            )}
           </div>
-
-          {b.ticketCode && (
-            <div className={styles.bookingTicketCode}>
-              <span>{t.profile.ticketCode}:</span>
-              <code>{b.ticketCode}</code>
-            </div>
-          )}
 
           {/* Transfer details block — only for awaiting_transfer */}
           {isAwaitingTransfer && b.ticketCode && (
             <div className={styles.transferMiniBox}>
               <p className={styles.transferMiniLabel}>
-                {isFR
-                  ? `${account.label} · ${account.description}`
-                  : `${account.label} · ${account.description}`}
+                {`${account.label} · ${account.description}`}
               </p>
               <dl className={styles.transferMiniList}>
                 <div className={styles.transferMiniRow}>

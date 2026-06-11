@@ -1,174 +1,245 @@
 @use '../../../styles/mixins';
 
-.ticket {
-  background: var(--bg-3);
-  border: 1px solid var(--line-strong);
-  border-left: 3px solid var(--line-strong);
-  border-radius: 28px;
-  overflow: hidden;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
+// ── Outer wrapper ─────────────────────────────────────────────────────────────
+
+.ticketRoot {
   min-width: 0;
-
-  &:hover {
-    border-color: rgba(184, 0, 0, 0.45);
-    border-left-color: var(--accent);
-  }
-
-  &.expanded {
-    border-color: rgba(184, 0, 0, 0.5);
-    border-left-color: var(--accent);
-    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35);
-    cursor: default;
-  }
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  min-height: 76px;
-  outline: none;
+// ── Mini-ticket card ──────────────────────────────────────────────────────────
 
-  @include mixins.small {
-    align-items: stretch;
-    flex-direction: column;
-    min-height: 0;
-    padding: 14px;
+.ticket {
+  background: #1c1916;
+  border: 0.5px solid rgba(243, 231, 220, 0.10);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  min-width: 0;
+  // Now the flex row itself (stub + headerContent side by side)
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 80px;
+  outline: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+
+  &:hover {
+    opacity: 0.93;
+    transform: translateY(-1px);
   }
 
   &:focus-visible {
     box-shadow: inset 0 0 0 2px var(--accent);
   }
+
+  // When expanded: flatten bottom corners and fade bottom border so the
+  // ticket merges seamlessly with the coupon panel that slides in below.
+  &.ticketOpen {
+    cursor: default;
+    opacity: 1;
+    transform: none;
+    border-radius: 6px 6px 0 0;
+    border-bottom-color: transparent;
+
+    &:hover {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
-.headerLeft {
+// ── Left stub ─────────────────────────────────────────────────────────────────
+
+.stub {
+  width: 96px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 10px 10px;
+  position: relative;
+  border-right: 2px dashed rgba(243, 231, 220, 0.3);
+
+  @include mixins.small {
+    width: 72px;
+    padding: 10px 8px 8px;
+  }
+}
+
+.stubBurgundy { background: #4a1414; }
+.stubAmber    { background: #4b3a12; }
+.stubGrey     { background: #2a2724; }
+
+.stubDay {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 26px;
+  color: #f3e7dc;
+  line-height: 1;
+  text-align: center;
+  margin-bottom: 3px;
+
+  @include mixins.small { font-size: 22px; }
+}
+
+.stubMonth {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #d9a89a;
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 8px;
+
+  @include mixins.small {
+    font-size: 9px;
+    margin-bottom: 6px;
+  }
+}
+
+.stubMonthAmber { color: #cdb27a; }
+.stubMonthGrey  { color: #6e675f; }
+
+.stubBarcode {
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  height: 14px;
+  margin-top: auto;
+
+  > div {
+    background: #f3e7dc;
+    opacity: 0.55;
+    flex-shrink: 0;
+  }
+}
+
+// Perforation cutout circles centred on the dashed right border
+.stubCutoutTop,
+.stubCutoutBottom {
+  position: absolute;
+  right: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-2, #1c1916);
+  pointer-events: none;
+}
+
+.stubCutoutTop    { top: -7px; }
+.stubCutoutBottom { bottom: -7px; }
+
+// ── Right content ─────────────────────────────────────────────────────────────
+
+.headerContent {
   flex: 1;
   min-width: 0;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+
+  @include mixins.small { padding: 10px 12px; }
+}
+
+.headerRow1 {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .showTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--fg);
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 17px;
+  color: #f3e7dc;
+  line-height: 1.25;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 
-  @include mixins.small {
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
+  @include mixins.small { font-size: 15px; }
 }
 
-.showMeta {
+// ── Status stamp ──────────────────────────────────────────────────────────────
+
+.stamp {
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  border: 1.5px solid;
+  border-radius: 6px;
+  padding: 3px 9px;
+  display: inline-block;
+  line-height: 1.3;
+  white-space: nowrap;
+
+  @include mixins.small { transform: none !important; }
+}
+
+.stampGreen { border-color: #5a8a5a; color: #7fb07f; }
+.stampAmber { border-color: #b08a3e; color: #cdb27a; }
+.stampMuted { border-color: rgba(156, 147, 138, 0.4); color: #6e675f; }
+
+// ── Composition line ──────────────────────────────────────────────────────────
+
+.compositionLine {
   font-size: 12px;
-  color: var(--fg-mute);
-  margin-bottom: 6px;
+  color: #9c938a;
+  line-height: 1.4;
+}
+
+.compositionCount  { color: #9c938a; }
+.compositionSep    { color: #6e675f; }
+.compositionAmount {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: #9c938a;
+}
+
+// ── Bottom row: code + CTA ────────────────────────────────────────────────────
+
+.headerRow3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .ticketCode {
-  display: inline-block;
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  color: var(--fg-dim);
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 2px 7px;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: #6e675f;
 }
 
-.headerRight {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-
-  @include mixins.small {
-    align-items: stretch;
-    flex-direction: row;
-    justify-content: space-between;
-    gap: 8px;
-  }
-}
-
-.statusBadge {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 20px;
-  font-weight: 500;
-}
-
-.paid {
-  background: rgba(76, 175, 80, 0.12);
-  color: #4caf50;
-  border: 1px solid rgba(76, 175, 80, 0.3);
-}
-
-.confirmed {
-  background: rgba(184, 0, 0, 0.1);
-  color: var(--accent);
-  border: 1px solid rgba(184, 0, 0, 0.25);
-}
-
-.onSiteBadges {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-
-  @include mixins.small {
-    align-items: flex-start;
-  }
-}
-
-.onSite {
-  background: rgba(33, 150, 243, 0.1);
-  color: #1976d2;
-  border: 1px solid rgba(33, 150, 243, 0.28);
-}
-
-.notPaid {
-  background: rgba(255, 160, 0, 0.1);
-  color: #e08a00;
-  border: 1px solid rgba(255, 160, 0, 0.28);
-}
-
-.qrBtn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-family: var(--font-mono);
+.actionText {
   font-size: 10px;
-  letter-spacing: 0.08em;
-  color: var(--fg-mute);
-  transition: color 0.2s;
-  min-height: 34px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: color 0.15s ease;
 
-  .ticket:hover & { color: var(--fg-dim); }
-
-  &.qrBtnOpen { color: var(--accent); }
+  @include mixins.small { display: none; }
 }
 
-.chevron {
-  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+.actionMuted { color: #9c938a; }
+.actionAmber { color: #cdb27a; }
 
-  &.chevronUp { transform: rotate(180deg); }
-}
+// ── Expanded coupon panel ─────────────────────────────────────────────────────
+//
+// Sibling of .ticket inside .ticketRoot — NOT nested inside the ticket card.
+// Padding and borders live only in .panelOpen so the collapsed grid row has
+// no intrinsic height from box decoration.
 
-// grid-template-rows 0fr→1fr animates the height; opacity fades content in/out.
-.body {
+.panel {
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
@@ -176,27 +247,44 @@
     grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.22s ease;
 
-  &.bodyExpanded {
+  &.panelOpen {
     grid-template-rows: 1fr;
     opacity: 1;
   }
 }
 
-.bodyInner {
-  overflow: hidden; // required: collapses to 0 when grid row is 0fr
+.panelInner {
+  overflow: hidden; // standard grid-animation trick: on the item, not the container
   min-height: 0;
-  border-top: 1px solid var(--line);
+  background: #191511;
+  border: 0 solid transparent;
+  border-radius: 0 0 6px 6px;
   display: flex;
   gap: 20px;
-  padding: 18px 18px 16px;
+  padding: 0 18px;
 
   @include mixins.small {
     flex-direction: column;
     align-items: center;
     gap: 16px;
+    padding: 0 14px;
+  }
+}
+
+.panelOpen > .panelInner {
+  // No top border: it would duplicate the card edge and can flash during close.
+  border-right-width: 0.5px;
+  border-bottom-width: 0.5px;
+  border-left-width: 0.5px;
+  border-color: rgba(243, 231, 220, 0.10);
+  padding: 20px 18px 18px;
+
+  @include mixins.small {
     padding: 18px 14px 16px;
   }
 }
+
+// ── QR column ─────────────────────────────────────────────────────────────────
 
 .qrCol {
   display: flex;
@@ -252,21 +340,22 @@
   text-align: center;
 }
 
+// ── Details column ────────────────────────────────────────────────────────────
+
 .details {
   flex: 1;
   min-width: 0;
 
-  @include mixins.small {
-    width: 100%;
-  }
+  @include mixins.small { width: 100%; }
 }
 
 .detailTitle {
+  font-family: var(--font-display);
+  font-style: italic;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--fg);
   margin-bottom: 4px;
-  letter-spacing: -0.01em;
   line-height: 1.3;
 }
 
@@ -312,48 +401,18 @@
     text-align: right;
     overflow-wrap: anywhere;
 
-    @include mixins.small {
-      text-align: left;
-    }
+    @include mixins.small { text-align: left; }
   }
 }
 
-.pdfBtn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 14px;
-  padding: 9px 14px;
-  background: transparent;
-  border: 1px solid var(--line-strong);
-  border-radius: 20px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--fg-mute);
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
-  width: 100%;
-  justify-content: center;
-
-  &:hover:not(:disabled) {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(184, 0, 0, 0.05);
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-}
+// ── Code box + PDF button ─────────────────────────────────────────────────────
 
 .codeBox {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--bg);
-  border: 1px solid var(--line-strong);
+  background: rgba(243, 231, 220, 0.04);
+  border: 0.5px solid rgba(243, 231, 220, 0.12);
   border-radius: 20px;
   padding: 8px 12px;
   min-width: 0;
@@ -382,4 +441,34 @@
   font-weight: 600;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.pdfBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 9px 14px;
+  background: transparent;
+  border: 0.5px solid rgba(243, 231, 220, 0.12);
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  width: 100%;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(184, 0, 0, 0.05);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 }
