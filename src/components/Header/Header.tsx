@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { IconChevronRight, IconExternalLink, IconUser } from '@tabler/icons-react';
 import { useLang } from '../../i18n/LangContext';
 import { useAuth } from '../../context/AuthContext';
 import { LINKS } from '../../constants/links';
@@ -35,6 +36,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
   const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeId, setActiveId] = useState('');
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 40);
@@ -56,11 +58,34 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
     return () => { document.body.style.overflow = ''; };
   }, [menuOpen]);
 
+  // Track active section for nav highlight.
+  // Uses a Set so that when a section leaves the viewport (isIntersecting=false)
+  // it is removed — prevents activeId staying stuck on 'afisha' in dead zones.
+  useEffect(() => {
+    const ids = ['afisha', 'repertoire', 'about', 'people'];
+    const visible = new Set<string>();
+
+    const obs = new IntersectionObserver(
+      entries => {
+        entries.forEach(e => {
+          if (e.isIntersecting) visible.add(e.target.id);
+          else visible.delete(e.target.id);
+        });
+        // Always pick the topmost (DOM-order) visible section; '' if none.
+        setActiveId(ids.find(id => visible.has(id)) ?? '');
+      },
+      { threshold: 0.15, rootMargin: '-80px 0px -20% 0px' }
+    );
+
+    ids.forEach(id => { const el = document.getElementById(id); if (el) obs.observe(el); });
+    return () => obs.disconnect();
+  }, []);
+
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   function handleNavClick(id: string) {
     closeMenu();
-    setTimeout(() => scrollToSection(id), 80);
+    setTimeout(() => scrollToSection(id), 150);
   }
 
   const navLinks = [
@@ -175,7 +200,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
         className={`${styles.mobileMenu} ${menuOpen ? styles.mobileMenuOpen : ''}`}
         aria-label="Мобильное меню"
       >
-        {/* Menu header */}
+        {/* Menu header: logo + close */}
         <div className={styles.menuTop}>
           <img
             src="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG"
@@ -190,11 +215,16 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
         </div>
 
         {/* Nav links */}
-        <ul className={styles.mobileNav}>
+        <ul className={styles.mobileNav} role="menu">
           {navLinks.map(({ label, id }) => (
-            <li key={id}>
-              <button onClick={() => handleNavClick(id)}>
-                {label}
+            <li key={id} className={activeId === id ? styles.mobileNavItemActive : undefined}>
+              <button
+                onClick={() => handleNavClick(id)}
+                role="menuitem"
+                tabIndex={menuOpen ? 0 : -1}
+              >
+                <span>{label}</span>
+                <IconChevronRight size={16} strokeWidth={1.5} />
               </button>
             </li>
           ))}
@@ -204,73 +234,76 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
               target="_blank"
               rel="noopener noreferrer"
               onClick={closeMenu}
+              role="menuitem"
+              tabIndex={menuOpen ? 0 : -1}
             >
-              Instagram
+              <span className={styles.mobileNavInstagram}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={styles.mobileNavInstagramIcon}>
+                  <path d="M7.8 0h8.4C20.5 0 24 3.5 24 7.8v8.4c0 4.3-3.5 7.8-7.8 7.8H7.8C3.5 24 0 20.5 0 16.2V7.8C0 3.5 3.5 0 7.8 0Zm-.27 2.16a5.37 5.37 0 0 0-5.37 5.37v8.94a5.37 5.37 0 0 0 5.37 5.37h8.94a5.37 5.37 0 0 0 5.37-5.37V7.53a5.37 5.37 0 0 0-5.37-5.37H7.53ZM12 5.84A6.16 6.16 0 1 1 12 18.16 6.16 6.16 0 0 1 12 5.84Zm0 2.16a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm6.4-2.4a1.44 1.44 0 1 1 0 2.88 1.44 1.44 0 0 1 0-2.88Z" />
+                </svg>
+                Instagram
+              </span>
+              <IconExternalLink size={16} strokeWidth={1.5} />
             </a>
           </li>
         </ul>
 
-        {/* Controls row: lang + theme */}
-        <div className={styles.menuControls}>
-          <div className={styles.menuLangSwitch}>
-            {LANGS.map(l => (
-              <button
-                key={l}
-                className={lang === l ? styles.active : undefined}
-                onClick={() => { onLangChange(l); }}
+        {/* Bottom panel: lang + theme toggle | auth button */}
+        <div className={styles.menuBottom}>
+          {/* Row 1: lang pill + theme switch */}
+          <div className={styles.menuControlsRow}>
+            <div className={styles.menuLangSwitch}>
+              {LANGS.map(l => (
+                <button
+                  key={l}
+                  className={lang === l ? styles.active : undefined}
+                  onClick={() => onLangChange(l)}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            <button
+              className={styles.menuThemeControl}
+              onClick={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
+              aria-label="Toggle theme"
+            >
+              <span className={styles.menuThemeLabel}>{t.nav.theme}</span>
+              <span
+                className={`${styles.menuThemeSwitch} ${theme === 'light' ? styles.menuThemeSwitchActive : ''}`}
+                aria-hidden="true"
               >
-                {l}
-              </button>
-            ))}
+                <span className={styles.menuThemeSwitchKnob} />
+              </span>
+            </button>
           </div>
 
-          <button
-            className={styles.menuThemeToggle}
-            onClick={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
-            aria-label="Toggle theme"
-          >
-            {theme === 'dark' ? (
-              <>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-                <span>Тёмная</span>
-              </>
+          {/* Row 2: auth */}
+          <div className={styles.menuAuth}>
+            {user ? (
+              <button
+                className={styles.menuAuthBtn}
+                onClick={() => { closeMenu(); onProfileOpen(); }}
+              >
+                <span className={styles.menuAuthAvatar}>
+                  {user.photoURL
+                    ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" />
+                    : getInitials(user.displayName)
+                  }
+                </span>
+                {t.nav.profileBtn}
+              </button>
             ) : (
-              <>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-                </svg>
-                <span>Светлая</span>
-              </>
+              <button
+                className={styles.menuAuthBtn}
+                onClick={() => { closeMenu(); onAuthOpen(); }}
+              >
+                <IconUser size={18} strokeWidth={1.5} />
+                {t.auth.headerBtn}
+              </button>
             )}
-          </button>
-        </div>
-
-        {/* Auth button */}
-        <div className={styles.menuAuth}>
-          {user ? (
-            <button
-              className={styles.menuAuthBtn}
-              onClick={() => { closeMenu(); onProfileOpen(); }}
-            >
-              <span className={styles.menuAuthAvatar}>
-                {user.photoURL
-                  ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" />
-                  : getInitials(user.displayName)
-                }
-              </span>
-              Личный кабинет
-            </button>
-          ) : (
-            <button
-              className={styles.menuAuthBtn}
-              onClick={() => { closeMenu(); onAuthOpen(); }}
-            >
-              {t.auth.headerBtn}
-            </button>
-          )}
+          </div>
         </div>
       </nav>
     </>

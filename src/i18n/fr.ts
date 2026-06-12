@@ -9,6 +9,8 @@ export const FR: T = {
     repertoire: 'Répertoire',
     about:      'À propos',
     people:     'Équipe',
+    theme:      'Thème',
+    profileBtn: 'Mon compte',
   },
   hero: {
     eyebrow:     'Saison 2026 / 2027 · Nice, Côte d\'Azur',

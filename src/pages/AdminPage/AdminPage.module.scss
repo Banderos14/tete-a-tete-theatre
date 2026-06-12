@@ -342,7 +342,7 @@
 .actionCancel {
   font-size: 11px;
   padding: 4px 8px;
-  border-radius: 16px;
+  border-radius: var(--radius-xs);
   background: rgba(184, 0, 0, 0.1);
   color: var(--accent-glow);
   border: 1px solid rgba(184, 0, 0, 0.2);

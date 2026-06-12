@@ -5,8 +5,9 @@
   to   { transform: translateX(-50%); }
 }
 
-// ── Outer wrapper — full-screen width ─────────────────────────────────────────
-.outer {
+// ── Non-scrolling outer wrapper — holds edge shadows ─────────────────────────
+// Shadows live here so they stay fixed when the inner scroll container is swiped.
+.sliderWrap {
   --card-w: clamp(240px, 28vw, 340px);
 
   position: relative;
@@ -38,20 +39,31 @@
     --card-w: clamp(220px, 74vw, 280px);
     width: 100%;
     margin-left: 0;
-    padding: 0 16px;
-    overflow-x: auto;
-    overflow-y: visible;
+    overflow: hidden;
     overflow-clip-margin: 0;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar { display: none; }
 
     &::before,
     &::after {
       width: 28px;
     }
+  }
+}
+
+// ── Scroll container (inner) — cards swipe here, shadows stay above ───────────
+.outer {
+  position: relative;
+
+  @include mixins.mobile {
+    width: 100%;
+    padding: 0 16px;
+    overflow-x: auto;
+    overflow-y: visible;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar { display: none; }
   }
 }
 
@@ -104,12 +116,14 @@
   }
 
   @media (hover: none), (pointer: coarse) {
+    transition: none;
+
     &:hover {
       transform: none;
       box-shadow: none;
 
-      .poster { opacity: 0.65; transform: none; }
-      .overlay { opacity: 0.9; }
+      .poster { opacity: 0.65; transform: none; transition: none; }
+      .overlay { opacity: 0.9; transition: none; }
       .openHint { opacity: 1; transform: none; }
     }
   }
@@ -125,6 +139,10 @@
   transition: opacity 0.5s ease, transform 0.5s ease;
 
   :global([data-theme='light']) & { opacity: 0.92; }
+
+  @media (hover: none), (pointer: coarse) {
+    transition: none;
+  }
 }
 
 // ── Decorative glyph (when no image) ─────────────────────────────────────────

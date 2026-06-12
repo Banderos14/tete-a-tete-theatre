@@ -9,6 +9,8 @@ export const RU: T = {
     repertoire: 'Репертуар',
     about:      'О театре',
     people:     'Люди',
+    theme:      'Тема',
+    profileBtn: 'Личный кабинет',
   },
   hero: {
     eyebrow:     'Сезон 2026 / 2027 · Nice, France',

@@ -64,7 +64,6 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
-  padding-top: 36px;
   border-top: 1px solid var(--line);
 
   @include mixins.mobile {
@@ -72,8 +71,9 @@
   }
 
   @include mixins.small {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    row-gap: 20px;
   }
 }
 
@@ -91,8 +91,24 @@
   }
 
   @include mixins.small {
-    min-height: 96px;
+    min-height: unset;
+    height: auto;
+    padding: 12px 8px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    display: block;
     text-align: center;
+
+    &:nth-child(1) { order: 2; }
+    &:nth-child(2) { order: 3; }
+    &:nth-child(3) {
+      order: 1;
+      grid-column: 1 / -1;
+      padding-bottom: 20px;
+      margin-bottom: 4px;
+      border-bottom: 0.5px solid rgba(243, 231, 220, 0.12);
+    }
   }
 }
 
@@ -105,6 +121,16 @@
 
   @include mixins.mobile {
     font-size: clamp(38px, 10vw, 50px);
+  }
+
+  @include mixins.small {
+    font-size: clamp(32px, 11vw, 48px);
+  }
+}
+
+.stat:nth-child(3) .statNum {
+  @include mixins.small {
+    font-size: clamp(48px, 16vw, 72px);
   }
 }
 
