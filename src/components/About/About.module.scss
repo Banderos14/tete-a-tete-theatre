@@ -145,6 +145,7 @@
 .img {
   position: relative;
   overflow: hidden;
+  border-radius: var(--radius-xs);
 
   &::after {
     content: '';

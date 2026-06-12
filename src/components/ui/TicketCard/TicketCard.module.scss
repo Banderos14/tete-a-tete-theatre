@@ -173,7 +173,7 @@
   text-transform: uppercase;
   letter-spacing: 1.5px;
   border: 1.5px solid;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   padding: 3px 9px;
   display: inline-block;
   line-height: 1.3;

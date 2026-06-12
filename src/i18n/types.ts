@@ -254,6 +254,7 @@ export interface T {
     btnMaps: string;
     mapAddr: string;
     mapLink: string;
+    mapLoading: string;
   };
   footer: {
     copyright: string;

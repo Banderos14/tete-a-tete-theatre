@@ -101,6 +101,7 @@ export const FR: T = {
     btnMaps:      'ITINÉRAIRE',
     mapAddr:      '24 RUE ROSSINI · 06000 NICE',
     mapLink:      'Ouvrir la carte',
+    mapLoading:   'Chargement de la carte…',
   },
   footer: {
     copyright: '© 2026 TÊT-À-TÊT · Théâtre russophone à Nice',

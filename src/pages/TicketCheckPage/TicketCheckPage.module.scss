@@ -40,7 +40,7 @@
   text-transform: uppercase;
   color: var(--fg-dim);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-s);
   padding: 8px 18px;
   font-family: var(--font-mono);
   transition: color 0.2s, border-color 0.2s;
@@ -146,7 +146,7 @@
   text-transform: uppercase;
   background: var(--accent);
   color: #fff;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   width: 100%;
   transition: background 0.18s;
 
@@ -167,7 +167,7 @@
   background: transparent;
   color: var(--fg-dim);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-s);
   width: 100%;
   transition: background 0.18s, border-color 0.18s, color 0.18s;
 

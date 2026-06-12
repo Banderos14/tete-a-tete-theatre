@@ -243,3 +243,55 @@
     &:hover { color: #f3e7dc; }
   }
 }
+
+// ── Light theme overrides ──────────────────────────────────────────────────────
+:global([data-theme='light']) {
+  .block {
+    border-bottom-color: rgba(26, 23, 21, 0.12);
+  }
+
+  .btnRoute {
+    color: var(--fg);
+    border-color: rgba(26, 23, 21, 0.22);
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        background: rgba(26, 23, 21, 0.05);
+        border-color: rgba(26, 23, 21, 0.38);
+      }
+    }
+  }
+
+  .socialIcon {
+    @media (hover: hover) and (pointer: fine) {
+      &:hover { color: var(--fg); }
+    }
+  }
+
+  .emailLink {
+    @media (hover: hover) and (pointer: fine) {
+      &:hover { color: var(--fg); }
+    }
+  }
+
+  .mapWrapper {
+    border-color: rgba(26, 23, 21, 0.15);
+  }
+
+  .mapOverlay {
+    background: rgba(247, 243, 236, 0.94);
+    border-top-color: rgba(26, 23, 21, 0.12);
+  }
+
+  .mapAddr {
+    color: var(--fg-mute);
+  }
+
+  .mapLink {
+    color: var(--fg-mute);
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover { color: var(--fg); }
+    }
+  }
+}

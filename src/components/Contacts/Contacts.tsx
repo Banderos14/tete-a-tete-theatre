@@ -13,6 +13,7 @@ const LeafletMap = lazy(() =>
 );
 
 function MapFallback() {
+  const { t } = useLang();
   return (
     <div
       style={{
@@ -30,7 +31,7 @@ function MapFallback() {
         textTransform: 'uppercase',
       }}
     >
-      Загрузка карты…
+      {t.contacts.mapLoading}
     </div>
   );
 }
