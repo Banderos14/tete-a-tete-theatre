@@ -3,7 +3,7 @@
   width: 100%;
   height: 100%;
   min-height: 380px;
-  background: #0a0908;
+  background: var(--bg);
 
   &::after {
     content: '';
@@ -11,8 +11,8 @@
     inset: 0;
     pointer-events: none;
     background:
-      linear-gradient(180deg, rgba(10, 9, 8, 0.03), rgba(10, 9, 8, 0.07)),
-      rgba(10, 9, 8, 0.02);
+      linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.07)),
+      rgba(0, 0, 0, 0.02);
     mix-blend-mode: multiply;
   }
 }

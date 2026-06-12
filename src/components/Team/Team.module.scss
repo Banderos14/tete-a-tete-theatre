@@ -50,6 +50,7 @@
   position: relative;
   overflow: hidden;
   margin-bottom: 14px;
+  border-radius: var(--radius-xs);
 
   &::before {
     content: '';
@@ -92,6 +93,7 @@
   object-fit: cover;
   object-position: top center;
   display: block;
+  border-radius: var(--radius-xs);
 }
 
 .initials {

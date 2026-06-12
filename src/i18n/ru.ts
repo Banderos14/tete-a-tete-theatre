@@ -92,6 +92,7 @@ export const RU: T = {
     btnMaps:      'МАРШРУТ',
     mapAddr:      '24 RUE ROSSINI · 06000 NICE',
     mapLink:      'Открыть карту',
+    mapLoading:   'Загрузка карты…',
   },
   footer: {
     copyright: '© 2026 ТЕТ-А-ТЕТ · Русскоязычный театр в Ницце',

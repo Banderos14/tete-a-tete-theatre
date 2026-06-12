@@ -119,6 +119,7 @@
   position: relative;
   overflow: hidden;
   transition: transform 0.4s ease;
+  border-radius: var(--radius-xs);
 
   &:hover { transform: scale(0.98); }
 

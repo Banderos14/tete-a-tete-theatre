@@ -1326,3 +1326,61 @@
   padding-top: 20px;
   flex-wrap: wrap;
 }
+
+// ── Light theme ───────────────────────────────────────────────────────────────
+:global([data-theme='light']) {
+  .panel {
+    box-shadow: 0 24px 80px rgba(40, 20, 10, 0.18);
+    border-color: rgba(90, 60, 45, 0.18);
+  }
+
+  .formSpine {
+    background: #ece6d8;
+    border-left-color:  rgba(26, 23, 21, 0.08);
+    border-right-color: rgba(26, 23, 21, 0.08);
+
+    span { color: var(--fg-mute); }
+  }
+
+  .loyaltyBlock {
+    background: var(--bg-3);
+    border-color: rgba(90, 60, 45, 0.16);
+  }
+
+  .input,
+  .textarea {
+    background: var(--bg-3);
+    border-color: rgba(90, 60, 45, 0.18);
+    color: var(--fg);
+
+    &::placeholder { color: var(--fg-mute); }
+  }
+
+  .ticketTypeActive {
+    background: var(--bg-3) !important;
+    border-color: rgba(90, 60, 45, 0.20) !important;
+  }
+
+  .ttRadio {
+    border-color: rgba(26, 23, 21, 0.35);
+  }
+
+  .paymentCardActive {
+    background: var(--bg-3) !important;
+    border-color: rgba(90, 60, 45, 0.20) !important;
+  }
+
+  .paymentDot {
+    border-color: rgba(26, 23, 21, 0.35);
+  }
+
+  .counter button {
+    border-color: rgba(26, 23, 21, 0.22);
+
+    &:hover:not(:disabled) { background: rgba(26, 23, 21, 0.07); }
+  }
+
+  .radioCircle {
+    border-color: rgba(26, 23, 21, 0.30);
+  }
+}

@@ -122,6 +122,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   // Синхронизация полей формы из Firestore
   useEffect(() => {
     if (!userProfile) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDisplayName(userProfile.displayName || user?.displayName || '');
     setBirthday(userProfile.birthday ?? '');
     setPhone(userProfile.phone ?? '');
@@ -145,6 +146,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   // Realtime-подписка на брони пользователя
   useEffect(() => {
     if (!open || !user) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHistoryLoading(true);
     setHistoryError(null);
 
@@ -178,10 +180,16 @@ export function ProfileDrawer({ open, onClose }: Props) {
   }, [open, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Сворачиваем раскрытый билет при смене раздела
-  useEffect(() => { setExpandedTicketId(null); }, [activeSection]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setExpandedTicketId(null);
+  }, [activeSection]);
 
   useEffect(() => {
-    if (submitted) setErrors(validate(displayName, birthday, phone, t.profile.required));
+    if (submitted) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setErrors(validate(displayName, birthday, phone, t.profile.required));
+    }
   }, [displayName, birthday, phone, submitted, t.profile.required]);
 
   const markDirty = useCallback(() => setIsDirty(true), []);
@@ -606,7 +614,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
                           onToggle={() => setExpandedTicketId(prev => prev === b.id ? null : b.id)}
                         />
                       ) : (
-                        <BookingCard key={b.id} booking={b} t={t} show={SHOW_MAP.get(b.showId)} />
+                        <BookingCard key={b.id} booking={b} t={t} />
                       );
                     })}
                   </div>
@@ -864,7 +872,7 @@ function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
 }
 
 // BookingCard — for non-QR active bookings (cancelled, pending, awaiting, etc.)
-function BookingCard({ booking: b, t, show: _show }: { booking: Booking; t: T; show?: Show }) {
+function BookingCard({ booking: b, t }: { booking: Booking; t: T }) {
   const { lang } = useLang();
   const isFR = lang === 'FR';
 

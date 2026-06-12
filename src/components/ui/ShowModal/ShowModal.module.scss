@@ -502,3 +502,54 @@
     svg { width: 18px; height: 18px; }
   }
 }
+
+// ── Light theme ───────────────────────────────────────────────────────────────
+:global([data-theme='light']) {
+  .panel {
+    box-shadow: 0 24px 80px rgba(40, 20, 10, 0.18);
+    border-color: rgba(90, 60, 45, 0.18);
+  }
+
+  .navBtn {
+    background: rgba(247, 243, 236, 0.90);
+    color: var(--fg);
+
+    &:hover { background: rgba(247, 243, 236, 1); color: var(--fg); }
+  }
+
+  .thumbStrip {
+    background: rgba(247, 243, 236, 0.92);
+  }
+
+  .thumbNav {
+    background: rgba(26, 23, 21, 0.10);
+    color: var(--fg);
+
+    &:hover { background: rgba(26, 23, 21, 0.22); }
+  }
+
+  .spine {
+    background: #ece6d8;
+    border-left-color:  rgba(26, 23, 21, 0.08);
+    border-right-color: rgba(26, 23, 21, 0.08);
+
+    span { color: var(--fg-mute); }
+  }
+
+  .metaRow {
+    border-bottom-color: var(--line);
+
+    &:first-child { border-top-color: var(--line); }
+  }
+
+  .bookRow {
+    background: var(--bg-2);
+  }
+
+  .close {
+    @include mixins.small {
+      background: rgba(247, 243, 236, 0.90);
+      color: var(--fg);
+    }
+  }
+}
