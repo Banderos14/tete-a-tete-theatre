@@ -303,9 +303,13 @@ export function AdminPage() {
                 className={`${styles.showCard} ${filterShow === show.id ? styles.showCardActive : ''}`}
                 onClick={() => setFilterShow(prev => prev === show.id ? 'all' : show.id)}
               >
-                <span className={styles.showCardGlyph} style={{ background: show.palette }}>
-                  {show.glyph}
-                </span>
+                {show.image ? (
+                  <img src={show.image} alt={show.title} className={styles.showCardImg} />
+                ) : (
+                  <span className={styles.showCardGlyph} style={{ background: show.palette }}>
+                    {show.glyph}
+                  </span>
+                )}
                 <div className={styles.showCardInfo}>
                   <p className={styles.showCardTitle}>{show.title}</p>
                   <p className={styles.showCardMeta}>

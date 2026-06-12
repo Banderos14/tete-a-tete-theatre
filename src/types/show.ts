@@ -43,6 +43,7 @@ export interface RepertoireItem {
   age: string;
   glyph: string;
   palette: string;
+  image?: string;
   description?: string;
   descriptionFR?: string;
   duration?: string;

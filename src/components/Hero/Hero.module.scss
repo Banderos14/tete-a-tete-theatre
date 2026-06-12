@@ -224,15 +224,14 @@
 // ── Centre beams — three-layer gradients, warm theatrical white ───────────────
 
 // Wide stage wash — medium-distance tier
-// Core fades at ~77% viewport, halo at ~92%, trail gone by ~88%
 .beamCW {
   left: 31vw;
   width: 32vw;
   clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
   background:
-    radial-gradient(ellipse 28% 68% at 50% 0%, rgba(255,245,230,0.40) 0%, rgba(255,235,215,0.13) 40%, transparent 100%),
-    radial-gradient(ellipse 70% 88% at 50% 0%, rgba(255,235,215,0.13) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.045) 0%, rgba(255,225,200,0.016) 55%, transparent 78%);
+    radial-gradient(ellipse 28% 68% at 50% 0%, rgba(255,245,230,0.34) 0%, rgba(255,235,215,0.11) 40%, transparent 100%),
+    radial-gradient(ellipse 70% 88% at 50% 0%, rgba(255,235,215,0.11) 0%, transparent 100%),
+    linear-gradient(to bottom, rgba(255,225,200,0.038) 0%, rgba(255,225,200,0.013) 55%, transparent 78%);
   animation:
     crossCenter 13s ease-in-out -3s  infinite,
     breathe      7s ease-in-out  0s  infinite;
@@ -244,23 +243,23 @@
   width: 9vw;
   clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
   background:
-    radial-gradient(ellipse 36% 70% at 50% 0%, rgba(255,245,230,0.52) 0%, rgba(255,235,215,0.16) 40%, transparent 100%),
-    radial-gradient(ellipse 78% 88% at 50% 0%, rgba(255,235,215,0.20) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.063) 0%, rgba(255,225,200,0.022) 55%, transparent 78%);
+    radial-gradient(ellipse 36% 70% at 50% 0%, rgba(255,245,230,0.44) 0%, rgba(255,235,215,0.14) 40%, transparent 100%),
+    radial-gradient(ellipse 78% 88% at 50% 0%, rgba(255,235,215,0.17) 0%, transparent 100%),
+    linear-gradient(to bottom, rgba(255,225,200,0.053) 0%, rgba(255,225,200,0.018) 55%, transparent 78%);
   animation:
     crossCenter  9s ease-in-out -6s  infinite,
     breathe      4s ease-in-out -1s  infinite;
 }
 
-// Narrow centre 2 — near-stage tier: opposite phase, dissolves into haze
+// Narrow centre 2 — opposite phase, dissolves into haze
 .beamCN2 {
   left: 47vw;
   width: 6.5vw;
   clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
   background:
-    radial-gradient(ellipse 38% 70% at 50% 0%, rgba(255,245,230,0.50) 0%, rgba(255,235,215,0.15) 40%, transparent 100%),
-    radial-gradient(ellipse 80% 88% at 50% 0%, rgba(255,235,215,0.18) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.058) 0%, rgba(255,225,200,0.020) 55%, transparent 78%);
+    radial-gradient(ellipse 38% 70% at 50% 0%, rgba(255,245,230,0.43) 0%, rgba(255,235,215,0.13) 40%, transparent 100%),
+    radial-gradient(ellipse 80% 88% at 50% 0%, rgba(255,235,215,0.15) 0%, transparent 100%),
+    linear-gradient(to bottom, rgba(255,225,200,0.049) 0%, rgba(255,225,200,0.017) 55%, transparent 78%);
   animation:
     crossCenterB 11s ease-in-out -1s  infinite,
     breathe       5s ease-in-out -3s  infinite;
@@ -268,43 +267,43 @@
 
 // ── Left beams ────────────────────────────────────────────────────────────────
 
-// Medium-distance tier — base brightness, warm white
+// Medium-distance tier — secondary, reduced brightness
 .beamL1 {
   left: 4vw;
   width: 17vw;
   clip-path: polygon(49% 0, 51% 0, 100% 100%, 0% 100%);
   background:
-    radial-gradient(ellipse 15% 65% at 50% 0%, rgba(255,245,230,0.34) 0%, rgba(255,235,215,0.11) 40%, transparent 100%),
-    radial-gradient(ellipse 46% 86% at 50% 0%, rgba(255,235,215,0.12) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.038) 0%, rgba(255,225,200,0.013) 55%, transparent 78%);
+    radial-gradient(ellipse 15% 65% at 50% 0%, rgba(255,245,230,0.27) 0%, rgba(255,235,215,0.09) 40%, transparent 100%),
+    radial-gradient(ellipse 46% 86% at 50% 0%, rgba(255,235,215,0.10) 0%, transparent 100%),
+    linear-gradient(to bottom, rgba(255,225,200,0.031) 0%, rgba(255,225,200,0.010) 55%, transparent 78%);
   animation:
     sweepLeftToCenter 11s ease-in-out -4s  infinite,
     breathe            5s ease-in-out -2s  infinite;
 }
 
-// Medium-near tier — focuses on logo, slightly warmer
+// Medium-near tier — focuses on logo
 .beamL2 {
   left: 13vw;
   width: 11vw;
   clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
   background:
-    radial-gradient(ellipse 30% 65% at 50% 0%, rgba(255,245,230,0.42) 0%, rgba(255,235,215,0.13) 40%, transparent 100%),
-    radial-gradient(ellipse 70% 86% at 50% 0%, rgba(255,235,215,0.14) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.045) 0%, rgba(255,225,200,0.016) 55%, transparent 78%);
+    radial-gradient(ellipse 30% 65% at 50% 0%, rgba(255,245,230,0.36) 0%, rgba(255,235,215,0.11) 40%, transparent 100%),
+    radial-gradient(ellipse 70% 86% at 50% 0%, rgba(255,235,215,0.12) 0%, transparent 100%),
+    linear-gradient(to bottom, rgba(255,225,200,0.038) 0%, rgba(255,225,200,0.013) 55%, transparent 78%);
   animation:
     focusCenterL 13s ease-in-out -7s  infinite,
     breathe       4s ease-in-out -5s  infinite;
 }
 
-// Near-stage tier — bright warm dart, fades before bottom
+// Near-stage tier — warm dart, secondary
 .beamL3 {
   left: 25vw;
   width: 7vw;
   clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
   background:
-    radial-gradient(ellipse 32% 68% at 50% 0%, rgba(255,245,230,0.50) 0%, rgba(255,235,215,0.15) 40%, transparent 100%),
-    radial-gradient(ellipse 75% 88% at 50% 0%, rgba(255,235,215,0.18) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.054) 0%, rgba(255,225,200,0.019) 55%, transparent 78%);
+    radial-gradient(ellipse 32% 68% at 50% 0%, rgba(255,245,230,0.41) 0%, rgba(255,235,215,0.12) 40%, transparent 100%),
+    radial-gradient(ellipse 75% 88% at 50% 0%, rgba(255,235,215,0.15) 0%, transparent 100%),
+    linear-gradient(to bottom, rgba(255,225,200,0.045) 0%, rgba(255,225,200,0.015) 55%, transparent 78%);
   animation:
     narrowArcL  8s ease-in-out -2s infinite,
     breathe     3s ease-in-out -1s infinite;
@@ -329,9 +328,9 @@
   width: 17vw;
   clip-path: polygon(49% 0, 51% 0, 100% 100%, 0% 100%);
   background:
-    radial-gradient(ellipse 15% 65% at 50% 0%, rgba(255,245,230,0.34) 0%, rgba(255,235,215,0.11) 40%, transparent 100%),
-    radial-gradient(ellipse 46% 86% at 50% 0%, rgba(255,235,215,0.12) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.038) 0%, rgba(255,225,200,0.013) 55%, transparent 78%);
+    radial-gradient(ellipse 15% 65% at 50% 0%, rgba(255,245,230,0.27) 0%, rgba(255,235,215,0.09) 40%, transparent 100%),
+    radial-gradient(ellipse 46% 86% at 50% 0%, rgba(255,235,215,0.10) 0%, transparent 100%),
+    linear-gradient(to bottom, rgba(255,225,200,0.031) 0%, rgba(255,225,200,0.010) 55%, transparent 78%);
   animation:
     sweepRightToCenter 12s ease-in-out -1s  infinite,
     breathe             5s ease-in-out -5s  infinite;
@@ -342,9 +341,9 @@
   width: 11vw;
   clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
   background:
-    radial-gradient(ellipse 30% 65% at 50% 0%, rgba(255,245,230,0.42) 0%, rgba(255,235,215,0.13) 40%, transparent 100%),
-    radial-gradient(ellipse 70% 86% at 50% 0%, rgba(255,235,215,0.14) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.045) 0%, rgba(255,225,200,0.016) 55%, transparent 78%);
+    radial-gradient(ellipse 30% 65% at 50% 0%, rgba(255,245,230,0.36) 0%, rgba(255,235,215,0.11) 40%, transparent 100%),
+    radial-gradient(ellipse 70% 86% at 50% 0%, rgba(255,235,215,0.12) 0%, transparent 100%),
+    linear-gradient(to bottom, rgba(255,225,200,0.038) 0%, rgba(255,225,200,0.013) 55%, transparent 78%);
   animation:
     focusCenterR 14s ease-in-out -5s  infinite,
     breathe       4s ease-in-out  0s  infinite;
@@ -355,9 +354,9 @@
   width: 7vw;
   clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
   background:
-    radial-gradient(ellipse 32% 68% at 50% 0%, rgba(255,245,230,0.50) 0%, rgba(255,235,215,0.15) 40%, transparent 100%),
-    radial-gradient(ellipse 75% 88% at 50% 0%, rgba(255,235,215,0.18) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.054) 0%, rgba(255,225,200,0.019) 55%, transparent 78%);
+    radial-gradient(ellipse 32% 68% at 50% 0%, rgba(255,245,230,0.41) 0%, rgba(255,235,215,0.12) 40%, transparent 100%),
+    radial-gradient(ellipse 75% 88% at 50% 0%, rgba(255,235,215,0.15) 0%, transparent 100%),
+    linear-gradient(to bottom, rgba(255,225,200,0.045) 0%, rgba(255,225,200,0.015) 55%, transparent 78%);
   animation:
     narrowArcR  9s ease-in-out -6s infinite,
     breathe     3s ease-in-out -2s infinite;
@@ -394,7 +393,7 @@
 // Near centre-left red — near-stage tier, slight smoke offset streak
 .beamRedL2 {
   left: 27vw;
-  width: 8vw;
+  width: 20vw;
   clip-path: polygon(49% 0, 51% 0, 100% 100%, 0% 100%);
   background:
     radial-gradient(ellipse 18% 65% at 50% 0%, rgba(255,20,20,0.50) 0%, rgba(220,0,0,0.16) 38%, transparent 100%),
@@ -424,7 +423,7 @@
 // Near centre-right red — mirror of RedL2
 .beamRedR2 {
   right: 27vw;
-  width: 8vw;
+  width: 10vw;
   clip-path: polygon(49% 0, 51% 0, 100% 100%, 0% 100%);
   background:
     radial-gradient(ellipse 18% 65% at 50% 0%, rgba(255,20,20,0.50) 0%, rgba(220,0,0,0.16) 38%, transparent 100%),
@@ -435,6 +434,7 @@
     redCenterR  13s ease-in-out  -8s infinite,
     flickerRed   4s ease-in-out  -1s infinite;
 }
+
 
 // ── Vignette ──────────────────────────────────────────────────────────────────
 
@@ -489,17 +489,26 @@
   }
 }
 
-// ── Mobile: keep only centre + main reds ─────────────────────────────────────
+// ── Mobile: 6 beams — wider + extra centre + left warm ───────────────────────
+// Visible: CW, CN1, CN2 (added), L2 (added as left warm), RedL1, RedR1
+// Hidden:  L1, L3, LX, R1, R2, R3, RX, RedL2, RedR2
 
 @include mixins.mobile {
-  .beamL1, .beamL2, .beamL3, .beamLX,
+  .beamL1, .beamL3, .beamLX,
   .beamR1, .beamR2, .beamR3, .beamRX,
-  .beamCN2, .beamRedL2, .beamRedR2 { display: none; }
+  .beamRedL2, .beamRedR2 { display: none; }
 
-  .beamCW    { width: 55vw; left: 22.5vw; }
-  .beamCN1   { width: 18vw; left: 41vw; }
-  .beamRedL1 { width: 15vw; }
-  .beamRedR1 { width: 15vw; }
+  // Centre wash: +27% wider
+  .beamCW    { width: 70vw; left: 15vw;  }
+  // Centre narrow 1: +33% wider
+  .beamCN1   { width: 24vw; left: 38vw;  }
+  // Centre narrow 2: newly shown — layering over CN1
+  .beamCN2   { width: 18vw; left: 41vw;  }
+  // Left warm beam: repositioned to left edge, +136% wider than desktop
+  .beamL2    { width: 26vw; left: 0vw;   }
+  // Red sides: +27% wider
+  .beamRedL1 { width: 19vw;              }
+  .beamRedR1 { width: 19vw;              }
 }
 
 .floor {

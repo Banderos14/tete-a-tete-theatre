@@ -77,8 +77,8 @@
 }
 
 .summaryNum {
-  font-family: var(--font-display);
-  font-size: 36px;
+  font-family: var(--font-mono);
+  font-size: 25px;
   color: var(--fg);
   line-height: 1;
 }
@@ -124,6 +124,15 @@
   display: grid;
   place-items: center;
   font-size: 18px;
+  flex-shrink: 0;
+}
+
+.showCardImg {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-s);
+  object-fit: cover;
+  object-position: center top;
   flex-shrink: 0;
 }
 

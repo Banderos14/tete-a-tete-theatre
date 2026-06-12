@@ -19,6 +19,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import { ensureAudienceCounterAndIncrement } from '../services/statsService';
 
 export type UserRole  = 'user' | 'admin';
 export type Messenger = 'whatsapp' | 'telegram';
@@ -104,7 +105,7 @@ async function ensureUserDocument(firebaseUser: import('firebase/auth').User): P
     return existing;
   }
 
-  // Document missing — create with all required fields
+  // Document missing — new user: create profile and count them as an audience member
   const profile = defaultProfile({
     displayName: firebaseUser.displayName ?? '',
     email:       firebaseUser.email ?? '',
@@ -116,6 +117,7 @@ async function ensureUserDocument(firebaseUser: import('firebase/auth').User): P
     createdAt:   serverTimestamp(),
     lastLoginAt: serverTimestamp(),
   });
+  void ensureAudienceCounterAndIncrement();
   return profile;
 }
 
@@ -177,6 +179,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createdAt:   serverTimestamp(),
       lastLoginAt: serverTimestamp(),
     });
+    // Email sign-up writes the doc directly (bypassing ensureUserDocument new-doc branch),
+    // so we increment the audience counter here explicitly.
+    void ensureAudienceCounterAndIncrement();
     setUserProfile(profile);
   }
 
@@ -250,6 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');

@@ -118,6 +118,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
   const [activeSection,    setActiveSection]    = useState<Section>('personal');
   const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
+  const [dismissingIds,    setDismissingIds]    = useState<Set<string>>(new Set());
 
   // Синхронизация полей формы из Firestore
   useEffect(() => {
@@ -194,6 +195,17 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
   const markDirty = useCallback(() => setIsDirty(true), []);
 
+  const startDismiss = useCallback((id: string) => {
+    setDismissingIds(prev => new Set(prev).add(id));
+    setTimeout(() => {
+      setDismissingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    }, 580);
+  }, []);
+
+  const cancelDismiss = useCallback((id: string) => {
+    setDismissingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+  }, []);
+
   function tryClose() {
     if (isDirty) {
       setWarnVisible(true);
@@ -256,7 +268,11 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const fbLinked         = userProfile?.facebookLinked ?? false;
   const birthdayFromFb   = userProfile?.birthdayFromFb ?? false;
   const missingCount     = Object.keys(validate(displayName, birthday, phone, t.profile.required)).length;
-  const activeBookings   = bookings.filter(b => !computedIsAttended(b) && !isStaleCancelledOrExpired(b));
+  const activeBookings   = bookings.filter(b =>
+    !computedIsAttended(b) &&
+    b.status !== 'cancelled' &&
+    b.paymentStatus !== 'expired'
+  );
   const attendedBookings = bookings.filter(computedIsAttended);
   const ticketCount      = activeBookings.filter(b =>
     b.paymentStatus === 'paid' && b.status === 'confirmed' && !!b.ticketCode
@@ -595,26 +611,43 @@ export function ProfileDrawer({ open, onClose }: Props) {
                   </div>
                 ) : historyError ? (
                   <p className={styles.historyError}>{historyError}</p>
-                ) : activeBookings.length === 0 ? (
+                ) : activeBookings.length === 0 && dismissingIds.size === 0 ? (
                   <p className={styles.emptyText}>{t.profile.noHistory}</p>
                 ) : (
                   <div className={styles.ticketList}>
-                    {activeBookings.map(b => {
+                    {/* activeBookings + bookings currently animating out (already cancelled in Firestore) */}
+                    {[
+                      ...activeBookings,
+                      ...bookings.filter(b => dismissingIds.has(b.id) && !activeBookings.some(a => a.id === b.id)),
+                    ].map(b => {
+                      const isDismissing = dismissingIds.has(b.id);
                       // on_site-билет показывается сразу, даже без оплаты:
                       // деньги берут на месте, QR нужен уже при входе.
                       const isQrTicket = (
                         (b.paymentStatus === 'paid' && b.status === 'confirmed') ||
                         (b.paymentMethod === 'on_site' && b.paymentStatus === 'not_paid')
                       ) && !!b.ticketCode;
-                      return isQrTicket ? (
-                        <TicketCard
+                      return (
+                        <div
                           key={b.id}
-                          booking={b}
-                          isExpanded={expandedTicketId === b.id}
-                          onToggle={() => setExpandedTicketId(prev => prev === b.id ? null : b.id)}
-                        />
-                      ) : (
-                        <BookingCard key={b.id} booking={b} t={t} />
+                          className={isDismissing ? styles.ticketItemDismissing : undefined}
+                        >
+                          {isQrTicket ? (
+                            <TicketCard
+                              booking={b}
+                              isExpanded={expandedTicketId === b.id}
+                              onToggle={() => setExpandedTicketId(prev => prev === b.id ? null : b.id)}
+                            />
+                          ) : (
+                            <BookingCard
+                              booking={b}
+                              t={t}
+                              isDismissing={isDismissing}
+                              onStartDismiss={startDismiss}
+                              onCancelDismiss={cancelDismiss}
+                            />
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -789,15 +822,6 @@ const BONUS_EVERY = 5;
 // 25-bar decorative barcode — uniform height, varying width
 const BOOKING_BARCODE_WIDTHS = [2,1,3,1,1,2,1,4,1,2,1,3,1,1,2,1,3,2,1,4,1,2,1,1,3] as const;
 
-// Hides cancelled/expired bookings 12 hours after they were cancelled/expired
-function isStaleCancelledOrExpired(b: Booking): boolean {
-  const isTerminal = b.status === 'cancelled' || b.paymentStatus === 'expired';
-  if (!isTerminal) return false;
-  const ts = b.cancelledAt ?? b.updatedAt;
-  if (!ts) return false;
-  return Date.now() - ts.toMillis() > 12 * 60 * 60 * 1000;
-}
-
 // Month map RU→FR for stub date display
 const MONTH_FR_MAP_BC: Record<string, string> = {
   'Янв': 'Jan', 'Фев': 'Fév', 'Мар': 'Mar', 'Апр': 'Avr',
@@ -872,7 +896,13 @@ function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
 }
 
 // BookingCard — for non-QR active bookings (cancelled, pending, awaiting, etc.)
-function BookingCard({ booking: b, t }: { booking: Booking; t: T }) {
+function BookingCard({ booking: b, t, isDismissing = false, onStartDismiss, onCancelDismiss }: {
+  booking: Booking;
+  t: T;
+  isDismissing?: boolean;
+  onStartDismiss: (id: string) => void;
+  onCancelDismiss: (id: string) => void;
+}) {
   const { lang } = useLang();
   const isFR = lang === 'FR';
 
@@ -888,10 +918,15 @@ function BookingCard({ booking: b, t }: { booking: Booking; t: T }) {
   const payStatus = b.paymentStatus ?? 'not_paid';
   const isAwaitingTransfer = payStatus === 'awaiting_transfer';
   const isExpiredTransfer  = payStatus === 'expired';
+  const isCancelled        = b.status === 'cancelled';
 
-  const canCancel = !isAttended && b.status !== 'cancelled' && b.status !== 'attended';
+  const canCancel = !isAttended && !isCancelled && b.status !== 'attended';
 
-  const hoursLeft  = isAwaitingTransfer ? hoursUntilExpiry(b) : null;
+  // Only compute countdown when the booking is actively awaiting payment.
+  // Stops for: cancelled status, expired paymentStatus, or during dismiss animation.
+  const hoursLeft = (isAwaitingTransfer && !isCancelled && !isDismissing)
+    ? hoursUntilExpiry(b)
+    : null;
   const paymentRef = b.paymentReference ?? `${PAYMENT_CONFIG.paymentReferencePrefix}-${b.ticketCode}`;
   const account    = getPaymentAccount(b.paymentAccountId);
 
@@ -938,10 +973,12 @@ function BookingCard({ booking: b, t }: { booking: Booking; t: T }) {
     if (!cancelReason) { setCancelError(t.booking.cancelReasonRequired); return; }
     setCancelLoading(true);
     setCancelError('');
+    onStartDismiss(b.id);
     try {
       await cancelBookingByUser(b.id, cancelReason, cancelComment || undefined);
       setCancelOpen(false);
     } catch {
+      onCancelDismiss(b.id);
       setCancelError(isFR ? 'Erreur lors de l\'annulation.' : 'Ошибка при отмене. Попробуйте ещё раз.');
     } finally {
       setCancelLoading(false);

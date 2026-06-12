@@ -6,6 +6,30 @@ import { PosterPlaceholder } from '../ui/PosterPlaceholder';
 import type { RepertoireItem, Show } from '../../types';
 import styles from './Repertoire.module.scss';
 
+// Show photo if available, fall back to glyph placeholder on error or absence
+function ShowPoster({
+  image, palette, glyph, title, lazy = true,
+}: {
+  image?: string; palette: string; glyph: string; title: string; lazy?: boolean;
+}) {
+  const [err, setErr] = useState(false);
+  if (image && !err) {
+    return (
+      <>
+        <img
+          src={image}
+          alt={title}
+          loading={lazy ? 'lazy' : 'eager'}
+          onError={() => setErr(true)}
+          className={styles.posterImgEl}
+        />
+        <div className={styles.posterImgOverlay} aria-hidden="true" />
+      </>
+    );
+  }
+  return <PosterPlaceholder palette={palette} glyph={glyph} title={title} kind="rep" />;
+}
+
 // ── Repertoire item modal ─────────────────────────────────────────────────────
 
 interface ModalProps {
@@ -45,7 +69,7 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
         <button className={styles.modalClose} onClick={onClose} aria-label="Закрыть">✕</button>
 
         <div className={styles.modalPoster}>
-          <PosterPlaceholder palette={item.palette} glyph={item.glyph} title={title} kind="rep" />
+          <ShowPoster image={item.image} palette={item.palette} glyph={item.glyph} title={title} lazy={false} />
         </div>
 
         <div className={styles.modalInfo}>
@@ -151,7 +175,7 @@ export function Repertoire({ onBook }: Props) {
             type="button"
           >
             <div className={styles.poster}>
-              <PosterPlaceholder palette={item.palette} glyph={item.glyph} title={cardTitle} kind="rep" />
+              <ShowPoster image={item.image} palette={item.palette} glyph={item.glyph} title={cardTitle} />
             </div>
             <div className={styles.meta}>
               <span>{t.showTags[item.tag] ?? item.tag}</span>

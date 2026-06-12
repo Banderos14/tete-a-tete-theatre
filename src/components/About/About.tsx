@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
+import { subscribeToAudienceCount } from '../../services/statsService';
 import styles from './About.module.scss';
 
 const IMAGES = [
@@ -10,7 +12,17 @@ const IMAGES = [
 
 export function About() {
   const { t } = useLang();
+  const [audienceCount, setAudienceCount] = useState<number | null>(null);
+
+  useEffect(() => subscribeToAudienceCount(setAudienceCount), []);
+
   const [metaLine1, metaLine2] = t.about.meta.split('\n');
+
+  const stats = t.about.stats.map((s, i) =>
+    i === 2 && audienceCount !== null
+      ? { ...s, num: audienceCount.toLocaleString('fr-FR') }
+      : s
+  );
 
   return (
     <section className={styles.about} id="about">
@@ -31,7 +43,7 @@ export function About() {
           </div>
 
           <div className={styles.stats}>
-            {t.about.stats.map((s, i) => (
+            {stats.map((s, i) => (
               <div key={i} className={styles.stat}>
                 <div className={styles.statNum}>
                   {s.italic ? <span className={styles.it}>{s.num}</span> : s.num}{s.suffix}
@@ -46,13 +58,17 @@ export function About() {
           {IMAGES.map((img, i) => (
             <div
               key={i}
+              data-card={i}
               className={`${styles.img} ${img.cls === 'tall' ? styles.tall : ''} ${img.cls === 'wide' ? styles.wide : ''}`}
-              style={{ background: img.tone }}
             >
-              <div className={styles.imgGlyph}>{img.glyph}</div>
-              <div className={styles.caption}>
-                <span>{t.about.imageLabels[i]}</span>
-                <span>0{i + 1}</span>
+              <div className={styles.cardInner}>
+                <div className={styles.glyphWrap}>
+                  <span className={styles.cardGlyph}>{img.glyph}</span>
+                </div>
+                <div className={styles.cardFooter}>
+                  <span className={styles.cardLabel}>{t.about.imageLabels[i]}</span>
+                  <span className={styles.cardNumber}>0{i + 1}</span>
+                </div>
               </div>
             </div>
           ))}

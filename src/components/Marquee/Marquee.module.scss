@@ -1,6 +1,6 @@
 @keyframes marqueeSlide {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }
 
 .marquee {
@@ -13,31 +13,37 @@
   border-bottom: 1px solid rgba(0,0,0,0.2);
 }
 
+/*
+  display: inline-flex = ширина трека = ширина контента (не 100% viewport).
+  translateX(-50%) = ровно одна группа → бесшовный цикл.
+*/
 .track {
-  display: flex;
-  gap: 60px;
-  padding: 14px 0;
+  display: inline-flex;
   white-space: nowrap;
+  padding: 14px 0;
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  animation: marqueeSlide 30s linear infinite;
+  animation: marqueeSlide 16s linear infinite;
   will-change: transform;
 
-  span {
-    display: inline-flex;
-    align-items: center;
-    gap: 60px;
-  }
-
-  @media (max-width: 900px) {
-    gap: 36px;
-    padding: 12px 0;
+  @media (max-width: 600px) {
     font-size: 11px;
     letter-spacing: 0.2em;
-    animation-duration: 16s;
+    padding: 11px 0;
+    animation-duration: 10s;
+  }
+}
 
-    span { gap: 36px; }
+.group {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    animation-duration: 0s;
+    animation-iteration-count: 1;
   }
 }
