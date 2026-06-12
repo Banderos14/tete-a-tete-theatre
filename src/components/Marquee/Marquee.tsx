@@ -3,11 +3,12 @@ import styles from './Marquee.module.scss';
 
 export function Marquee() {
   const { t } = useLang();
-  const line = t.marquee.join(' · ');
+  const content = t.marquee.join(' · ') + ' · ';
   return (
     <div className={styles.marquee}>
       <div className={styles.track}>
-        <span>{line} · {line}</span>
+        <span className={styles.group}>{content}</span>
+        <span className={styles.group} aria-hidden="true">{content}</span>
       </div>
     </div>
   );

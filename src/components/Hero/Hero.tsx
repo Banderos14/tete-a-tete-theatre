@@ -24,15 +24,11 @@ export function Hero() {
         <div className={`${styles.beam} ${styles.beamCN1}`} />
         <div className={`${styles.beam} ${styles.beamCN2}`} />
         {/* Left */}
-        <div className={`${styles.beam} ${styles.beamL1}`} />
         <div className={`${styles.beam} ${styles.beamL2}`} />
         <div className={`${styles.beam} ${styles.beamL3}`} />
-        <div className={`${styles.beam} ${styles.beamLX}`} />
         {/* Right */}
-        <div className={`${styles.beam} ${styles.beamR1}`} />
         <div className={`${styles.beam} ${styles.beamR2}`} />
         <div className={`${styles.beam} ${styles.beamR3}`} />
-        <div className={`${styles.beam} ${styles.beamRX}`} />
         {/* Red */}
         <div className={`${styles.beam} ${styles.beamRedL1}`} />
         <div className={`${styles.beam} ${styles.beamRedL2}`} />

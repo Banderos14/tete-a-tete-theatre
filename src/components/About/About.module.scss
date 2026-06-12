@@ -64,7 +64,6 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
-  padding-top: 36px;
   border-top: 1px solid var(--line);
 
   @include mixins.mobile {
@@ -72,8 +71,9 @@
   }
 
   @include mixins.small {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    row-gap: 20px;
   }
 }
 
@@ -91,8 +91,24 @@
   }
 
   @include mixins.small {
-    min-height: 96px;
+    min-height: unset;
+    height: auto;
+    padding: 12px 8px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    display: block;
     text-align: center;
+
+    &:nth-child(1) { order: 2; }
+    &:nth-child(2) { order: 3; }
+    &:nth-child(3) {
+      order: 1;
+      grid-column: 1 / -1;
+      padding-bottom: 20px;
+      margin-bottom: 4px;
+      border-bottom: 0.5px solid rgba(243, 231, 220, 0.12);
+    }
   }
 }
 
@@ -105,6 +121,16 @@
 
   @include mixins.mobile {
     font-size: clamp(38px, 10vw, 50px);
+  }
+
+  @include mixins.small {
+    font-size: clamp(32px, 11vw, 48px);
+  }
+}
+
+.stat:nth-child(3) .statNum {
+  @include mixins.small {
+    font-size: clamp(48px, 16vw, 72px);
   }
 }
 
@@ -142,43 +168,109 @@
   }
 }
 
+// ── Image cards — Live-style visual ──────────────────────────────────────────
+
 .img {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-xs);
+  transition: transform 0.4s ease;
 
   &::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.6) 100%);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.4) 100%);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: scale(0.98);
+
+      .cardGlyph { color: rgba(245, 241, 234, 0.30); }
+    }
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    &:hover { transform: none; }
   }
 }
+
+// Dark-theme card backgrounds — Live palette
+.img[data-card="0"] { background: linear-gradient(135deg, #3a0a0e, #0a0605); }
+.img[data-card="1"] { background: linear-gradient(135deg, #1a141a, #08060a); }
+.img[data-card="2"] { background: linear-gradient(135deg, #2a1a0a, #14080a); }
+.img[data-card="3"] { background: linear-gradient(135deg, #2a0e14, #14060a); }
 
 .tall { grid-row: span 2; }
 .wide { grid-column: span 2; }
 
-.imgGlyph {
+// ── Card inner: flex layout (no absolute for footer) ──────────────────────────
+
+.cardInner {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-  font-size: 80px;
-  color: rgba(245, 241, 234, 0.55);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px;
+  z-index: 2;
 }
 
-.caption {
-  position: absolute;
-  bottom: 10px;
-  left: 12px;
-  right: 12px;
-  @include mixins.mono(9px, 0.16em);
-  text-transform: uppercase;
-  color: rgba(245, 241, 234, 0.85);
-  z-index: 2;
+.glyphWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardGlyph {
+  font-family: var(--font-display);
+  font-size: 54px;
+  color: rgba(245, 241, 234, 0.18);
+  transition: color 0.4s ease;
+  user-select: none;
+  pointer-events: none;
+}
+
+.tall .cardGlyph { font-size: 80px; }
+.wide .cardGlyph { font-size: 64px; }
+
+.cardFooter {
   display: flex;
   justify-content: space-between;
+  align-items: flex-end;
   gap: 8px;
+}
+
+.cardLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 234, 0.75);
   overflow-wrap: anywhere;
+}
+
+.cardNumber {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 234, 0.35);
+  white-space: nowrap;
+}
+
+// ── Light theme ───────────────────────────────────────────────────────────────
+
+:global([data-theme='light']) {
+  .img[data-card="0"] { background: linear-gradient(135deg, #b89098, #9a7280); }
+  .img[data-card="1"] { background: linear-gradient(135deg, #9088a0, #7a7090); }
+  .img[data-card="2"] { background: linear-gradient(135deg, #a09070, #887858); }
+  .img[data-card="3"] { background: linear-gradient(135deg, #aa8890, #927078); }
+
+  .cardGlyph { color: rgba(245, 241, 234, 0.25); }
+
+  .cardLabel  { color: rgba(245, 241, 234, 0.85); }
+  .cardNumber { color: rgba(245, 241, 234, 0.50); }
 }

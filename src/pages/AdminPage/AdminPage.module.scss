@@ -77,8 +77,8 @@
 }
 
 .summaryNum {
-  font-family: var(--font-display);
-  font-size: 36px;
+  font-family: var(--font-mono);
+  font-size: 25px;
   color: var(--fg);
   line-height: 1;
 }
@@ -124,6 +124,15 @@
   display: grid;
   place-items: center;
   font-size: 18px;
+  flex-shrink: 0;
+}
+
+.showCardImg {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-s);
+  object-fit: cover;
+  object-position: center top;
   flex-shrink: 0;
 }
 
@@ -333,7 +342,7 @@
 .actionCancel {
   font-size: 11px;
   padding: 4px 8px;
-  border-radius: 16px;
+  border-radius: var(--radius-xs);
   background: rgba(184, 0, 0, 0.1);
   color: var(--accent-glow);
   border: 1px solid rgba(184, 0, 0, 0.2);

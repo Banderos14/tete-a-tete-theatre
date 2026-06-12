@@ -17,9 +17,10 @@ export function AfishaSlider({ onCardClick }: Props) {
 
   return (
     <div
-      className={`${styles.outer} reveal`}
+      className={`${styles.sliderWrap} reveal`}
       style={{ '--slide-count': total * (COPIES / 2) } as React.CSSProperties}
     >
+      <div className={styles.outer}>
       <div className={styles.track}>
         {CARDS.map((show, i) => {
           const cardIndex = (i % total) + 1;
@@ -78,6 +79,7 @@ export function AfishaSlider({ onCardClick }: Props) {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

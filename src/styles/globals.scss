@@ -87,7 +87,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     gap: 16px;
     margin: 56px auto 48px;
 
-    .meta { text-align: left; }
+    .meta { text-align: right; }
 
     h2 { font-size: clamp(40px, 10vw, 108px); }
   }
@@ -95,7 +95,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   @include mixins.small {
     margin: 44px auto 36px;
 
-    h2 { font-size: clamp(36px, 9.5vw, 108px); }
+    h2 { 
+      font-size: clamp(36px, 9.5vw, 108px);
+      text-align: center;
+    }
   }
 }
 

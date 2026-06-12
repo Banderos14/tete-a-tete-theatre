@@ -345,7 +345,9 @@
   transition: color 0.2s ease;
   flex-shrink: 0;
 
-  &:hover { color: var(--fg); }
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { color: var(--fg); }
+  }
 
   svg { width: 20px; height: 20px; }
 }
@@ -354,118 +356,159 @@
 .mobileNav {
   list-style: none;
   flex: 1;
-  padding: 12px 0;
+  padding: 0;
 
   li {
     border-bottom: 1px solid var(--line);
-
-    &:first-child { border-top: none; }
-    &:last-child { border-bottom: none; }
+    transition: background 0.2s ease;
   }
 
   a, button {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     width: 100%;
-    padding: 18px 24px;
-    font-family: var(--font-display);
-    font-size: 22px;
-    font-weight: 400;
-    letter-spacing: 0.04em;
+    padding: 16px 24px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
     color: var(--fg-dim);
-    text-align: left;
-    text-transform: none;
-    transition: color 0.2s ease, padding-left 0.2s ease;
+    text-transform: uppercase;
+    transition: color 0.15s ease;
 
-    &:hover, &:active {
-      color: var(--fg);
+    @media (hover: hover) and (pointer: fine) {
+      &:hover { color: var(--fg); }
     }
 
-    &:active { color: var(--accent); }
+    @media (hover: none), (pointer: coarse) {
+      &:active {
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        transition: none;
+      }
+    }
   }
 }
 
-// ── Controls: lang + theme ─────────────────────────────────────────────────────
-.menuControls {
+.mobileNavInstagram {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--line);
-  flex-shrink: 0;
+  gap: 10px;
+}
 
-  @include mixins.small {
-    align-items: center;
-    flex-direction: column;
-    padding: 16px 20px;
+.mobileNavInstagramIcon {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.mobileNavItemActive {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+
+  > a, > button {
+    color: var(--accent);
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover { color: var(--accent); }
+    }
   }
+}
+
+// ── Bottom panel (sticky) ─────────────────────────────────────────────────────
+.menuBottom {
+  flex-shrink: 0;
+  border-top: 1px solid var(--line-strong);
+  background: var(--bg-2);
+}
+
+// Row 1: lang pill + theme switch
+.menuControlsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
 }
 
 .menuLangSwitch {
   display: inline-flex;
   flex: 0 0 auto;
-  min-height: 44px;
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.12em;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
   overflow: hidden;
-  width: auto;
   background: var(--bg-3);
 
   button {
-    padding: 8px 13px;
-    min-width: 48px;
+    padding: 8px 14px;
+    min-width: 44px;
+    min-height: 36px;
     color: var(--fg-mute);
     transition: all 0.2s ease;
 
-    &:hover:not(.active) { color: var(--fg); }
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(.active) { color: var(--fg); }
+    }
   }
 }
 
-.menuThemeToggle {
+.menuThemeControl {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  gap: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.menuThemeLabel {
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 10px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--fg-mute);
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  padding: 8px 14px;
-  min-height: 44px;
-  flex: 0 0 auto;
-  transition: color 0.2s ease, border-color 0.2s ease;
+}
 
-  &:hover {
-    color: var(--fg);
-    border-color: var(--fg-mute);
-  }
+.menuThemeSwitch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--radius-s);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
 
-  svg {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-  }
+.menuThemeSwitchActive {
+  background: var(--accent);
+  border-color: var(--accent);
 
-  @include mixins.small {
-    min-width: min(220px, 100%);
+  .menuThemeSwitchKnob {
+    transform: translateX(18px);
+    background: var(--fg);
   }
+}
+
+.menuThemeSwitchKnob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--fg-mute);
+  transition: transform 0.25s ease, background 0.25s ease;
 }
 
 // ── Auth area ──────────────────────────────────────────────────────────────────
 .menuAuth {
-  padding: 16px 24px 32px;
+  padding: 14px 24px max(24px, env(safe-area-inset-bottom));
   flex-shrink: 0;
 
   @include mixins.small {
-    padding: 16px 20px max(28px, env(safe-area-inset-bottom));
+    padding: 14px 20px max(28px, env(safe-area-inset-bottom));
   }
 }
 
@@ -475,27 +518,39 @@
   justify-content: center;
   gap: 10px;
   width: 100%;
-  padding: 14px 20px;
+  padding: 13px 20px;
   min-width: 0;
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #fff;
-  background: var(--accent);
-  border-radius: 6px;
-  transition: opacity 0.2s ease;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-s);
+  transition: background 0.2s ease, opacity 0.2s ease;
   min-height: 48px;
   overflow-wrap: anywhere;
 
-  &:hover { opacity: 0.88; }
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    &:active {
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+      transition: none;
+    }
+  }
 }
 
 .menuAuthAvatar {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
   display: grid;
   place-items: center;
   font-size: 11px;

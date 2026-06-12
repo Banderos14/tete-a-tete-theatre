@@ -179,6 +179,8 @@ export interface T {
     repertoire: string;
     about: string;
     people: string;
+    theme: string;
+    profileBtn: string;
   };
   hero: {
     eyebrow: string;

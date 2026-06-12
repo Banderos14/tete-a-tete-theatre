@@ -8,6 +8,7 @@ const TILES = [
   { kind: '',        glyph: '❧' },
   { kind: '',        glyph: '✺' },
   { kind: '',        glyph: '❋' },
+  { kind: '',        glyph: '❧' },
 ] as const;
 
 interface Props {
