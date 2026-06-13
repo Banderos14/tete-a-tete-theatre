@@ -1,4 +1,5 @@
 import { useLang } from '../../i18n/LangContext';
+import { scrollToSection } from '../../utils/smoothScroll';
 import styles from './Footer.module.scss';
 
 export function Footer() {
@@ -7,7 +8,7 @@ export function Footer() {
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>
-        <a href="#top" className={styles.mark} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+        <a href="#top" className={styles.mark} onClick={(e) => { e.preventDefault(); scrollToSection('top', { offset: 0 }); }}>
           <img src="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" alt="ТЕТ-А-ТЕТ" />
           <span>
             ТЕТ <span className={styles.dot}>·</span> А <span className={styles.dot}>·</span> ТЕТ
@@ -22,7 +23,7 @@ export function Footer() {
 
         <button
           className={styles.backTop}
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onClick={() => scrollToSection('top', { offset: 0 })}
         >
           {t.footer.backTop} <span className="arrow">↑</span>
         </button>

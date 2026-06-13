@@ -21,6 +21,7 @@
 
 .quote {
   font-family: var(--font-display);
+  letter-spacing: 1px;
   font-style: italic;
   font-size: clamp(28px, 3vw, 40px);
   line-height: 1.25;
@@ -114,6 +115,7 @@
 
 .statNum {
   font-family: var(--font-display);
+  letter-spacing: 1px;
   font-size: 56px;
   line-height: 1;
   color: var(--accent-glow);
@@ -226,6 +228,7 @@
 
 .cardGlyph {
   font-family: var(--font-display);
+  letter-spacing: 1px;
   font-size: 54px;
   color: rgba(245, 241, 234, 0.18);
   transition: color 0.4s ease;

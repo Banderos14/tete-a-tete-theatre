@@ -106,12 +106,7 @@
   overflow: hidden;
 
   @include mixins.mobile {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--line);
-    flex-direction: column;
-    overflow: visible;
-    order: 1;
+    display: none;
   }
 }
 
@@ -407,14 +402,19 @@
 
   @include mixins.mobile {
     display: flex;
-    align-items: center;
-    min-height: 70px;
-    padding: 12px 64px 12px 18px;
+    flex-direction: column;
+    padding: 14px 64px 14px 18px;
     border-bottom: 1px solid rgba(243, 231, 220, 0.1);
     background: #4a1414;
     flex-shrink: 0;
     order: 0;
+    gap: 12px;
   }
+}
+
+.mobileHeaderTop {
+  display: flex;
+  align-items: center;
 }
 
 .mobileIdentity {
@@ -742,7 +742,7 @@
 .toggleTrack {
   width: 40px;
   height: 22px;
-  border-radius: 18px;
+  border-radius: var(--radius-xs);
   background: var(--bg-3);
   border: 1px solid var(--line-strong);
   position: relative;
@@ -778,12 +778,7 @@
   gap: 16px;
 
   @include mixins.mobile {
-    padding: 12px 20px max(16px, env(safe-area-inset-bottom));
-    order: 3;
-  }
-
-  @include mixins.small {
-    padding: 10px 16px 14px;
+    display: none;
   }
 }
 
@@ -978,10 +973,13 @@
 .birthdayHint {
   margin-top: 7px;
   font-size: 11px;
-  color: #6e675f;
+  color: var(--accent);
   font-family: var(--font-mono);
   line-height: 1.5;
   padding-left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 // ── Tickets section title ─────────────────────────────────────────────────────
@@ -1465,6 +1463,7 @@
 
 .attendedRowTitle {
   font-family: var(--font-display);
+  letter-spacing: 1px;
   font-style: italic;
   font-size: 16px;
   color: #f3e7dc;
@@ -1680,6 +1679,294 @@
     border-color: var(--line-strong);
   }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+// ── Mobile tab bar ────────────────────────────────────────────────────────────
+
+.mobileTabBar {
+  display: none;
+
+  @include mixins.mobile {
+    display: flex;
+    flex-direction: row;
+    border-bottom: 0.5px solid rgba(243, 231, 220, 0.1);
+    background: var(--bg-2);
+    flex-shrink: 0;
+    order: 1;
+  }
+}
+
+.mobileTab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 4px;
+  min-height: 54px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--fg-mute);
+  border-bottom: 2px solid transparent;
+  transition: color 0.18s ease, border-color 0.18s ease;
+  font-family: var(--font-body);
+
+  svg { flex-shrink: 0; }
+
+  &.mobileTabActive {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+}
+
+// ── Mobile loyalty cards ──────────────────────────────────────────────────────
+
+.mobileLoyaltyGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  // Компенсируем асимметричный padding mobileHeader (18px слева, 64px справа).
+  // Close-button — position:fixed, на этот ряд не попадает вертикально.
+  margin-right: -46px; // -(64px - 18px)
+  justify-content: center;
+}
+
+.mobileLoyaltyCard {
+  background: rgba(243, 231, 220, 0.05);
+  border: 0.5px solid rgba(243, 231, 220, 0.12);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.mobileLoyaltyCount {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 28px;
+  color: var(--accent);
+  line-height: 1;
+  text-align: center;
+}
+
+.mobileLoyaltyLabel {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9c938a;
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.mobileLoyaltyCaption {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9c938a;
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.mobileLoyaltySegments {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin: 2px 0;
+  width: 100%; // без этого при align-items:center на родителе flex-child схлопывается
+}
+
+.mobileLoyaltySegment {
+  flex: 1;
+  height: 6px;
+  border-radius: 2px;
+  background: rgba(243, 231, 220, 0.12);
+  transition: background 0.2s;
+
+  &.mobileLoyaltySegmentFilled {
+    background: var(--accent);
+  }
+}
+
+.mobileLoyaltyRemaining {
+  font-size: 10px;
+  color: #9c938a;
+  font-family: var(--font-mono);
+  line-height: 1.4;
+  text-align: center;
+
+  &.mobileLoyaltyRewardActive {
+    color: var(--accent);
+    font-weight: 600;
+  }
+}
+
+// ── Mobile save / cancel buttons ──────────────────────────────────────────────
+
+.mobileSaveButtons {
+  display: none;
+
+  @include mixins.mobile {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 24px;
+  }
+}
+
+.cancelBtn {
+  padding: 12px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg-mute);
+  background: transparent;
+  font-size: 13px;
+  font-family: var(--font-body);
+  min-height: 44px;
+  transition: border-color 0.2s ease, color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--fg-mute);
+    color: var(--fg);
+  }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.saveBtnMobile {
+  padding: 12px 16px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+
+  &:hover:not(:disabled) { background: var(--accent-bright); }
+  &:disabled { opacity: 0.7; cursor: not-allowed; }
+}
+
+.savedStatusMobile {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--fg-mute);
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.saveBtnSpinner {
+  animation: spin 0.8s linear infinite;
+}
+
+// ── Favorites / Settings empty state ─────────────────────────────────────────
+
+.tabEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.tabEmptyIcon {
+  color: var(--fg-mute);
+  opacity: 0.5;
+}
+
+.tabEmptyText {
+  font-size: 14px;
+  color: var(--fg-mute);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+// ── Contacts subsection inside profile tab (mobile only) ─────────────────────
+
+.contactsSubsection {
+  display: none;
+
+  @include mixins.mobile {
+    display: block;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 0.5px solid rgba(243, 231, 220, 0.10);
+  }
+}
+
+.contactsSubtitle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  margin-bottom: 20px;
+  font-weight: 400;
+}
+
+.phoneInputWrap {
+  position: relative;
+
+  input {
+    padding-right: 44px;
+  }
+}
+
+.phoneInputIcon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-mute);
+  pointer-events: none;
+}
+
+.contactMessengerOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contactMessengerBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  min-height: 48px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--fg-mute);
+  transition: border-color 0.2s ease, color 0.2s ease;
+
+  &.contactMessengerBtnActive {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+// ── Settings tab divider ──────────────────────────────────────────────────────
+
+.settingsDivider {
+  border: none;
+  border-top: 0.5px solid rgba(243, 231, 220, 0.10);
+  margin: 24px 0;
 }
 
 // ── Light theme ───────────────────────────────────────────────────────────────

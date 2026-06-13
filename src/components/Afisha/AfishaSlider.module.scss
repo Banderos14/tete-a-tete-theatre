@@ -213,6 +213,7 @@
 
 .showTitle {
   font-family: var(--font-display);
+  letter-spacing: 1px;
   font-size: clamp(16px, 1.8vw, 20px);
   color: rgba(255, 255, 255, 0.92);
   font-weight: 400;

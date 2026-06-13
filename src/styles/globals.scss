@@ -185,4 +185,19 @@ section {
 
   .arrow { transition: transform 0.35s ease; display: inline-block; }
   &:hover .arrow { transform: translateX(5px); }
+
+  // Touch-устройства: анимация заполнения в 2× медленнее
+  @media (hover: none) and (pointer: coarse) {
+    transition: color 0.8s ease, border-color 0.8s ease;
+
+    &::before {
+      transition: transform 0.96s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    &.btn-primary {
+      transition: background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease;
+    }
+
+    .arrow { transition: transform 0.7s ease; }
+  }
 }
