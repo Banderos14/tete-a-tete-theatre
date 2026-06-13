@@ -24,7 +24,27 @@ function getAdminApp() {
   if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT env var is not set');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return initializeApp({ credential: cert(JSON.parse(raw) as any) });
+  let sa: Record<string, any>;
+  try {
+    sa = JSON.parse(raw);
+  } catch {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON — check for unescaped quotes');
+  }
+
+  // Vercel stores env vars as single-line strings; private_key ends up with literal \n
+  if (typeof sa.private_key === 'string') {
+    sa.private_key = sa.private_key.replace(/\\n/g, '\n');
+  }
+
+  if (!sa.project_id)    throw new Error('FIREBASE_SERVICE_ACCOUNT is missing project_id');
+  if (!sa.client_email)  throw new Error('FIREBASE_SERVICE_ACCOUNT is missing client_email');
+  if (!sa.private_key)   throw new Error('FIREBASE_SERVICE_ACCOUNT is missing private_key');
+
+  try {
+    return initializeApp({ credential: cert(sa) });
+  } catch (e) {
+    throw new Error(`Firebase Admin init failed: ${(e as Error).message}`, { cause: e });
+  }
 }
 
 const ALLOWED_ORIGINS = new Set(
@@ -151,7 +171,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     send(res, 200, { ok: true, userDeleted: true, authDeleted, bookingsDeletedCount }, req);
 
   } catch (err) {
-    console.error('[delete-user] Error:', err);
-    send(res, 500, { error: 'Internal server error' }, req);
+    const message = err instanceof Error ? err.message : String(err);
+    const code    = (err as { code?: string }).code;
+    console.error('[delete-user]', err);
+    send(res, 500, { ok: false, error: message, ...(code ? { code } : {}) }, req);
   }
 }
