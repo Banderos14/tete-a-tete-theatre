@@ -1,14 +1,8 @@
 import { useCallback } from 'react';
 import { LINKS } from '../../constants/links';
 import { useLang } from '../../i18n/LangContext';
+import { scrollToSection } from '../../utils/smoothScroll';
 import styles from './Hero.module.scss';
-
-function scrollToSection(id: string) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const top = el.getBoundingClientRect().top + window.scrollY - 80;
-  window.scrollTo({ top, behavior: 'smooth' });
-}
 
 export function Hero() {
   const { t } = useLang();

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent, type ReactNode } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
-import { IconLock, IconCalendarEvent } from '@tabler/icons-react';
+import { IconLock, IconCalendarEvent, IconUser, IconTicket, IconMasksTheater, IconSettings, IconLoader2, IconGift, IconPhone, IconBrandWhatsapp, IconBrandTelegram } from '@tabler/icons-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from '../../../services/bookingService';
@@ -75,7 +75,7 @@ function validate(displayName: string, birthday: string, phone: string, required
   return errors;
 }
 
-type Section = 'personal' | 'contacts' | 'socials' | 'notifications' | 'tickets' | 'shows';
+type Section = 'personal' | 'contacts' | 'socials' | 'notifications' | 'tickets' | 'shows' | 'favorites' | 'settings';
 const FORM_SECTIONS: Section[] = ['personal', 'contacts', 'socials', 'notifications'];
 
 // Decorative barcode: uniform 16px height, widths vary 1-4px like a real ticket barcode
@@ -96,7 +96,8 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const [displayName, setDisplayName] = useState('');
   const [birthday,    setBirthday]    = useState('');
   const [phone,       setPhone]       = useState('');
-  const [messenger,   setMessenger]   = useState<Messenger>('whatsapp');
+  const [messenger,         setMessenger]         = useState<Messenger>('whatsapp');
+  const [preferredContact,  setPreferredContact]  = useState<string[]>(['whatsapp']);
   const [socialLink,  setSocialLink]  = useState('');
   const [notify,      setNotify]      = useState(true);
 
@@ -120,6 +121,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const [activeSection,    setActiveSection]    = useState<Section>('personal');
   const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
   const [dismissingIds,    setDismissingIds]    = useState<Set<string>>(new Set());
+  const [activeMobileTab, setActiveMobileTab]  = useState<'profile' | 'tickets' | 'favorites' | 'settings'>('profile');
 
   // Синхронизация полей формы из Firestore
   useEffect(() => {
@@ -129,6 +131,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setBirthday(userProfile.birthday ?? '');
     setPhone(userProfile.phone ?? '');
     setMessenger(userProfile.phoneMessenger ?? 'whatsapp');
+    setPreferredContact(userProfile.preferredContact ?? (userProfile.phoneMessenger ? [userProfile.phoneMessenger] : ['whatsapp']));
     const social = userProfile.socialLink ?? '';
     // Старый баг: Facebook access token сохранялся как socialLink — чистим.
     const isBadUrl = social.startsWith('https://facebook.com/EAA');
@@ -225,7 +228,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
       return;
     }
     setSaving(true);
-    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, socialLink, notifications: notify });
+    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, notifications: notify });
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
@@ -260,6 +263,52 @@ export function ProfileDrawer({ open, onClose }: Props) {
     await logout();
   }
 
+  function handleResetForm() {
+    setDisplayName(userProfile?.displayName || user?.displayName || '');
+    setBirthday(userProfile?.birthday ?? '');
+    setPhone(userProfile?.phone ?? '');
+    setMessenger(userProfile?.phoneMessenger ?? 'whatsapp');
+    setPreferredContact(userProfile?.preferredContact ?? (userProfile?.phoneMessenger ? [userProfile.phoneMessenger] : ['whatsapp']));
+    const social = userProfile?.socialLink ?? '';
+    setSocialLink(social.startsWith('https://facebook.com/EAA') ? '' : social);
+    setNotify(userProfile?.notifications ?? true);
+    setIsDirty(false);
+    setErrors({});
+    setSubmitted(false);
+  }
+
+  async function handleMobileProfileSave() {
+    setSubmitted(true);
+    const errs: ValidationErrors = {};
+    if (!displayName.trim()) errs.displayName = t.profile.required;
+    if (!birthday)           errs.birthday    = t.profile.required;
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    setSaving(true);
+    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, notifications: notify });
+    setSaving(false);
+    setSavedMsg(true);
+    setIsDirty(false);
+    setTimeout(() => setSavedMsg(false), 4000);
+  }
+
+  async function handleMobileSettingsSave() {
+    setSaving(true);
+    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, notifications: notify });
+    setSaving(false);
+    setSavedMsg(true);
+    setIsDirty(false);
+    setTimeout(() => setSavedMsg(false), 4000);
+  }
+
+  function setMobileTab(tab: 'profile' | 'tickets' | 'favorites' | 'settings') {
+    setActiveMobileTab(tab);
+    if (tab === 'profile')   setActiveSection('personal');
+    if (tab === 'tickets')   setActiveSection('tickets');
+    if (tab === 'favorites') setActiveSection('favorites');
+    if (tab === 'settings')  setActiveSection('settings');
+  }
+
   const headerName       = displayName || user?.displayName || userProfile?.displayName || '';
   const email            = user?.email ?? userProfile?.email ?? '';
   const photoURL         = user?.photoURL ?? null;
@@ -279,6 +328,11 @@ export function ProfileDrawer({ open, onClose }: Props) {
     ? new Date(user.metadata.creationTime).getFullYear()
     : null;
   const isGoogleProvider = user?.providerData?.some(p => p.providerId === 'google.com') ?? false;
+
+  const attended      = getUserAttendedCount(bookings);
+  const filled        = cycleProgress(bookings);
+  const isRewardAvail = hasAvailableLoyaltyReward(bookings);
+  const remaining     = isRewardAvail ? 0 : 5 - filled;
 
   const navItems: { id: Section; label: string; badge?: number }[] = [
     { id: 'personal',      label: t.profile.sectionPersonal      },
@@ -413,16 +467,52 @@ export function ProfileDrawer({ open, onClose }: Props) {
         {/* ── Main content ──────────────────────────────────────────────────── */}
         <div className={styles.mainContent}>
           <div className={styles.mobileHeader}>
-            <div className={styles.mobileIdentity}>
-              <div className={styles.mobileAvatar}>
-                {photoURL
-                  ? <img src={photoURL} alt={headerName} referrerPolicy="no-referrer" />
-                  : <span>{getInitials(headerName)}</span>
-                }
+            <div className={styles.mobileHeaderTop}>
+              <div className={styles.mobileIdentity}>
+                <div className={styles.mobileAvatar}>
+                  {photoURL
+                    ? <img src={photoURL} alt={headerName} referrerPolicy="no-referrer" />
+                    : <span>{getInitials(headerName)}</span>
+                  }
+                </div>
+                <div className={styles.mobileIdentityText}>
+                  <p className={styles.mobileName}>{headerName || '—'}</p>
+                  <p className={styles.mobileEmail}>{email}</p>
+                </div>
               </div>
-              <div className={styles.mobileIdentityText}>
-                <p className={styles.mobileName}>{headerName || '—'}</p>
-                <p className={styles.mobileEmail}>{email}</p>
+            </div>
+            <div className={styles.mobileLoyaltyGrid}>
+              <div className={styles.mobileLoyaltyCard}>
+                <span className={styles.mobileLoyaltyCount}>{attended}</span>
+                <span className={styles.mobileLoyaltyLabel}>
+                  {lang === 'FR' ? 'spectacles' : 'посещений'}
+                </span>
+              </div>
+              <div className={styles.mobileLoyaltyCard}>
+                <span className={styles.mobileLoyaltyCaption}>
+                  {lang === 'FR' ? 'avant −50%' : 'до скидки 50%'}
+                </span>
+                <div
+                  className={styles.mobileLoyaltySegments}
+                  role="img"
+                  aria-label={lang === 'FR'
+                    ? `Fidélité : ${filled} sur 5`
+                    : `Лояльность: ${filled} из 5`}
+                >
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div
+                      key={i}
+                      className={`${styles.mobileLoyaltySegment} ${i < filled ? styles.mobileLoyaltySegmentFilled : ''}`}
+                    />
+                  ))}
+                </div>
+                <span className={`${styles.mobileLoyaltyRemaining} ${isRewardAvail ? styles.mobileLoyaltyRewardActive : ''}`}>
+                  {isRewardAvail
+                    ? (lang === 'FR' ? 'Remise −50% active !' : 'Скидка 50% активна!')
+                    : (lang === 'FR'
+                        ? `encore ${remaining} visite${remaining !== 1 ? 's' : ''}`
+                        : `ещё ${remaining} визитов`)}
+                </span>
               </div>
             </div>
           </div>
@@ -438,6 +528,42 @@ export function ProfileDrawer({ open, onClose }: Props) {
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>
           </button>
+
+          {/* Mobile tab bar — hidden on desktop */}
+          <nav className={styles.mobileTabBar} aria-label={lang === 'FR' ? 'Navigation' : 'Навигация'}>
+            <button
+              type="button"
+              className={`${styles.mobileTab} ${activeMobileTab === 'profile' ? styles.mobileTabActive : ''}`}
+              onClick={() => setMobileTab('profile')}
+            >
+              <IconUser size={20} stroke={1.5} />
+              <span>{lang === 'FR' ? 'Profil' : 'Профиль'}</span>
+            </button>
+            <button
+              type="button"
+              className={`${styles.mobileTab} ${activeMobileTab === 'tickets' ? styles.mobileTabActive : ''}`}
+              onClick={() => setMobileTab('tickets')}
+            >
+              <IconTicket size={20} stroke={1.5} />
+              <span>{lang === 'FR' ? 'Billets' : 'Билеты'}</span>
+            </button>
+            <button
+              type="button"
+              className={`${styles.mobileTab} ${activeMobileTab === 'favorites' ? styles.mobileTabActive : ''}`}
+              onClick={() => setMobileTab('favorites')}
+            >
+              <IconMasksTheater size={20} stroke={1.5} />
+              <span>{lang === 'FR' ? 'Spectacles' : 'Спектакли'}</span>
+            </button>
+            <button
+              type="button"
+              className={`${styles.mobileTab} ${activeMobileTab === 'settings' ? styles.mobileTabActive : ''}`}
+              onClick={() => setMobileTab('settings')}
+            >
+              <IconSettings size={20} stroke={1.5} />
+              <span>{lang === 'FR' ? 'Réglages' : 'Настройки'}</span>
+            </button>
+          </nav>
 
           {/* Scrollable content area */}
           <div className={styles.contentScroll}>
@@ -516,11 +642,89 @@ export function ProfileDrawer({ open, onClose }: Props) {
                     </div>
                   )}
                   <p className={styles.birthdayHint}>
+                    <IconGift size={12} stroke={1.5} />
                     {lang === 'FR'
-                      ? 'Le jour de votre anniversaire — une surprise du théâtre'
-                      : 'В день рождения — сюрприз от театра'}
+                      ? ' Le jour de votre anniversaire — une surprise du théâtre'
+                      : ' В день рождения — сюрприз от театра'}
                   </p>
                 </PersonalField>
+
+                {/* Contacts subsection — mobile profile tab only */}
+                <div className={styles.contactsSubsection}>
+                  <h3 className={styles.contactsSubtitle}>
+                    {lang === 'FR' ? 'Contacts' : 'Контакты'}
+                  </h3>
+
+                  <PersonalField label={lang === 'FR' ? 'Téléphone' : 'Телефон'} error={errors.phone}>
+                    <div className={styles.phoneInputWrap}>
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        value={phone}
+                        onChange={e => { setPhone(formatPhone(e.target.value)); markDirty(); }}
+                        placeholder="+33 6 00 00 00 00"
+                        autoComplete="tel"
+                        className={`${styles.personalInput} ${errors.phone ? styles.personalInputError : ''}`}
+                      />
+                      <IconPhone size={16} stroke={1.5} className={styles.phoneInputIcon} />
+                    </div>
+                  </PersonalField>
+
+                  <div className={styles.personalFieldWrap}>
+                    <div className={styles.personalFieldLabel}>
+                      <span className={styles.personalFieldLabelText}>
+                        {lang === 'FR' ? 'Via' : 'Связь через'}
+                      </span>
+                    </div>
+                    <div className={styles.contactMessengerOptions}>
+                      {(['whatsapp', 'telegram'] as const).map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          className={`${styles.contactMessengerBtn} ${preferredContact.includes(m) ? styles.contactMessengerBtnActive : ''}`}
+                          onClick={() => {
+                            setPreferredContact(prev =>
+                              prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]
+                            );
+                            markDirty();
+                          }}
+                        >
+                          {m === 'whatsapp'
+                            ? <IconBrandWhatsapp size={16} stroke={1.5} />
+                            : <IconBrandTelegram size={16} stroke={1.5} />}
+                          {m === 'whatsapp' ? 'WhatsApp' : 'Telegram'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile-only save/cancel buttons — desktop uses the sticky saveRow below */}
+                <div className={styles.mobileSaveButtons}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={handleResetForm}
+                    disabled={saving}
+                  >
+                    {lang === 'FR' ? 'Annuler' : 'Отмена'}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.saveBtnMobile}
+                    onClick={handleMobileProfileSave}
+                    disabled={saving}
+                  >
+                    {saving
+                      ? <IconLoader2 size={15} stroke={1.5} className={styles.saveBtnSpinner} />
+                      : t.profile.save}
+                  </button>
+                  {savedMsg && (
+                    <span className={styles.savedStatusMobile}>
+                      {lang === 'FR' ? 'Enregistré' : 'Сохранено'}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
@@ -650,6 +854,99 @@ export function ProfileDrawer({ open, onClose }: Props) {
                     })}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── СПЕКТАКЛИ (mobile favorites tab) ── */}
+            {activeSection === 'favorites' && (
+              <div className={styles.section}>
+                <h2 className={styles.ticketsTitle}>
+                  {lang === 'FR' ? 'Mes spectacles' : 'Мои спектакли'}
+                </h2>
+                <VisitCounter bookings={bookings} t={t} />
+                {historyLoading ? (
+                  <div className={styles.skeletonList}>
+                    <div className={`${styles.skeleton} ${styles.skeletonTicket}`} />
+                  </div>
+                ) : attendedBookings.length === 0 ? (
+                  <p className={styles.emptyText}>
+                    {lang === 'FR' ? 'Aucun spectacle visité pour le moment.' : 'Вы ещё не посетили ни одного спектакля.'}
+                  </p>
+                ) : (
+                  <div className={styles.attendedList}>
+                    {groupAttendedBookings(attendedBookings).map((group, idx) => (
+                      <AttendedRow
+                        key={group.showId}
+                        group={group}
+                        stampAngle={STAMP_ANGLES[idx % STAMP_ANGLES.length]}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── НАСТРОЙКИ ── */}
+            {activeSection === 'settings' && (
+              <div className={styles.section}>
+
+                {/* Соцсети */}
+                <h2 className={styles.sectionTitle}>{t.profile.sectionSocials}</h2>
+                <button
+                  type="button"
+                  className={`${styles.fbBtn} ${fbLinked ? styles.fbConnected : ''}`}
+                  onClick={handleLinkFacebook}
+                  disabled={fbLoading || fbLinked}
+                >
+                  <FacebookIcon size={16} />
+                  {fbLoading ? '…' : fbLinked ? t.profile.facebookConnected : t.profile.connectFacebook}
+                </button>
+                {fbError && <p className={styles.fieldError}>{fbError}</p>}
+                <Field label={t.profile.socialLink} style={{ marginTop: 16 }}>
+                  <input
+                    type="url"
+                    value={socialLink}
+                    onChange={e => { setSocialLink(e.target.value); markDirty(); }}
+                    placeholder={t.profile.socialLinkPlaceholder}
+                  />
+                </Field>
+
+                <div className={styles.settingsDivider} />
+
+                {/* Уведомления */}
+                <h2 className={styles.sectionTitle}>{t.profile.sectionNotifications}</h2>
+                <Toggle
+                  label={t.profile.notifyShows}
+                  checked={notify}
+                  onChange={v => { setNotify(v); markDirty(); }}
+                />
+
+                <div className={styles.mobileSaveButtons}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={handleResetForm}
+                    disabled={saving}
+                  >
+                    {lang === 'FR' ? 'Annuler' : 'Отмена'}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.saveBtnMobile}
+                    onClick={handleMobileSettingsSave}
+                    disabled={saving}
+                  >
+                    {saving
+                      ? <IconLoader2 size={15} stroke={1.5} className={styles.saveBtnSpinner} />
+                      : t.profile.save}
+                  </button>
+                  {savedMsg && (
+                    <span className={styles.savedStatusMobile}>
+                      {lang === 'FR' ? 'Enregistré' : 'Сохранено'}
+                    </span>
+                  )}
+                </div>
+
               </div>
             )}
 

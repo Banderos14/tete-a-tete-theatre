@@ -29,8 +29,9 @@ export interface UserProfile {
   email:           string;
   phone:           string;
   phoneVerified?:  boolean;
-  phoneMessenger?: Messenger;
-  birthday?:       string;       // 'YYYY-MM-DD'
+  phoneMessenger?:   Messenger;
+  preferredContact?: string[];   // multiselect: ['whatsapp', 'telegram']
+  birthday?:         string;     // 'YYYY-MM-DD'
   birthdayFromFb?: boolean;
   socialLink:      string;
   facebookLinked?: boolean;

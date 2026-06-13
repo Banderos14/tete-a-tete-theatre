@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useScrollLock } from '../../hooks/useScrollLock';
 import { createPortal } from 'react-dom';
 import { REPERTOIRE, SHOWS } from '../../data/shows';
 import { useLang } from '../../i18n/LangContext';
@@ -55,10 +56,7 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
+  useScrollLock(true);
 
   return createPortal(
     <div
@@ -158,6 +156,14 @@ export function Repertoire({ onBook }: Props) {
         {REPERTOIRE.map((item) => {
           const cardTitle  = lang === 'FR' ? (item.titleFR  ?? item.title)  : item.title;
           const cardAuthor = lang === 'FR' ? (item.authorFR ?? item.author) : item.author;
+          const cardTag    = t.showTags[item.tag] ?? item.tag;
+          const linkedShow = item.status === 'active'
+            ? SHOWS.find(s => s.id === item.id) ?? null
+            : null;
+          const linkedPrice = linkedShow
+            ? (lang === 'FR' ? (linkedShow.priceFR ?? linkedShow.price) : linkedShow.price)
+            : null;
+          const linkedDate = linkedShow?.date ?? null;
           return (
           <button
             key={item.id}
@@ -170,15 +176,22 @@ export function Repertoire({ onBook }: Props) {
               'reveal',
               allForceVisible ? 'visible' : '',
               highlightedId === item.id ? styles.highlighted : '',
+              item.status === 'past' ? styles.pastItem : '',
             ].filter(Boolean).join(' ')}
             onClick={() => setSelected(item)}
             type="button"
           >
             <div className={styles.poster}>
               <ShowPoster image={item.image} palette={item.palette} glyph={item.glyph} title={cardTitle} />
+              <span className={[
+                styles.mobilePosterAge,
+                item.status !== 'active' ? styles.mobilePosterAgePast : '',
+              ].filter(Boolean).join(' ')}>
+                {item.age}
+              </span>
             </div>
             <div className={styles.meta}>
-              <span>{t.showTags[item.tag] ?? item.tag}</span>
+              <span>{cardTag}</span>
               <span>{item.age}</span>
             </div>
             <div className={styles.title}>{cardTitle}</div>
@@ -192,6 +205,20 @@ export function Repertoire({ onBook }: Props) {
 
             <div className={styles.arrow}>
               {t.repertoire.more} <span className="arrow">→</span>
+            </div>
+
+            {/* мобильный блок — скрыт на десктопе */}
+            <div className={styles.mobileInfo}>
+              <div className={styles.mobileGenre}>{cardTag}</div>
+              <div className={styles.mobileTitle}>{cardTitle}</div>
+              <div className={styles.mobileFooter}>
+                <span className={styles.mobileDate}>
+                  {linkedDate ?? (lang === 'FR' ? 'bientôt' : 'скоро')}
+                </span>
+                {linkedPrice && (
+                  <span className={styles.mobilePrice}>{linkedPrice}</span>
+                )}
+              </div>
             </div>
           </button>
           );

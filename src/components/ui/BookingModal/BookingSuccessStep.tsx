@@ -98,14 +98,14 @@ export function BookingSuccessStep({
         {payment === 'on_site' ? (
           <p className={styles.successText}>
             {lang === 'FR'
-              ? 'Votre réservation est bien reçue. Le paiement se fera sur place avant le spectacle.'
-              : 'Бронирование принято. Оплата будет произведена на месте перед спектаклем.'}
+              ? 'Votre réservation est bien reçue. Les détails de votre réservation ont été envoyés par e-mail. Le paiement se fera sur place avant le spectacle.'
+              : 'Бронирование принято. Детали бронирования отправлены на вашу почту. Оплата будет произведена на месте перед спектаклем.'}
           </p>
         ) : (
           <p className={styles.successText}>
             {lang === 'FR'
-              ? 'Votre réservation est bien reçue. Les coordonnées bancaires pour le virement ont été envoyées par e-mail. Veuillez indiquer le code de réservation dans le libellé du virement.'
-              : 'Бронирование принято. Реквизиты для банковского перевода отправлены на вашу почту. Пожалуйста, укажите код брони в назначении платежа.'}
+              ? 'Votre réservation est bien reçue. Les coordonnées bancaires et le code de réservation ont été envoyés par e-mail.'
+              : 'Бронирование принято. Реквизиты для оплаты и код брони отправлены на вашу почту.'}
           </p>
         )}
 

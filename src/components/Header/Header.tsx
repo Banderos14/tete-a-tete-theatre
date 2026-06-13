@@ -5,14 +5,8 @@ import { useLang } from '../../i18n/LangContext';
 import { useAuth } from '../../context/AuthContext';
 import { LINKS } from '../../constants/links';
 import type { Lang } from '../../i18n/translations';
+import { scrollToSection } from '../../utils/smoothScroll';
 import styles from './Header.module.scss';
-
-function scrollToSection(id: string) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const top = el.getBoundingClientRect().top + window.scrollY - 80;
-  window.scrollTo({ top, behavior: 'smooth' });
-}
 
 type Theme = 'dark' | 'light';
 
@@ -82,7 +76,9 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
 
   function handleNavClick(id: string) {
     closeMenu();
-    setTimeout(() => scrollToSection(id), 150);
+    // 220 ms lets iOS Safari finish releasing the scroll lock and restoring
+    // layout before the animation starts — prevents a layout-induced jerk.
+    setTimeout(() => scrollToSection(id), 220);
   }
 
   const navLinks = [

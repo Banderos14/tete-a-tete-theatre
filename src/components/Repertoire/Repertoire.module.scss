@@ -34,7 +34,6 @@
   }
 
   @include mixins.tablet { grid-template-columns: repeat(2, 1fr); }
-  @include mixins.small  { grid-template-columns: 1fr; }
 }
 
 .item {
@@ -171,6 +170,7 @@
 
 .title {
   font-family: var(--font-display);
+  letter-spacing: 1px;
   font-size: 22px;
   font-weight: 500;
   line-height: 1.1;
@@ -212,6 +212,8 @@
   display: grid;
   place-items: center;
   padding: 24px;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .modalPanel {
@@ -223,6 +225,9 @@
   max-width: 560px;
   max-height: 90vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: auto;
   display: grid;
   grid-template-columns: 180px 1fr;
   gap: 0;
@@ -305,6 +310,7 @@
 
 .modalTitle {
   font-family: var(--font-display);
+  letter-spacing: 1px;
   font-size: clamp(18px, 2.5vw, 26px);
   font-weight: 500;
   line-height: 1.1;
@@ -356,4 +362,130 @@
   transition: opacity 0.2s ease;
 
   &:hover { opacity: 0.85; }
+}
+
+// ── Мобильные элементы (скрыты на десктопе) ─────────────────────────────────
+.mobilePosterAge,
+.mobileInfo {
+  display: none;
+}
+
+// ── Мобильная сетка 2×N (max-width: 900px) ──────────────────────────────────
+@include mixins.mobile {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
+
+    &::before { display: none; }
+  }
+
+  .item {
+    padding: 0;
+    gap: 0;
+    min-height: unset;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+
+    .meta,
+    .title,
+    .author,
+    .activeBadge,
+    .pastBadge,
+    .arrow {
+      display: none;
+    }
+
+    &.pastItem {
+      opacity: 0.55;
+    }
+  }
+
+  .poster {
+    aspect-ratio: unset;
+    height: 110px;
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+
+  .mobilePosterAge {
+    display: block;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--accent);
+    border-radius: var(--radius-xxs);
+    padding: 2px 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.4;
+    color: #fff;
+    z-index: 2;
+
+    &.mobilePosterAgePast {
+      background: transparent;
+      border: 1px solid var(--line-strong);
+      color: var(--fg-mute);
+    }
+  }
+
+  .mobileInfo {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    flex: 1;
+  }
+
+  .mobileGenre {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+
+  .mobileTitle {
+    font-family: var(--font-display);
+    letter-spacing: 1;
+    font-size: 12px;
+    color: var(--fg);
+    font-weight: 500;
+    line-height: 1.25;
+    margin-bottom: 5px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  .mobileFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px;
+    margin-top: auto;
+  }
+
+  .mobileDate {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--fg-mute);
+  }
+
+  .mobilePrice {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #fff;
+    background: var(--accent);
+    border-radius: 5px;
+    padding: 3px 7px;
+    white-space: nowrap;
+  }
 }
