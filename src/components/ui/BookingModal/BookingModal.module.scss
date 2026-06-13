@@ -895,6 +895,7 @@
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    touch-action: pan-y;
   }
 }
 
@@ -906,7 +907,16 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 
-  @include mixins.mobile { padding: 24px 20px max(24px, env(safe-area-inset-bottom)); }
+  @include mixins.mobile {
+    // successWrap handles all scrolling on mobile — no nested scroll container
+    overflow-y: visible;
+    overflow-x: visible;
+    padding: 20px 20px max(20px, env(safe-area-inset-bottom));
+  }
+
+  @include mixins.small {
+    padding: 16px 18px max(16px, env(safe-area-inset-bottom));
+  }
 }
 
 .successTitle {
@@ -917,6 +927,11 @@
   margin-bottom: 20px;
   line-height: 1.1;
   max-width: 280px;
+
+  @include mixins.small {
+    font-size: 22px;
+    margin-bottom: 14px;
+  }
 }
 
 .successText {
@@ -1022,8 +1037,13 @@
   @include mixins.mobile {
     flex-direction: row;
     align-items: center;
-    padding: 18px 20px;
-    min-height: 100px;
+    padding: 14px 18px;
+    min-height: 80px;
+  }
+
+  @include mixins.small {
+    padding: 12px 16px;
+    min-height: 72px;
   }
 }
 
@@ -1288,12 +1308,22 @@
     position: static;
     transform: rotate(3deg);
     align-self: flex-start;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
+  }
+
+  @include mixins.small {
+    margin-bottom: 6px;
+    font-size: 10px;
+    padding: 3px 9px;
   }
 }
 
 .successSummary {
   margin-bottom: 20px;
+
+  @include mixins.small {
+    margin-bottom: 12px;
+  }
 }
 
 .summaryRow {
