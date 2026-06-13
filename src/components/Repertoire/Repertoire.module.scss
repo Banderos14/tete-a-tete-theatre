@@ -53,18 +53,24 @@
   outline-offset: -2px;
   z-index: 1;
 
-  &:hover {
-    background: var(--bg-2);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: var(--bg-2);
 
-    .poster :global(.placeholder),
-    .poster .posterImgEl {
-      transform: scale(1.05);
-    }
+      .poster :global(.placeholder),
+      .poster .posterImgEl {
+        transform: scale(1.05);
+      }
 
-    .arrow {
-      color: var(--accent);
-      :global(.arrow) { transform: translateX(4px); }
+      .arrow {
+        color: var(--accent);
+        :global(.arrow) { transform: translateX(4px); }
+      }
     }
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    transition: none;
   }
 
   &.highlighted {
@@ -112,6 +118,10 @@
     background-size: cover;
     background-position: center;
     transition: transform 0.6s ease;
+
+    @media (hover: none), (pointer: coarse) {
+      transition: none;
+    }
   }
 }
 
@@ -125,6 +135,10 @@
   display: block;
   transition: transform 0.6s ease;
   filter: brightness(0.85) contrast(0.95) saturate(0.93);
+
+  @media (hover: none), (pointer: coarse) {
+    transition: none;
+  }
 }
 
 .posterImgOverlay {
@@ -181,6 +195,10 @@
   padding-top: 16px;
   border-top: 1px solid var(--line);
   transition: color 0.25s ease;
+
+  @media (hover: none), (pointer: coarse) {
+    transition: none;
+  }
 }
 
 // ── Repertoire modal ─────────────────────────────────────────────────────────

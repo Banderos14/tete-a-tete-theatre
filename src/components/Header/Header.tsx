@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useScrollLock } from '../../hooks/useScrollLock';
 import { IconChevronRight, IconExternalLink, IconUser } from '@tabler/icons-react';
 import { useLang } from '../../i18n/LangContext';
 import { useAuth } from '../../context/AuthContext';
@@ -52,11 +53,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
     return () => window.removeEventListener('scroll', handler);
   }, [menuOpen]);
 
-  // Lock body scroll when menu is open
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [menuOpen]);
+  useScrollLock(menuOpen);
 
   // Track active section for nav highlight.
   // Uses a Set so that when a section leaves the viewport (isIntersecting=false)

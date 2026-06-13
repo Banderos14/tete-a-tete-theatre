@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { useScrollLock } from '../../../hooks/useScrollLock';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
@@ -141,11 +142,7 @@ export function BookingModal({ show, onClose }: Props) {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (show) document.body.style.overflow = 'hidden';
-    else      document.body.style.overflow = '';
-    return () => { document.body.style.overflow = ''; };
-  }, [show]);
+  useScrollLock(!!show);
 
   if (!show) return null;
 

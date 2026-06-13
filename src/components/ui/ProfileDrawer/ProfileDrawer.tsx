@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent, type ReactNode } from 'react';
+import { useScrollLock } from '../../../hooks/useScrollLock';
 import { IconLock, IconCalendarEvent } from '@tabler/icons-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
@@ -139,10 +140,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setSubmitted(false);
   }, [userProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  useScrollLock(open);
 
   // Realtime-подписка на брони пользователя
   useEffect(() => {

@@ -1,3 +1,5 @@
+// точка сборки
+
 export type { Lang, T, Stat } from './types';
 export { RU } from './ru';
 export { FR } from './fr';

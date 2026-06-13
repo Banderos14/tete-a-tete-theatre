@@ -16,6 +16,7 @@
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
+    "pdfjs-dist": "^5.6.205",
     "qrcode": "^1.5.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

@@ -126,6 +126,13 @@
   gap: 16px;
   margin-top: 32px;
   flex-wrap: wrap;
+
+  @include mixins.small {
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 28px;
+    flex-wrap: nowrap;
+  }
 }
 
 .btnRoute {
@@ -164,6 +171,10 @@
   @include mixins.mobile {
     gap: 12px;
   }
+
+  @include mixins.small {
+    justify-content: center;
+  }
 }
 
 .socialIcon {
@@ -174,6 +185,17 @@
 
   @media (hover: hover) and (pointer: fine) {
     &:hover { color: #f3e7dc; }
+  }
+
+  @include mixins.small {
+    width: 48px;
+    height: 48px;
+    justify-content: center;
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
   }
 }
 

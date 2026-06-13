@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react';
 import { TEAM } from '../../data/team';
 import { useLang } from '../../i18n/LangContext';
 import type { TeamMember, TeamGroup } from '../../types';
@@ -18,15 +19,39 @@ function getInitials(name: string): string {
 interface PersonCardProps {
   person: TeamMember;
   index: number;
+  isActive?: boolean;
+  onActivate?: (id: string) => void;
 }
 
-function PersonCard({ person, index }: PersonCardProps) {
+function PersonCard({ person, index, isActive = false, onActivate }: PersonCardProps) {
   const { lang, t } = useLang();
   const displayName = lang === 'FR' ? (person.nameFR ?? person.name) : person.name;
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+
+  function handlePointerDown(e: React.PointerEvent) {
+    pointerStart.current = { x: e.clientX, y: e.clientY };
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    if (!pointerStart.current || !onActivate) return;
+    const dx = Math.abs(e.clientX - pointerStart.current.x);
+    const dy = Math.abs(e.clientY - pointerStart.current.y);
+    pointerStart.current = null;
+    if (dx > 10 || dy > 10) return;
+    onActivate(person.name);
+  }
+
+  function handlePointerCancel() {
+    pointerStart.current = null;
+  }
+
   return (
+    <div className="reveal" style={{ transitionDelay: `${(index % 4) * 60}ms` }}>
     <div
-      className={`${styles.person} reveal`}
-      style={{ transitionDelay: `${(index % 4) * 60}ms` }}
+      className={`${styles.person}${isActive ? ' ' + styles.active : ''}`}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
     >
       <div className={styles.photo}>
         <div className={styles.photoInner} style={{ background: person.tone }}>
@@ -45,11 +70,32 @@ function PersonCard({ person, index }: PersonCardProps) {
       <div className={styles.name}>{displayName}</div>
       <div className={styles.role}>{t.team.roles[person.role] ?? person.role}</div>
     </div>
+    </div>
   );
 }
 
 export function Team() {
   const { lang, t } = useLang();
+  const [activePersonId, setActivePersonId] = useState<string | null>(null);
+  const autoResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleActivate(id: string) {
+    if (autoResetTimer.current) {
+      clearTimeout(autoResetTimer.current);
+      autoResetTimer.current = null;
+    }
+
+    if (activePersonId === id) {
+      setActivePersonId(null);
+      return;
+    }
+
+    setActivePersonId(id);
+    autoResetTimer.current = setTimeout(() => {
+      setActivePersonId(null);
+      autoResetTimer.current = null;
+    }, 1500);
+  }
 
   const grouped = GROUP_ORDER.map(group => ({
     group,
@@ -71,7 +117,13 @@ export function Team() {
             <div className={`${styles.groupLabel} reveal`}>{label}</div>
             <div className={styles.grid}>
               {members.map((person, i) => (
-                <PersonCard key={person.name} person={person} index={i} />
+                <PersonCard
+                  key={person.name}
+                  person={person}
+                  index={i}
+                  isActive={activePersonId === person.name}
+                  onActivate={handleActivate}
+                />
               ))}
             </div>
           </div>

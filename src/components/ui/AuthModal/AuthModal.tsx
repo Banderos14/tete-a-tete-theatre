@@ -1,4 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
+import { useScrollLock } from '../../../hooks/useScrollLock';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { mapAuthError, isEmailInUseError, isPopupClosedError } from '../../../utils/authErrors';
@@ -33,12 +34,7 @@ export function AuthModal({ open, onClose }: Props) {
     }
   }, [open]);
 
-  // Lock body scroll when open
-  useEffect(() => {
-    if (open) document.body.style.overflow = 'hidden';
-    else       document.body.style.overflow = '';
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  useScrollLock(open);
 
   function resetForm() {
     setError(''); setInfo('');

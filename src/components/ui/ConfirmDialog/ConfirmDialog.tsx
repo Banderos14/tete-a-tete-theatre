@@ -1,3 +1,4 @@
+import { useScrollLock } from '../../../hooks/useScrollLock';
 import styles from './ConfirmDialog.module.scss';
 
 interface ConfirmDialogProps {
@@ -21,6 +22,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  useScrollLock(isOpen);
   if (!isOpen) return null;
 
   return (

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useScrollLock } from '../../../hooks/useScrollLock';
 import { createPortal } from 'react-dom';
 import { useLang } from '../../../i18n/LangContext';
 import type { Show } from '../../../types';
@@ -63,12 +64,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
     });
   }, [allPhotos.length]);
 
-  // Lock scroll
-  useEffect(() => {
-    if (!show) return;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, [show]);
+  useScrollLock(!!show);
 
   // Keyboard: ESC + arrow keys
   useEffect(() => {
