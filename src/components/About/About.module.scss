@@ -189,7 +189,6 @@
     &:hover {
       transform: scale(0.98);
 
-      .cardGlyph { color: rgba(245, 241, 234, 0.30); }
     }
   }
 
@@ -199,13 +198,47 @@
 }
 
 // Dark-theme card backgrounds — Live palette
+// card 0: gradient stays as fallback when video fails to load
 .img[data-card="0"] { background: linear-gradient(135deg, #3a0a0e, #0a0605); }
-.img[data-card="1"] { background: linear-gradient(135deg, #1a141a, #08060a); }
+.img[data-card="1"] {
+  background: linear-gradient(135deg, #1a141a, #08060a);
+  background-image: url('/images/about/zal.webp');
+  background-size: cover;
+  background-position: center;
+}
 .img[data-card="2"] { background: linear-gradient(135deg, #2a1a0a, #14080a); }
 .img[data-card="3"] { background: linear-gradient(135deg, #2a0e14, #14060a); }
 
+// suppress diagonal ::after when video card is present — videoOverlay replaces it
+.img[data-card="0"]::after { display: none; }
+
 .tall { grid-row: span 2; }
 .wide { grid-column: span 2; }
+
+// ── Video background (card 0) ─────────────────────────────────────────────────
+
+.videoBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+}
+
+.videoOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.65),
+    rgba(0, 0, 0, 0.15)
+  );
+  z-index: 1;
+  pointer-events: none;
+}
 
 // ── Card inner: flex layout (no absolute for footer) ──────────────────────────
 
@@ -216,28 +249,8 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 10px 12px;
-  z-index: 2;
+  z-index: 3;
 }
-
-.glyphWrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cardGlyph {
-  font-family: var(--font-display);
-  letter-spacing: 1px;
-  font-size: 54px;
-  color: rgba(245, 241, 234, 0.18);
-  transition: color 0.4s ease;
-  user-select: none;
-  pointer-events: none;
-}
-
-.tall .cardGlyph { font-size: 80px; }
-.wide .cardGlyph { font-size: 64px; }
 
 .cardFooter {
   display: flex;
@@ -271,8 +284,6 @@
   .img[data-card="1"] { background: linear-gradient(135deg, #9088a0, #7a7090); }
   .img[data-card="2"] { background: linear-gradient(135deg, #a09070, #887858); }
   .img[data-card="3"] { background: linear-gradient(135deg, #aa8890, #927078); }
-
-  .cardGlyph { color: rgba(245, 241, 234, 0.25); }
 
   .cardLabel  { color: rgba(245, 241, 234, 0.85); }
   .cardNumber { color: rgba(245, 241, 234, 0.50); }

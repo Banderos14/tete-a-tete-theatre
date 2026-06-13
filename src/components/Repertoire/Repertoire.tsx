@@ -7,11 +7,11 @@ import { PosterPlaceholder } from '../ui/PosterPlaceholder';
 import type { RepertoireItem, Show } from '../../types';
 import styles from './Repertoire.module.scss';
 
-// Show photo if available, fall back to glyph placeholder on error or absence
+// Show photo if available, fall back to colour placeholder on error or absence
 function ShowPoster({
-  image, palette, glyph, title, lazy = true,
+  image, palette, title, lazy = true,
 }: {
-  image?: string; palette: string; glyph: string; title: string; lazy?: boolean;
+  image?: string; palette: string; title: string; lazy?: boolean;
 }) {
   const [err, setErr] = useState(false);
   if (image && !err) {
@@ -21,14 +21,14 @@ function ShowPoster({
           src={image}
           alt={title}
           loading={lazy ? 'lazy' : 'eager'}
-          onError={() => setErr(true)}
+          onError={() => { console.warn('[show image failed]', title, image); setErr(true); }}
           className={styles.posterImgEl}
         />
         <div className={styles.posterImgOverlay} aria-hidden="true" />
       </>
     );
   }
-  return <PosterPlaceholder palette={palette} glyph={glyph} title={title} kind="rep" />;
+  return <PosterPlaceholder palette={palette} title={title} kind="rep" />;
 }
 
 // ── Repertoire item modal ─────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
         <button className={styles.modalClose} onClick={onClose} aria-label="Закрыть">✕</button>
 
         <div className={styles.modalPoster}>
-          <ShowPoster image={item.image} palette={item.palette} glyph={item.glyph} title={title} lazy={false} />
+          <ShowPoster image={item.image} palette={item.palette} title={title} lazy={false} />
         </div>
 
         <div className={styles.modalInfo}>
@@ -182,7 +182,7 @@ export function Repertoire({ onBook }: Props) {
             type="button"
           >
             <div className={styles.poster}>
-              <ShowPoster image={item.image} palette={item.palette} glyph={item.glyph} title={cardTitle} />
+              <ShowPoster image={item.image} palette={item.palette} title={cardTitle} />
               <span className={[
                 styles.mobilePosterAge,
                 item.status !== 'active' ? styles.mobilePosterAgePast : '',
@@ -213,7 +213,9 @@ export function Repertoire({ onBook }: Props) {
               <div className={styles.mobileTitle}>{cardTitle}</div>
               <div className={styles.mobileFooter}>
                 <span className={styles.mobileDate}>
-                  {linkedDate ?? (lang === 'FR' ? 'bientôt' : 'скоро')}
+                  {item.status === 'past'
+                    ? t.repertoire.statusPast
+                    : (linkedDate ?? (lang === 'FR' ? 'bientôt' : 'скоро'))}
                 </span>
                 {linkedPrice && (
                   <span className={styles.mobilePrice}>{linkedPrice}</span>

@@ -1516,7 +1516,7 @@ function AttendedRow({ group, stampAngle }: { group: GroupedShow; stampAngle: nu
   const { show, showTitle, count, lastDate, lastTime } = group;
   const title = show ? (isFR && show.titleFR ? show.titleFR : show.title) : showTitle;
   const thumbBg = show?.palette ?? '#2a1f1a';
-  const thumbGlyph = show?.glyph ?? showInitials(title);
+  const thumbGlyph = showInitials(title);
   const repeatText = count > 1
     ? (isFR ? `· ${count} fois` : `· были ${count} ${pluralRaz(count)}`)
     : '';

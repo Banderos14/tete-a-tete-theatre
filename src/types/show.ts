@@ -23,9 +23,7 @@ export interface Show {
   durationFR?: string;
   desc: string;
   descFR: string;
-  href: string;
   palette: string;
-  glyph: string;
   image?: string;
   photos?: string[];
   ticketTypes: TicketType[];
@@ -41,7 +39,6 @@ export interface RepertoireItem {
   authorFR?: string;
   tag: string;
   age: string;
-  glyph: string;
   palette: string;
   image?: string;
   description?: string;

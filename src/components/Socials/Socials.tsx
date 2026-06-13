@@ -3,12 +3,12 @@ import { useLang } from '../../i18n/LangContext';
 import styles from './Socials.module.scss';
 
 const TILES = [
-  { kind: 'feature', glyph: '❦' },
-  { kind: '',        glyph: '✸' },
-  { kind: '',        glyph: '❧' },
-  { kind: '',        glyph: '✺' },
-  { kind: '',        glyph: '❋' },
-  { kind: '',        glyph: '❧' },
+  { kind: 'feature' },
+  { kind: ''        },
+  { kind: ''        },
+  { kind: ''        },
+  { kind: ''        },
+  { kind: ''        },
 ] as const;
 
 interface Props {
@@ -46,7 +46,19 @@ export function Socials({ theme }: Props) {
               className={`${styles.tile} ${tile.kind === 'feature' ? styles.feature : ''}`}
               data-tile={i}
             >
-              <div className={styles.tileGlyph}>{tile.glyph}</div>
+              {i === 0 && (
+                <video
+                  className={styles.videoBg}
+                  src="/images/video/zakulis.mp4"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
+                  aria-hidden="true"
+                />
+              )}
+              {i === 0 && <div className={styles.videoOverlay} aria-hidden="true" />}
               <div className={styles.badge}>{t.socials.tileLabels[i]}</div>
             </div>
           ))}

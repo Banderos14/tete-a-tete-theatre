@@ -28,17 +28,6 @@
   pointer-events: none;
 }
 
-.glyph {
-  font-family: var(--font-display);
-  font-size: 108px;
-  color: rgba(245, 241, 234, 0.18);
-  line-height: 1;
-  position: absolute;
-  top: 36%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
 .title {
   position: absolute;
   bottom: 24px;
