@@ -14,6 +14,8 @@
   transition: opacity 0.25s ease;
   pointer-events: none;
   overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: contain;
 
   &.overlayVisible {
     opacity: 1;
@@ -39,6 +41,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   transform: translateY(16px) scale(0.97);
   opacity: 0;
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),

@@ -1,3 +1,5 @@
+// интерфейсы T, Lang, Stat
+
 export type Lang = 'RU' | 'FR';
 
 export interface Stat {

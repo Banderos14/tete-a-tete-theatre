@@ -12,6 +12,8 @@
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
+  touch-action: none;
+  overscroll-behavior: contain;
   // visibility delayed: becomes hidden only after opacity finishes
   transition: opacity 0.28s ease, visibility 0s linear 0.28s;
 
@@ -259,6 +261,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  overscroll-behavior: contain;
 
   &::-webkit-scrollbar { width: 3px; }
   &::-webkit-scrollbar-track { background: transparent; }
@@ -505,6 +508,7 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   padding: 0 0 8px;
 
   &::-webkit-scrollbar { width: 3px; }

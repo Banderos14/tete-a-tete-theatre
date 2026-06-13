@@ -8,6 +8,37 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import type { Booking } from '../../types/booking';
 import styles from './TicketCheckPage.module.scss';
 
+// Lazily converts the first PDF page to a PNG File for QR scanning.
+// pdfjs-dist is loaded only when the user actually selects a PDF.
+async function convertPdfFirstPageToImageFile(pdfFile: File): Promise<File> {
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url,
+  ).href;
+
+  const bytes = await pdfFile.arrayBuffer();
+  const doc   = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const page  = await doc.getPage(1);
+
+  // Scale 2.5 keeps the QR code big enough for reliable detection
+  const viewport = page.getViewport({ scale: 2.5 });
+  const canvas   = document.createElement('canvas');
+  canvas.width   = viewport.width;
+  canvas.height  = viewport.height;
+
+  await page.render({ canvas, viewport }).promise;
+
+  return new Promise<File>((resolve, reject) => {
+    canvas.toBlob(
+      blob => blob
+        ? resolve(new File([blob], 'ticket-page.png', { type: 'image/png' }))
+        : reject(new Error('canvas.toBlob returned null')),
+      'image/png',
+    );
+  });
+}
+
 type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'error';
 
 export function TicketCheckPage() {
@@ -141,9 +172,23 @@ export function TicketCheckPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     setScanState('loading');
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+    let scanFile = file;
+    if (isPdf) {
+      try {
+        scanFile = await convertPdfFirstPageToImageFile(file);
+      } catch {
+        setErrorMsg('Не удалось прочитать PDF. Убедитесь, что файл не повреждён.');
+        setScanState('error');
+        return;
+      }
+    }
+
     const scanner = new Html5Qrcode('qr-file-scanner');
     try {
-      const text = await scanner.scanFile(file, false);
+      const text = await scanner.scanFile(scanFile, false);
       scanner.clear();
 
       const code = parseTicketCodeFromScan(text);
@@ -163,7 +208,11 @@ export function TicketCheckPage() {
       setScanState('found');
     } catch {
       scanner.clear();
-      setErrorMsg('Не удалось распознать QR-код в изображении.');
+      setErrorMsg(
+        isPdf
+          ? 'QR-код не найден в PDF-файле.'
+          : 'Не удалось распознать QR-код в изображении.',
+      );
       setScanState('error');
     }
   }
@@ -267,7 +316,7 @@ export function TicketCheckPage() {
 
           <p className={styles.scanTitle}>СКАНИРОВАНИЕ БИЛЕТА</p>
           <p className={styles.scanHint}>
-            Наведите камеру на QR-код или выберите изображение из галереи
+            Наведите камеру на QR-код, выберите изображение или PDF-файл билета
           </p>
 
           {cameraError && (
@@ -287,14 +336,14 @@ export function TicketCheckPage() {
               onClick={() => fileInputRef.current?.click()}
             >
               <ImageIcon />
-              Выбрать изображение
+              Изображение или PDF
             </button>
           </div>
 
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,application/pdf"
             style={{ display: 'none' }}
             onChange={handleFileSelect}
           />

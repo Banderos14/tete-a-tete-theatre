@@ -549,13 +549,13 @@
   @include mixins.mobile {
     letter-spacing: 0.09em;
     font-size: 11px;
-    gap: 10px;
+    gap: 14px;
     margin-bottom: 28px;
   }
 
   @include mixins.small {
     letter-spacing: 0.06em;
-    font-size: 10px;
+    font-size: 13px;
     flex-wrap: wrap;
     justify-content: center;
     line-height: 1.45;
@@ -605,7 +605,7 @@
   @include mixins.small {
     width: 100%;
     justify-content: center;
-    font-size: clamp(38px, 11vw, 48px);
+    font-size: clamp(70px, 13vw, 80px);
     gap: clamp(5px, 2.2vw, 10px);
     letter-spacing: 0;
   }
@@ -679,6 +679,7 @@
   @include mixins.small {
     overflow: visible;
     padding: 0 4px;
+    font-size: clamp(16px, 4vw, 25px);
   }
 }
 
@@ -696,7 +697,7 @@
 
   @include mixins.small {
     max-width: 100%;
-    font-size: clamp(30px, 11vw, 42px);
+    font-size: clamp(29px, 10.5vw, 41px);
     overflow-wrap: anywhere;
   }
 }

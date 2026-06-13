@@ -72,7 +72,13 @@
     z-index: 2;
   }
 
-  .person:hover &::after { opacity: 1; }
+  @media (hover: hover) and (pointer: fine) {
+    .person:hover &::after { opacity: 1; }
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .person.active &::after { opacity: 1; }
+  }
 }
 
 .photoInner {
@@ -81,9 +87,17 @@
   transition: filter 0.5s ease, transform 0.6s ease;
   filter: grayscale(0.2) contrast(1.05);
 
-  .person:hover & {
-    filter: grayscale(0) contrast(1.08);
-    transform: scale(1.03);
+  @media (hover: hover) and (pointer: fine) {
+    .person:hover & {
+      filter: grayscale(0) contrast(1.08);
+      transform: scale(1.03);
+    }
+  }
+
+  // On touch: photo must not move — no transform, no scale, no transition
+  @media (hover: none), (pointer: coarse) {
+    transform: none;
+    transition: none;
   }
 }
 
