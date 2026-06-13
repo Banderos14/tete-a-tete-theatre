@@ -281,7 +281,7 @@ export function BookingModal({ show, onClose }: Props) {
         {step === 'auth' && (
           <div className={styles.authWrap}>
             <div className={styles.authShowStrip} style={{ background: show.palette }}>
-              <span className={styles.authGlyph}>{show.glyph}</span>
+              <div className={styles.authGlyph} style={{ background: show.palette }} />
               <div>
                 <p className={styles.authShowTitle}>{showTitle}</p>
                 <p className={styles.authShowMeta}>{show.day} {monthLabel} · {show.time}</p>

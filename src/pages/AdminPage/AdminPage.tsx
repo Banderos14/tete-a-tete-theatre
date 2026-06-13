@@ -307,7 +307,7 @@ export function AdminPage() {
                   <img src={show.image} alt={show.title} className={styles.showCardImg} />
                 ) : (
                   <span className={styles.showCardGlyph} style={{ background: show.palette }}>
-                    {show.glyph}
+                    {show.title.replace(/[«»]/g, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
                   </span>
                 )}
                 <div className={styles.showCardInfo}>

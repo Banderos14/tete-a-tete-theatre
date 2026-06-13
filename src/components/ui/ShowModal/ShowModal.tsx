@@ -117,9 +117,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
                 style={{ backgroundImage: `url(${currentPhoto})` }}
               />
             ) : (
-              <div className={styles.mainPhotoPlaceholder} style={{ background: show.palette }}>
-                <span className={styles.glyphLg}>{show.glyph}</span>
-              </div>
+              <div className={styles.mainPhotoPlaceholder} style={{ background: show.palette }} />
             )}
 
             {hasMultiple && (

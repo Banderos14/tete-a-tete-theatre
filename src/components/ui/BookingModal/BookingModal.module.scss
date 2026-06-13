@@ -367,17 +367,6 @@
   @include mixins.small { padding: 16px 20px; }
 }
 
-.formHeaderGlyph {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  font-size: 26px;
-  flex-shrink: 0;
-  opacity: 0.9;
-}
-
 .formHeaderInfo {
   display: flex;
   flex-direction: column;

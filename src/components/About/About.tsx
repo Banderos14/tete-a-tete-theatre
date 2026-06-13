@@ -4,10 +4,10 @@ import { subscribeToAudienceCount } from '../../services/statsService';
 import styles from './About.module.scss';
 
 const IMAGES = [
-  { tone: 'var(--ph-1)', cls: 'tall', glyph: '✸' },
-  { tone: 'var(--ph-5)', cls: '',     glyph: '❧' },
-  { tone: 'var(--ph-4)', cls: '',     glyph: '❦' },
-  { tone: 'var(--ph-1)', cls: 'wide', glyph: '❋' },
+  { tone: 'var(--ph-1)', cls: 'tall' },
+  { tone: 'var(--ph-5)', cls: ''     },
+  { tone: 'var(--ph-4)', cls: ''     },
+  { tone: 'var(--ph-1)', cls: 'wide' },
 ] as const;
 
 export function About() {
@@ -61,10 +61,20 @@ export function About() {
               data-card={i}
               className={`${styles.img} ${img.cls === 'tall' ? styles.tall : ''} ${img.cls === 'wide' ? styles.wide : ''}`}
             >
+              {i === 0 && (
+                <video
+                  className={styles.videoBg}
+                  src="/images/video/premiere.mp4"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
+                  aria-hidden="true"
+                />
+              )}
+              {i === 0 && <div className={styles.videoOverlay} aria-hidden="true" />}
               <div className={styles.cardInner}>
-                <div className={styles.glyphWrap}>
-                  <span className={styles.cardGlyph}>{img.glyph}</span>
-                </div>
                 <div className={styles.cardFooter}>
                   <span className={styles.cardLabel}>{t.about.imageLabels[i]}</span>
                   <span className={styles.cardNumber}>0{i + 1}</span>

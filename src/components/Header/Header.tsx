@@ -39,14 +39,6 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
-  // Close menu on scroll
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = () => { if (window.scrollY > 60) setMenuOpen(false); };
-    window.addEventListener('scroll', handler, { passive: true });
-    return () => window.removeEventListener('scroll', handler);
-  }, [menuOpen]);
-
   useScrollLock(menuOpen);
 
   // Track active section for nav highlight.

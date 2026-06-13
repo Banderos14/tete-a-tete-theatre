@@ -3,6 +3,14 @@ import { SHOWS } from '../../data/shows';
 import type { Show } from '../../types';
 import styles from './AfishaSlider.module.scss';
 
+// Warn in console if a show image URL cannot be loaded (CSS background-image gives no onError)
+SHOWS.forEach(s => {
+  if (!s.image) return;
+  const img = new Image();
+  img.onerror = () => console.warn('[show image failed]', s.id, s.image);
+  img.src = s.image;
+});
+
 // 4 copies: track wider than any viewport, -50% always covered by content
 const COPIES = 4;
 const CARDS = Array.from({ length: COPIES }, () => SHOWS).flat();
@@ -45,7 +53,7 @@ export function AfishaSlider({ onCardClick }: Props) {
                   style={{ backgroundImage: `url(${show.image})` }}
                 />
               )}
-              {!show.image && <div className={styles.glyph}>{show.glyph}</div>}
+              {/* no-image state handled by palette background */}
               <div className={styles.overlay} />
 
               <div className={styles.body}>
