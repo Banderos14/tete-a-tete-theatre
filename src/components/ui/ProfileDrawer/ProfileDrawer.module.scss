@@ -348,6 +348,19 @@
   }
 }
 
+.navWarningDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  margin-left: 6px;
+
+  @include mixins.mobile {
+    display: none;
+  }
+}
+
 // Logout — mobile nav only
 .navItemLogout {
   display: none;
@@ -934,6 +947,16 @@
   border-color: var(--accent) !important;
 }
 
+@keyframes fieldPulse {
+  0%   { border-color: rgba(192, 57, 43, 0.25); box-shadow: 0 0 0 0   rgba(192, 57, 43, 0.00); }
+  45%  { border-color: rgba(192, 57, 43, 0.80); box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.13); }
+  100% { border-color: rgba(192, 57, 43, 0.25); box-shadow: 0 0 0 0   rgba(192, 57, 43, 0.00); }
+}
+
+.fieldPulse {
+  animation: fieldPulse 1s ease-in-out 2 !important;
+}
+
 .birthdayText {
   font-size: 15px;
   color: #f3e7dc;
@@ -1224,6 +1247,7 @@
 
 .bookingShowTitle {
   font-family: var(--font-display);
+  letter-spacing: 1px;
   font-style: italic;
   font-size: 17px;
   color: #f3e7dc;
@@ -1248,8 +1272,6 @@
 }
 
 .bookingCompositionAmount {
-  font-family: var(--font-display);
-  font-style: italic;
   color: #9c938a;
 }
 
@@ -1274,10 +1296,6 @@
   text-transform: uppercase;
   line-height: 1.4;
   white-space: nowrap;
-
-  @include mixins.small {
-    display: none;
-  }
 }
 
 .bookingActionMuted { color: #9c938a; }
@@ -1496,10 +1514,6 @@
   border-radius: var(--radius-xs);
   padding: 3px 9px;
   white-space: nowrap;
-
-  @include mixins.small {
-    display: none;
-  }
 }
 
 @keyframes shimmer {
@@ -1718,6 +1732,26 @@
     color: var(--accent);
     border-bottom-color: var(--accent);
   }
+}
+
+.mobileTabIconWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mobileTabWarningDot {
+  position: absolute;
+  top: -2px;
+  right: -5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1.5px solid var(--bg-2);
+  pointer-events: none;
 }
 
 // ── Mobile loyalty cards ──────────────────────────────────────────────────────
@@ -1967,6 +2001,39 @@
   border: none;
   border-top: 0.5px solid rgba(243, 231, 220, 0.10);
   margin: 24px 0;
+}
+
+// ── Settings logout button ────────────────────────────────────────────────────
+
+.settingsLogoutBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  min-height: 48px;
+  background: transparent;
+  border: 1px solid rgba(243, 231, 220, 0.15);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6e675f;
+  font-family: var(--font-mono);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  margin-top: 8px;
+
+  &:hover {
+    border-color: rgba(176, 64, 64, 0.4);
+    color: var(--accent);
+    background: rgba(176, 64, 64, 0.05);
+  }
+
+  @include mixins.small {
+    min-height: 52px;
+    font-size: 13px;
+  }
 }
 
 // ── Light theme ───────────────────────────────────────────────────────────────

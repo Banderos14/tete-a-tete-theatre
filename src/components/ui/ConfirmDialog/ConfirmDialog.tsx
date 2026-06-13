@@ -32,18 +32,18 @@ export function ConfirmDialog({
         <p className={styles.message}>{message}</p>
         <div className={styles.actions}>
           <button
-            className={styles.cancelBtn}
-            disabled={loading}
-            onClick={onCancel}
-          >
-            {cancelLabel}
-          </button>
-          <button
             className={styles.confirmBtn}
             disabled={loading}
             onClick={onConfirm}
           >
             {loading ? 'Подождите…' : confirmLabel}
+          </button>
+          <button
+            className={styles.cancelBtn}
+            disabled={loading}
+            onClick={onCancel}
+          >
+            {cancelLabel}
           </button>
         </div>
       </div>

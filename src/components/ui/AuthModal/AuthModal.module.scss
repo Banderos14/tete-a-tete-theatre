@@ -94,6 +94,7 @@
 
 .brand {
   font-family: var(--font-display);
+  letter-spacing: 1px;
   font-size: 22px;
   letter-spacing: 0.08em;
   color: var(--fg);
@@ -144,7 +145,7 @@
   background: #fff;
   color: #3c4043;
   border: 1px solid #dadce0;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -241,7 +242,7 @@
   min-height: 48px;
   background: var(--accent);
   color: var(--fg);
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.12em;

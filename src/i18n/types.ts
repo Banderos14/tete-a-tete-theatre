@@ -75,6 +75,7 @@ export interface T {
     notifications: string;
     logout: string;
     required: string;
+    phoneInvalid: string;
     incomplete: (n: number) => string;
     visitCount: (n: number) => string;
     bonusProgress: (remaining: number) => string;

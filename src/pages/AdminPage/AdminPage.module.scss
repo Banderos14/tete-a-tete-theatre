@@ -388,7 +388,7 @@
 .actionUnpaid {
   font-size: 10px;
   padding: 3px 7px;
-  border-radius: 16px;
+  border-radius: var(--radius-xs);
   background: rgba(100, 100, 100, 0.1);
   color: var(--fg-mute);
   border: 1px solid var(--line);
@@ -745,4 +745,39 @@
   border-radius: 4px;
   padding: 1px 5px;
   white-space: nowrap;
+}
+
+.deleteUserError {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(192, 57, 43, 0.08);
+  border: 1px solid rgba(192, 57, 43, 0.3);
+  border-radius: var(--radius-s);
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--fg);
+  line-height: 1.5;
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: rgba(0,0,0,0.12);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+}
+
+.errorDismiss {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--fg-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  &:hover { color: var(--fg); }
 }
