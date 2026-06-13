@@ -5,7 +5,7 @@ import { RU } from '../../i18n';
 import { getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPaid, expireOverdueBookings, hoursUntilExpiry } from '../../services/bookingService';
 import { getPaymentAccount, PAYMENT_CONFIG } from '../../config/payment';
 import { markEligibleBookingsAsAttended } from '../../services/attendanceService';
-import { getAllUsers, getUsersForNewsletter } from '../../services/userService';
+import { getAllUsers, getUsersForNewsletter, deleteUserCompletely } from '../../services/userService';
 import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail, sendNewShowAnnouncementEmail } from '../../services/emailService';
 import { SHOWS } from '../../data/shows';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -17,9 +17,10 @@ type FilterShowId    = 'all' | string;
 type FilterStatus    = 'all' | BookingStatus;
 type AdminTab        = 'bookings' | 'users' | 'newsletter';
 type ConfirmAction   =
-  | { type: 'paid';   bookingId: string }
-  | { type: 'unpaid'; bookingId: string }
-  | { type: 'cancel'; bookingId: string }
+  | { type: 'paid';       bookingId: string }
+  | { type: 'unpaid';     bookingId: string }
+  | { type: 'cancel';     bookingId: string }
+  | { type: 'deleteUser'; uid: string; displayName: string }
   | null;
 
 function formatTimestamp(ts: unknown): string {
@@ -53,7 +54,7 @@ const PAY_STATUS_STYLE: Record<PaymentStatus, string> = {
 export function AdminPage() {
   const navigate    = useNavigate();
   const t           = RU;
-  const { userProfile, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
 
   const [tab,         setTab]         = useState<AdminTab>('bookings');
   const [bookings,    setBookings]    = useState<Booking[]>([]);
@@ -61,8 +62,10 @@ export function AdminPage() {
   const [filterShow,  setFilterShow]  = useState<FilterShowId>('all');
   const [filterStatus,setFilterStatus]= useState<FilterStatus>('all');
   const [fetching,    setFetching]    = useState(true);
-  const [updatingId,    setUpdatingId]    = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [updatingId,     setUpdatingId]     = useState<string | null>(null);
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [deleteUserError, setDeleteUserError] = useState<string | null>(null);
+  const [confirmAction,  setConfirmAction]  = useState<ConfirmAction>(null);
 
   const [nlShowId,    setNlShowId]    = useState<string>(SHOWS[0]?.id ?? '');
   const [nlSending,   setNlSending]   = useState(false);
@@ -206,6 +209,22 @@ export function AdminPage() {
 
     setNlSending(false);
     setNlResult({ sent, errors });
+  }
+
+  async function handleDeleteUser(uid: string) {
+    setUpdatingUserId(uid);
+    setDeleteUserError(null);
+    try {
+      const result = await deleteUserCompletely(uid);
+      setUsers(prev => prev.filter(u => u.uid !== uid));
+      if (result.bookingsDeletedCount > 0) {
+        setBookings(prev => prev.filter(b => b.userId !== uid));
+      }
+    } catch (e) {
+      setDeleteUserError(e instanceof Error ? e.message : 'Ошибка удаления пользователя');
+    } finally {
+      setUpdatingUserId(null);
+    }
   }
 
   if (loading) {
@@ -512,6 +531,16 @@ export function AdminPage() {
             </div>
           </div>
 
+          {deleteUserError && (
+            <div className={styles.deleteUserError}>
+              <strong>Ошибка удаления:</strong> {deleteUserError}
+              {deleteUserError.includes('FIREBASE_SERVICE_ACCOUNT') && (
+                <span> — добавьте переменную <code>FIREBASE_SERVICE_ACCOUNT</code> в настройках Vercel.</span>
+              )}
+              <button className={styles.errorDismiss} onClick={() => setDeleteUserError(null)}>×</button>
+            </div>
+          )}
+
           {fetching ? (
             <div className={styles.centered}><span className={styles.spinner} /></div>
           ) : users.length === 0 ? (
@@ -527,6 +556,7 @@ export function AdminPage() {
                     <th>Роль</th>
                     <th>Уведомления</th>
                     <th>{t.admin.userCreatedAt}</th>
+                    <th>Действия</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -542,6 +572,21 @@ export function AdminPage() {
                       </td>
                       <td className={styles.cellCenter}>{u.notifications ? '✓' : '—'}</td>
                       <td className={styles.cellMono}>{formatTimestamp(u.createdAt)}</td>
+                      <td>
+                        {u.role !== 'admin' && u.uid !== user?.uid && (
+                          <button
+                            className={styles.actionCancel}
+                            disabled={updatingUserId === u.uid}
+                            onClick={() => setConfirmAction({
+                              type: 'deleteUser',
+                              uid: u.uid,
+                              displayName: u.displayName || u.email,
+                            })}
+                          >
+                            {updatingUserId === u.uid ? '…' : 'Удалить'}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -560,8 +605,7 @@ export function AdminPage() {
           </p>
 
           <div className={styles.newsletterWarning}>
-            На бесплатном тарифе Resend есть дневные и месячные лимиты.
-            Не запускайте рассылку несколько раз подряд.
+            На бесплатном тарифе Resend не запускать рассылку несколько раз подряд, потому что упремся в лимиты!!!
           </div>
 
           <div className={styles.section}>
@@ -612,7 +656,7 @@ export function AdminPage() {
         message="Вы уверены, что хотите отметить эту бронь как оплаченную? Это изменит статус оплаты."
         confirmLabel="Да, оплату получили"
         cancelLabel="Отмена"
-        loading={updatingId === confirmAction?.bookingId}
+        loading={confirmAction?.type === 'paid' && updatingId === confirmAction.bookingId}
         onCancel={() => setConfirmAction(null)}
         onConfirm={() => {
           if (!confirmAction || confirmAction.type !== 'paid') return;
@@ -628,7 +672,7 @@ export function AdminPage() {
         message="Вы уверены, что хотите снова отметить эту бронь как неоплаченную? Это действие может сделать билет недействительным."
         confirmLabel="Да, снять оплату"
         cancelLabel="Отмена"
-        loading={updatingId === confirmAction?.bookingId}
+        loading={confirmAction?.type === 'unpaid' && updatingId === confirmAction.bookingId}
         onCancel={() => setConfirmAction(null)}
         onConfirm={() => {
           if (!confirmAction || confirmAction.type !== 'unpaid') return;
@@ -644,13 +688,33 @@ export function AdminPage() {
         message="Вы уверены, что хотите отменить эту бронь? Билет станет недействительным."
         confirmLabel="Да, отменить бронь"
         cancelLabel="Назад"
-        loading={updatingId === confirmAction?.bookingId}
+        loading={confirmAction?.type === 'cancel' && updatingId === confirmAction.bookingId}
         onCancel={() => setConfirmAction(null)}
         onConfirm={() => {
           if (!confirmAction || confirmAction.type !== 'cancel') return;
           const id = confirmAction.bookingId;
           setConfirmAction(null);
           handleStatus(id, 'cancelled');
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmAction?.type === 'deleteUser'}
+        title="Удалить пользователя полностью?"
+        message={
+          confirmAction?.type === 'deleteUser'
+            ? `Пользователь «${confirmAction.displayName}» будет удалён из Firebase Auth, коллекции users и все его бронирования будут удалены. Это действие нельзя отменить.`
+            : ''
+        }
+        confirmLabel="Да, удалить полностью"
+        cancelLabel="Отмена"
+        loading={confirmAction?.type === 'deleteUser' && updatingUserId === confirmAction.uid}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (!confirmAction || confirmAction.type !== 'deleteUser') return;
+          const uid = confirmAction.uid;
+          setConfirmAction(null);
+          void handleDeleteUser(uid);
         }}
       />
 

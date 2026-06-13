@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent, type ReactNode } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
-import { IconLock, IconCalendarEvent, IconUser, IconTicket, IconMasksTheater, IconSettings, IconLoader2, IconGift, IconPhone, IconBrandWhatsapp, IconBrandTelegram } from '@tabler/icons-react';
+import { IconLock, IconCalendarEvent, IconUser, IconTicket, IconMasksTheater, IconSettings, IconLoader2, IconGift, IconPhone, IconBrandWhatsapp, IconBrandTelegram, IconLogout } from '@tabler/icons-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from '../../../services/bookingService';
@@ -18,26 +18,39 @@ function formatBirthdayDisplay(dateStr: string, lang: 'RU' | 'FR'): string {
   }).format(d);
 }
 
+// Normalise input to French international format: +33 X XX XX XX XX (9 local digits max).
+// Accepts: "+33 7 53…", "07 53…", bare local digits.
 function formatPhone(raw: string): string {
-  const hasPlus = raw.startsWith('+');
+  const hasPlus = raw.trimStart().startsWith('+');
   const digits  = raw.replace(/\D/g, '');
+
   if (!digits) return hasPlus ? '+' : '';
-  if (hasPlus && digits.startsWith('33')) {
-    const local = digits.slice(2);
-    let out = '+33';
-    if (!local) return out;
-    out += ' ' + local[0];
-    for (let i = 1; i < local.length; i += 2) out += ' ' + local.slice(i, i + 2);
-    return out;
-  }
+
+  // Derive local digits (after country code 33)
+  let local: string;
   if (hasPlus) {
-    const country = digits.slice(0, 2);
-    const rest    = digits.slice(2);
-    let out = '+' + country;
-    for (let i = 0; i < rest.length; i += 2) out += ' ' + rest.slice(i, i + 2);
-    return out;
+    local = digits.startsWith('33') ? digits.slice(2) : digits;
+  } else if (digits.startsWith('0')) {
+    // French local: 07… → strip leading 0
+    local = digits.slice(1);
+  } else {
+    local = digits;
   }
-  return digits;
+
+  // Hard-cap at 9 local digits — extra input is silently ignored
+  local = local.slice(0, 9);
+
+  if (!local) return '+33';
+
+  // Format: +33 X XX XX XX XX
+  let out = '+33 ' + local[0];
+  for (let i = 1; i < local.length; i += 2) out += ' ' + local.slice(i, i + 2);
+  return out;
+}
+
+function isCompleteFrenchPhone(phone: string): boolean {
+  const digits = phone.replace(/\D/g, '');
+  return digits.startsWith('33') && digits.length === 11;
 }
 
 function getInitials(name: string | null | undefined): string {
@@ -67,11 +80,18 @@ interface ValidationErrors {
   phone?:       string;
 }
 
-function validate(displayName: string, birthday: string, phone: string, required: string): ValidationErrors {
+function validate(
+  displayName: string,
+  birthday: string,
+  phone: string,
+  required: string,
+  phoneInvalid: string,
+): ValidationErrors {
   const errors: ValidationErrors = {};
   if (!displayName.trim()) errors.displayName = required;
   if (!birthday)           errors.birthday    = required;
-  if (!phone.trim())       errors.phone       = required;
+  if (!phone.trim())                         errors.phone = required;
+  else if (!isCompleteFrenchPhone(phone))    errors.phone = phoneInvalid;
   return errors;
 }
 
@@ -122,6 +142,9 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
   const [dismissingIds,    setDismissingIds]    = useState<Set<string>>(new Set());
   const [activeMobileTab, setActiveMobileTab]  = useState<'profile' | 'tickets' | 'favorites' | 'settings'>('profile');
+
+  const [pulseBirthday, setPulseBirthday] = useState(false);
+  const [pulsePhone,    setPulsePhone]    = useState(false);
 
   // Синхронизация полей формы из Firestore
   useEffect(() => {
@@ -187,12 +210,33 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setExpandedTicketId(null);
   }, [activeSection]);
 
+  // Pulse-анимация для незаполненных обязательных полей при смене раздела
+  useEffect(() => {
+    if (activeSection === 'personal' && !birthday) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPulseBirthday(true);
+      const t = setTimeout(() => setPulseBirthday(false), 2100);
+      return () => clearTimeout(t);
+    }
+    setPulseBirthday(false);
+  }, [activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if ((activeSection === 'contacts' || activeSection === 'personal') && !phone.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPulsePhone(true);
+      const t = setTimeout(() => setPulsePhone(false), 2100);
+      return () => clearTimeout(t);
+    }
+    setPulsePhone(false);
+  }, [activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (submitted) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setErrors(validate(displayName, birthday, phone, t.profile.required));
+      setErrors(validate(displayName, birthday, phone, t.profile.required, t.profile.phoneInvalid));
     }
-  }, [displayName, birthday, phone, submitted, t.profile.required]);
+  }, [displayName, birthday, phone, submitted, t.profile.required, t.profile.phoneInvalid]);
 
   const markDirty = useCallback(() => setIsDirty(true), []);
 
@@ -220,7 +264,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSubmitted(true);
-    const errs = validate(displayName, birthday, phone, t.profile.required);
+    const errs = validate(displayName, birthday, phone, t.profile.required, t.profile.phoneInvalid);
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
       if (errs.displayName || errs.birthday) setActiveSection('personal');
@@ -282,6 +326,8 @@ export function ProfileDrawer({ open, onClose }: Props) {
     const errs: ValidationErrors = {};
     if (!displayName.trim()) errs.displayName = t.profile.required;
     if (!birthday)           errs.birthday    = t.profile.required;
+    if (!phone.trim())                      errs.phone = t.profile.required;
+    else if (!isCompleteFrenchPhone(phone)) errs.phone = t.profile.phoneInvalid;
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setSaving(true);
@@ -314,7 +360,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const photoURL         = user?.photoURL ?? null;
   const fbLinked         = userProfile?.facebookLinked ?? false;
   const birthdayFromFb   = userProfile?.birthdayFromFb ?? false;
-  const missingCount     = Object.keys(validate(displayName, birthday, phone, t.profile.required)).length;
+  const missingCount     = Object.keys(validate(displayName, birthday, phone, t.profile.required, t.profile.phoneInvalid)).length;
   const activeBookings   = bookings.filter(b =>
     !computedIsAttended(b) &&
     b.status !== 'cancelled' &&
@@ -334,9 +380,12 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const isRewardAvail = hasAvailableLoyaltyReward(bookings);
   const remaining     = isRewardAvail ? 0 : 5 - filled;
 
-  const navItems: { id: Section; label: string; badge?: number }[] = [
-    { id: 'personal',      label: t.profile.sectionPersonal      },
-    { id: 'contacts',      label: t.profile.sectionContacts      },
+  const missingBirthday = !birthday;
+  const missingPhone    = !phone.trim() || !isCompleteFrenchPhone(phone);
+
+  const navItems: { id: Section; label: string; badge?: number; warning?: boolean }[] = [
+    { id: 'personal',      label: t.profile.sectionPersonal,      warning: missingBirthday },
+    { id: 'contacts',      label: t.profile.sectionContacts,      warning: missingPhone    },
     { id: 'socials',       label: t.profile.sectionSocials       },
     { id: 'notifications', label: t.profile.sectionNotifications },
     { id: 'tickets',       label: t.profile.history,              badge: ticketCount || undefined },
@@ -440,6 +489,9 @@ export function ProfileDrawer({ open, onClose }: Props) {
                 onClick={() => setActiveSection(item.id)}
               >
                 <span className={styles.navLabel}>{item.label}</span>
+                {item.warning && (
+                  <span className={styles.navWarningDot} aria-hidden="true" />
+                )}
                 {item.badge !== undefined && (
                   <span className={styles.navBadge}>{item.badge}</span>
                 )}
@@ -536,7 +588,12 @@ export function ProfileDrawer({ open, onClose }: Props) {
               className={`${styles.mobileTab} ${activeMobileTab === 'profile' ? styles.mobileTabActive : ''}`}
               onClick={() => setMobileTab('profile')}
             >
-              <IconUser size={20} stroke={1.5} />
+              <span className={styles.mobileTabIconWrap}>
+                <IconUser size={20} stroke={1.5} />
+                {(missingBirthday || missingPhone) && (
+                  <span className={styles.mobileTabWarningDot} aria-hidden="true" />
+                )}
+              </span>
               <span>{lang === 'FR' ? 'Profil' : 'Профиль'}</span>
             </button>
             <button
@@ -618,7 +675,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
                     </div>
                   ) : (
                     <div
-                      className={`${styles.birthdayField} ${errors.birthday ? styles.birthdayFieldError : ''}`}
+                      className={`${styles.birthdayField} ${errors.birthday ? styles.birthdayFieldError : ''} ${pulseBirthday && !errors.birthday ? styles.fieldPulse : ''}`}
                       onClick={handleBirthdayClick}
                       role="button"
                       tabIndex={0}
@@ -664,7 +721,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
                         onChange={e => { setPhone(formatPhone(e.target.value)); markDirty(); }}
                         placeholder="+33 6 00 00 00 00"
                         autoComplete="tel"
-                        className={`${styles.personalInput} ${errors.phone ? styles.personalInputError : ''}`}
+                        className={`${styles.personalInput} ${errors.phone ? styles.personalInputError : ''} ${pulsePhone && !errors.phone ? styles.fieldPulse : ''}`}
                       />
                       <IconPhone size={16} stroke={1.5} className={styles.phoneInputIcon} />
                     </div>
@@ -741,7 +798,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
                     onChange={e => { setPhone(formatPhone(e.target.value)); markDirty(); }}
                     placeholder="+33 6 00 00 00 00"
                     autoComplete="tel"
-                    className={errors.phone ? styles.inputError : ''}
+                    className={`${errors.phone ? styles.inputError : ''} ${pulsePhone && !errors.phone ? styles.fieldPulse : ''}`}
                   />
                 </Field>
 
@@ -946,6 +1003,18 @@ export function ProfileDrawer({ open, onClose }: Props) {
                     </span>
                   )}
                 </div>
+
+                <div className={styles.settingsDivider} />
+
+                {/* Logout */}
+                <button
+                  type="button"
+                  className={styles.settingsLogoutBtn}
+                  onClick={handleLogout}
+                >
+                  <IconLogout size={16} stroke={1.5} />
+                  {lang === 'FR' ? 'Se déconnecter' : 'Выйти из аккаунта'}
+                </button>
 
               </div>
             )}

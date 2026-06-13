@@ -13,7 +13,7 @@
 .dialog {
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 32px 36px;
   max-width: 400px;
   width: 100%;
@@ -50,44 +50,60 @@
 
 .actions {
   display: flex;
+  align-items: center;
   gap: 10px;
-  justify-content: flex-end;
+  justify-content: center;
+  flex-wrap: wrap;
   margin-top: 6px;
 
   @media (max-width: 600px) {
-    flex-direction: column-reverse;
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
   }
 }
 
 .cancelBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 20px;
   font-size: 12px;
   font-family: var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-s);
   color: var(--fg-mute);
   transition: color 0.2s, border-color 0.2s;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
   min-height: 44px;
+  white-space: normal;
+  text-align: center;
 
   &:hover:not(:disabled) { color: var(--fg); border-color: var(--line-strong); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .confirmBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 20px;
   font-size: 12px;
   font-family: var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  border-radius: 4px;
+  border-radius: var(--radius-s);
   background: var(--accent);
   color: #fff;
   transition: background 0.2s, opacity 0.2s;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
   min-height: 44px;
+  white-space: normal;
+  text-align: center;
 
   &:hover:not(:disabled) { background: var(--accent-bright, #c00); }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
