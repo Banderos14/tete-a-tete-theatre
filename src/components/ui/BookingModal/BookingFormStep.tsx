@@ -52,6 +52,8 @@ interface Props {
   maxTickets: number;
   availableSeats: number;
 
+  phoneError?: string;
+
   onTicketsChange: (v: number) => void;
   onSelectedTicketChange: (tt: TicketType) => void;
   onPaymentChange: (pm: PaymentMethod) => void;
@@ -64,7 +66,7 @@ interface Props {
 export function BookingFormStep({
   show, lang, t,
   tickets, payment, phone, comment,
-  submitLoading, submitError,
+  submitLoading, submitError, phoneError,
   activeTicket, baseAmount, totalAmount, discountAmount, loyaltyAvailable, maxTickets, availableSeats,
   onTicketsChange, onSelectedTicketChange, onPaymentChange, onPhoneChange, onCommentChange,
   onSubmit,
@@ -86,7 +88,7 @@ export function BookingFormStep({
   }
 
   return (
-    <form onSubmit={onSubmit} className={styles.formLayout}>
+    <form onSubmit={onSubmit} className={styles.formLayout} data-scroll-lock-allow="true">
 
       {/* LEFT — 310px */}
       <div className={styles.formLeft}>
@@ -187,8 +189,11 @@ export function BookingFormStep({
         <div className={styles.section}>
           <label className={styles.sectionLabel} htmlFor="bk-phone">{t.booking.phone}</label>
           <input id="bk-phone" className={styles.input} type="tel" inputMode="tel"
+            autoComplete="tel"
             value={phone} onChange={e => onPhoneChange(e.target.value)}
-            placeholder="+33 6 00 00 00 00" />
+            placeholder="+33 6 00 00 00 00"
+            style={{ fontSize: '16px' }} />
+          {phoneError && <p className={styles.error}>{phoneError}</p>}
         </div>
 
         {/* Payment — карточки */}

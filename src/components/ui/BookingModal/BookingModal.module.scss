@@ -11,8 +11,12 @@
   place-items: center;
   padding: 20px;
   overflow: hidden;
+  // touch-action:none → iOS never commits to a pan gesture inside the overlay,
+  // so touchmove events stay cancelable (e.cancelable=true) and e.preventDefault()
+  // always works. Scroll containers use -webkit-overflow-scrolling:touch which
+  // creates a native UIScrollView that scrolls independently of this none value.
   touch-action: none;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
 
   @include mixins.small {
     place-items: end center;
@@ -888,14 +892,15 @@
   overscroll-behavior: contain;
 
   @include mixins.mobile {
-    grid-template-columns: 1fr;
+    // Switch from grid to flex — flex: 1 + overflow: hidden work predictably on iOS.
+    // iOS Safari can't properly constrain a display:grid inside a flex parent.
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: unset;
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
     overscroll-behavior: contain;
-    touch-action: pan-y;
   }
 }
 
@@ -904,18 +909,36 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  // overflow-y lives on successContent now; successRight just clips the scrollbar
+  overflow: hidden;
+
+  @include mixins.mobile {
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+// Scrollable content inside successRight — stamp, title, summary, text.
+// Buttons (successActions) are a sibling AFTER this element, outside the scroll zone.
+.successContent {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
 
   @include mixins.mobile {
-    // successWrap handles all scrolling on mobile — no nested scroll container
-    overflow-y: visible;
-    overflow-x: visible;
-    padding: 20px 20px max(20px, env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    padding: 20px 20px 12px;
   }
 
   @include mixins.small {
-    padding: 16px 18px max(16px, env(safe-area-inset-bottom));
+    padding: 16px 18px 10px;
   }
 }
 
@@ -1035,15 +1058,20 @@
   flex-shrink: 0;
 
   @include mixins.mobile {
-    flex-direction: row;
-    align-items: center;
-    padding: 14px 18px;
-    min-height: 80px;
+    // On mobile the stub becomes a top hero block instead of a left column.
+    // Use column layout so stubTop / stubBottom stack vertically.
+    flex: 0 0 auto;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: unset;
+    padding: 22px 20px 18px;
+    min-height: clamp(220px, 32dvh, 300px);
+    border-bottom: 2px dashed rgba(243,231,220,0.22);
   }
 
   @include mixins.small {
-    padding: 12px 16px;
-    min-height: 72px;
+    padding: 18px 18px 16px;
+    min-height: clamp(200px, 30dvh, 260px);
   }
 }
 
@@ -1075,8 +1103,6 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-
-  @include mixins.mobile { display: none; }
 }
 
 .stubSummaryRow {
@@ -1353,9 +1379,33 @@
 .successActions {
   display: flex;
   gap: 10px;
-  margin-top: auto;
+  flex-shrink: 0;
   padding-top: 20px;
   flex-wrap: wrap;
+
+  @include mixins.mobile {
+    padding: 14px 20px max(16px, env(safe-area-inset-bottom));
+    background: var(--bg-2);
+    border-top: 0.5px solid rgba(243,231,220,0.12);
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  @include mixins.small {
+    flex-direction: column;
+    padding: 12px 18px max(14px, env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+}
+
+// ── iOS input zoom prevention ─────────────────────────────────────────────────
+// Safari auto-zooms the viewport when a focused input has font-size < 16px.
+// The zoom persists after the keyboard closes and breaks the modal layout.
+@include mixins.small {
+  .input,
+  .textarea {
+    font-size: 16px;
+  }
 }
 
 // ── Light theme ───────────────────────────────────────────────────────────────

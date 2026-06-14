@@ -1,12 +1,6 @@
 @use '../../styles/mixins';
 
-@keyframes slideLeft {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
 // ── Non-scrolling outer wrapper — holds edge shadows ─────────────────────────
-// Shadows live here so they stay fixed when the inner scroll container is swiped.
 .sliderWrap {
   --card-w: clamp(240px, 28vw, 340px);
 
@@ -49,40 +43,32 @@
   }
 }
 
-// ── Scroll container (inner) — cards swipe here, shadows stay above ───────────
+// ── Interaction container ─────────────────────────────────────────────────────
+// JS RAF drives the track transform; this element owns pointer events.
 .outer {
   position: relative;
+  // Allow vertical page scroll; JS confirms horizontal drag and stops scroll via touchmove listener.
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  user-select: none;
+  cursor: grab;
 
-  @include mixins.mobile {
-    width: 100%;
-    padding: 0 16px;
-    overflow-x: auto;
-    overflow-y: visible;
-    scroll-snap-type: x proximity;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar { display: none; }
+  // During confirmed horizontal drag: disable all native touch actions so the browser
+  // can't reclaim the gesture. JS preventDefault on touchmove already stops scroll,
+  // but touch-action: none makes it explicit for future-proofing.
+  &[data-dragging] {
+    touch-action: none;
+    cursor: grabbing;
   }
 }
 
-// ── Scrolling track ───────────────────────────────────────────────────────────
+// ── Scrolling track — driven by RAF, not CSS animation ───────────────────────
 .track {
   display: flex;
   width: max-content;
-  animation: slideLeft calc(var(--slide-count) * 6s) linear infinite;
   will-change: transform;
-
-  @media (hover: hover) and (pointer: fine) {
-    .outer:hover & {
-      animation-play-state: paused;
-    }
-  }
-
-  @include mixins.mobile {
-    animation-duration: calc(var(--slide-count) * 4.6s);
-  }
+  // Promote to GPU compositing layer — eliminates paint jank on iOS Safari
+  backface-visibility: hidden;
 }
 
 // ── Card — portrait format ────────────────────────────────────────────────────
@@ -94,6 +80,8 @@
   overflow: hidden;
   cursor: pointer;
   background: var(--bg);
+  // Prevent browser from drag-opening images
+  -webkit-user-drag: none;
   transition:
     transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.5s ease;
@@ -113,8 +101,6 @@
 
   @include mixins.mobile {
     height: clamp(320px, 56vh, 420px);
-    scroll-snap-align: center;
-    touch-action: pan-x pan-y;
     transition: none;
   }
 }
@@ -126,6 +112,8 @@
   background-size: cover;
   background-position: center top;
   opacity: 0.65;
+  pointer-events: none;
+  -webkit-user-drag: none;
   transition: opacity 0.5s ease, transform 0.5s ease;
 
   :global([data-theme='light']) & { opacity: 0.92; }
@@ -135,8 +123,7 @@
   }
 }
 
-
-// ── Overlay — bottom-fade only, much lighter than before ─────────────────────
+// ── Overlay — bottom-fade only ────────────────────────────────────────────────
 .overlay {
   position: absolute;
   inset: 0;
@@ -147,6 +134,7 @@
     rgba(0, 0, 0, 0.72) 100%
   );
   opacity: 0.9;
+  pointer-events: none;
   transition: opacity 0.5s ease;
 
   @media (hover: none), (pointer: coarse) {
@@ -163,6 +151,7 @@
   flex-direction: column;
   justify-content: space-between;
   z-index: 2;
+  pointer-events: none;
 }
 
 .top {

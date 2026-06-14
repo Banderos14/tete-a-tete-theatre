@@ -12,7 +12,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import type { Booking, NewBooking, BookingStatus, PaymentStatus } from '../types/booking';
-import { THEATRE_CAPACITY } from '../config/theatre';
 
 function getTimestampMs(ts: unknown): number {
   if (!ts) return 0;
@@ -25,23 +24,10 @@ function getTimestampMs(ts: unknown): number {
 const COLLECTION = 'bookings';
 
 export async function createBooking(data: NewBooking): Promise<string> {
-  // Check available seats before booking
-  const q = query(
-    collection(db, COLLECTION),
-    where('showId', '==', data.showId),
-  );
-  const snap = await getDocs(q);
-  let bookedSeats = 0;
-  snap.forEach((d) => {
-    const b = d.data() as Booking;
-    if (b.status !== 'cancelled') {
-      bookedSeats += (b.ticketsCount ?? 1);
-    }
-  });
-  if (bookedSeats + data.ticketsCount > THEATRE_CAPACITY) {
-    throw new Error('NOT_ENOUGH_SEATS');
-  }
-
+  // Seat check happens client-side via subscribeToShowBookedSeats + handleSubmit guard.
+  // A getDocs query here with where('showId','==',id) violates Firestore security rules
+  // for non-admin users (the rule requires resource.data.userId == auth.uid, so any
+  // query that could return other users' documents is rejected with permission-denied).
   const ref = await addDoc(collection(db, COLLECTION), {
     ...data,
     createdAt: serverTimestamp(),
