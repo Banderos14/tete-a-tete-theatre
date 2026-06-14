@@ -31,17 +31,17 @@ export function formatPhone(raw: string): string {
     return out;
   }
 
-  // ── Other international: +CC… ──────────────────────────────────────────────
+  // ── Other international: +CC… — capped at E.164 max 15 digits total ──────
   if (hasPlus) {
     const country = digits.slice(0, 2);
-    const rest    = digits.slice(2);
+    const rest    = digits.slice(2, 13); // 2 + 13 = 15 max
     let out = '+' + country;
     for (let i = 0; i < rest.length; i += 2) out += ' ' + rest.slice(i, i + 2);
     return out;
   }
 
-  // Bare digits — no formatting applied
-  return digits;
+  // Bare digits — no formatting, capped at E.164 max (15 digits)
+  return digits.slice(0, 15);
 }
 
 /** Returns true if phone is a complete French mobile/landline: +33 + 9 local digits. */

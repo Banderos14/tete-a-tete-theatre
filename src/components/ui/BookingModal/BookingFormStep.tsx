@@ -192,6 +192,7 @@ export function BookingFormStep({
             autoComplete="tel"
             value={phone} onChange={e => onPhoneChange(e.target.value)}
             placeholder="+33 6 00 00 00 00"
+            maxLength={20}
             style={{ fontSize: '16px' }} />
           {phoneError && <p className={styles.error}>{phoneError}</p>}
         </div>

@@ -5,10 +5,17 @@ import type { Show } from '../../types';
 import styles from './AfishaSlider.module.scss';
 
 SHOWS.forEach(s => {
-  if (!s.image) return;
-  const img = new Image();
-  img.onerror = () => console.warn('[show image failed]', s.id, s.image);
-  img.src = s.image;
+  if (s.image) {
+    const img = new Image();
+    img.onerror = () => console.warn('[show image failed]', s.id, s.image);
+    img.src = s.image;
+  }
+  // Preload first detail photo so ShowModal renders it instantly on open
+  const firstPhoto = s.photos?.[0];
+  if (firstPhoto) {
+    const detail = new Image();
+    detail.src = firstPhoto;
+  }
 });
 
 // 3 copies: left buffer | center (visible) | right buffer.

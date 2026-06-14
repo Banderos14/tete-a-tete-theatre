@@ -589,7 +589,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
           </nav>
 
           {/* Scrollable content area */}
-          <div className={styles.contentScroll}>
+          <div className={styles.contentScroll} data-scroll-lock-allow="true">
 
             {/* ── ЛИЧНЫЕ ДАННЫЕ ── */}
             {activeSection === 'personal' && (

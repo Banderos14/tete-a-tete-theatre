@@ -24,16 +24,23 @@
   z-index: 500;
   background: rgba(0, 0, 0, 0.74);
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
-  animation: fadeIn 0.3s ease both;
+  animation: fadeIn 0.22s ease both;
   overflow: hidden;
   overscroll-behavior: contain;
   touch-action: none;
 
-  &.backdropOut { animation: fadeOut 0.28s ease both; }
+  &.backdropOut { animation: fadeOut 0.22s ease both; }
+
+  @include mixins.mobile {
+    // blur is GPU-composited — skip on mobile to avoid repaint stutter
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 
   @include mixins.small {
     align-items: stretch;
@@ -55,9 +62,14 @@
   overflow: hidden;
   overscroll-behavior: contain;
   touch-action: auto;
-  animation: slideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: slideUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 
-  &.panelOut { animation: slideDown 0.28s cubic-bezier(0.4, 0, 1, 1) both; }
+  &.panelOut { animation: slideDown 0.22s cubic-bezier(0.4, 0, 1, 1) both; }
+
+  @include mixins.mobile {
+    animation-duration: 0.22s;
+    &.panelOut { animation-duration: 0.18s; }
+  }
 
   @include mixins.mobile {
     flex-direction: column;

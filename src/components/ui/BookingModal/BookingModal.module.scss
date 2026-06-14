@@ -18,6 +18,12 @@
   touch-action: none;
   overscroll-behavior: none;
 
+  @include mixins.mobile {
+    // blur is GPU-composited — skip on mobile to avoid repaint stutter
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
   @include mixins.small {
     place-items: end center;
     padding: 0;
