@@ -11,7 +11,9 @@ SHOWS.forEach(s => {
   img.src = s.image;
 });
 
-const COPIES = 4;
+// 3 copies: left buffer | center (visible) | right buffer.
+// Start offset = -singleWidth (center copy). Loop wraps at 0 and -2*singleWidth.
+const COPIES = 3;
 const CARDS  = Array.from({ length: COPIES }, () => SHOWS).flat();
 
 const DRAG_THRESHOLD    = 6;    // px horizontal before gesture counts as drag (lower = more responsive)
@@ -54,24 +56,39 @@ export function AfishaSlider({ onCardClick }: Props) {
   });
 
   // ── Offset application — translate3d forces GPU layer on iOS Safari ─────────
-  // loopWidth from ref: no DOM read inside the hot RAF path.
+  // loopWidth (= singleCopyWidth) from ref: no DOM read inside the hot RAF path.
+  // Valid range: (-2·lw, 0).  Copy 2 (center) is always at offset -lw.
+  //   • too far left  (o ≤ -2·lw) → jump forward by lw
+  //   • too far right (o ≥ 0)     → jump back   by lw
   const applyOffset = useCallback((offset: number) => {
     const track = trackRef.current;
     if (!track) return;
     const lw = loopWidthRef.current;
     let o = offset;
     if (lw > 0) {
-      while (o <= -lw) o += lw;
-      while (o > 0)    o -= lw;
+      while (o <= -lw * 2) o += lw;
+      while (o >= 0)       o -= lw;
     }
     offsetRef.current = o;
     track.style.transform = `translate3d(${o}px,0,0)`;
   }, []);
 
-  // Cache loopWidth once; ResizeObserver keeps it fresh on viewport resize.
+  // Cache singleCopyWidth = scrollWidth / COPIES; set initial offset to center copy.
+  // ResizeObserver keeps the cached value fresh after viewport resize.
+  // Initial offset is set once (when loopWidthRef is still 0) so RAF starts in the
+  // center copy and doesn't need to correct itself on the very first tick.
   useEffect(() => {
     const measure = () => {
-      if (trackRef.current) loopWidthRef.current = trackRef.current.scrollWidth / 2;
+      if (!trackRef.current) return;
+      const single = trackRef.current.scrollWidth / COPIES;
+      if (single <= 0) return;
+      const firstMeasure = loopWidthRef.current === 0;
+      loopWidthRef.current = single;
+      if (firstMeasure) {
+        const init = -single;               // center copy
+        offsetRef.current = init;
+        trackRef.current.style.transform = `translate3d(${init}px,0,0)`;
+      }
     };
     measure();
     const ro = new ResizeObserver(measure);

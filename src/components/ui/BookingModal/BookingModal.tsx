@@ -7,7 +7,7 @@ import { createBooking, subscribeToUserBookings, subscribeToShowBookedSeats } fr
 import { generateTicketCode } from '../../../services/ticketService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
-import { formatPhone } from '../../../utils/phone';
+import { formatPhone, isValidPhone } from '../../../utils/phone';
 import { PAYMENT_CONFIG } from '../../../config/payment';
 import { THEATRE_CAPACITY } from '../../../config/theatre';
 import {
@@ -16,7 +16,7 @@ import {
   getUserAttendedCount,
 } from '../../../services/loyaltyService';
 import type { Show, TicketType } from '../../../types';
-import type { Booking, PaymentMethod } from '../../../types/booking';
+import type { Booking, PaymentMethod, BookingStatus, PaymentStatus } from '../../../types/booking';
 import { BookingFormStep } from './BookingFormStep';
 import { BookingSuccessStep } from './BookingSuccessStep';
 import styles from './BookingModal.module.scss';
@@ -49,6 +49,7 @@ export function BookingModal({ show, onClose }: Props) {
   const [comment,          setComment]          = useState('');
   const [submitLoading,    setSubmitLoading]    = useState(false);
   const [submitError,      setSubmitError]      = useState('');
+  const [phoneError,       setPhoneError]       = useState('');
   const [ticketCode,       setTicketCode]       = useState('');
   const [savedAmount,      setSavedAmount]      = useState(0);
   const [copiedCode,       setCopiedCode]       = useState(false);
@@ -116,7 +117,7 @@ export function BookingModal({ show, onClose }: Props) {
     /* eslint-disable react-hooks/set-state-in-effect */
     setStep(user ? 'form' : 'auth');
     setTickets(1); setSelectedTicket(null); setPayment('on_site');
-    setComment(''); setSubmitError('');
+    setComment(''); setSubmitError(''); setPhoneError('');
     setAuthEmail(''); setAuthPassword(''); setAuthName(''); setAuthError('');
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -180,7 +181,15 @@ export function BookingModal({ show, onClose }: Props) {
       setSubmitError(t.booking.soldOut);
       return;
     }
-    setSubmitLoading(true); setSubmitError('');
+
+    // Phone validation — must be a formatted number (starts with +, ≥10 digits).
+    // formatPhone is already called on every keystroke; this catches bare digits like '75688587880'.
+    if (!isValidPhone(phone)) {
+      setPhoneError(t.profile.phoneInvalid);
+      return;
+    }
+
+    setSubmitLoading(true); setSubmitError(''); setPhoneError('');
     try {
       const code      = generateTicketCode();
       const userName  = user.displayName ?? userProfile?.displayName ?? '';
@@ -199,7 +208,7 @@ export function BookingModal({ show, onClose }: Props) {
         ? `${activeTicket.label} · ${activeTicket.price}€ × ${tickets} = ${baseAmount}€, скидка 50% = ${totalAmount}€`
         : `${activeTicket.label} · ${activeTicket.price}€ × ${tickets} = ${totalAmount}€`;
 
-      await createBooking({
+      const bookingPayload = {
         showId:        show.id,
         showTitle:     show.title,
         showDate,
@@ -213,9 +222,9 @@ export function BookingModal({ show, onClose }: Props) {
         priceInfo,
         totalAmount,
         ticketCode:    code,
-        status:        'pending',
+        status:        'pending' as BookingStatus,
         paymentMethod: payment,
-        paymentStatus: isBankTransfer ? 'awaiting_transfer' : 'not_paid',
+        paymentStatus: (isBankTransfer ? 'awaiting_transfer' : 'not_paid') as PaymentStatus,
         comment,
         lang,
         ...(isBankTransfer ? { paymentAccountId: PAYMENT_CONFIG.paymentAccounts[0].id } : {}),
@@ -227,9 +236,11 @@ export function BookingModal({ show, onClose }: Props) {
           loyaltyDiscountAmount:           discountAmount,
           loyaltyRewardUsedFromVisitCount: attendedCount,
         } : {}),
-      });
+      };
 
-      // Non-blocking — booking is already saved if email fails
+      await createBooking(bookingPayload);
+
+      // Non-blocking — booking is already saved if email fails.
       sendBookingConfirmationEmail({
         userEmail,
         userName,
@@ -249,7 +260,7 @@ export function BookingModal({ show, onClose }: Props) {
           loyaltyDiscountApplied: true,
           loyaltyDiscountAmount:  discountAmount,
         } : {}),
-      }).catch(() => {/* silently ignored */});
+      }).catch(() => {/* email failure must never affect a saved booking */});
 
       setTicketCode(code);
       setSavedAmount(totalAmount);
@@ -261,19 +272,27 @@ export function BookingModal({ show, onClose }: Props) {
         saveProfile({ phone }).catch(e => console.warn('[booking] phone sync to profile failed', e));
       }
     } catch (err) {
-      const fe = err as { code?: string; message?: string };
+      const fe = err as { code?: string; message?: string; stack?: string };
       console.error('[BookingModal] createBooking failed', {
-        code:            fe?.code,
-        message:         fe?.message,
+        errorCode:       fe?.code,
+        errorMessage:    fe?.message,
+        errorStack:      fe?.stack,
         uid:             user?.uid,
-        emailPresent:    !!(user?.email),
-        paymentMethod:   payment,
+        email:           user?.email ?? null,
         showId:          show?.id,
         showDate:        show ? `${show.day} ${show.month} ${show.year}` : null,
+        showTime:        show?.time,
+        ticketType:      activeTicket?.id,
         ticketsCount:    tickets,
-        phonePresent:    !!phone,
+        phoneRaw:        phone,
+        phoneValid:      isValidPhone(phone),
+        paymentMethod:   payment,
+        totalAmount,
         isAuthenticated: !!user,
         userDocPresent:  !!userProfile,
+        userDocPhone:    userProfile?.phone ?? null,
+        bookedSeats,
+        availableSeats,
       });
       setSubmitError(t.booking.submitError);
     } finally { setSubmitLoading(false); }
@@ -394,7 +413,8 @@ export function BookingModal({ show, onClose }: Props) {
             onTicketsChange={setTickets}
             onSelectedTicketChange={tt => { setSelectedTicket(tt); setTickets(1); }}
             onPaymentChange={setPayment}
-            onPhoneChange={v => setPhone(formatPhone(v))}
+            onPhoneChange={v => { setPhone(formatPhone(v)); setPhoneError(''); }}
+            phoneError={phoneError}
             onCommentChange={setComment}
             onSubmit={handleSubmit}
           />

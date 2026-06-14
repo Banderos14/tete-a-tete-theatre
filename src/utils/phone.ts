@@ -49,3 +49,19 @@ export function isCompleteFrenchPhone(phone: string): boolean {
   const digits = phone.replace(/\D/g, '');
   return digits.startsWith('33') && digits.length === 11;
 }
+
+/**
+ * Returns true if phone is a valid, submittable phone number.
+ * Requires:
+ *   - formatted value (must start with '+', so bare digits are rejected)
+ *   - at least 10 total digits (covers +33 + 9, or any other +CC + 8+)
+ *
+ * Bare digit strings like '75688587880' (no leading 0 or +) are invalid.
+ * Empty string is invalid.
+ */
+export function isValidPhone(phone: string): boolean {
+  const trimmed = phone.trim();
+  if (!trimmed) return false;
+  if (!trimmed.startsWith('+')) return false;
+  return trimmed.replace(/\D/g, '').length >= 10;
+}
