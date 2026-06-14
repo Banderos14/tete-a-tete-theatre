@@ -50,7 +50,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
 
   const handleClose = useCallback(() => {
     setClosing(true);
-    setTimeout(onClose, 280);
+    setTimeout(onClose, 220);
   }, [onClose]);
 
   const goTo = useCallback((idx: number) => {

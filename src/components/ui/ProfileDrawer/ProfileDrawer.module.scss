@@ -531,6 +531,7 @@
   @include mixins.mobile {
     min-height: 0;
     order: 2;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
