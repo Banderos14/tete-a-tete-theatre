@@ -8,6 +8,7 @@ import { markEligibleBookingsAsAttended } from '../../../services/attendanceServ
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Booking, BookingStatus } from '../../../types/booking';
 import type { Messenger } from '../../../context/AuthContext';
+import { formatPhone, isCompleteFrenchPhone } from '../../../utils/phone';
 import styles from './ProfileDrawer.module.scss';
 
 function formatBirthdayDisplay(dateStr: string, lang: 'RU' | 'FR'): string {
@@ -16,41 +17,6 @@ function formatBirthdayDisplay(dateStr: string, lang: 'RU' | 'FR'): string {
   return new Intl.DateTimeFormat(lang === 'FR' ? 'fr-FR' : 'ru-RU', {
     day: 'numeric', month: 'long', year: 'numeric',
   }).format(d);
-}
-
-// Normalise input to French international format: +33 X XX XX XX XX (9 local digits max).
-// Accepts: "+33 7 53…", "07 53…", bare local digits.
-function formatPhone(raw: string): string {
-  const hasPlus = raw.trimStart().startsWith('+');
-  const digits  = raw.replace(/\D/g, '');
-
-  if (!digits) return hasPlus ? '+' : '';
-
-  // Derive local digits (after country code 33)
-  let local: string;
-  if (hasPlus) {
-    local = digits.startsWith('33') ? digits.slice(2) : digits;
-  } else if (digits.startsWith('0')) {
-    // French local: 07… → strip leading 0
-    local = digits.slice(1);
-  } else {
-    local = digits;
-  }
-
-  // Hard-cap at 9 local digits — extra input is silently ignored
-  local = local.slice(0, 9);
-
-  if (!local) return '+33';
-
-  // Format: +33 X XX XX XX XX
-  let out = '+33 ' + local[0];
-  for (let i = 1; i < local.length; i += 2) out += ' ' + local.slice(i, i + 2);
-  return out;
-}
-
-function isCompleteFrenchPhone(phone: string): boolean {
-  const digits = phone.replace(/\D/g, '');
-  return digits.startsWith('33') && digits.length === 11;
 }
 
 function getInitials(name: string | null | undefined): string {

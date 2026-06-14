@@ -86,7 +86,7 @@ export function BookingFormStep({
   }
 
   return (
-    <form onSubmit={onSubmit} className={styles.formLayout}>
+    <form onSubmit={onSubmit} className={styles.formLayout} data-scroll-lock-allow="true">
 
       {/* LEFT — 310px */}
       <div className={styles.formLeft}>

@@ -18,12 +18,10 @@ const easeInOutCubic: EasingFn = (t) =>
 // Duration scales with scroll distance so adjacent sections feel snappy
 // while a full-page jump gives a real "tour".
 // sqrt curve biases mid-distances toward the longer end.
-//   mobile : 2200 ms (adjacent) … 4200 ms (full page)
-//   desktop: 1300 ms (adjacent) … 2600 ms (full page)
 function calcDuration(distancePx: number, mobile: boolean): number {
   const vh = window.innerHeight;
   const t  = Math.sqrt(Math.min(Math.abs(distancePx) / vh / 5, 1));
-  const [minMs, maxMs] = mobile ? [1700, 3200] : [1100, 2100];
+  const [minMs, maxMs] = mobile ? [1300, 2400] : [900, 1700];
   return Math.round(minMs + t * (maxMs - minMs));
 }
 

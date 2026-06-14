@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
@@ -7,6 +7,7 @@ import { createBooking, subscribeToUserBookings, subscribeToShowBookedSeats } fr
 import { generateTicketCode } from '../../../services/ticketService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
+import { formatPhone } from '../../../utils/phone';
 import { PAYMENT_CONFIG } from '../../../config/payment';
 import { THEATRE_CAPACITY } from '../../../config/theatre';
 import {
@@ -25,33 +26,11 @@ interface Props {
   onClose: () => void;
 }
 
-function formatPhone(raw: string): string {
-  const hasPlus = raw.startsWith('+');
-  const digits = raw.replace(/\D/g, '');
-  if (!digits) return hasPlus ? '+' : '';
-  if (hasPlus && digits.startsWith('33')) {
-    const local = digits.slice(2);
-    let out = '+33';
-    if (!local) return out;
-    out += ' ' + local[0];
-    for (let i = 1; i < local.length; i += 2) out += ' ' + local.slice(i, i + 2);
-    return out;
-  }
-  if (hasPlus) {
-    const country = digits.slice(0, 2);
-    const rest = digits.slice(2);
-    let out = '+' + country;
-    for (let i = 0; i < rest.length; i += 2) out += ' ' + rest.slice(i, i + 2);
-    return out;
-  }
-  return digits;
-}
-
 type Step = 'auth' | 'form' | 'success';
 
 export function BookingModal({ show, onClose }: Props) {
   const { lang, t } = useLang();
-  const { user, userProfile, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { user, userProfile, loading: authContextLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, saveProfile } = useAuth();
 
   const initialStep = (): Step => (user ? 'form' : 'auth');
 
@@ -144,6 +123,33 @@ export function BookingModal({ show, onClose }: Props) {
 
   useScrollLock(!!show);
 
+  // Belt-and-suspenders: direct non-passive touchmove listener on the overlay.
+  // useScrollLock already covers the document, but attaching here ensures we catch
+  // any event that might not bubble up (e.g. if a child calls stopPropagation).
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el || !show) return;
+    let startY = 0;
+    const onStart = (e: TouchEvent) => { startY = e.touches[0]?.clientY ?? 0; };
+    const onMove  = (e: TouchEvent) => {
+      const allowEl = (e.target as Element | null)
+        ?.closest('[data-scroll-lock-allow]') as HTMLElement | null;
+      if (!allowEl) { e.preventDefault(); return; }
+      const dy       = (e.touches[0]?.clientY ?? 0) - startY;
+      const atTop    = allowEl.scrollTop <= 0;
+      const atBottom = allowEl.scrollTop >= allowEl.scrollHeight - allowEl.clientHeight - 1;
+      if (dy > 0 && atTop)    { e.preventDefault(); return; }
+      if (dy < 0 && atBottom) { e.preventDefault(); return; }
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove',  onMove,  { passive: false });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove',  onMove);
+    };
+  }, [show]);
+
   if (!show) return null;
 
   async function handleGoogle() {
@@ -169,7 +175,7 @@ export function BookingModal({ show, onClose }: Props) {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!user || !activeTicket || !show) return;
+    if (!user || !activeTicket || !show || authContextLoading) return;
     if (availableSeats < tickets) {
       setSubmitError(t.booking.soldOut);
       return;
@@ -248,7 +254,27 @@ export function BookingModal({ show, onClose }: Props) {
       setTicketCode(code);
       setSavedAmount(totalAmount);
       setStep('success');
-    } catch {
+
+      // Sync phone to profile when profile phone is empty (non-blocking).
+      // Booking is already saved — a profile update failure must not affect the booking.
+      if (phone && !userProfile?.phone) {
+        saveProfile({ phone }).catch(e => console.warn('[booking] phone sync to profile failed', e));
+      }
+    } catch (err) {
+      const fe = err as { code?: string; message?: string };
+      console.error('[BookingModal] createBooking failed', {
+        code:            fe?.code,
+        message:         fe?.message,
+        uid:             user?.uid,
+        emailPresent:    !!(user?.email),
+        paymentMethod:   payment,
+        showId:          show?.id,
+        showDate:        show ? `${show.day} ${show.month} ${show.year}` : null,
+        ticketsCount:    tickets,
+        phonePresent:    !!phone,
+        isAuthenticated: !!user,
+        userDocPresent:  !!userProfile,
+      });
       setSubmitError(t.booking.submitError);
     } finally { setSubmitLoading(false); }
   }
@@ -266,6 +292,7 @@ export function BookingModal({ show, onClose }: Props) {
 
   return (
     <div
+      ref={overlayRef}
       className={styles.overlay}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
@@ -279,7 +306,7 @@ export function BookingModal({ show, onClose }: Props) {
 
         {/* ── Auth step — centered single column ── */}
         {step === 'auth' && (
-          <div className={styles.authWrap}>
+          <div className={styles.authWrap} data-scroll-lock-allow="true">
             <div className={styles.authShowStrip} style={{ background: show.palette }}>
               <div className={styles.authGlyph} style={{ background: show.palette }} />
               <div>

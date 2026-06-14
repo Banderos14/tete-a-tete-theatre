@@ -74,41 +74,47 @@ export function BookingSuccessStep({
       {/* ПРАВАЯ ЧАСТЬ */}
       <div className={styles.successRight}>
 
-        <div className={styles.successStamp}>
-          {lang === 'FR' ? 'ACCEPTÉ' : 'ПРИНЯТО'}
+        {/* Скроллируемая область — только контент, без кнопок */}
+        <div className={styles.successContent} data-scroll-lock-allow="true">
+
+          <div className={styles.successStamp}>
+            {lang === 'FR' ? 'ACCEPTÉ' : 'ПРИНЯТО'}
+          </div>
+
+          <h3 className={styles.successTitle}>{t.booking.successTitle}</h3>
+
+          <div className={styles.successSummary}>
+            <div className={styles.summaryRow}>
+              <span>{t.booking.labelTickets}</span>
+              <span>{tickets} × {ticketLabel(activeTicket?.id)}</span>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{t.booking.labelAmount}</span>
+              <span className={styles.summaryAmount}>{savedAmount}&nbsp;€</span>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{lang === 'FR' ? 'Détails envoyés à' : 'Детали отправлены'}</span>
+              <span>{userEmail}</span>
+            </div>
+          </div>
+
+          {payment === 'on_site' ? (
+            <p className={styles.successText}>
+              {lang === 'FR'
+                ? 'Votre réservation est bien reçue. Les détails de votre réservation ont été envoyés par e-mail. Le paiement se fera sur place avant le spectacle.'
+                : 'Бронирование принято. Детали бронирования отправлены на вашу почту. Оплата будет произведена на месте перед спектаклем.'}
+            </p>
+          ) : (
+            <p className={styles.successText}>
+              {lang === 'FR'
+                ? 'Votre réservation est bien reçue. Les coordonnées bancaires et le code de réservation ont été envoyés par e-mail.'
+                : 'Бронирование принято. Реквизиты для оплаты и код брони отправлены на вашу почту.'}
+            </p>
+          )}
+
         </div>
 
-        <h3 className={styles.successTitle}>{t.booking.successTitle}</h3>
-
-        <div className={styles.successSummary}>
-          <div className={styles.summaryRow}>
-            <span>{t.booking.labelTickets}</span>
-            <span>{tickets} × {ticketLabel(activeTicket?.id)}</span>
-          </div>
-          <div className={styles.summaryRow}>
-            <span>{t.booking.labelAmount}</span>
-            <span className={styles.summaryAmount}>{savedAmount}&nbsp;€</span>
-          </div>
-          <div className={styles.summaryRow}>
-            <span>{lang === 'FR' ? 'Détails envoyés à' : 'Детали отправлены'}</span>
-            <span>{userEmail}</span>
-          </div>
-        </div>
-
-        {payment === 'on_site' ? (
-          <p className={styles.successText}>
-            {lang === 'FR'
-              ? 'Votre réservation est bien reçue. Les détails de votre réservation ont été envoyés par e-mail. Le paiement se fera sur place avant le spectacle.'
-              : 'Бронирование принято. Детали бронирования отправлены на вашу почту. Оплата будет произведена на месте перед спектаклем.'}
-          </p>
-        ) : (
-          <p className={styles.successText}>
-            {lang === 'FR'
-              ? 'Votre réservation est bien reçue. Les coordonnées bancaires et le code de réservation ont été envoyés par e-mail.'
-              : 'Бронирование принято. Реквизиты для оплаты и код брони отправлены на вашу почту.'}
-          </p>
-        )}
-
+        {/* Кнопки вне зоны скролла — всегда видны внизу */}
         <div className={styles.successActions}>
           <button className={styles.closeSuccessBtn} onClick={onClose}>{t.booking.close}</button>
           <button
