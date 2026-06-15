@@ -23,20 +23,23 @@
     <title>ТЕТ-А-ТЕТ · Русскоязычный театр в Ницце</title>
     <link rel="icon" type="image/png" href="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" />
 
-    <!-- Preload critical self-hosted Hero fonts (Bad Russian = display font, Forum = H1 title) -->
-    <link rel="preload" href="/fonts/bad-russian.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/Forum.woff2" as="font" type="font/woff2" crossorigin />
-
-    <!-- Preconnect for Dela Gothic One (used for section numbers/mono text) -->
+    <!-- Preconnect for Dela Gothic One CDN -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Dela Gothic One only (Caprasimo removed — unused in codebase) -->
+    <!-- Dela Gothic One — loaded async (non-render-blocking). Used only below fold (section numbers/mono).
+         Fonts are swap-safe: system font renders first, then replaces. -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
       rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
-    <!-- Bad Russian, Forum, Ekaterina are self-hosted — see /public/fonts/ and variables.scss -->
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet" />
+    </noscript>
+    <!-- Self-hosted fonts (Bad Russian, Forum, Ekaterina) loaded via @font-face in CSS — no preload needed -->
   </head>
   <body>
     <div id="root"></div>

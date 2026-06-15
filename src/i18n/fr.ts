@@ -42,7 +42,7 @@ export const FR: T = {
     h3It:    'vivante',
     h3After: 'de la scène',
     text:    'Notre Instagram — la chronique vivante du théâtre : répétitions, premières, coulisses et actualités. Suivez la naissance d\'un spectacle — de la première lecture à la représentation.',
-    tileLabels: ['Coulisses', 'Première', 'Répétition', 'Salut', 'Scène', 'Scène'],
+    tileLabels: ['Coulisses', 'Première', 'Partie technique', 'Scène', 'Répétition', 'Scène'],
   },
   about: {
     num:       '03 / About',
@@ -58,7 +58,7 @@ export const FR: T = {
       { num: '42',   suffix: '',     label: 'spectacles',            italic: false },
       { num: '2 451', suffix: '',     label: 'spectateurs',  italic: false },
     ],
-    imageLabels: ['Tournée', 'Salle', 'Répétition', 'Salut de la troupe'],
+    imageLabels: ['Tournée', 'Salle', "Avant d'entrer en scène", 'Salut de la troupe'],
   },
   repertoire: {
     num:          '04 / Répertoire',

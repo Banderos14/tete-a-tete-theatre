@@ -3,12 +3,12 @@ import { useLang } from '../../i18n/LangContext';
 import styles from './Socials.module.scss';
 
 const TILES = [
-  { kind: 'feature' },
-  { kind: ''        },
-  { kind: ''        },
-  { kind: ''        },
-  { kind: ''        },
-  { kind: ''        },
+  { kind: 'tall' },   // 0 — ЗАКУЛИСЬЕ  (col1, rows 1-2)
+  { kind: ''     },   // 1 — СЦЕНА      (col2, row1)
+  { kind: ''     },   // 2 — ТЕХН.ЧАСТЬ (col3, row1)
+  { kind: ''     },   // 3 — МАШКА      (col2, row2)
+  { kind: 'tall' },   // 4 — РЕПЕТИЦИЯ  (col3, rows 2-3)
+  { kind: 'wide' },   // 5 — ПОКЛОН     (col1+2, row3)
 ] as const;
 
 interface Props {
@@ -43,25 +43,47 @@ export function Socials({ theme }: Props) {
           {TILES.map((tile, i) => (
             <div
               key={i}
-              className={`${styles.tile} ${tile.kind === 'feature' ? styles.feature : ''}`}
+              className={`${styles.tile} ${tile.kind === 'tall' ? styles.tall : ''} ${tile.kind === 'wide' ? styles.wide : ''}`}
               data-tile={i}
             >
               {i === 0 && (
-                <video
-                  className={styles.videoBg}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
-                  aria-hidden="true"
-                >
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
                   <source src="/images/video/zakulis.webm" type="video/webm" />
-                  <source src="/images/video/zakulis.mp4"  type="video/mp4" />
                 </video>
               )}
-              {i === 0 && <div className={styles.videoOverlay} aria-hidden="true" />}
+              {i === 1 && (
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
+                  <source src="/images/video/mashka.webm" type="video/webm" />
+
+                </video>
+              )}
+              {i === 2 && (
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
+                  <source src="/images/video/techPart.webm" type="video/webm" />
+                </video>
+              )}
+              {i === 3 && (
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
+                  <source src="/images/video/newYear.webm" type="video/webm" />
+                </video>
+              )}
+              {i === 4 && (
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
+                  <source src="/images/video/ludaCouch.webm" type="video/webm" />
+                </video>
+              )}
+              {i === 5 && (
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
+                  <source src="/images/video/mladshie.webm" type="video/webm" />
+                </video>
+              )}
+              <div className={styles.videoOverlay} aria-hidden="true" />
               <div className={styles.badge}>{t.socials.tileLabels[i]}</div>
             </div>
           ))}

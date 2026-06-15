@@ -63,17 +63,30 @@ export function About() {
             >
               {i === 0 && (
                 <video
-                  className={styles.videoBg}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
+                  className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
                   aria-hidden="true"
                 >
                   <source src="/images/video/premiere.webm" type="video/webm" />
-                  <source src="/images/video/premiere.mp4"  type="video/mp4" />
+                </video>
+              )}
+              {i === 2 && (
+                <video
+                  className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
+                  aria-hidden="true"
+                >
+                  <source src="/images/video/deviz.webm" type="video/webm" />
+                </video>
+              )}
+              {i === 3 && (
+                <video
+                  className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
+                  aria-hidden="true"
+                  style={{ objectPosition: 'center 100%' }}
+                >
+                  <source src="/images/video/poklon2.webm" type="video/webm" />
                 </video>
               )}
               {i === 0 && <div className={styles.videoOverlay} aria-hidden="true" />}
