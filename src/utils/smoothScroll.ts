@@ -6,12 +6,12 @@ export interface ScrollOptions {
   easing?: EasingFn;
 }
 
-// Mobile: sinusoidal — derivative at t=0 is exactly 0, so there is no jerk
-// whatsoever. Starts from rest, peaks gently in the middle, lands softly.
+// Mobile: sinusoidal ease-in-out — peak velocity only 1.57× the average (vs 4× for
+// quartic). The page scrolls at a nearly uniform, cinema-smooth pace with a gentle
+// ramp at each end. No aggressive mid-scroll burst.
 const easeInOutSine: EasingFn = (t) => -(Math.cos(Math.PI * t) - 1) / 2;
 
-// Desktop: cubic — faster peak speed feels more responsive on a mouse-driven UI,
-// still starts and ends at rest (derivative = 0 at both endpoints).
+// Desktop: cubic ease-in-out — symmetric, suits deliberate mouse-driven navigation.
 const easeInOutCubic: EasingFn = (t) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
@@ -21,7 +21,7 @@ const easeInOutCubic: EasingFn = (t) =>
 function calcDuration(distancePx: number, mobile: boolean): number {
   const vh = window.innerHeight;
   const t  = Math.sqrt(Math.min(Math.abs(distancePx) / vh / 5, 1));
-  const [minMs, maxMs] = mobile ? [1300, 2400] : [900, 1700];
+  const [minMs, maxMs] = mobile ? [1300, 1800] : [900, 1700];
   return Math.round(minMs + t * (maxMs - minMs));
 }
 

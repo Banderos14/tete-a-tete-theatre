@@ -103,6 +103,15 @@
     height: clamp(320px, 56vh, 420px);
     transition: none;
   }
+
+  // Active (tap) feedback on touch devices — mirrors desktop hover palette reveal
+  @media (hover: none), (pointer: coarse) {
+    &:active {
+      .poster  { opacity: 0.55; }
+      .overlay { opacity: 0.78; }
+      .openHint { opacity: 1; }
+    }
+  }
 }
 
 // ── Poster image ──────────────────────────────────────────────────────────────

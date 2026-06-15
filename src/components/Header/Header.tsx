@@ -68,9 +68,9 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
 
   function handleNavClick(id: string) {
     closeMenu();
-    // 220 ms lets iOS Safari finish releasing the scroll lock and restoring
-    // layout before the animation starts — prevents a layout-induced jerk.
-    setTimeout(() => scrollToSection(id), 220);
+    // 100 ms lets iOS Safari release the scroll lock and restore layout before
+    // the animation starts — prevents a jerk while keeping response feeling instant.
+    setTimeout(() => scrollToSection(id), 100);
   }
 
   const navLinks = [

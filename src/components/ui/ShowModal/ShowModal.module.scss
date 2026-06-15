@@ -40,6 +40,8 @@
     // blur is GPU-composited — skip on mobile to avoid repaint stutter
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    // Faster close on mobile: match the 150ms JS timeout
+    &.backdropOut { animation-duration: 0.13s; }
   }
 
   @include mixins.small {
@@ -68,7 +70,8 @@
 
   @include mixins.mobile {
     animation-duration: 0.22s;
-    &.panelOut { animation-duration: 0.18s; }
+    // Match 150ms JS timeout: animation finishes before DOM removal
+    &.panelOut { animation-duration: 0.13s; }
   }
 
   @include mixins.mobile {

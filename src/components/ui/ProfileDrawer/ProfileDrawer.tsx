@@ -667,8 +667,8 @@ export function ProfileDrawer({ open, onClose }: Props) {
                   <p className={styles.birthdayHint}>
                     <IconGift size={12} stroke={1.5} />
                     {lang === 'FR'
-                      ? ' Le jour de votre anniversaire — une surprise du théâtre'
-                      : ' В день рождения — сюрприз от театра'}
+                      ? ' Pour une attention personnalisée'
+                      : ' Для персонального поздравления'}
                   </p>
                 </PersonalField>
 

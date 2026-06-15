@@ -186,18 +186,27 @@ section {
   .arrow { transition: transform 0.35s ease; display: inline-block; }
   &:hover .arrow { transform: translateX(5px); }
 
-  // Touch-устройства: анимация заполнения в 2× медленнее
+  // Touch-устройства: без fill-анимации, только быстрый lightweight press effect
   @media (hover: none) and (pointer: coarse) {
-    transition: color 0.8s ease, border-color 0.8s ease;
+    // Disable the slide-fill — on tap it starts filling then immediately reverses on finger-up
+    &::before { display: none; }
 
-    &::before {
-      transition: transform 0.96s cubic-bezier(0.22, 1, 0.36, 1);
+    // Only GPU-composited properties — text stays fully readable at all times
+    transition: transform 0.13s ease-out, border-color 0.13s ease-out;
+
+    &:active {
+      border-color: var(--fg);
+      transform: scale(0.975);
     }
 
     &.btn-primary {
-      transition: background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease;
+      transition: transform 0.13s ease-out, background 0.13s ease-out;
+      &:active {
+        background: var(--accent-bright);
+        transform: scale(0.975);
+      }
     }
 
-    .arrow { transition: transform 0.7s ease; }
+    .arrow { transition: none; }
   }
 }

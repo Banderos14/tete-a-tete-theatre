@@ -4,18 +4,27 @@ import { SHOWS } from '../../data/shows';
 import type { Show } from '../../types';
 import styles from './AfishaSlider.module.scss';
 
-SHOWS.forEach(s => {
-  if (s.image) {
-    const img = new Image();
-    img.onerror = () => console.warn('[show image failed]', s.id, s.image);
-    img.src = s.image;
-  }
-  // Preload first detail photo so ShowModal renders it instantly on open
-  const firstPhoto = s.photos?.[0];
-  if (firstPhoto) {
-    const detail = new Image();
-    detail.src = firstPhoto;
-  }
+// Preload show images after the browser is idle so we don't compete with
+// the first paint / LCP. requestIdleCallback fires between frames on both
+// desktop and mobile; the setTimeout fallback covers Safari < 16.4.
+const _schedulePreload = typeof requestIdleCallback === 'function'
+  ? (fn: () => void) => requestIdleCallback(fn, { timeout: 2000 })
+  : (fn: () => void) => setTimeout(fn, 200);
+
+_schedulePreload(() => {
+  SHOWS.forEach(s => {
+    if (s.image) {
+      const img = new Image();
+      img.onerror = () => console.warn('[show image failed]', s.id, s.image);
+      img.src = s.image;
+    }
+    // Preload first detail photo so ShowModal renders it instantly on open
+    const firstPhoto = s.photos?.[0];
+    if (firstPhoto) {
+      const detail = new Image();
+      detail.src = firstPhoto;
+    }
+  });
 });
 
 // 3 copies: left buffer | center (visible) | right buffer.

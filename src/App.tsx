@@ -98,6 +98,20 @@ export default function App() {
 
   useEffect(() => {
     if (introState !== 'done') return;
+    // Kick off lazy chunk downloads during the first idle window after page load.
+    // Even though these chunks are also triggered by Suspense boundaries, calling
+    // import() here ensures the browser starts fetching them as early as possible.
+    const schedule = (window as typeof window & { requestIdleCallback?: (fn: () => void) => void })
+      .requestIdleCallback ?? ((fn: () => void) => setTimeout(fn, 400));
+    schedule(() => {
+      import('./components/ui/AuthModal');
+      import('./components/ui/ProfileDrawer');
+      import('./components/ui/BookingModal');
+    });
+  }, [introState]);
+
+  useEffect(() => {
+    if (introState !== 'done') return;
     const els = document.querySelectorAll<HTMLElement>('.reveal');
     const io = new IntersectionObserver(entries => {
       entries.forEach(e => {

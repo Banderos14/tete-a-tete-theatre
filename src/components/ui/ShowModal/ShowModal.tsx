@@ -50,7 +50,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
 
   const handleClose = useCallback(() => {
     setClosing(true);
-    setTimeout(onClose, 220);
+    setTimeout(onClose, 150);
   }, [onClose]);
 
   const goTo = useCallback((idx: number) => {
@@ -64,7 +64,9 @@ export function ShowModal({ show, onClose, onBook }: Props) {
     });
   }, [allPhotos.length]);
 
-  useScrollLock(!!show);
+  // Unlock body scroll immediately when close animation starts (don't wait for onClose).
+  // The 150ms animation still plays but the page is interactable right away on tap.
+  useScrollLock(!!show && !closing);
 
   // Keyboard: ESC + arrow keys
   useEffect(() => {
@@ -178,7 +180,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
         </div>
 
         {/* ── Info ────────────────────────────────────────────────────────── */}
-        <div className={styles.info}>
+        <div className={styles.info} data-scroll-lock-allow="true">
           <div className={styles.ageStamp}>{show.age}</div>
 
           <div className={styles.author}>{author}</div>

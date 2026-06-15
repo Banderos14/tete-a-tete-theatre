@@ -22,6 +22,14 @@
     pointer-events: auto;
   }
 
+  @include mixins.mobile {
+    // blur is GPU-composited — skip on mobile to avoid repaint stutter
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    // Faster fade on mobile
+    transition: opacity 0.15s ease;
+  }
+
   @include mixins.small {
     align-items: end;
     place-items: end center;
@@ -50,6 +58,17 @@
   &.modalVisible {
     transform: translateY(0) scale(1);
     opacity: 1;
+  }
+
+  @include mixins.mobile {
+    // Cheaper transform (no scale) + faster on mobile
+    transform: translateY(16px);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.15s ease;
+
+    &.modalVisible {
+      transform: translateY(0);
+    }
   }
 
   @include mixins.small {

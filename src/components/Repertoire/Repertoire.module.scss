@@ -209,6 +209,11 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 500;
+
+  @include mixins.mobile {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
   display: grid;
   place-items: center;
   padding: 24px;
