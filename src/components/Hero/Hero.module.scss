@@ -1,7 +1,5 @@
 @use '../../styles/mixins';
 
-// ── Keyframes ────────────────────────────────────────────────────────────────
-
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.4; }
@@ -163,8 +161,6 @@
   50%       { opacity: 0.042; }
 }
 
-// ── Hero shell ────────────────────────────────────────────────────────────────
-
 .hero {
   position: relative;
   min-height: 100svh;
@@ -191,8 +187,6 @@
   }
 }
 
-// ── CSS Stage Lights ──────────────────────────────────────────────────────────
-
 .stageLights {
   position: absolute;
   inset: 0;
@@ -218,10 +212,6 @@
     animation: none !important;
   }
 }
-
-// ── Centre beams ──────────────────────────────────────────────────────────────
-
-// ── Centre beams — three-layer gradients, warm theatrical white ───────────────
 
 // Wide stage wash — medium-distance tier
 .beamCW {
@@ -264,8 +254,6 @@
     crossCenterB 11s ease-in-out -1s  infinite,
     breathe       5s ease-in-out -3s  infinite;
 }
-
-// ── Left beams ────────────────────────────────────────────────────────────────
 
 // Medium-distance tier — secondary, reduced brightness
 .beamL1 {
@@ -321,8 +309,6 @@
   animation: airDrift 22s ease-in-out -9s infinite;
 }
 
-// ── Right beams ───────────────────────────────────────────────────────────────
-
 .beamR1 {
   right: 4vw;
   width: 17vw;
@@ -372,8 +358,6 @@
     linear-gradient(to bottom, rgba(255,225,200,0.013) 0%, transparent 68%);
   animation: airDrift 28s ease-in-out -15s infinite;
 }
-
-// ── Red beams — 4-layer: core + smoke-streak + halo + daze ───────────────────
 
 // Far left red — wide secondary daze via wider div; light-through-smoke feel
 .beamRedL1 {
@@ -436,8 +420,6 @@
 }
 
 
-// ── Vignette ──────────────────────────────────────────────────────────────────
-
 .vignette {
   position: absolute;
   inset: 0;
@@ -469,7 +451,6 @@
     );
 }
 
-// ── Atmospheric haze overlay ──────────────────────────────────────────────────
 // Sits above beams, below vignette edge-dark; barely visible warm fog layer
 
 .haze {
@@ -489,7 +470,6 @@
   }
 }
 
-// ── Mobile: 6 beams — wider + extra centre + left warm ───────────────────────
 // Visible: CW, CN1, CN2 (added), L2 (added as left warm), RedL1, RedR1
 // Hidden:  L1, L3, LX, R1, R2, R3, RX, RedL2, RedR2
 
@@ -521,8 +501,6 @@
   pointer-events: none;
   z-index: 2;
 }
-
-// ── Content ───────────────────────────────────────────────────────────────────
 
 .content {
   position: relative;
@@ -814,8 +792,6 @@
   animation: scrollLine 2s ease-in-out infinite;
 }
 
-// ── Light theme overrides ─────────────────────────────────────────────────────
-
 :global([data-theme='light']) {
   .hero {
     background:
@@ -828,8 +804,6 @@
   .floor {
     background: linear-gradient(180deg, transparent 0%, var(--bg) 100%);
   }
-
-  // ── Warm amber centre beams ──────────────────────────────────────────────────
 
   .beamCW {
     background:
@@ -851,8 +825,6 @@
       radial-gradient(ellipse 80% 88% at 50% 0%, rgba(90,60,30,0.063) 0%, transparent 100%),
       linear-gradient(to bottom, rgba(80,55,25,0.020) 0%, transparent 65%);
   }
-
-  // ── Warm amber left beams ────────────────────────────────────────────────────
 
   .beamL1 {
     background:
@@ -882,8 +854,6 @@
       linear-gradient(to bottom, rgba(80,55,25,0.005) 0%, transparent 55%);
   }
 
-  // ── Warm amber right beams ───────────────────────────────────────────────────
-
   .beamR1 {
     background:
       radial-gradient(ellipse 15% 65% at 50% 0%, rgba(120,80,50,0.12) 0%, rgba(100,65,35,0.039) 40%, transparent 100%),
@@ -911,8 +881,6 @@
       radial-gradient(ellipse 68% 78% at 50% 0%, rgba(90,60,30,0.014) 0%, transparent 100%),
       linear-gradient(to bottom, rgba(80,55,25,0.005) 0%, transparent 55%);
   }
-
-  // ── Muted burgundy red beams ─────────────────────────────────────────────────
 
   .beamRedL1 {
     background:
@@ -946,16 +914,12 @@
       linear-gradient(to bottom, rgba(70,0,0,0.021) 0%, transparent 65%);
   }
 
-  // ── Light-theme vignette: warm centre glow, no edge darkening ────────────────
-
   .vignette {
     background:
       radial-gradient(ellipse 16% 10% at 50% 33%, rgba(80,50,20,0.030) 0%, transparent 100%),
       radial-gradient(ellipse 24% 14% at 50% 35%, rgba(140,50,20,0.025) 0%, transparent 100%),
       radial-gradient(ellipse 30% 20% at 50% 36%, rgba(130,0,0,0.040) 0%, transparent 85%);
   }
-
-  // ── Light-theme haze: warm amber tone ────────────────────────────────────────
 
   .haze {
     opacity: 0.045;
@@ -964,8 +928,6 @@
       radial-gradient(ellipse 80% 65% at 78% 28%, rgba(170,130,90,1)  0%, transparent 65%),
       radial-gradient(ellipse 65% 42% at 50%  8%, rgba(150,110,80,1)  0%, transparent 68%);
   }
-
-  // ── Accent elements ──────────────────────────────────────────────────────────
 
   .accentDot {
     background: #B80000;

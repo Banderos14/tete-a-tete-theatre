@@ -49,14 +49,17 @@ export function Socials({ theme }: Props) {
               {i === 0 && (
                 <video
                   className={styles.videoBg}
-                  src="/images/video/zakulis.mp4"
                   autoPlay
                   muted
                   loop
                   playsInline
+                  preload="metadata"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
                   aria-hidden="true"
-                />
+                >
+                  <source src="/images/video/zakulis.webm" type="video/webm" />
+                  <source src="/images/video/zakulis.mp4"  type="video/mp4" />
+                </video>
               )}
               {i === 0 && <div className={styles.videoOverlay} aria-hidden="true" />}
               <div className={styles.badge}>{t.socials.tileLabels[i]}</div>

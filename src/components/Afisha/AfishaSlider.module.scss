@@ -1,6 +1,5 @@
 @use '../../styles/mixins';
 
-// ── Non-scrolling outer wrapper — holds edge shadows ─────────────────────────
 .sliderWrap {
   --card-w: clamp(240px, 28vw, 340px);
 
@@ -43,7 +42,6 @@
   }
 }
 
-// ── Interaction container ─────────────────────────────────────────────────────
 // JS RAF drives the track transform; this element owns pointer events.
 .outer {
   position: relative;
@@ -62,7 +60,6 @@
   }
 }
 
-// ── Scrolling track — driven by RAF, not CSS animation ───────────────────────
 .track {
   display: flex;
   width: max-content;
@@ -71,7 +68,6 @@
   backface-visibility: hidden;
 }
 
-// ── Card — portrait format ────────────────────────────────────────────────────
 .card {
   flex-shrink: 0;
   width: var(--card-w);
@@ -114,7 +110,6 @@
   }
 }
 
-// ── Poster image ──────────────────────────────────────────────────────────────
 .poster {
   position: absolute;
   inset: 0;
@@ -132,7 +127,6 @@
   }
 }
 
-// ── Overlay — bottom-fade only ────────────────────────────────────────────────
 .overlay {
   position: absolute;
   inset: 0;
@@ -151,7 +145,6 @@
   }
 }
 
-// ── Card content ──────────────────────────────────────────────────────────────
 .body {
   position: absolute;
   inset: 0;
@@ -187,7 +180,6 @@
   border-radius: 4px;
 }
 
-// ── Show title in card center ─────────────────────────────────────────────────
 .middle {
   display: flex;
   flex-direction: column;
@@ -214,7 +206,6 @@
   text-transform: uppercase;
 }
 
-// ── Bottom row: date + open hint ──────────────────────────────────────────────
 .bottom {
   display: flex;
   justify-content: space-between;
@@ -258,7 +249,6 @@
   color: rgba(255, 255, 255, 0.28);
 }
 
-// ── "Open" hint instead of external link ─────────────────────────────────────
 .openHint {
   display: inline-flex;
   align-items: center;

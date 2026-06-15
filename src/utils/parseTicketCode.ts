@@ -1,14 +1,6 @@
-/**
- * Extracts a ticket code from any QR scan result format.
- *
- * Supported formats:
- *   A) HashRouter URL: https://…/#/admin/checkin?ticket=RU3R-HZJF
- *   B) Regular URL:    https://…/admin/checkin?ticket=RU3R-HZJF
- *   C) JSON legacy:    {"ticketCode":"RU3R-HZJF"}
- *   D) Raw code:       RU3R-HZJF
- *
- * Returns null if the input looks like a URL but contains no ticket param.
- */
+// Извлекает код билета из результата QR-сканирования.
+// Форматы: HashRouter URL (…/#/admin/checkin?ticket=CODE), обычный URL, JSON-легаси, голый код.
+// Возвращает null, если input похож на URL, но ticket-параметра нет.
 export function parseTicketCodeFromScan(raw: string): string | null {
   const text = raw.trim();
   if (!text) return null;
@@ -17,7 +9,7 @@ export function parseTicketCodeFromScan(raw: string): string | null {
   try {
     const url = new URL(text);
 
-    // HashRouter URL: ticket lives inside the fragment, e.g. "#/admin/checkin?ticket=CODE"
+    // HashRouter URL: ticket в fragment, напр. "#/admin/checkin?ticket=CODE"
     if (url.hash) {
       const qIndex = url.hash.indexOf('?');
       if (qIndex !== -1) {
@@ -26,14 +18,14 @@ export function parseTicketCodeFromScan(raw: string): string | null {
       }
     }
 
-    // Regular URL: ?ticket=CODE in the main search string
+    // Обычный URL: ?ticket=CODE в строке запроса
     const code = url.searchParams.get('ticket');
     if (code) return decodeURIComponent(code);
 
-    // URL recognised but no ticket param — not our QR
+    // URL распознан, но ticket-параметра нет — чужой QR
     return null;
   } catch {
-    // Not a URL — continue
+    // Не URL — продолжаем
   }
 
   // Старый JSON-формат: {"ticketCode":"RU3R-HZJF"}
@@ -41,7 +33,7 @@ export function parseTicketCodeFromScan(raw: string): string | null {
     const obj = JSON.parse(text) as { ticketCode?: string };
     if (typeof obj.ticketCode === 'string' && obj.ticketCode) return obj.ticketCode;
   } catch {
-    // Not JSON — continue
+    // Не JSON — продолжаем
   }
 
   return text;

@@ -6,18 +6,15 @@ export interface ScrollOptions {
   easing?: EasingFn;
 }
 
-// Mobile: sinusoidal ease-in-out — peak velocity only 1.57× the average (vs 4× for
-// quartic). The page scrolls at a nearly uniform, cinema-smooth pace with a gentle
-// ramp at each end. No aggressive mid-scroll burst.
+// Mobile: синусоидальное замедление — плавный старт и финиш, без резкого ускорения в середине.
 const easeInOutSine: EasingFn = (t) => -(Math.cos(Math.PI * t) - 1) / 2;
 
-// Desktop: cubic ease-in-out — symmetric, suits deliberate mouse-driven navigation.
+// Desktop: кубическое — симметрично, хорошо работает для навигации мышью.
 const easeInOutCubic: EasingFn = (t) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-// Duration scales with scroll distance so adjacent sections feel snappy
-// while a full-page jump gives a real "tour".
-// sqrt curve biases mid-distances toward the longer end.
+// Длительность растёт со расстоянием: короткие прыжки — быстро, на всю страницу — плавно.
+// sqrt сжимает диапазон к длинному концу для средних дистанций.
 function calcDuration(distancePx: number, mobile: boolean): number {
   const vh = window.innerHeight;
   const t  = Math.sqrt(Math.min(Math.abs(distancePx) / vh / 5, 1));
@@ -28,7 +25,7 @@ function calcDuration(distancePx: number, mobile: boolean): number {
 let activeCancelFn: (() => void) | null = null;
 
 export function smoothScrollToElement(element: HTMLElement, options: ScrollOptions = {}): void {
-  // Cancel any in-progress animation so scrolls don't stack
+  // Отменяем предыдущую анимацию, если она ещё идёт
   activeCancelFn?.();
   activeCancelFn = null;
 
@@ -38,8 +35,7 @@ export function smoothScrollToElement(element: HTMLElement, options: ScrollOptio
   const offset  = options.offset ?? 80;
   const easing  = options.easing ?? (mobile ? easeInOutSine : easeInOutCubic);
 
-  // All geometry is captured once here — nothing is read inside the RAF loop,
-  // so there is no per-frame layout thrashing.
+  // Вся геометрия фиксируется один раз — внутри RAF-цикла DOM не читаем.
   const startY   = window.scrollY;
   const targetY  = Math.max(0, element.getBoundingClientRect().top + window.scrollY - offset);
   const distance = targetY - startY;
@@ -62,9 +58,8 @@ export function smoothScrollToElement(element: HTMLElement, options: ScrollOptio
     activeCancelFn = null;
   }
 
-  // Yields to the user immediately if they touch or wheel during animation.
-  // Listeners are attached with a 1-frame delay so the touchstart from the
-  // button tap that *started* this scroll cannot accidentally cancel it.
+  // Если пользователь крутит колёсико или тапает — сразу отдаём управление.
+  // Слушатели вешаем через один RAF, чтобы тап, который запустил скролл, не отменил его сам себя.
   function onUserScroll(): void {
     cancelled = true;
     cleanup();
@@ -72,15 +67,13 @@ export function smoothScrollToElement(element: HTMLElement, options: ScrollOptio
 
   activeCancelFn = onUserScroll;
 
-  // Defer listener attachment by one RAF so the originating touch/click
-  // event has fully propagated before we start listening for cancellation.
   requestAnimationFrame(() => {
     if (cancelled) return;
     window.addEventListener('wheel',      onUserScroll, { capture: true, passive: true });
     window.addEventListener('touchstart', onUserScroll, { capture: true, passive: true });
   });
 
-  // RAF loop — only arithmetic and one scrollTo per frame, no DOM reads.
+  // RAF-цикл: только арифметика и один scrollTo за кадр, DOM не читаем.
   function step(timestamp: number): void {
     if (cancelled) return;
     if (startTime === null) startTime = timestamp;

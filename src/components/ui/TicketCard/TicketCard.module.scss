@@ -1,12 +1,8 @@
 @use '../../../styles/mixins';
 
-// ── Outer wrapper ─────────────────────────────────────────────────────────────
-
 .ticketRoot {
   min-width: 0;
 }
-
-// ── Mini-ticket card ──────────────────────────────────────────────────────────
 
 .ticket {
   background: #1c1916;
@@ -47,8 +43,6 @@
     }
   }
 }
-
-// ── Left stub ─────────────────────────────────────────────────────────────────
 
 .stub {
   width: 96px;
@@ -130,8 +124,6 @@
 .stubCutoutTop    { top: -7px; }
 .stubCutoutBottom { bottom: -7px; }
 
-// ── Right content ─────────────────────────────────────────────────────────────
-
 .headerContent {
   flex: 1;
   min-width: 0;
@@ -164,8 +156,6 @@
   @include mixins.small { font-size: 15px; }
 }
 
-// ── Status stamp ──────────────────────────────────────────────────────────────
-
 .stamp {
   font-family: var(--font-mono);
   flex-shrink: 0;
@@ -184,8 +174,6 @@
 .stampAmber { border-color: #b08a3e; color: #cdb27a; }
 .stampMuted { border-color: rgba(156, 147, 138, 0.4); color: #6e675f; }
 
-// ── Composition line ──────────────────────────────────────────────────────────
-
 .compositionLine {
   font-size: 12px;
   color: #9c938a;
@@ -197,8 +185,6 @@
 .compositionAmount {
   color: #9c938a;
 }
-
-// ── Bottom row: code + CTA ────────────────────────────────────────────────────
 
 .headerRow3 {
   display: flex;
@@ -229,7 +215,6 @@
 .actionMuted { color: #9c938a; }
 .actionAmber { color: #cdb27a; }
 
-// ── Expanded coupon panel ─────────────────────────────────────────────────────
 //
 // Sibling of .ticket inside .ticketRoot — NOT nested inside the ticket card.
 // Animation uses grid-template-rows trick; all decoration lives in .panelInner
@@ -265,8 +250,6 @@
   border-color: rgba(243, 231, 220, 0.10);
 }
 
-// ── Tear-off perforation ──────────────────────────────────────────────────────
-
 .tearOff {
   position: relative;
   height: 20px;
@@ -296,8 +279,6 @@
 .tearOffLeft  { left: -10px; }
 .tearOffRight { right: -10px; }
 
-// ── Paper body ────────────────────────────────────────────────────────────────
-
 .paperBody {
   background: #f3e7dc;
   display: flex;
@@ -311,8 +292,6 @@
     padding: 16px 14px 18px;
   }
 }
-
-// ── QR column ─────────────────────────────────────────────────────────────────
 
 .qrCol {
   display: flex;
@@ -367,8 +346,6 @@
   color: var(--fg-mute);
   text-align: center;
 }
-
-// ── Details column ────────────────────────────────────────────────────────────
 
 .details {
   flex: 1;
@@ -428,8 +405,6 @@
   }
 }
 
-// ── Booking code row ──────────────────────────────────────────────────────────
-
 .codeRow {
   display: flex;
   align-items: center;
@@ -464,8 +439,6 @@
   word-break: break-word;
   line-height: 1.1;
 }
-
-// ── PDF text link ─────────────────────────────────────────────────────────────
 
 .pdfLink {
   display: inline-flex;

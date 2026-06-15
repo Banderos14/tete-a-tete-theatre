@@ -6,45 +6,32 @@ function onDocTouchStart(e: TouchEvent): void {
   touchStartY = e.touches[0].clientY;
 }
 
-// Blocks touchmove everywhere inside a locked overlay EXCEPT [data-scroll-lock-allow]
-// containers — and even there, prevents rubber-band at scroll boundaries.
-//
-// With touch-action:none on the overlay, iOS never commits to a pan gesture,
-// so e.cancelable is always true and e.preventDefault() always works.
-// The "-webkit-overflow-scrolling: touch" on each scroll container creates a
-// native UIScrollView that scrolls independently of touch-action CSS.
+// Блокирует touchmove везде, кроме [data-scroll-lock-allow] — и там же
+// останавливает rubber-band на границах скролла.
+// touch-action:none на оверлее держит e.cancelable:true, поэтому preventDefault всегда работает.
 function onDocTouchMove(e: TouchEvent): void {
   const target  = e.target as HTMLElement | null;
   const allowEl = target?.closest?.('[data-scroll-lock-allow]') as HTMLElement | null;
 
   if (!allowEl) {
-    // Not inside an allowed scroll zone — kill it.
     if (e.cancelable) e.preventDefault();
     return;
   }
 
-  // Inside an allowed scroll container: prevent rubber-band at boundaries.
+  // Предотвращаем rubber-band на границах разрешённого контейнера.
   const deltaY   = e.touches[0].clientY - touchStartY;
   const atTop    = allowEl.scrollTop <= 0;
   const atBottom = allowEl.scrollTop >= allowEl.scrollHeight - allowEl.clientHeight - 1;
 
   if (deltaY > 0 && atTop)    { if (e.cancelable) e.preventDefault(); return; }
   if (deltaY < 0 && atBottom) { if (e.cancelable) e.preventDefault(); return; }
-  // Mid-scroll: UIScrollView handles it natively — don't interfere.
+  // Середина скролла — UIScrollView обрабатывает нативно.
 }
 
-/**
- * Blocks background scroll when a modal/drawer/overlay is open.
- *
- * Four layers of protection:
- *   1. body position:fixed + html/body overflow:hidden + overscroll-behavior:none
- *   2. touchmove preventDefault (capture phase) for anything NOT inside [data-scroll-lock-allow]
- *   3. Boundary-aware prevention inside [data-scroll-lock-allow] (stops rubber-band)
- *   4. The overlay CSS MUST use touch-action:none (not pan-y!) so iOS never commits
- *      to a pan gesture — keeping e.cancelable:true so e.preventDefault() always works.
- *      Scroll containers must use -webkit-overflow-scrolling:touch so UIScrollView
- *      handles their scroll natively, independent of the ancestor touch-action:none.
- */
+// Блокирует фоновый скролл, пока открыта модалка/дравер.
+// Оверлей ДОЛЖЕН иметь touch-action:none (не pan-y!), иначе iOS коммитит pan-жест
+// и e.cancelable становится false — preventDefault не сработает.
+// Скролл-контейнеры внутри используют -webkit-overflow-scrolling:touch для нативного UIScrollView.
 export function useScrollLock(active: boolean): void {
   useEffect(() => {
     if (!active) return;
@@ -65,7 +52,7 @@ export function useScrollLock(active: boolean): void {
     html.style.height            = '100%';
     html.style.overscrollBehavior = 'none';
 
-    // capture:true — fires before any element handler, even if stopPropagation is called.
+    // capture:true — срабатывает раньше любого обработчика элемента, даже при stopPropagation.
     document.addEventListener('touchstart', onDocTouchStart, { passive: true,  capture: true });
     document.addEventListener('touchmove',  onDocTouchMove,  { passive: false, capture: true });
 

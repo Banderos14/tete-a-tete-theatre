@@ -842,8 +842,6 @@
   letter-spacing: 0.02em;
 }
 
-// ── Personal section ──────────────────────────────────────────────────────────
-
 .personalHeader {
   display: flex;
   align-items: baseline;
@@ -1022,8 +1020,6 @@
   gap: 5px;
 }
 
-// ── Tickets section title ─────────────────────────────────────────────────────
-
 .ticketsTitle {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -1033,8 +1029,6 @@
   margin-bottom: 24px;
   font-weight: 400;
 }
-
-// ── Ticket list ───────────────────────────────────────────────────────────────
 
 .ticketList {
   display: flex;
@@ -1069,8 +1063,6 @@
   border-radius: 10px;
   padding: 10px 12px;
 }
-
-// ── Loyalty block — shows tab ─────────────────────────────────────────────────
 
 .visitCounter {
   margin-bottom: 24px;
@@ -1138,8 +1130,6 @@
   line-height: 1.5;
   margin: 0;
 }
-
-// ── BookingCard — theatre ticket aesthetic ────────────────────────────────────
 
 .bookingCard {
   background: #1c1916;
@@ -1438,8 +1428,6 @@
   border-radius: var(--radius-xs);
 }
 
-// ── Attended shows list — row design ─────────────────────────────────────────
-
 .attendedList {
   display: flex;
   flex-direction: column;
@@ -1579,8 +1567,6 @@
 
 .skeletonTicket { height: 76px; border-radius: 12px; }
 
-// ── Cancel booking inline dialog ───────────────────────────────────────────────
-
 .cancelBookingBtn {
   margin-top: 10px;
   font-size: 11px;
@@ -1712,8 +1698,6 @@
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
-// ── Mobile tab bar ────────────────────────────────────────────────────────────
-
 .mobileTabBar {
   display: none;
 
@@ -1770,8 +1754,6 @@
   border: 1.5px solid var(--bg-2);
   pointer-events: none;
 }
-
-// ── Mobile loyalty cards ──────────────────────────────────────────────────────
 
 .mobileLoyaltyGrid {
   display: grid;
@@ -1855,8 +1837,6 @@
   }
 }
 
-// ── Mobile save / cancel buttons ──────────────────────────────────────────────
-
 .mobileSaveButtons {
   display: none;
 
@@ -1922,8 +1902,6 @@
   animation: spin 0.8s linear infinite;
 }
 
-// ── Favorites / Settings empty state ─────────────────────────────────────────
-
 .tabEmptyState {
   display: flex;
   flex-direction: column;
@@ -1945,8 +1923,6 @@
   font-style: italic;
   line-height: 1.5;
 }
-
-// ── Contacts subsection inside profile tab (mobile only) ─────────────────────
 
 .contactsSubsection {
   display: none;
@@ -2012,15 +1988,11 @@
   }
 }
 
-// ── Settings tab divider ──────────────────────────────────────────────────────
-
 .settingsDivider {
   border: none;
   border-top: 0.5px solid rgba(243, 231, 220, 0.10);
   margin: 24px 0;
 }
-
-// ── Settings logout button ────────────────────────────────────────────────────
 
 .settingsLogoutBtn {
   width: 100%;
@@ -2053,7 +2025,6 @@
   }
 }
 
-// ── Light theme ───────────────────────────────────────────────────────────────
 :global([data-theme='light']) {
   .panel {
     box-shadow: 0 24px 80px rgba(40, 20, 10, 0.18);

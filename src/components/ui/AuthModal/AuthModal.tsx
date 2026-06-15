@@ -46,7 +46,7 @@ export function AuthModal({ open, onClose }: Props) {
       await signInWithGoogle();
       onClose();
     } catch (e) {
-      // Popup closed silently — not an error worth surfacing
+      // Попап закрыт молча — не показываем ошибку пользователю
       if (isPopupClosedError(e)) { setLoading(false); return; }
       setError(mapAuthError(e, t.auth.errors));
     } finally { setLoading(false); }
@@ -62,7 +62,7 @@ export function AuthModal({ open, onClose }: Props) {
       }
       onClose();
     } catch (e) {
-      // Email already in use during registration → guide user to sign-in tab
+      // Email уже занят при регистрации → направляем пользователя на вкладку входа
       if (tab === 'signUp' && isEmailInUseError(e)) {
         setTab('signIn');
         setError(mapAuthError(e, t.auth.errors));

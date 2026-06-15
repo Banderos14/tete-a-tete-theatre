@@ -119,7 +119,6 @@
   }
 }
 
-// ── Actions row (button + socials) ───────────────────────────────────────────
 .actionsRow {
   display: flex;
   align-items: center;
@@ -199,7 +198,6 @@
   }
 }
 
-// ── Map ───────────────────────────────────────────────────────────────────────
 .mapWrapper {
   display: flex;
   flex-direction: column;
@@ -266,7 +264,6 @@
   }
 }
 
-// ── Light theme overrides ──────────────────────────────────────────────────────
 :global([data-theme='light']) {
   .block {
     border-bottom-color: rgba(26, 23, 21, 0.12);

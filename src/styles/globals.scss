@@ -10,7 +10,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  scroll-behavior: auto; // we handle scroll via JS, avoid double-smooth
+  scroll-behavior: auto; // скролл управляется через JS, нативный smooth не нужен
 }
 
 html, body {
@@ -30,8 +30,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 ::selection { background: var(--accent); color: #fff; }
 
-// All elements with class "reveal" start hidden and fade+slide up into view
-// IntersectionObserver in App.tsx adds ".visible" when element enters viewport
+// Элементы с .reveal скрыты до viewport; App.tsx добавляет .visible через IntersectionObserver
 .reveal {
   opacity: 0;
   transform: translateY(32px);
@@ -129,7 +128,7 @@ section {
   align-items: center;
   gap: 10px;
   padding: 14px 24px;
-  min-height: 48px; // touch target — minimum 48px for mobile
+  min-height: 48px; // минимум 48px для тач-таргета
   font-family: var(--font-body);
   font-size: 13px;
   letter-spacing: 0.12em;
@@ -143,7 +142,7 @@ section {
   transition: color 0.4s ease, border-color 0.4s ease;
   cursor: pointer;
 
-  // Slide-fill background — wipes in from left on hover
+  // Fill-фон: заезжает слева при hover
   &::before {
     content: '';
     position: absolute;
@@ -186,13 +185,19 @@ section {
   .arrow { transition: transform 0.35s ease; display: inline-block; }
   &:hover .arrow { transform: translateX(5px); }
 
-  // Touch-устройства: без fill-анимации, только быстрый lightweight press effect
+  // Touch-устройства: без fill-анимации, лёгкий press-эффект
   @media (hover: none) and (pointer: coarse) {
-    // Disable the slide-fill — on tap it starts filling then immediately reverses on finger-up
+    // Fill-слайд на тапе начинает заезжать и сразу откатывается — отключаем
     &::before { display: none; }
 
-    // Only GPU-composited properties — text stays fully readable at all times
     transition: transform 0.13s ease-out, border-color 0.13s ease-out;
+
+    // iOS sticky-hover: браузер может залипать в :hover после тапа.
+    // Без fill-фона текст становился тёмным — явно фиксируем цвет.
+    &:hover {
+      color: var(--fg);
+      border-color: var(--line-strong);
+    }
 
     &:active {
       border-color: var(--fg);
@@ -201,10 +206,8 @@ section {
 
     &.btn-primary {
       transition: transform 0.13s ease-out, background 0.13s ease-out;
-      &:active {
-        background: var(--accent-bright);
-        transform: scale(0.975);
-      }
+      &:hover  { color: #fff; border-color: var(--accent); }
+      &:active { background: var(--accent-bright); transform: scale(0.975); }
     }
 
     .arrow { transition: none; }

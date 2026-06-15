@@ -201,7 +201,6 @@
   }
 }
 
-// ── Repertoire modal ─────────────────────────────────────────────────────────
 .modalBackdrop {
   position: fixed;
   inset: 0;
@@ -369,13 +368,11 @@
   &:hover { opacity: 0.85; }
 }
 
-// ── Мобильные элементы (скрыты на десктопе) ─────────────────────────────────
 .mobilePosterAge,
 .mobileInfo {
   display: none;
 }
 
-// ── Мобильная сетка 2×N (max-width: 900px) ──────────────────────────────────
 @include mixins.mobile {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -64,7 +64,7 @@ function validate(
 type Section = 'personal' | 'contacts' | 'socials' | 'notifications' | 'tickets' | 'shows' | 'favorites' | 'settings';
 const FORM_SECTIONS: Section[] = ['personal', 'contacts', 'socials', 'notifications'];
 
-// Decorative barcode: uniform 16px height, widths vary 1-4px like a real ticket barcode
+// Декоративный штрихкод: высота 16px, ширина полос 1–4px как у настоящего билета
 const BARCODE_WIDTHS = [
   2,1,3,1,1,2,1,4,1,2,1,3,1,1,2,1,3,2,1,4,1,2,1,1,3,1,2,1,4,1,
   1,3,1,2,1,1,4,2,1,3,1,2,1,1,3,1,2,4,1,1,2,1,3,1,2,1,4,1,2,3,
@@ -1038,8 +1038,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
   );
 }
 
-// ── Field ──────────────────────────────────────────────────────────────────────
-
 function Field({
   label, error, children, style,
 }: {
@@ -1056,8 +1054,6 @@ function Field({
     </div>
   );
 }
-
-// ── PersonalField ──────────────────────────────────────────────────────────────
 
 function PersonalField({
   label, providerLabel, error, children,
@@ -1084,8 +1080,6 @@ function PersonalField({
   );
 }
 
-// ── Toggle ─────────────────────────────────────────────────────────────────────
-
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className={styles.toggle}>
@@ -1103,8 +1097,6 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
     </label>
   );
 }
-
-// ── Icons ──────────────────────────────────────────────────────────────────────
 
 function FacebookIcon({ size = 16 }: { size?: number }) {
   return (
@@ -1130,8 +1122,6 @@ function TelegramIcon() {
   );
 }
 
-// ── Booking history sub-components ─────────────────────────────────────────────
-
 import type { T } from '../../../i18n/translations';
 import type { Show } from '../../../types';
 import { SHOWS } from '../../../data/shows';
@@ -1152,7 +1142,7 @@ const BONUS_EVERY = 5;
 // 25-bar decorative barcode — uniform height, varying width
 const BOOKING_BARCODE_WIDTHS = [2,1,3,1,1,2,1,4,1,2,1,3,1,1,2,1,3,2,1,4,1,2,1,1,3] as const;
 
-// Month map RU→FR for stub date display
+// Перевод месяца RU→FR для отображения даты на корешке билета
 const MONTH_FR_MAP_BC: Record<string, string> = {
   'Янв': 'Jan', 'Фев': 'Fév', 'Мар': 'Mar', 'Апр': 'Avr',
   'Май': 'Mai', 'Июн': 'Juin', 'Июл': 'Juil', 'Авг': 'Août',
@@ -1225,7 +1215,7 @@ function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
   );
 }
 
-// BookingCard — for non-QR active bookings (cancelled, pending, awaiting, etc.)
+// BookingCard — для броней без QR (cancelled, pending, awaiting и т.д.)
 function BookingCard({ booking: b, t, isDismissing = false, onStartDismiss, onCancelDismiss }: {
   booking: Booking;
   t: T;
@@ -1252,15 +1242,15 @@ function BookingCard({ booking: b, t, isDismissing = false, onStartDismiss, onCa
 
   const canCancel = !isAttended && !isCancelled && b.status !== 'attended';
 
-  // Only compute countdown when the booking is actively awaiting payment.
-  // Stops for: cancelled status, expired paymentStatus, or during dismiss animation.
+  // Обратный отсчёт считаем только пока бронь ждёт оплаты.
+  // Останавливаем при: cancelled, expired paymentStatus или в анимации dismiss.
   const hoursLeft = (isAwaitingTransfer && !isCancelled && !isDismissing)
     ? hoursUntilExpiry(b)
     : null;
   const paymentRef = b.paymentReference ?? `${PAYMENT_CONFIG.paymentReferencePrefix}-${b.ticketCode}`;
   const account    = getPaymentAccount(b.paymentAccountId);
 
-  // Stub colour — same priority as TicketCard: grey > paid(burgundy) > pending/amber
+  // Цвет корешка — тот же приоритет, что в TicketCard: grey > paid(burgundy) > pending/amber
   const stubVariant: 'burgundy' | 'amber' | 'grey' =
     (b.status === 'cancelled' || payStatus === 'expired')  ? 'grey'     :
     payStatus === 'paid'                                   ? 'burgundy' :
@@ -1268,17 +1258,14 @@ function BookingCard({ booking: b, t, isDismissing = false, onStartDismiss, onCa
     (b.paymentMethod === 'on_site' && payStatus === 'not_paid') ? 'amber' :
     'burgundy';
 
-  // Date parsing
   const { day, monthAbbrev } = parseBookingDate(b.showDate, isFR);
   const timeLabel = `${monthAbbrev} · ${b.showTime}`;
 
-  // Ticket type label
   const ticketTypeLabel =
     b.ticketType === 'student'
       ? (isFR ? 'Étudiant' : 'Студент')
       : (isFR ? 'Standard' : 'Стандарт');
 
-  // Contextual action text
   let actionText = '';
   let actionClass = styles.bookingActionMuted;
   if (payStatus === 'paid' && b.status === 'confirmed') {
@@ -1489,8 +1476,6 @@ function BookingCard({ booking: b, t, isDismissing = false, onStartDismiss, onCa
     </div>
   );
 }
-
-// ── Attended shows — grouped list ──────────────────────────────────────────────
 
 interface GroupedShow {
   showId:    string;

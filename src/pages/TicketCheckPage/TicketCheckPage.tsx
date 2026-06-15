@@ -8,8 +8,8 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import type { Booking } from '../../types/booking';
 import styles from './TicketCheckPage.module.scss';
 
-// Lazily converts the first PDF page to a PNG File for QR scanning.
-// pdfjs-dist is loaded only when the user actually selects a PDF.
+// Конвертирует первую страницу PDF в PNG для сканирования QR.
+// pdfjs-dist загружается лениво — только когда пользователь выбирает PDF.
 async function convertPdfFirstPageToImageFile(pdfFile: File): Promise<File> {
   const pdfjsLib = await import('pdfjs-dist');
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -21,7 +21,7 @@ async function convertPdfFirstPageToImageFile(pdfFile: File): Promise<File> {
   const doc   = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
   const page  = await doc.getPage(1);
 
-  // Scale 2.5 keeps the QR code big enough for reliable detection
+  // Scale 2.5: QR-код получается достаточно большим для надёжного распознавания
   const viewport = page.getViewport({ scale: 2.5 });
   const canvas   = document.createElement('canvas');
   canvas.width   = viewport.width;

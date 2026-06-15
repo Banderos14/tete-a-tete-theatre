@@ -56,7 +56,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Always writes updatedAt — never exposes API key to frontend
+// Всегда записывает updatedAt — ключ API не попадает во frontend
 async function upsertProfile(uid: string, data: Partial<UserProfile> & Record<string, unknown>) {
   await setDoc(
     doc(db, 'users', uid),
@@ -76,29 +76,24 @@ function defaultProfile(overrides: Partial<UserProfile> = {}): UserProfile {
   };
 }
 
-// Resolves provider string from Firebase providerData
+// Определяет строку провайдера из Firebase providerData
 function resolveProvider(firebaseUser: import('firebase/auth').User): UserProfile['provider'] {
   const pid = firebaseUser.providerData[0]?.providerId;
   return pid === 'google.com' ? 'google' : 'email';
 }
 
-/**
- * Ensures users/{uid} document exists and is up-to-date.
- *
- * - Document exists   → updates lastLoginAt + backfills missing photoURL/provider.
- *                       NEVER overwrites role, phone, displayName or any user-set field.
- * - Document missing  → creates a fresh document with role:'user'.
- *                       Safe for orphaned Auth accounts and first-time Google users.
- *
- * Returns the profile as it exists in Firestore (pre-update snapshot for existing docs).
- */
+// Гарантирует актуальность документа users/{uid}.
+// Если документ есть — обновляет lastLoginAt и дозаполняет photoURL/provider (не затрагивает
+// role, phone, displayName и другие поля, заданные пользователем).
+// Если документа нет — создаёт с role:'user' (безопасно для сирот Auth и новых Google-аккаунтов).
+// Возвращает профиль из Firestore в том виде, каким он был до обновления.
 async function ensureUserDocument(firebaseUser: import('firebase/auth').User): Promise<UserProfile> {
   const ref  = doc(db, 'users', firebaseUser.uid);
   const snap = await getDoc(ref);
 
   if (snap.exists()) {
     const existing = snap.data() as UserProfile;
-    // Only merge safe system fields — never touch role or user-edited data
+    // Мержим только системные поля — role и пользовательские данные не трогаем
     const updates: Record<string, unknown> = { lastLoginAt: serverTimestamp() };
     if (!existing.photoURL && firebaseUser.photoURL) updates.photoURL  = firebaseUser.photoURL;
     if (!existing.provider)                          updates.provider   = resolveProvider(firebaseUser);
@@ -106,7 +101,7 @@ async function ensureUserDocument(firebaseUser: import('firebase/auth').User): P
     return existing;
   }
 
-  // Document missing — new user: create profile and count them as an audience member
+  // Документа нет — новый пользователь: создаём профиль и учитываем в счётчике зрителей
   const profile = defaultProfile({
     displayName: firebaseUser.displayName ?? '',
     email:       firebaseUser.email ?? '',
@@ -122,7 +117,7 @@ async function ensureUserDocument(firebaseUser: import('firebase/auth').User): P
   return profile;
 }
 
-// Converts Facebook birthday MM/DD/YYYY → YYYY-MM-DD
+// Преобразует Facebook-дату рождения MM/DD/YYYY → YYYY-MM-DD
 function parseFbBirthday(fb: string): string {
   const parts = fb.split('/');
   if (parts.length === 3) return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
@@ -155,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signInWithGoogle() {
     const provider = new GoogleAuthProvider();
-    // Always prompt account selection so users can switch accounts
+    // Всегда показываем выбор аккаунта, чтобы можно было переключиться
     provider.setCustomParameters({ prompt: 'select_account' });
     const result  = await signInWithPopup(auth, provider);
     const profile = await ensureUserDocument(result.user);
@@ -168,9 +163,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserProfile(profile);
   }
 
-  // Explicit write here (not ensureUserDocument) to guarantee the correct
-  // displayName from the form field lands in Firestore before onAuthStateChanged
-  // fires and potentially reads a still-null displayName from Auth.
+  // Пишем напрямую (не через ensureUserDocument), чтобы displayName из формы
+  // гарантированно попал в Firestore до того, как сработает onAuthStateChanged
+  // и прочитает ещё-null displayName из Auth.
   async function signUpWithEmail(email: string, password: string, name: string) {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await firebaseUpdateProfile(result.user, { displayName: name });
@@ -180,8 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createdAt:   serverTimestamp(),
       lastLoginAt: serverTimestamp(),
     });
-    // Email sign-up writes the doc directly (bypassing ensureUserDocument new-doc branch),
-    // so we increment the audience counter here explicitly.
+    // Email-регистрация пишет документ напрямую (минуя ветку new-doc в ensureUserDocument),
+    // поэтому инкремент счётчика зрителей делаем здесь явно.
     void ensureAudienceCounterAndIncrement();
     setUserProfile(profile);
   }
@@ -220,7 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (data.birthday) fbBirthday = parseFbBirthday(data.birthday);
         }
       } catch {
-        // Graph API failed — continue without birthday
+        // Graph API недоступен — продолжаем без даты рождения
       }
     }
 
@@ -234,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await firebaseUpdateProfile(user, { displayName: resolvedName });
     }
 
-    // Clear legacy malformed socialLink (old code saved access token as URL)
+    // Чистим старый кривой socialLink (старый код сохранял access token как URL)
     const currentSocial = userProfile?.socialLink ?? '';
     if (currentSocial.startsWith('https://facebook.com/EAA')) {
       updates.socialLink = '';

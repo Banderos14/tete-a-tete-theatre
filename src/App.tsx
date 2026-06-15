@@ -98,9 +98,8 @@ export default function App() {
 
   useEffect(() => {
     if (introState !== 'done') return;
-    // Kick off lazy chunk downloads during the first idle window after page load.
-    // Even though these chunks are also triggered by Suspense boundaries, calling
-    // import() here ensures the browser starts fetching them as early as possible.
+    // Запускаем prefetch ленивых чанков в idle-окно. Suspense тоже триггерит их,
+    // но явный import() начинает загрузку раньше — до первого взаимодействия пользователя.
     const schedule = (window as typeof window & { requestIdleCallback?: (fn: () => void) => void })
       .requestIdleCallback ?? ((fn: () => void) => setTimeout(fn, 400));
     schedule(() => {
@@ -117,7 +116,7 @@ export default function App() {
       entries.forEach(e => {
         if (e.isIntersecting) {
           e.target.classList.add('visible');
-          io.unobserve(e.target); // stop observing once revealed
+          io.unobserve(e.target); // после появления — отписываемся
         }
       });
     }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
@@ -156,7 +155,7 @@ export default function App() {
           <Route path="/admin/checkin" element={<Suspense fallback={null}><TicketCheckPage /></Suspense>} />
         </Routes>
 
-        {/* Global modals — lazy-loaded, rendered outside Routes so they persist across navigation */}
+        {/* Глобальные модалки — ленивые, вне Routes чтобы не пересоздаваться при навигации */}
         <Suspense fallback={null}>
           <AuthModal     open={authOpen}      onClose={() => setAuthOpen(false)} />
         </Suspense>

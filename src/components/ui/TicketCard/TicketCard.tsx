@@ -73,7 +73,7 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
       ? (isFR ? 'Étudiant' : 'Студент')
       : (isFR ? 'Standard' : 'Стандарт');
 
-  // CTA text changes between collapsed / expanded
+  // Текст кнопки меняется в зависимости от collapsed/expanded
   let ctaCollapsed = '';
   let ctaExpanded  = isFR ? 'Masquer ↑' : 'Скрыть ↑';
   let ctaClass     = styles.actionMuted;
@@ -238,8 +238,6 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
   );
 }
 
-// ── Status stamp ──────────────────────────────────────────────────────────────
-
 export function StampBadge({ booking: b, isFR }: { booking: Booking; isFR: boolean }) {
   const payStatus = b.paymentStatus ?? 'not_paid';
   const status    = b.status;
@@ -273,8 +271,6 @@ export function StampBadge({ booking: b, isFR }: { booking: Booking; isFR: boole
     </span>
   );
 }
-
-// ── Icons ─────────────────────────────────────────────────────────────────────
 
 function DownloadIcon() {
   return (

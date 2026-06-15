@@ -4,7 +4,6 @@
   background: var(--bg);
 }
 
-// ── Groups wrapper ──
 .groups {
   max-width: 1500px;
   margin: 0 auto;
@@ -30,7 +29,6 @@
   border-bottom: 1px solid var(--line);
 }
 
-// ── Person grid ──
 .grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
