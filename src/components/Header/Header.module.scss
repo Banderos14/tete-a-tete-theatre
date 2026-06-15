@@ -1,6 +1,5 @@
 @use '../../styles/mixins';
 
-// ── Fixed header ───────────────────────────────────────────────────────────────
 .header {
   position: fixed;
   top: 0;
@@ -35,7 +34,6 @@
   }
 }
 
-// ── Desktop nav ────────────────────────────────────────────────────────────────
 .nav {
   display: flex;
   gap: 32px;
@@ -95,7 +93,6 @@
   }
 }
 
-// ── Logo ───────────────────────────────────────────────────────────────────────
 .logo {
   justify-self: center;
   display: flex;
@@ -121,7 +118,6 @@
   }
 }
 
-// ── Desktop visibility helpers ─────────────────────────────────────────────────
 .desktopOnly {
   @include mixins.mobile { display: none !important; }
 }
@@ -131,7 +127,6 @@
   @include mixins.mobile { display: grid !important; }
 }
 
-// ── Lang switch ────────────────────────────────────────────────────────────────
 .langSwitch {
   display: flex;
   font-family: var(--font-mono);
@@ -155,7 +150,6 @@
   color: var(--fg) !important;
 }
 
-// ── Theme toggle ───────────────────────────────────────────────────────────────
 .themeToggle {
   width: 32px;
   height: 32px;
@@ -172,7 +166,6 @@
   @include mixins.mobile { display: none; }
 }
 
-// ── Sign in btn ────────────────────────────────────────────────────────────────
 .signInBtn {
   font-size: 11px;
   letter-spacing: 0.1em;
@@ -190,7 +183,6 @@
   }
 }
 
-// ── Avatar btn ─────────────────────────────────────────────────────────────────
 .avatarBtn {
   width: 32px;
   height: 32px;
@@ -220,7 +212,6 @@
   }
 }
 
-// ── Burger button ──────────────────────────────────────────────────────────────
 .burgerBtn {
   display: none;
   flex-direction: column;
@@ -265,7 +256,6 @@
   }
 }
 
-// ── Mobile menu overlay (backdrop) ────────────────────────────────────────────
 .menuOverlay {
   display: none;
   position: fixed;
@@ -286,7 +276,6 @@
   }
 }
 
-// ── Mobile menu drawer ─────────────────────────────────────────────────────────
 .mobileMenu {
   display: none;
   position: fixed;
@@ -319,7 +308,6 @@
   }
 }
 
-// ── Menu top: logo + close ─────────────────────────────────────────────────────
 .menuTop {
   display: flex;
   align-items: center;
@@ -352,7 +340,6 @@
   svg { width: 20px; height: 20px; }
 }
 
-// ── Mobile nav list ────────────────────────────────────────────────────────────
 .mobileNav {
   list-style: none;
   flex: 1;
@@ -413,7 +400,6 @@
   }
 }
 
-// ── Bottom panel (sticky) ─────────────────────────────────────────────────────
 .menuBottom {
   flex-shrink: 0;
   border-top: 1px solid var(--line-strong);
@@ -502,7 +488,6 @@
   transition: transform 0.25s ease, background 0.25s ease;
 }
 
-// ── Auth area ──────────────────────────────────────────────────────────────────
 .menuAuth {
   padding: 14px 24px max(24px, env(safe-area-inset-bottom));
   flex-shrink: 0;

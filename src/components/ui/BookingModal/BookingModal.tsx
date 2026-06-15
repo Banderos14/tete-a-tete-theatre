@@ -91,7 +91,7 @@ export function BookingModal({ show, onClose }: Props) {
     return subscribeToShowBookedSeats(show.id, setBookedSeats);
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clamp tickets count to availableSeats when capacity changes.
+  // Ограничиваем количество билетов при изменении доступных мест.
   useEffect(() => {
     if (availableSeats >= 1 && tickets > availableSeats) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -124,9 +124,8 @@ export function BookingModal({ show, onClose }: Props) {
 
   useScrollLock(!!show);
 
-  // Belt-and-suspenders: direct non-passive touchmove listener on the overlay.
-  // useScrollLock already covers the document, but attaching here ensures we catch
-  // any event that might not bubble up (e.g. if a child calls stopPropagation).
+  // Дополнительный non-passive listener прямо на оверлее — ловит события,
+  // которые могли не всплыть из-за stopPropagation в дочерних элементах.
   const overlayRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = overlayRef.current;
@@ -168,7 +167,7 @@ export function BookingModal({ show, onClose }: Props) {
       if (authTab === 'signIn') await signInWithEmail(authEmail, authPassword);
       else                      await signUpWithEmail(authEmail, authPassword, authName);
     } catch (e) {
-      // Email exists during signup → switch to login tab; authEmail is already filled
+      // Email уже занят при регистрации → переключаем на вкладку входа (authEmail уже заполнен)
       if (authTab === 'signUp' && isEmailInUseError(e)) setAuthTab('signIn');
       setAuthError(mapAuthError(e, t.auth.errors));
     } finally { setAuthLoading(false); }
@@ -182,8 +181,8 @@ export function BookingModal({ show, onClose }: Props) {
       return;
     }
 
-    // Phone validation — must be a formatted number (starts with +, ≥10 digits).
-    // formatPhone is already called on every keystroke; this catches bare digits like '75688587880'.
+    // Телефон должен быть форматированным (начинается с +, ≥10 цифр).
+    // formatPhone уже вызывается на каждом keystroke; здесь ловим голые цифры вроде '75688587880'.
     if (!isValidPhone(phone)) {
       setPhoneError(t.profile.phoneInvalid);
       return;
@@ -240,7 +239,7 @@ export function BookingModal({ show, onClose }: Props) {
 
       await createBooking(bookingPayload);
 
-      // Non-blocking — booking is already saved if email fails.
+      // Не блокируем — бронь уже сохранена, провал email её не затронет.
       sendBookingConfirmationEmail({
         userEmail,
         userName,
@@ -266,8 +265,8 @@ export function BookingModal({ show, onClose }: Props) {
       setSavedAmount(totalAmount);
       setStep('success');
 
-      // Sync phone to profile when profile phone is empty (non-blocking).
-      // Booking is already saved — a profile update failure must not affect the booking.
+      // Синхронизируем телефон в профиль если он там пустой (не блокируем).
+      // Бронь уже сохранена — сбой обновления профиля не должен её затронуть.
       if (phone && !userProfile?.phone) {
         saveProfile({ phone }).catch(e => console.warn('[booking] phone sync to profile failed', e));
       }
@@ -323,7 +322,7 @@ export function BookingModal({ show, onClose }: Props) {
           </svg>
         </button>
 
-        {/* ── Auth step — centered single column ── */}
+        {/* Auth */}
         {step === 'auth' && (
           <div className={styles.authWrap} data-scroll-lock-allow="true">
             <div className={styles.authShowStrip} style={{ background: show.palette }}>
@@ -390,7 +389,7 @@ export function BookingModal({ show, onClose }: Props) {
           </div>
         )}
 
-        {/* ── Form step ── */}
+        {/* Форма */}
         {step === 'form' && (
           <BookingFormStep
             show={show}
@@ -420,7 +419,7 @@ export function BookingModal({ show, onClose }: Props) {
           />
         )}
 
-        {/* ── Success step ── */}
+        {/* Успех */}
         {step === 'success' && (
           <BookingSuccessStep
             show={show}

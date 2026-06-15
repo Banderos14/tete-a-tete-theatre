@@ -7,7 +7,7 @@ import { PosterPlaceholder } from '../ui/PosterPlaceholder';
 import type { RepertoireItem, Show } from '../../types';
 import styles from './Repertoire.module.scss';
 
-// Show photo if available, fall back to colour placeholder on error or absence
+// Постер спектакля: показываем фото если есть, иначе цветной плейсхолдер
 function ShowPoster({
   image, palette, title, lazy = true,
 }: {
@@ -30,8 +30,6 @@ function ShowPoster({
   }
   return <PosterPlaceholder palette={palette} title={title} kind="rep" />;
 }
-
-// ── Repertoire item modal ─────────────────────────────────────────────────────
 
 interface ModalProps {
   item: RepertoireItem;
@@ -105,8 +103,6 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
   );
 }
 
-// ── Repertoire section ────────────────────────────────────────────────────────
-
 interface Props {
   onBook: (show: Show) => void;
 }
@@ -120,7 +116,7 @@ export function Repertoire({ onBook }: Props) {
 
   const handleClose = useCallback(() => setSelected(null), []);
 
-  // Scroll to and highlight the show from ?show= URL param.
+  // Скролл к спектаклю и подсветка по ?show= в URL-параметре.
   useEffect(() => {
     const slug = new URLSearchParams(window.location.search).get('show');
     if (!slug || !REPERTOIRE.find(item => item.id === slug)) return;
@@ -129,12 +125,12 @@ export function Repertoire({ onBook }: Props) {
       const el = cardRefs.current.get(slug);
       if (!el) return;
 
-      // Force ALL cards visible via React state so className never loses 'visible'
+      // Делаем все карточки видимыми через React, чтобы className не терял 'visible'
       setAllForceVisible(true);
       setHighlightedId(slug);
       setTimeout(() => setHighlightedId(null), 2000);
 
-      // Small rAF delay so React commits the visible state before we scroll
+      // Небольшая задержка через rAF, чтобы React закоммитил visible-стейт перед скроллом
       requestAnimationFrame(() => {
         el.scrollIntoView({ behavior: 'smooth', block: 'end' });
       });

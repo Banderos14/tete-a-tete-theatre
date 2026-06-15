@@ -1,7 +1,6 @@
 import type { Booking } from '../types/booking';
 
-// ── Cyrillic → Latin transliteration ─────────────────────────────────────────
-// Used only as a last-resort fallback when Cyrillic fonts fail to load.
+// Транслитерация кириллицы → латиница — запасной вариант, если кирилличные шрифты не загрузились.
 const CYR: Record<string, string> = {
   'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh',
   'з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o',
@@ -20,7 +19,7 @@ function transliterate(text: string): string {
     .join('');
 }
 
-// Convert "17 Май 2026" → "17.05.2026" (avoids Cyrillic month names in Helvetica).
+// "17 Май 2026" → "17.05.2026": Helvetica не умеет в кириллицу, числовой формат безопаснее.
 const MONTH_TO_NUM: Record<string, string> = {
   'Янв':'01','Фев':'02','Мар':'03','Апр':'04',
   'Май':'05','Июн':'06','Июл':'07','Авг':'08',
@@ -34,14 +33,12 @@ function formatDateForPdf(showDate: string): string {
     const num = MONTH_TO_NUM[month];
     if (num) return `${day.padStart(2, '0')}.${num}.${year}`;
   }
-  // Unknown format — transliterate so Helvetica never sees raw Cyrillic.
+  // Неизвестный формат — транслит, чтобы Helvetica не получил сырую кириллицу.
   return transliterate(showDate).trim() || showDate;
 }
 
-// ── Localised label sets ───────────────────────────────────────────────────────
-// FR uses Latin-1 accents (é, à, è) which Helvetica WinAnsi supports natively.
-// RU uses Cyrillic — rendered with Inter when loaded, or the RU_FALLBACK set
-// (transliterated ASCII) when Inter fails.
+// FR: Latin-1 с акцентами (é, à, è) — Helvetica WinAnsi поддерживает нативно.
+// RU: кирилличные подписи через Inter; при ошибке загрузки — транслит в RU_LATIN.
 const LABELS = {
   FR: {
     date: 'DATE', time: 'HEURE', address: 'ADRESSE',
@@ -55,7 +52,7 @@ const LABELS = {
     code: 'КОД БРОНИ',
     footer: 'Предъявите этот билет на входе.',
   },
-  // Fallback used when Inter font failed to load and Cyrillic can't be rendered.
+  // Транслит — используется когда Inter не загрузился и кириллица недоступна.
   RU_LATIN: {
     date: 'DATA', time: 'VREMYA', address: 'ADRES',
     guest: 'ZRITEL', tickets: 'BILETY', amount: 'SUMMA',
@@ -64,7 +61,6 @@ const LABELS = {
   },
 } as const;
 
-// ── Runtime font loader ───────────────────────────────────────────────────────
 async function loadFontBase64(path: string): Promise<string | null> {
   try {
     const res = await fetch(path);
@@ -80,7 +76,6 @@ async function loadFontBase64(path: string): Promise<string | null> {
   }
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
 export async function generateTicketPdf(
   booking: Booking,
   qrDataUrl: string,
@@ -93,10 +88,8 @@ export async function generateTicketPdf(
   const MARGIN = 16;
   const isRU   = lang === 'RU';
 
-  // ── Font: decorative title ────────────────────────────────────────────────
-  // We want "Bad Russian" here, but bad-russian.woff/woff2 cannot be embedded
-  // in jsPDF (which requires raw TTF binary). Ekaterina Velikaya Two is the
-  // available decorative Cyrillic font in TTF format — same theatrical style.
+  // Декоративный заголовок: хотим Bad Russian, но woff/woff2 jsPDF не поддерживает
+  // (нужен TTF binary). Ekaterina Velikaya Two — доступный кирилличный TTF того же театрального стиля.
   const DECOR_ID = 'EkaterinaTwoRegular';
   let hasDecorFont = false;
   const b64Decor = await loadFontBase64('/fonts/ekaterinavelikayatwo.ttf');
@@ -106,9 +99,8 @@ export async function generateTicketPdf(
     hasDecorFont = true;
   }
 
-  // ── Font: Cyrillic body (RU mode only) ────────────────────────────────────
-  // Inter-Regular covers the full Cyrillic block and is available as TTF.
-  // Used for RU labels, guest name, and footer.
+  // Inter-Regular покрывает весь кириллический блок и доступен как TTF.
+  // Используется для подписей, имени гостя и футера в режиме RU.
   const INTER_ID = 'InterRegular';
   let hasInterFont = false;
   if (isRU) {
@@ -120,29 +112,28 @@ export async function generateTicketPdf(
     }
   }
 
-  // Pick the label set for this language + font availability.
+  // Выбираем набор подписей в зависимости от языка и доступности шрифта.
   const L = isRU
     ? (hasInterFont ? LABELS.RU : LABELS.RU_LATIN)
     : LABELS.FR;
 
-  // Helpers
   const H = (style: 'normal' | 'bold' | 'italic' = 'normal') =>
     doc.setFont('helvetica', style);
 
-  // For body text that may contain Cyrillic in RU mode.
+  // Для основного текста, который в RU-режиме может содержать кириллицу.
   const setBodyFont = () => {
     if (isRU && hasInterFont) doc.setFont(INTER_ID, 'normal');
     else H('normal');
   };
 
-  // Guest name: use original if Inter renders Cyrillic; otherwise transliterate.
+  // Имя гостя: кириллица через Inter; иначе — транслит.
   const guestName = (isRU && hasInterFont)
     ? (booking.userName || booking.userEmail || 'Guest')
     : (transliterate(booking.userName).trim() || booking.userEmail || 'Guest');
 
   let y = 18;
 
-  // ── Theatre header ────────────────────────────────────────────────────────
+  // Шапка театра
   H('bold');
   doc.setFontSize(14);
   doc.setTextColor(180, 0, 0);
@@ -160,9 +151,8 @@ export async function generateTicketPdf(
   doc.line(MARGIN, y, W - MARGIN, y);
   y += 9;
 
-  // ── Show title ────────────────────────────────────────────────────────────
-  // Ekaterina Two renders the Cyrillic title in a theatrical style.
-  // Fallback: Helvetica bold + transliterate (no Cyrillic in PDF).
+  // Название спектакля: Ekaterina Two для театрального вида,
+  // фоллбек — Helvetica bold + транслит.
   const rawTitle = booking.showTitle || 'Spectacle';
   doc.setTextColor(28, 24, 22);
   if (hasDecorFont) {
@@ -185,7 +175,7 @@ export async function generateTicketPdf(
   doc.line(MARGIN, y, W - MARGIN, y);
   y += 7;
 
-  // ── Details table ─────────────────────────────────────────────────────────
+  // Таблица деталей бронирования
   const labelX  = MARGIN + 2;
   const valueX  = 74;
   const rowStep = 7.5;
@@ -201,14 +191,14 @@ export async function generateTicketPdf(
   rows.push([L.code, booking.ticketCode]);
 
   for (const [label, value] of rows) {
-    // Label (small grey uppercase)
+    // Подпись (маленькая серая, uppercase)
     if (isRU && hasInterFont) doc.setFont(INTER_ID, 'normal');
     else H('bold');
     doc.setFontSize(7.5);
     doc.setTextColor(155, 150, 142);
     doc.text(label, labelX, y);
 
-    // Value: Courier bold for ticket code, body font for everything else
+    // Значение: для кода брони — Courier bold, для остального — основной шрифт
     if (label === L.code) {
       doc.setFont('courier', 'bold');
       doc.setFontSize(10);
@@ -227,12 +217,12 @@ export async function generateTicketPdf(
   doc.line(MARGIN, y, W - MARGIN, y);
   y += 7;
 
-  // ── QR code ───────────────────────────────────────────────────────────────
+  // QR-код
   const qrSize = 66;
   doc.addImage(qrDataUrl, 'PNG', (W - qrSize) / 2, y, qrSize, qrSize);
   y += qrSize + 6;
 
-  // ── Ticket code ───────────────────────────────────────────────────────────
+  // Код билета
   doc.setFont('courier', 'bold');
   doc.setFontSize(17);
   doc.setTextColor(28, 24, 22);
@@ -244,7 +234,7 @@ export async function generateTicketPdf(
   doc.line(MARGIN, y, W - MARGIN, y);
   y += 6;
 
-  // ── Footer ────────────────────────────────────────────────────────────────
+  // Футер
   doc.setFontSize(8.5);
   doc.setTextColor(150, 146, 140);
   if (isRU && hasInterFont) doc.setFont(INTER_ID, 'normal');

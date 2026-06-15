@@ -45,9 +45,7 @@ export function Hero() {
           <h1 className={`${styles.title} display`}>
             <span className={styles.titleBefore}>{t.hero.title.before}</span>
             <span className={styles.accentGroup}>
-              {/* <span className={styles.accentDot} /> */}
               <span className={styles.accentLetter}>{t.hero.title.letter}</span>
-              {/* <span className={styles.accentDot} /> */}
             </span>
             <span className={styles.titleAfter}>{t.hero.title.after}</span>
           </h1>

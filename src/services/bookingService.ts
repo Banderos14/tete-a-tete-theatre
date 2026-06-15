@@ -24,10 +24,10 @@ function getTimestampMs(ts: unknown): number {
 const COLLECTION = 'bookings';
 
 export async function createBooking(data: NewBooking): Promise<string> {
-  // Seat check happens client-side via subscribeToShowBookedSeats + handleSubmit guard.
-  // A getDocs query here with where('showId','==',id) violates Firestore security rules
-  // for non-admin users (the rule requires resource.data.userId == auth.uid, so any
-  // query that could return other users' documents is rejected with permission-denied).
+  // Проверка мест — на клиенте через subscribeToShowBookedSeats + guard в handleSubmit.
+  // getDocs с where('showId','==',id) нарушает правила безопасности Firestore для
+  // не-admin пользователей: правило требует resource.data.userId == auth.uid,
+  // поэтому любой запрос, способный вернуть чужие документы, отклоняется с permission-denied.
   const ref = await addDoc(collection(db, COLLECTION), {
     ...data,
     createdAt: serverTimestamp(),
@@ -45,8 +45,8 @@ export async function getUserBookingsOnce(userId: string): Promise<Booking[]> {
   });
 }
 
-// Realtime subscription — no composite index required (sorts client-side).
-// Returns an unsubscribe function; call it when the component unmounts.
+// Realtime-подписка без составного индекса (сортировка на клиенте).
+// Возвращает функцию отписки — вызывать при анмаунте компонента.
 export function subscribeToUserBookings(
   userId: string,
   onUpdate: (bookings: Booking[]) => void,
@@ -147,8 +147,8 @@ function snapshotToBookings(snapshot: Awaited<ReturnType<typeof getDocs>>): Book
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as object) } as Booking));
 }
 
-// Realtime subscription to the number of booked seats for a show.
-// Active statuses (pending / confirmed / attended) reserve seats; cancelled does not.
+// Realtime-подписка на количество занятых мест по спектаклю.
+// Активные статусы (pending / confirmed / attended) резервируют места; cancelled — не резервирует.
 export function subscribeToShowBookedSeats(
   showId: string,
   onUpdate: (bookedSeats: number) => void,
@@ -174,7 +174,7 @@ export function subscribeToShowBookedSeats(
   );
 }
 
-// User-initiated cancellation — stores reason and optional comment.
+// Отмена по инициативе пользователя: сохраняет причину и необязательный комментарий.
 export async function cancelBookingByUser(
   bookingId: string,
   reason: string,

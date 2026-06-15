@@ -7,7 +7,7 @@ import { LINKS, ADDRESS } from '../../constants/links';
 import { useLang } from '../../i18n/LangContext';
 import styles from './Contacts.module.scss';
 
-// Leaflet is split into a separate bundle — loads asynchronously, not blocking main thread
+// Leaflet выделен в отдельный чанк — загружается асинхронно, не блокирует основной поток
 const LeafletMap = lazy(() =>
   import('./LeafletMap').then(m => ({ default: m.LeafletMap }))
 );

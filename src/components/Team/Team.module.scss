@@ -4,7 +4,6 @@
   background: var(--bg);
 }
 
-// ── Groups wrapper ──
 .groups {
   max-width: 1500px;
   margin: 0 auto;
@@ -30,7 +29,6 @@
   border-bottom: 1px solid var(--line);
 }
 
-// ── Person grid ──
 .grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -94,10 +92,14 @@
     }
   }
 
-  // On touch: photo must not move — no transform, no scale, no transition
+  // On touch: no transform/scale, but animate filter so active state feels alive
   @media (hover: none), (pointer: coarse) {
     transform: none;
-    transition: none;
+    transition: filter 0.3s ease;
+
+    .person.active & {
+      filter: grayscale(0) contrast(1.1) saturate(1.15);
+    }
   }
 }
 

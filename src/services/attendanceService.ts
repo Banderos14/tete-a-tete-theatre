@@ -1,14 +1,14 @@
 import { updateBookingStatus } from './bookingService';
 import type { Booking } from '../types/booking';
 
-// Russian 3-letter month abbreviations used in showDate strings (e.g. "17 Май 2026")
+// 3-буквенные сокращения русских месяцев для разбора строк типа "17 Май 2026"
 const MONTH_RU: Record<string, number> = {
   'Янв': 0, 'Фев': 1, 'Мар': 2, 'Апр': 3,
   'Май': 4, 'Июн': 5, 'Июл': 6, 'Авг': 7,
   'Сен': 8, 'Окт': 9, 'Ноя': 10, 'Дек': 11,
 };
 
-// Returns the time when the show is considered "over" (start + 2 h buffer).
+// Возвращает время, когда спектакль считается завершённым (начало + 2 часа буфера).
 function parseShowEnd(showDate: string, showTime: string): Date | null {
   const parts = showDate.trim().split(/\s+/);
   if (parts.length !== 3) return null;
@@ -25,8 +25,8 @@ function parseShowEnd(showDate: string, showTime: string): Date | null {
   return new Date(start.getTime() + 2 * 60 * 60 * 1000);
 }
 
-// Pure check: should this booking be considered attended?
-// Requires confirmed + paid + show ended 2+ hours ago.
+// Чистая проверка: считать ли бронь посещённой?
+// Требует confirmed + paid + спектакль завершился 2+ часа назад.
 export function shouldMarkAsAttended(booking: Booking): boolean {
   if (booking.status !== 'confirmed') return false;
   if (booking.paymentStatus !== 'paid') return false;
@@ -41,10 +41,10 @@ export function computedIsAttended(booking: Booking): boolean {
   return booking.status === 'attended' || shouldMarkAsAttended(booking);
 }
 
-// Writes attended status to Firestore for all eligible bookings.
-// Calls onUpdate(bookingId) after each successful write so the caller can
-// update local state incrementally.
-// Safe to call repeatedly: shouldMarkAsAttended guards against re-marking.
+// Записывает статус attended в Firestore для всех подходящих броней.
+// После каждой успешной записи вызывает onUpdate(bookingId), чтобы caller
+// мог обновлять локальный стейт инкрементально.
+// Можно вызывать повторно: shouldMarkAsAttended защищает от дублирования.
 export async function markEligibleBookingsAsAttended(
   bookings: Booking[],
   onUpdate: (bookingId: string) => void,

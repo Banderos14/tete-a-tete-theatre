@@ -95,8 +95,6 @@
   }
 }
 
-// ── Auth step ────────────────────────────────────────────────────────────
-
 .authWrap {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -255,8 +253,6 @@
   gap: 10px;
 }
 
-// ── Shared section / label ───────────────────────────────────────────────
-
 .section {
   padding: 18px 24px;
   border-top: 1px solid var(--line);
@@ -298,8 +294,6 @@
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
-
-// ── Loyalty block ────────────────────────────────────────────────────────
 
 .loyaltyBlock {
   margin-top: 10px;
@@ -344,8 +338,6 @@
   text-decoration: line-through;
   opacity: 0.6;
 }
-
-// ── Form layout ──────────────────────────────────────────────────────────
 
 .formBody {
   display: flex;
@@ -705,8 +697,6 @@
   margin-top: 8px;
 }
 
-// ── Inputs ───────────────────────────────────────────────────────────────
-
 .input {
   width: 100%;
   background: #26211c;
@@ -750,8 +740,6 @@
   line-height: 1.5;
   font-family: var(--font-body);
 }
-
-// ── Payment cards (form) ─────────────────────────────────────────────────
 
 .paymentCards {
   display: flex;
@@ -847,8 +835,6 @@
   @include mixins.small { padding: 0 20px; }
 }
 
-// ── Submit button ────────────────────────────────────────────────────────
-
 .submitBtn {
   width: calc(100% - 64px);
   margin: 0 32px 28px;
@@ -886,8 +872,6 @@
   font-size: 14px;
   opacity: 0.75;
 }
-
-// ── Success layout ───────────────────────────────────────────────────────
 
 .successWrap {
   display: grid;
@@ -970,8 +954,6 @@
   margin-bottom: 16px;
 }
 
-// ── Copy buttons ─────────────────────────────────────────────────────────
-
 .copyBtn {
   display: inline-flex;
   align-items: center;
@@ -1051,8 +1033,6 @@
     min-height: 46px;
   }
 }
-
-// ── Ticket stub (shared: form + success) ─────────────────────────────────
 
 .stub {
   background: #4a1414;
@@ -1190,8 +1170,6 @@
   @include mixins.mobile { display: none; }
 }
 
-// ── Ticket row (form) ────────────────────────────────────────────────────
-
 .ticketRow {
   display: flex;
   align-items: center;
@@ -1284,8 +1262,6 @@
   }
 }
 
-// ── Payment row (form) ───────────────────────────────────────────────────
-
 .paymentRow {
   display: flex;
   align-items: center;
@@ -1319,8 +1295,6 @@
   font-size: 12px;
   color: var(--fg-mute);
 }
-
-// ── Success right panel ──────────────────────────────────────────────────
 
 .successStamp {
   position: absolute;
@@ -1404,9 +1378,8 @@
   }
 }
 
-// ── iOS input zoom prevention ─────────────────────────────────────────────────
-// Safari auto-zooms the viewport when a focused input has font-size < 16px.
-// The zoom persists after the keyboard closes and breaks the modal layout.
+// iOS: Safari зумирует viewport при фокусе на input с font-size < 16px.
+// Зум остаётся после закрытия клавиатуры и ломает лэйаут модалки.
 @include mixins.small {
   .input,
   .textarea {
@@ -1414,7 +1387,6 @@
   }
 }
 
-// ── Light theme ───────────────────────────────────────────────────────────────
 :global([data-theme='light']) {
   .panel {
     box-shadow: 0 24px 80px rgba(40, 20, 10, 0.18);

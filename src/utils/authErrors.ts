@@ -1,6 +1,6 @@
 import { FirebaseError } from 'firebase/app';
 
-// Supported keys — must match T['auth']['errors'] in translations.ts
+// Ключи должны совпадать с T['auth']['errors'] в translations.ts
 type AuthErrors = {
   invalidEmail:                     string;
   wrongPassword:                    string;

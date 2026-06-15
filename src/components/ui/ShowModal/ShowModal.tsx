@@ -23,7 +23,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
   const [descExpanded, setDescExpanded] = useState(false);
   const [bookedSeats,  setBookedSeats]  = useState(0);
 
-  // Derived state: reset when show changes (render-time setState — React recommended pattern)
+  // Производный стейт: сбрасываем при смене спектакля (render-time setState — паттерн из документации React)
   const [stateShowId, setStateShowId] = useState<string | null>(null);
   const currentId = show?.id ?? null;
   if (currentId !== stateShowId) {
@@ -40,7 +40,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
     [show],
   );
 
-  // Realtime available seats: subscribe when show opens, unsubscribe on close/change
+  // Realtime остаток мест: подписываемся при открытии спектакля, отписываемся при закрытии/смене
   useEffect(() => {
     if (!show) return;
     return subscribeToShowBookedSeats(show.id, setBookedSeats);
@@ -50,7 +50,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
 
   const handleClose = useCallback(() => {
     setClosing(true);
-    setTimeout(onClose, 220);
+    setTimeout(onClose, 150);
   }, [onClose]);
 
   const goTo = useCallback((idx: number) => {
@@ -64,9 +64,11 @@ export function ShowModal({ show, onClose, onBook }: Props) {
     });
   }, [allPhotos.length]);
 
-  useScrollLock(!!show);
+  // Разблокируем фон сразу при старте анимации закрытия — страница становится интерактивной
+  // ещё во время 150мс анимации, без ожидания onClose.
+  useScrollLock(!!show && !closing);
 
-  // Keyboard: ESC + arrow keys
+  // Клавиатура: ESC + стрелки
   useEffect(() => {
     if (!show) return;
     const onKey = (e: KeyboardEvent) => {
@@ -107,7 +109,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
           </svg>
         </button>
 
-        {/* ── Carousel (250px, image to edges) ────────────────────────────── */}
+        {/* Карусель фото */}
         <div className={styles.carousel}>
           <div className={styles.mainPhoto}>
             {currentPhoto ? (
@@ -172,13 +174,13 @@ export function ShowModal({ show, onClose, onBook }: Props) {
           </div>
         </div>
 
-        {/* ── Spine (34px, hidden on mobile) ──────────────────────────────── */}
+        {/* Корешок (скрыт на мобиле) */}
         <div className={styles.spine} aria-hidden="true">
           <span>Сезон 2025 / 2026 · Théâtre Tête-à-Tête · Nice</span>
         </div>
 
-        {/* ── Info ────────────────────────────────────────────────────────── */}
-        <div className={styles.info}>
+        {/* Информация о спектакле */}
+        <div className={styles.info} data-scroll-lock-allow="true">
           <div className={styles.ageStamp}>{show.age}</div>
 
           <div className={styles.author}>{author}</div>

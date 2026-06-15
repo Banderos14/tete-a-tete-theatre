@@ -1,19 +1,15 @@
-// Frontend email service.
+// Frontend email-сервис.
+// Отправка происходит в Vercel Serverless Function /api/send-email.
+// API-ключ (RESEND_API_KEY) во frontend никогда не попадает.
 //
-// All actual sending happens in the Vercel Serverless Function at /api/send-email.
-// The API key (RESEND_API_KEY) is NEVER exposed to the browser.
+// Env-переменная (опционально):
+//   VITE_EMAIL_ENDPOINT — по умолчанию "/api/send-email".
+//                         Переопределяйте только при смене бэкенда или пути.
 //
-// Frontend env variable (optional):
-//   VITE_EMAIL_ENDPOINT   — defaults to "/api/send-email"
-//                           Override only if you use a different backend or path.
-//
-// If the endpoint call fails for any reason, the booking is NOT blocked —
-// email is best-effort.
+// Если endpoint недоступен — бронирование НЕ блокируется, email отправляется best-effort.
 
 import type { BookingStatus } from '../types/booking';
 import { PAYMENT_CONFIG, getPaymentAccount, normalizeIban } from '../config/payment';
-
-// ── Constants ─────────────────────────────────────────────────────────────────
 
 const THEATRE_NAME    = PAYMENT_CONFIG.receiverName;
 const THEATRE_ADDRESS = PAYMENT_CONFIG.address;
@@ -21,8 +17,6 @@ const THEATRE_EMAIL   = PAYMENT_CONFIG.paymentEmail;
 const THEATRE_PHONE   = PAYMENT_CONFIG.paymentPhone;
 const PAY_REF_PREFIX  = PAYMENT_CONFIG.paymentReferencePrefix;
 const THEATRE_MAPS    = PAYMENT_CONFIG.googleMapsUrl;
-
-// ── Data types ────────────────────────────────────────────────────────────────
 
 export interface BookingEmailData {
   userEmail:        string;
@@ -69,8 +63,7 @@ export interface PaymentPaidEmailData {
   lang:          'RU' | 'FR';
 }
 
-// ── Month translation (showDate stored as "17 Май 2026") ─────────────────────
-
+// showDate хранится как "17 Май 2026" — перевод месяца для FR-писем
 const MONTHS_RU_TO_FR: Record<string, string> = {
   'Янв': 'Janvier', 'Фев': 'Février',  'Мар': 'Mars',      'Апр': 'Avril',
   'Май': 'Mai',      'Июн': 'Juin',     'Июл': 'Juillet',   'Авг': 'Août',
@@ -81,8 +74,6 @@ function localeDate(showDate: string, lang: 'RU' | 'FR'): string {
   if (lang === 'RU') return showDate;
   return showDate.replace(/[А-ЯЁ][а-яё]+/, m => MONTHS_RU_TO_FR[m] ?? m);
 }
-
-// ── Shared HTML building blocks ───────────────────────────────────────────────
 
 function wrapHtml(lang: string, subject: string, headerTitle: string, bodyHtml: string): string {
   return `<!DOCTYPE html>
@@ -179,8 +170,6 @@ function noteBlock(text: string): string {
   </div>`;
 }
 
-// ── Booking confirmation email ─────────────────────────────────────────────────
-
 function buildConfirmationEmail(data: BookingEmailData): { subject: string; html: string; text: string } {
   const isRU           = data.lang === 'RU';
   const isBankTransfer = data.paymentMethod === 'bank_transfer';
@@ -235,7 +224,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
     ...amountRows,
   ];
 
-  // Bank transfer details block — uses the selected payment account
+  // Реквизиты для банковского перевода — берём выбранный платёжный аккаунт
   const paymentReference = `${PAY_REF_PREFIX}-${data.ticketCode}`;
   const account = isBankTransfer ? getPaymentAccount(data.paymentAccountId) : null;
 
@@ -297,7 +286,7 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
 
   const html = wrapHtml(isRU ? 'ru' : 'fr', subject, headerTitle, bodyHtml);
 
-  // Plain-text version
+  // Текстовая версия письма
   const buildTransferText = (): string[] => {
     if (!isBankTransfer || !account) return [];
     const lines: string[] = ['', isRU ? 'Реквизиты для перевода:' : 'Coordonnées bancaires :'];
@@ -356,8 +345,6 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
 
   return { subject, html, text };
 }
-
-// ── Status update email ───────────────────────────────────────────────────────
 
 function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html: string; text: string } {
   const isRU    = data.lang === 'RU';
@@ -435,8 +422,6 @@ function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html
   return { subject, html, text };
 }
 
-// ── Payment paid email ────────────────────────────────────────────────────────
-
 function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: string; html: string; text: string } {
   const isRU               = data.lang === 'RU';
   const isAlreadyConfirmed = data.bookingStatus === 'confirmed';
@@ -496,8 +481,6 @@ function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: string; h
 
   return { subject, html, text };
 }
-
-// ── New show announcement email ───────────────────────────────────────────────
 
 export interface NewShowEmailData {
   userEmail:   string;
@@ -571,10 +554,8 @@ function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: str
   return { subject, html, text };
 }
 
-// ── API call ──────────────────────────────────────────────────────────────────
-
 async function callEndpoint(payload: { to: string; subject: string; html: string; text: string }): Promise<void> {
-  // Default to /api/send-email — works on Vercel without any frontend env config
+  // По умолчанию /api/send-email — работает на Vercel без настройки env во frontend
   const endpoint = (import.meta.env.VITE_EMAIL_ENDPOINT as string | undefined) ?? '/api/send-email';
 
   try {
@@ -588,12 +569,10 @@ async function callEndpoint(payload: { to: string; subject: string; html: string
       console.warn('[emailService] Endpoint returned', resp.status, err);
     }
   } catch (err) {
-    // Network error — never blocks the booking
+    // Сетевая ошибка — бронирование не блокируем
     console.warn('[emailService] Fetch error:', err);
   }
 }
-
-// ── Public API ────────────────────────────────────────────────────────────────
 
 export async function sendBookingConfirmationEmail(data: BookingEmailData): Promise<void> {
   if (!data.userEmail) {
@@ -604,21 +583,21 @@ export async function sendBookingConfirmationEmail(data: BookingEmailData): Prom
   await callEndpoint({ to: data.userEmail, subject, html, text });
 }
 
-// Sends an update when admin changes booking status (confirmed / cancelled / attended).
+// Обновление статуса брони (confirmed / cancelled / attended) — отправляется из AdminPage.
 export async function sendBookingStatusUpdateEmail(data: BookingStatusEmailData): Promise<void> {
   const { subject, html, text } = buildStatusEmail(data);
   await callEndpoint({ to: data.userEmail, subject, html, text });
 }
 
-// Sends a payment confirmation when admin marks booking as paid.
+// Подтверждение оплаты — отправляется когда admin отмечает бронь как оплаченную.
 export async function sendPaymentPaidEmail(data: PaymentPaidEmailData): Promise<void> {
   if (!data.userEmail) return;
   const { subject, html, text } = buildPaymentPaidEmail(data);
   await callEndpoint({ to: data.userEmail, subject, html, text });
 }
 
-// Sends a new-show announcement to a single subscriber.
-// Call once per recipient — AdminPage loops over getUsersForNewsletter().
+// Анонс нового спектакля — отправлять по одному получателю;
+// AdminPage перебирает список через getUsersForNewsletter().
 export async function sendNewShowAnnouncementEmail(data: NewShowEmailData): Promise<void> {
   if (!data.userEmail) return;
   const { subject, html, text } = buildNewShowEmail(data);

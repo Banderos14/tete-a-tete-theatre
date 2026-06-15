@@ -170,8 +170,6 @@
   }
 }
 
-// ── Image cards — Live-style visual ──────────────────────────────────────────
-
 .img {
   position: relative;
   overflow: hidden;
@@ -215,8 +213,6 @@
 .tall { grid-row: span 2; }
 .wide { grid-column: span 2; }
 
-// ── Video background (card 0) ─────────────────────────────────────────────────
-
 .videoBg {
   position: absolute;
   inset: 0;
@@ -239,8 +235,6 @@
   z-index: 1;
   pointer-events: none;
 }
-
-// ── Card inner: flex layout (no absolute for footer) ──────────────────────────
 
 .cardInner {
   position: absolute;
@@ -276,8 +270,6 @@
   color: rgba(245, 241, 234, 0.35);
   white-space: nowrap;
 }
-
-// ── Light theme ───────────────────────────────────────────────────────────────
 
 :global([data-theme='light']) {
   .img[data-card="0"] { background: linear-gradient(135deg, #b89098, #9a7280); }

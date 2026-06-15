@@ -41,9 +41,9 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
 
   useScrollLock(menuOpen);
 
-  // Track active section for nav highlight.
-  // Uses a Set so that when a section leaves the viewport (isIntersecting=false)
-  // it is removed — prevents activeId staying stuck on 'afisha' in dead zones.
+  // Отслеживаем активную секцию для подсветки навигации.
+  // Set: при выходе из viewport (isIntersecting=false) секция удаляется —
+  // чтобы activeId не залипал на 'afisha' в мёртвых зонах.
   useEffect(() => {
     const ids = ['afisha', 'repertoire', 'about', 'people'];
     const visible = new Set<string>();
@@ -54,7 +54,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
           if (e.isIntersecting) visible.add(e.target.id);
           else visible.delete(e.target.id);
         });
-        // Always pick the topmost (DOM-order) visible section; '' if none.
+        // Берём самую верхнюю (по DOM) видимую секцию; '' если ни одна.
         setActiveId(ids.find(id => visible.has(id)) ?? '');
       },
       { threshold: 0.15, rootMargin: '-80px 0px -20% 0px' }
@@ -68,9 +68,9 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
 
   function handleNavClick(id: string) {
     closeMenu();
-    // 220 ms lets iOS Safari finish releasing the scroll lock and restoring
-    // layout before the animation starts — prevents a layout-induced jerk.
-    setTimeout(() => scrollToSection(id), 220);
+    // 100 ms lets iOS Safari release the scroll lock and restore layout before
+    // the animation starts — prevents a jerk while keeping response feeling instant.
+    setTimeout(() => scrollToSection(id), 100);
   }
 
   const navLinks = [

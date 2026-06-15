@@ -16,8 +16,6 @@
   to   { opacity: 1; }
 }
 
-// ── Backdrop ───────────────────────────────────────────────────────────────
-
 .backdrop {
   position: fixed;
   inset: 0;
@@ -40,6 +38,8 @@
     // blur is GPU-composited — skip on mobile to avoid repaint stutter
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    // Faster close on mobile: match the 150ms JS timeout
+    &.backdropOut { animation-duration: 0.13s; }
   }
 
   @include mixins.small {
@@ -47,8 +47,6 @@
     padding: 0;
   }
 }
-
-// ── Panel ──────────────────────────────────────────────────────────────────
 
 .panel {
   position: relative;
@@ -68,7 +66,8 @@
 
   @include mixins.mobile {
     animation-duration: 0.22s;
-    &.panelOut { animation-duration: 0.18s; }
+    // Match 150ms JS timeout: animation finishes before DOM removal
+    &.panelOut { animation-duration: 0.13s; }
   }
 
   @include mixins.mobile {
@@ -86,8 +85,6 @@
     border: none;
   }
 }
-
-// ── Carousel (left zone, ~42% of panel) ───────────────────────────────────
 
 .carousel {
   flex: 0 0 42%;
@@ -140,8 +137,6 @@
   justify-content: center;
 }
 
-// ── Nav arrows ─────────────────────────────────────────────────────────────
-
 .navBtn {
   position: absolute;
   top: 50%;
@@ -167,8 +162,6 @@
 
 .navPrev { left: 8px; }
 .navNext { right: 8px; }
-
-// ── Thumbnail strip — centered overlay at bottom of carousel ──────────────
 
 .thumbStrip {
   position: absolute;
@@ -252,8 +245,6 @@
   pointer-events: none;
 }
 
-// ── Spine (34px, hidden on mobile) ─────────────────────────────────────────
-
 .spine {
   width: 34px;
   flex-shrink: 0;
@@ -279,8 +270,6 @@
 
   @include mixins.mobile { display: none; }
 }
-
-// ── Info (content page) ────────────────────────────────────────────────────
 
 .info {
   flex: 1;
@@ -352,8 +341,6 @@
   flex-shrink: 0;
 }
 
-// ── Meta table ─────────────────────────────────────────────────────────────
-
 .metaTable {
   display: flex;
   flex-direction: column;
@@ -400,8 +387,6 @@
   color: var(--fg-dim) !important;
 }
 
-// ── Description with drop cap ──────────────────────────────────────────────
-
 .desc {
   font-size: 13px;
   line-height: 1.78;
@@ -443,8 +428,6 @@
   &:hover { color: var(--fg-dim); }
 }
 
-// ── Book row ───────────────────────────────────────────────────────────────
-
 .bookRow {
   display: flex;
   align-items: center;
@@ -474,8 +457,6 @@
 .seatsCount {
   color: #cdb27a;
 }
-
-// ── Close button ───────────────────────────────────────────────────────────
 
 .close {
   position: absolute;
@@ -507,7 +488,6 @@
   }
 }
 
-// ── Light theme ───────────────────────────────────────────────────────────────
 :global([data-theme='light']) {
   .panel {
     box-shadow: 0 24px 80px rgba(40, 20, 10, 0.18);

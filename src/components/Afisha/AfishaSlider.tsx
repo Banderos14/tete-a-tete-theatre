@@ -4,29 +4,36 @@ import { SHOWS } from '../../data/shows';
 import type { Show } from '../../types';
 import styles from './AfishaSlider.module.scss';
 
-SHOWS.forEach(s => {
-  if (s.image) {
-    const img = new Image();
-    img.onerror = () => console.warn('[show image failed]', s.id, s.image);
-    img.src = s.image;
-  }
-  // Preload first detail photo so ShowModal renders it instantly on open
-  const firstPhoto = s.photos?.[0];
-  if (firstPhoto) {
-    const detail = new Image();
-    detail.src = firstPhoto;
-  }
+// Предзагрузка постеров в idle — не конкурируем с LCP. setTimeout — фолбэк для Safari < 16.4.
+const _schedulePreload = typeof requestIdleCallback === 'function'
+  ? (fn: () => void) => requestIdleCallback(fn, { timeout: 2000 })
+  : (fn: () => void) => setTimeout(fn, 200);
+
+_schedulePreload(() => {
+  SHOWS.forEach(s => {
+    if (s.image) {
+      const img = new Image();
+      img.onerror = () => console.warn('[show image failed]', s.id, s.image);
+      img.src = s.image;
+    }
+    // Первое фото спектакля — предзагружаем, чтобы ShowModal открылся без мерцания
+    const firstPhoto = s.photos?.[0];
+    if (firstPhoto) {
+      const detail = new Image();
+      detail.src = firstPhoto;
+    }
+  });
 });
 
-// 3 copies: left buffer | center (visible) | right buffer.
-// Start offset = -singleWidth (center copy). Loop wraps at 0 and -2*singleWidth.
+// 3 копии: левый буфер | центр (видимый) | правый буфер.
+// Начальное смещение = -singleWidth. Цикл оборачивается на 0 и -2·singleWidth.
 const COPIES = 3;
 const CARDS  = Array.from({ length: COPIES }, () => SHOWS).flat();
 
-const DRAG_THRESHOLD    = 6;    // px horizontal before gesture counts as drag (lower = more responsive)
-const HORIZONTAL_BIAS   = 0.7;  // drag if absDx > absDy * BIAS — allows gestures up to ~55° from horizontal
-const AUTO_SPEED        = 0.8;  // target px/frame for auto-scroll (≈48 px/s at 60 fps)
-const LERP              = 0.08; // velocity blend per frame — 0.08 → iOS-like half-life ≈ 9 frames
+const DRAG_THRESHOLD    = 6;    // горизонтальный порог (px) для подтверждения drag
+const HORIZONTAL_BIAS   = 0.7;  // absDx > absDy * BIAS → драг (до ~55° от горизонтали)
+const AUTO_SPEED        = 0.8;  // целевая скорость авто-прокрутки (≈48 px/s при 60 fps)
+const LERP              = 0.08; // смешение скорости за кадр — период полураспада ≈ 9 кадров
 
 interface Props {
   onCardClick: (show: Show) => void;
@@ -40,10 +47,10 @@ export function AfishaSlider({ onCardClick }: Props) {
   const trackRef     = useRef<HTMLDivElement>(null);
   const rafRef       = useRef<number>(0);
   const offsetRef    = useRef(0);
-  // velocityRef drives all motion: negative = moving left (auto direction).
-  // It lerps toward −AUTO_SPEED each frame, giving natural inertia decay.
+  // velocityRef управляет движением: отрицательное = влево (авто-направление).
+  // Лерпится к −AUTO_SPEED каждый кадр, давая плавное затухание инерции.
   const velocityRef  = useRef(-AUTO_SPEED);
-  // loopWidth cached once (scrollWidth / 2) so the RAF tick never reads DOM.
+  // loopWidth кешируется один раз (scrollWidth / 2), чтобы RAF-тик не обращался к DOM.
   const loopWidthRef = useRef(0);
   const isHoveredRef = useRef(false);
 
@@ -55,18 +62,15 @@ export function AfishaSlider({ onCardClick }: Props) {
     startOffset: 0,
     isDragging: false,
     moved: false,
-    // Velocity tracking for inertia (EMA of recent pointermove deltas)
+    // Трекинг скорости для инерции (EMA дельт pointermove)
     lastX: 0,
     lastTime: 0,
     velocity: 0, // px/ms, updated each pointermove
     show: null as Show | null,
   });
 
-  // ── Offset application — translate3d forces GPU layer on iOS Safari ─────────
-  // loopWidth (= singleCopyWidth) from ref: no DOM read inside the hot RAF path.
-  // Valid range: (-2·lw, 0).  Copy 2 (center) is always at offset -lw.
-  //   • too far left  (o ≤ -2·lw) → jump forward by lw
-  //   • too far right (o ≥ 0)     → jump back   by lw
+  // translate3d переводит трек на GPU-слой iOS Safari, без DOM-чтений в RAF-пути.
+  // Допустимый диапазон: (-2·lw, 0). Центральная копия всегда на offset = -lw.
   const applyOffset = useCallback((offset: number) => {
     const track = trackRef.current;
     if (!track) return;
@@ -80,10 +84,8 @@ export function AfishaSlider({ onCardClick }: Props) {
     track.style.transform = `translate3d(${o}px,0,0)`;
   }, []);
 
-  // Cache singleCopyWidth = scrollWidth / COPIES; set initial offset to center copy.
-  // ResizeObserver keeps the cached value fresh after viewport resize.
-  // Initial offset is set once (when loopWidthRef is still 0) so RAF starts in the
-  // center copy and doesn't need to correct itself on the very first tick.
+  // Кешируем singleCopyWidth = scrollWidth / COPIES; ResizeObserver обновляет при ресайзе.
+  // Начальное смещение ставим один раз (пока loopWidthRef == 0), чтобы RAF стартовал на центральной копии.
   useEffect(() => {
     const measure = () => {
       if (!trackRef.current) return;
@@ -103,12 +105,8 @@ export function AfishaSlider({ onCardClick }: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // ── RAF tick ──────────────────────────────────────────────────────────────
-  // Skipped only when:
-  //   isDragging  – position is set directly by pointermove (position-based drag)
-  //   isHovered   – desktop hover freezes the track
-  // Otherwise: lerp velocityRef → −AUTO_SPEED each frame.
-  // After drag release, velocityRef is seeded from drag velocity → free inertia.
+  // RAF-тик пропускается только при isDragging (позиция управляется pointermove)
+  // и isHovered (десктоп). После отпускания drag velocityRef получает инерцию из скорости жеста.
   useEffect(() => {
     const tick = () => {
       if (!drag.current.isDragging && !isHoveredRef.current) {
@@ -121,8 +119,8 @@ export function AfishaSlider({ onCardClick }: Props) {
     return () => cancelAnimationFrame(rafRef.current);
   }, [applyOffset]);
 
-  // ── Non-passive touchmove — stops page scroll during confirmed horizontal drag ──
-  // React's onPointerMove is passive on some iOS versions; a direct listener is reliable.
+  // Non-passive touchmove — блокирует скролл страницы при горизонтальном drag.
+  // React's onPointerMove на некоторых iOS-версиях пассивный, прямой listener надёжнее.
   useEffect(() => {
     const outer = outerRef.current;
     if (!outer) return;
@@ -133,11 +131,9 @@ export function AfishaSlider({ onCardClick }: Props) {
     return () => outer.removeEventListener('touchmove', onTouchMove);
   }, []);
 
-  // ── Hover pause — desktop only ─────────────────────────────────────────────
   const onMouseEnter = useCallback(() => { isHoveredRef.current = true;  }, []);
   const onMouseLeave = useCallback(() => { isHoveredRef.current = false; }, []);
 
-  // ── Pointer down ───────────────────────────────────────────────────────────
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
@@ -158,11 +154,9 @@ export function AfishaSlider({ onCardClick }: Props) {
       show: idx >= 0 ? CARDS[idx] : null,
     };
 
-    // data-dragging (grabbing cursor) set only when drag is confirmed in onPointerMove.
-    // No pause here — tick keeps running during taps (auto-scroll continues).
+    // data-dragging (курсор grabbing) выставляется только при подтверждённом drag в onPointerMove.
   }, []);
 
-  // ── Pointer move ───────────────────────────────────────────────────────────
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
     if (!d.active || d.pointerId !== e.pointerId) return;
@@ -174,8 +168,7 @@ export function AfishaSlider({ onCardClick }: Props) {
 
     if (!d.moved && absDx + absDy > DRAG_THRESHOLD) d.moved = true;
 
-    // Confirm horizontal drag: past threshold AND more horizontal than BIAS allows diagonals.
-    // HORIZONTAL_BIAS = 0.7 → gesture up to ~55° from horizontal still counts as carousel drag.
+    // Подтверждаем горизонтальный drag: прошли порог и движение более горизонтальное, чем BIAS.
     if (!d.isDragging && absDx > DRAG_THRESHOLD && absDx > absDy * HORIZONTAL_BIAS) {
       d.isDragging = true;
       outerRef.current?.setAttribute('data-dragging', '');
@@ -184,11 +177,10 @@ export function AfishaSlider({ onCardClick }: Props) {
 
     if (!d.isDragging) return;
 
-    // Position-based drag: set offset directly (tick is suspended via isDragging check).
+    // Позиционный drag: offset ставим напрямую, тик suspended через isDragging.
     applyOffset(d.startOffset + dx);
 
-    // Track velocity via EMA for inertia on release.
-    // Use a time window of 8–150 ms to filter noise and stale samples.
+    // EMA-скорость для инерции после отпускания (окно 8–150 мс фильтрует шум).
     const now = performance.now();
     const dt  = now - d.lastTime;
     if (dt > 8 && dt < 150) {
@@ -199,7 +191,6 @@ export function AfishaSlider({ onCardClick }: Props) {
     d.lastTime = now;
   }, [applyOffset]);
 
-  // ── Pointer up ─────────────────────────────────────────────────────────────
   const onPointerUp = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
     if (!d.active || d.pointerId !== e.pointerId) return;
@@ -207,28 +198,25 @@ export function AfishaSlider({ onCardClick }: Props) {
     outerRef.current?.removeAttribute('data-dragging');
 
     if (!d.moved && d.show) {
-      // True tap — fire click. velocityRef is already at auto speed.
       onCardClick(d.show);
     } else if (d.isDragging) {
-      // Seed inertia: convert drag velocity (px/ms) → px/frame at 60 fps.
-      // Clamped to ±15 px/frame (≈900 px/s) to prevent extreme throws.
+      // Конвертируем скорость drag (px/ms) → px/кадр при 60 fps, ±15 px/кадр макс.
       const inertia = d.velocity * (1000 / 60);
       velocityRef.current = Math.max(-15, Math.min(15, inertia));
     }
 
-    // CRITICAL: reset isDragging so the RAF tick resumes immediately.
-    // Without this, tick checks !drag.current.isDragging → still true → carousel frozen.
+    // Сбрасываем isDragging — иначе RAF-тик будет заморожен.
     d.isDragging = false;
   }, [onCardClick]);
 
-  // ── Pointer cancel (system interrupt: call, notification, etc.) ───────────
+  // Системное прерывание (звонок, уведомление) — чистый сброс без инерции.
   const onPointerCancel = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
     if (!d.active || d.pointerId !== e.pointerId) return;
-    d.active    = false;
-    d.isDragging = false; // let RAF resume
+    d.active     = false;
+    d.isDragging = false;
     outerRef.current?.removeAttribute('data-dragging');
-    velocityRef.current = -AUTO_SPEED; // clean reset — no inertia on cancel
+    velocityRef.current = -AUTO_SPEED;
   }, []);
 
   return (
