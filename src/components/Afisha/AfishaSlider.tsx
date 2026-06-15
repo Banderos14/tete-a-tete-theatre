@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLang } from '../../i18n/LangContext';
 import { SHOWS } from '../../data/shows';
 import type { Show } from '../../types';
@@ -16,24 +16,25 @@ _schedulePreload(() => {
       img.onerror = () => console.warn('[show image failed]', s.id, s.image);
       img.src = s.image;
     }
-    // Первое фото спектакля — предзагружаем, чтобы ShowModal открылся без мерцания
     const firstPhoto = s.photos?.[0];
     if (firstPhoto) {
       const detail = new Image();
-      detail.src = firstPhoto;
+      detail.src = typeof firstPhoto === 'string' ? firstPhoto : firstPhoto.src;
     }
   });
 });
 
-// 3 копии: левый буфер | центр (видимый) | правый буфер.
-// Начальное смещение = -singleWidth. Цикл оборачивается на 0 и -2·singleWidth.
-const COPIES = 3;
-const CARDS  = Array.from({ length: COPIES }, () => SHOWS).flat();
+// Минимальное число копий набора карточек.
+// Инвариант «нет чёрного поля»: copies ≥ ceil(viewport / singleWidth) + 2.
+// При 3 спектаклях × ~340px = ~1020px на набор:
+//   desktop 1920px → нужно ceil(1920/1020)+2 = 4 → MIN_COPIES=5 покрывает.
+//   desktop 2560px → нужно 5, динамически увеличим до 6.
+const MIN_COPIES = 5;
 
-const DRAG_THRESHOLD    = 6;    // горизонтальный порог (px) для подтверждения drag
-const HORIZONTAL_BIAS   = 0.7;  // absDx > absDy * BIAS → драг (до ~55° от горизонтали)
-const AUTO_SPEED        = 0.8;  // целевая скорость авто-прокрутки (≈48 px/s при 60 fps)
-const LERP              = 0.08; // смешение скорости за кадр — период полураспада ≈ 9 кадров
+const DRAG_THRESHOLD  = 6;
+const HORIZONTAL_BIAS = 0.7;
+const AUTO_SPEED      = 0.8;
+const LERP            = 0.08;
 
 interface Props {
   onCardClick: (show: Show) => void;
@@ -43,34 +44,38 @@ export function AfishaSlider({ onCardClick }: Props) {
   const { lang, t } = useLang();
   const total = SHOWS.length;
 
+  // Число копий растёт при первом измерении если viewport шире одного набора
+  const [numCopies, setNumCopies] = useState(MIN_COPIES);
+  const copiesRef   = useRef(MIN_COPIES);
+  const cards = useMemo(
+    () => Array.from({ length: numCopies }, () => SHOWS).flat(),
+    [numCopies],
+  );
+
   const outerRef     = useRef<HTMLDivElement>(null);
   const trackRef     = useRef<HTMLDivElement>(null);
   const rafRef       = useRef<number>(0);
   const offsetRef    = useRef(0);
-  // velocityRef управляет движением: отрицательное = влево (авто-направление).
-  // Лерпится к −AUTO_SPEED каждый кадр, давая плавное затухание инерции.
   const velocityRef  = useRef(-AUTO_SPEED);
-  // loopWidth кешируется один раз (scrollWidth / 2), чтобы RAF-тик не обращался к DOM.
-  const loopWidthRef = useRef(0);
+  const loopWidthRef = useRef(0); // ширина одного набора (px); 0 = ещё не измерено
   const isHoveredRef = useRef(false);
 
   const drag = useRef({
-    active: false,
-    pointerId: -1,
-    startX: 0,
-    startY: 0,
+    active:      false,
+    pointerId:   -1,
+    startX:      0,
+    startY:      0,
     startOffset: 0,
-    isDragging: false,
-    moved: false,
-    // Трекинг скорости для инерции (EMA дельт pointermove)
-    lastX: 0,
-    lastTime: 0,
-    velocity: 0, // px/ms, updated each pointermove
-    show: null as Show | null,
+    isDragging:  false,
+    moved:       false,
+    lastX:       0,
+    lastTime:    0,
+    velocity:    0,
+    show:        null as Show | null,
   });
 
-  // translate3d переводит трек на GPU-слой iOS Safari, без DOM-чтений в RAF-пути.
-  // Допустимый диапазон: (-2·lw, 0). Центральная копия всегда на offset = -lw.
+  // Диапазон offset: (-2·lw, 0).
+  // При copies ≥ ceil(vw/lw)+2 правый край viewport никогда не выходит за трек.
   const applyOffset = useCallback((offset: number) => {
     const track = trackRef.current;
     if (!track) return;
@@ -84,29 +89,54 @@ export function AfishaSlider({ onCardClick }: Props) {
     track.style.transform = `translate3d(${o}px,0,0)`;
   }, []);
 
-  // Кешируем singleCopyWidth = scrollWidth / COPIES; ResizeObserver обновляет при ресайзе.
-  // Начальное смещение ставим один раз (пока loopWidthRef == 0), чтобы RAF стартовал на центральной копии.
   useEffect(() => {
     const measure = () => {
-      if (!trackRef.current) return;
-      const single = trackRef.current.scrollWidth / COPIES;
-      if (single <= 0) return;
+      const track = trackRef.current;
+      const outer = outerRef.current;
+      if (!track || !outer) return;
+
+      const copies = copiesRef.current;
+      const singleW = track.scrollWidth / copies;
+      if (singleW <= 0) return;
+
+      const vw = outer.clientWidth;
+      // +3 вместо +2 — дополнительный буфер для быстрого drag и resize
+      const needed = Math.max(MIN_COPIES, Math.ceil(vw / singleW) + 3);
+
+      if (needed > copies) {
+        // Нужно больше копий → увеличиваем стейт; ResizeObserver перемерит после ре-рендера
+        copiesRef.current = needed;
+        setNumCopies(needed);
+        return;
+      }
+
       const firstMeasure = loopWidthRef.current === 0;
-      loopWidthRef.current = single;
+      loopWidthRef.current = singleW;
+
       if (firstMeasure) {
-        const init = -single;               // center copy
+        // Стартуем со второй копии — слева и справа всегда есть буферные копии
+        const init = -singleW;
         offsetRef.current = init;
-        trackRef.current.style.transform = `translate3d(${init}px,0,0)`;
+        track.style.transform = `translate3d(${init}px,0,0)`;
       }
     };
-    measure();
+
+    // Небольшая задержка на случай, если изображения ещё не дали layout
+    const raf = requestAnimationFrame(() => {
+      measure();
+      setTimeout(measure, 120); // fallback после загрузки шрифтов / изображений
+    });
+
     const ro = new ResizeObserver(measure);
     if (trackRef.current) ro.observe(trackRef.current);
-    return () => ro.disconnect();
+    if (outerRef.current) ro.observe(outerRef.current);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, []);
 
-  // RAF-тик пропускается только при isDragging (позиция управляется pointermove)
-  // и isHovered (десктоп). После отпускания drag velocityRef получает инерцию из скорости жеста.
   useEffect(() => {
     const tick = () => {
       if (!drag.current.isDragging && !isHoveredRef.current) {
@@ -119,8 +149,6 @@ export function AfishaSlider({ onCardClick }: Props) {
     return () => cancelAnimationFrame(rafRef.current);
   }, [applyOffset]);
 
-  // Non-passive touchmove — блокирует скролл страницы при горизонтальном drag.
-  // React's onPointerMove на некоторых iOS-версиях пассивный, прямой listener надёжнее.
   useEffect(() => {
     const outer = outerRef.current;
     if (!outer) return;
@@ -141,21 +169,20 @@ export function AfishaSlider({ onCardClick }: Props) {
     const idx    = cardEl ? parseInt(cardEl.dataset.showIdx!, 10) : -1;
 
     drag.current = {
-      active: true,
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
+      active:      true,
+      pointerId:   e.pointerId,
+      startX:      e.clientX,
+      startY:      e.clientY,
       startOffset: offsetRef.current,
-      isDragging: false,
-      moved: false,
-      lastX: e.clientX,
-      lastTime: performance.now(),
-      velocity: 0,
-      show: idx >= 0 ? CARDS[idx] : null,
+      isDragging:  false,
+      moved:       false,
+      lastX:       e.clientX,
+      lastTime:    performance.now(),
+      velocity:    0,
+      // idx — глобальный по всем копиям; модуль даёт индекс в SHOWS
+      show: idx >= 0 ? SHOWS[((idx % total) + total) % total] : null,
     };
-
-    // data-dragging (курсор grabbing) выставляется только при подтверждённом drag в onPointerMove.
-  }, []);
+  }, [total]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
@@ -168,7 +195,6 @@ export function AfishaSlider({ onCardClick }: Props) {
 
     if (!d.moved && absDx + absDy > DRAG_THRESHOLD) d.moved = true;
 
-    // Подтверждаем горизонтальный drag: прошли порог и движение более горизонтальное, чем BIAS.
     if (!d.isDragging && absDx > DRAG_THRESHOLD && absDx > absDy * HORIZONTAL_BIAS) {
       d.isDragging = true;
       outerRef.current?.setAttribute('data-dragging', '');
@@ -177,15 +203,13 @@ export function AfishaSlider({ onCardClick }: Props) {
 
     if (!d.isDragging) return;
 
-    // Позиционный drag: offset ставим напрямую, тик suspended через isDragging.
     applyOffset(d.startOffset + dx);
 
-    // EMA-скорость для инерции после отпускания (окно 8–150 мс фильтрует шум).
     const now = performance.now();
     const dt  = now - d.lastTime;
     if (dt > 8 && dt < 150) {
-      const rawV = (e.clientX - d.lastX) / dt; // px/ms
-      d.velocity = d.velocity * 0.6 + rawV * 0.4; // EMA α=0.4
+      const rawV = (e.clientX - d.lastX) / dt;
+      d.velocity = d.velocity * 0.6 + rawV * 0.4;
     }
     d.lastX    = e.clientX;
     d.lastTime = now;
@@ -200,16 +224,13 @@ export function AfishaSlider({ onCardClick }: Props) {
     if (!d.moved && d.show) {
       onCardClick(d.show);
     } else if (d.isDragging) {
-      // Конвертируем скорость drag (px/ms) → px/кадр при 60 fps, ±15 px/кадр макс.
       const inertia = d.velocity * (1000 / 60);
       velocityRef.current = Math.max(-15, Math.min(15, inertia));
     }
 
-    // Сбрасываем isDragging — иначе RAF-тик будет заморожен.
     d.isDragging = false;
   }, [onCardClick]);
 
-  // Системное прерывание (звонок, уведомление) — чистый сброс без инерции.
   const onPointerCancel = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
     if (!d.active || d.pointerId !== e.pointerId) return;
@@ -232,7 +253,7 @@ export function AfishaSlider({ onCardClick }: Props) {
         onPointerCancel={onPointerCancel}
       >
         <div ref={trackRef} className={styles.track}>
-          {CARDS.map((show, i) => {
+          {cards.map((show, i) => {
             const cardIndex = (i % total) + 1;
             const month  = t.months[show.month] ?? show.month;
             const title  = lang === 'FR' ? (show.titleFR  ?? show.title)  : show.title;
@@ -252,7 +273,10 @@ export function AfishaSlider({ onCardClick }: Props) {
                 {show.image && (
                   <div
                     className={styles.poster}
-                    style={{ backgroundImage: `url(${show.image})` }}
+                    style={{
+                      backgroundImage: `url(${show.image})`,
+                      ...(show.imagePosition ? { backgroundPosition: show.imagePosition } : {}),
+                    }}
                   />
                 )}
                 <div className={styles.overlay} />

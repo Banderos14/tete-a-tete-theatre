@@ -58,7 +58,7 @@ export function BookingSuccessStep({
           <p className={styles.stubMeta}>{show.day} {monthLabel} {show.year} · {show.time}</p>
         </div>
         <div className={styles.stubBottom}>
-          <div className={styles.stubCodeLabel}>КОД БРОНИ</div>
+          <div className={styles.stubCodeLabel}>{lang === 'FR' ? 'CODE RÉSA' : 'КОД БРОНИ'}</div>
           <div className={styles.stubCode}>{ticketCode}</div>
           <div className={styles.barcode} aria-hidden="true">
             {[2,5,2,3,7,2,4,2,6,3,2,5].map((w, i) => (

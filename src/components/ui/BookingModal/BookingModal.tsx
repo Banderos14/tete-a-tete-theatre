@@ -316,7 +316,7 @@ export function BookingModal({ show, onClose }: Props) {
     >
       <div className={styles.modal} role="dialog" aria-modal="true">
 
-        <button className={styles.closeBtn} onClick={onClose} aria-label="Закрыть">
+        <button className={styles.closeBtn} onClick={onClose} aria-label={lang === 'FR' ? 'Fermer' : 'Закрыть'}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>

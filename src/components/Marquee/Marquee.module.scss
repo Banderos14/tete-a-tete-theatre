@@ -14,10 +14,14 @@
 }
 
 /*
-  display: inline-flex = ширина трека = ширина контента (не 100% viewport).
-  translateX(-50%) = ровно одна группа → бесшовный цикл.
+  display: inline-flex — ширина трека = суммарная ширина контента, не 100% viewport.
+  translateX(-50%) = ровно одна группа → бесшовный цикл при groupWidth ≥ containerWidth.
+  --marquee-repeats задаётся из JS; duration масштабируется чтобы скорость была постоянной.
 */
 .track {
+  // Базовые длительности (1 повтор). При N повторах → N × base, пиксельная скорость та же.
+  --base: 16s;
+
   display: inline-flex;
   white-space: nowrap;
   padding: 14px 0;
@@ -25,14 +29,14 @@
   font-size: 12px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  animation: marqueeSlide 16s linear infinite;
+  animation: marqueeSlide calc(var(--marquee-repeats, 3) * var(--base)) linear infinite;
   will-change: transform;
 
   @media (max-width: 600px) {
+    --base: 10s;
     font-size: 9px;
     letter-spacing: 0.2em;
     padding: 11px 0;
-    animation-duration: 10s;
   }
 }
 

@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function AuthModal({ open, onClose }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
 
   const [tab,          setTab]          = useState<Tab>('signIn');
@@ -94,7 +94,7 @@ export function AuthModal({ open, onClose }: Props) {
       <div className={`${styles.modal} ${open ? styles.modalVisible : ''}`} role="dialog" aria-modal="true">
 
         {/* Close */}
-        <button className={styles.closeBtn} onClick={onClose} aria-label="Закрыть">
+        <button className={styles.closeBtn} onClick={onClose} aria-label={lang === 'FR' ? 'Fermer' : 'Закрыть'}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>
