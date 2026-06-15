@@ -32,6 +32,9 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeId, setActiveId] = useState('');
+  // Замораживаем activeId в момент открытия меню: scroll-lock меняет layout
+  // и IntersectionObserver сбрасывает activeId, вызывая мигание подсветки.
+  const [frozenActiveId, setFrozenActiveId] = useState('');
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 40);
@@ -64,7 +67,13 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
     return () => obs.disconnect();
   }, []);
 
+  const navActiveId = menuOpen ? frozenActiveId : activeId;
+
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const openMenu  = useCallback(() => {
+    setFrozenActiveId(activeId);
+    setMenuOpen(true);
+  }, [activeId]);
 
   function handleNavClick(id: string) {
     closeMenu();
@@ -146,7 +155,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
             <button
               className={`${styles.avatarBtn} ${styles.desktopOnly}`}
               onClick={onProfileOpen}
-              aria-label="Личный кабинет"
+              aria-label={t.profile.title}
               title={user.displayName ?? user.email ?? ''}
             >
               {user.photoURL
@@ -163,8 +172,8 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
           {/* Burger button */}
           <button
             className={styles.burgerBtn}
-            onClick={() => setMenuOpen(v => !v)}
-            aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'}
+            onClick={() => menuOpen ? closeMenu() : openMenu()}
+            aria-label={menuOpen ? (lang === 'FR' ? 'Fermer le menu' : 'Закрыть меню') : (lang === 'FR' ? 'Ouvrir le menu' : 'Открыть меню')}
             aria-expanded={menuOpen}
             data-open={menuOpen}
           >
@@ -183,7 +192,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
       {/* Mobile menu drawer */}
       <nav
         className={`${styles.mobileMenu} ${menuOpen ? styles.mobileMenuOpen : ''}`}
-        aria-label="Мобильное меню"
+        aria-label={lang === 'FR' ? 'Menu mobile' : 'Мобильное меню'}
       >
         {/* Menu header: logo + close */}
         <div className={styles.menuTop}>
@@ -192,7 +201,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
             alt="ТЕТ-А-ТЕТ"
             className={styles.menuLogo}
           />
-          <button className={styles.menuClose} onClick={closeMenu} aria-label="Закрыть">
+          <button className={styles.menuClose} onClick={closeMenu} aria-label={lang === 'FR' ? 'Fermer' : 'Закрыть'}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -202,7 +211,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
         {/* Nav links */}
         <ul className={styles.mobileNav} role="menu">
           {navLinks.map(({ label, id }) => (
-            <li key={id} className={activeId === id ? styles.mobileNavItemActive : undefined}>
+            <li key={id} className={navActiveId === id ? styles.mobileNavItemActive : undefined}>
               <button
                 onClick={() => handleNavClick(id)}
                 role="menuitem"

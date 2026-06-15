@@ -114,18 +114,63 @@
   min-height: 0;
 }
 
-.mainPhotoImg {
+// Анимированная обёртка — меняется при переключении фото (key=activeIdx)
+.mainPhotoWrap {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center top;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d0b09;
   animation: photoFade 0.28s ease both;
+  overflow: hidden;
 
+  // Тонкий градиент снизу — читаемость кнопки «Забронировать» и навигации
   &::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.40) 100%);
+    background: linear-gradient(to bottom, transparent 55%, rgba(0,0,0,0.32) 100%);
+    pointer-events: none;
+    z-index: 2;
+  }
+}
+
+// Размытый фон-заливка для горизонтальных фото (пустые поля сбоку).
+// Только десктоп — на мобиле тёмный фон достаточен, blur дорогой на GPU.
+.photoBlur {
+  position: absolute;
+  inset: -8%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(22px);
+  opacity: 0.20;
+  pointer-events: none;
+
+  @include mixins.mobile {
+    display: none;
+  }
+}
+
+// Desktop: contain — показывает фото целиком, пустые поля заполняет photoBlur.
+// Mobile: cover + scale — фото крупное, мелкие пустые поля убраны;
+//   масштаб управляется CSS-переменной --photo-mobile-scale из поля mobileScale.
+.photoImg {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+
+  @include mixins.mobile {
+    object-fit: cover;
+    transform: scale(var(--photo-mobile-scale, 1));
+    transform-origin: center;
   }
 }
 
@@ -319,7 +364,7 @@
   letter-spacing: 2px;
   text-transform: uppercase;
   color: #9c938a;
-  padding-right: 50px; // avoid overlap with ageStamp
+  padding-right: 50px;
 }
 
 .title {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent, type ReactNode } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
-import { IconLock, IconCalendarEvent, IconUser, IconTicket, IconMasksTheater, IconSettings, IconLoader2, IconGift, IconPhone, IconBrandWhatsapp, IconBrandTelegram, IconLogout } from '@tabler/icons-react';
+import { IconLock, IconCalendarEvent, IconUser, IconTicket, IconMasksTheater, IconSettings, IconLoader2, IconPhone, IconBrandWhatsapp, IconBrandTelegram, IconLogout } from '@tabler/icons-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from '../../../services/bookingService';
@@ -28,14 +28,16 @@ function mapFbError(err: unknown, lang: 'RU' | 'FR'): string {
   const code = (err as { code?: string })?.code ?? '';
   const isFR = lang === 'FR';
   const map: Record<string, string> = {
-    'auth/popup-closed-by-user':        isFR ? 'Fenêtre fermée'                          : 'Окно закрыто',
-    'auth/cancelled-popup-request':     isFR ? 'Requête annulée'                         : 'Запрос отменён',
-    'auth/operation-not-allowed':       isFR ? 'Facebook non activé dans Firebase'       : 'Facebook не включён в Firebase Console',
-    'auth/provider-already-linked':     isFR ? 'Facebook déjà connecté'                  : 'Facebook уже подключён',
-    'auth/account-exists-with-different-credential': isFR ? 'Ce compte Facebook est déjà utilisé' : 'Этот аккаунт Facebook уже используется',
-    'auth/network-request-failed':      isFR ? 'Erreur réseau'                           : 'Ошибка сети',
+    'auth/popup-closed-by-user':        isFR ? 'Fenêtre fermée'                                                                : 'Окно закрыто',
+    'auth/cancelled-popup-request':     isFR ? 'Requête annulée'                                                               : 'Запрос отменён',
+    'auth/operation-not-allowed':       isFR ? 'Facebook non activé dans Firebase'                                             : 'Facebook не включён в Firebase Console',
+    'auth/provider-already-linked':     isFR ? 'Facebook déjà connecté'                                                        : 'Facebook уже подключён',
+    'auth/account-exists-with-different-credential': isFR ? 'Ce compte Facebook est déjà utilisé'                             : 'Этот аккаунт Facebook уже используется',
+    'auth/network-request-failed':      isFR ? 'Erreur réseau'                                                                 : 'Ошибка сети',
+    'auth/internal-error':              isFR ? 'Facebook temporairement indisponible. Réessayez plus tard.'                    : 'Facebook временно недоступен. Попробуйте позже.',
+    'auth/popup-blocked':               isFR ? 'Fenêtre bloquée — autorisez les popups pour ce site'                          : 'Попап заблокирован — разрешите всплывающие окна для этого сайта',
   };
-  return map[code] ?? (err instanceof Error ? err.message : (isFR ? 'Erreur de connexion' : 'Ошибка подключения'));
+  return map[code] ?? (isFR ? 'Facebook temporairement indisponible. Réessayez plus tard.' : 'Facebook временно недоступен. Попробуйте позже.');
 }
 
 // Валидация
@@ -95,7 +97,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const [isDirty,     setIsDirty]     = useState(false);
   const [warnVisible, setWarnVisible] = useState(false);
   const warnTimer    = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const datePickerRef = useRef<HTMLInputElement>(null);
 
   const [fbLoading, setFbLoading] = useState(false);
   const [fbError,   setFbError]   = useState('');
@@ -245,15 +246,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setTimeout(() => setSavedMsg(false), 4000);
   }
 
-  function handleBirthdayClick() {
-    if (birthdayFromFb || !datePickerRef.current) return;
-    try {
-      datePickerRef.current.showPicker();
-    } catch {
-      datePickerRef.current.click();
-    }
-  }
-
   const handleLinkFacebook = useCallback(async () => {
     setFbError('');
     setFbLoading(true);
@@ -360,7 +352,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
   if (open && loading) {
     return (
-      <div className={`${styles.modalWrap} ${styles.modalWrapOpen}`} aria-label="Личный кабинет" aria-modal>
+      <div className={`${styles.modalWrap} ${styles.modalWrapOpen}`} aria-label={lang === 'FR' ? 'Mon espace' : 'Личный кабинет'} aria-modal>
         <div className={styles.modal} onClick={e => e.stopPropagation()}>
           <div className={styles.sidebar}>
             <div className={styles.sidebarTop}>
@@ -409,7 +401,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
         noValidate
         onClick={e => e.stopPropagation()}
         role="dialog"
-        aria-label="Личный кабинет"
+        aria-label={lang === 'FR' ? 'Mon espace' : 'Личный кабинет'}
         aria-modal
       >
 
@@ -540,7 +532,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
             type="button"
             className={styles.closeBtn}
             onClick={tryClose}
-            aria-label="Закрыть"
+            aria-label={lang === 'FR' ? 'Fermer' : 'Закрыть'}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -642,10 +634,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
                   ) : (
                     <div
                       className={`${styles.birthdayField} ${errors.birthday ? styles.birthdayFieldError : ''} ${pulseBirthday && !errors.birthday ? styles.fieldPulse : ''}`}
-                      onClick={handleBirthdayClick}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleBirthdayClick(); }}
                     >
                       <span className={`${styles.birthdayText} ${!birthday ? styles.birthdayPlaceholder : ''}`}>
                         {birthday
@@ -654,22 +642,14 @@ export function ProfileDrawer({ open, onClose }: Props) {
                       </span>
                       <IconCalendarEvent size={16} stroke={1.5} className={styles.birthdayIcon} />
                       <input
-                        ref={datePickerRef}
                         type="date"
                         value={birthday}
                         onChange={e => { setBirthday(e.target.value); markDirty(); }}
                         className={styles.hiddenDateInput}
-                        tabIndex={-1}
-                        aria-hidden="true"
+                        aria-label={lang === 'FR' ? 'Date de naissance' : 'Дата рождения'}
                       />
                     </div>
                   )}
-                  <p className={styles.birthdayHint}>
-                    <IconGift size={12} stroke={1.5} />
-                    {lang === 'FR'
-                      ? ' Pour une attention personnalisée'
-                      : ' Для персонального поздравления'}
-                  </p>
                 </PersonalField>
 
                 {/* Contacts subsection — mobile profile tab only */}

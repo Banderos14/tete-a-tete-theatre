@@ -487,6 +487,11 @@
   gap: 4px;
   margin-bottom: 24px;
   border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 }
 
 .tabBtn {
@@ -498,8 +503,15 @@
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover { color: var(--fg); }
+
+  @include mixins.small {
+    padding: 10px 14px;
+    font-size: 12px;
+  }
 }
 
 .tabActive {
@@ -590,6 +602,8 @@
 .newsletterWrap {
   max-width: 540px;
   padding: 8px 0 40px;
+
+  @include mixins.small { padding: 8px 0 60px; }
 }
 
 .newsletterTitle {
@@ -632,7 +646,33 @@
 }
 
 .section {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+.newsletterSendBtn {
+  display: block;
+  width: 100%;
+  padding: 14px 24px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: var(--radius-md);
+  background: rgba(76, 175, 80, 0.12);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.25);
+  transition: background 0.2s, opacity 0.2s;
+  min-height: 48px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: rgba(76, 175, 80, 0.25); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  @include mixins.small {
+    font-size: 14px;
+    padding: 16px 20px;
+    min-height: 52px;
+  }
 }
 
 .sectionLabel {
@@ -646,15 +686,26 @@
 
 .select {
   width: 100%;
-  padding: 9px 12px;
+  padding: 10px 36px 10px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-s);
   font-size: 13px;
+  line-height: 1.4;
   color: var(--fg);
   background: var(--bg);
   cursor: pointer;
+  min-height: 44px;
+  appearance: auto;
+  -webkit-appearance: auto;
+  text-overflow: ellipsis;
 
   &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  @include mixins.small {
+    font-size: 16px;
+    min-height: 48px;
+    padding: 12px 36px 12px 12px;
+  }
 }
 
 .confirmOverlay {

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
 import { createPortal } from 'react-dom';
 import { useLang } from '../../../i18n/LangContext';
-import type { Show } from '../../../types';
+import type { Show, ShowPhoto } from '../../../types';
 import { subscribeToShowBookedSeats } from '../../../services/bookingService';
 import { THEATRE_CAPACITY } from '../../../config/theatre';
 import styles from './ShowModal.module.scss';
@@ -35,10 +35,17 @@ export function ShowModal({ show, onClose, onBook }: Props) {
     if (currentId !== null) setClosing(false);
   }
 
-  const allPhotos = useMemo(
-    () => !show ? [] : show.photos?.length ? show.photos : show.image ? [show.image] : [],
-    [show],
-  );
+  // Нормализуем photos: string → {src, position?}, добавляем imagePosition на главное фото
+  const allPhotos = useMemo<ShowPhoto[]>(() => {
+    if (!show) return [];
+    if (show.photos?.length) {
+      return show.photos.map(p =>
+        typeof p === 'string' ? { src: p } : p
+      );
+    }
+    if (show.image) return [{ src: show.image, position: show.imagePosition }];
+    return [];
+  }, [show]);
 
   // Realtime остаток мест: подписываемся при открытии спектакля, отписываемся при закрытии/смене
   useEffect(() => {
@@ -103,7 +110,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
         className={`${styles.panel} ${closing ? styles.panelOut : ''}`}
         onClick={e => e.stopPropagation()}
       >
-        <button className={styles.close} onClick={handleClose} aria-label="Закрыть">
+        <button className={styles.close} onClick={handleClose} aria-label={lang === 'FR' ? 'Fermer' : 'Закрыть'}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>
@@ -113,11 +120,23 @@ export function ShowModal({ show, onClose, onBook }: Props) {
         <div className={styles.carousel}>
           <div className={styles.mainPhoto}>
             {currentPhoto ? (
-              <div
-                key={activeIdx}
-                className={styles.mainPhotoImg}
-                style={{ backgroundImage: `url(${currentPhoto})` }}
-              />
+              <div key={activeIdx} className={styles.mainPhotoWrap}>
+                <div
+                  className={styles.photoBlur}
+                  style={{ backgroundImage: `url(${currentPhoto.src})` }}
+                  aria-hidden="true"
+                />
+                <img
+                  className={styles.photoImg}
+                  src={currentPhoto.src}
+                  style={{
+                    objectPosition: currentPhoto.position ?? 'center center',
+                    '--photo-mobile-scale': String(currentPhoto.mobileScale ?? 1),
+                  } as React.CSSProperties}
+                  alt=""
+                  draggable={false}
+                />
+              </div>
             ) : (
               <div className={styles.mainPhotoPlaceholder} style={{ background: show.palette }} />
             )}
@@ -127,12 +146,12 @@ export function ShowModal({ show, onClose, onBook }: Props) {
                 <button
                   className={`${styles.navBtn} ${styles.navPrev}`}
                   onClick={() => goTo(activeIdx - 1)}
-                  aria-label="Предыдущее"
+                  aria-label={lang === 'FR' ? 'Précédent' : 'Предыдущее'}
                 >‹</button>
                 <button
                   className={`${styles.navBtn} ${styles.navNext}`}
                   onClick={() => goTo(activeIdx + 1)}
-                  aria-label="Следующее"
+                  aria-label={lang === 'FR' ? 'Suivant' : 'Следующее'}
                 >›</button>
 
                 {/* Thumbnails overlay at bottom of carousel */}
@@ -141,7 +160,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
                     <button
                       className={styles.thumbNav}
                       onClick={() => setThumbStart(s => Math.max(0, s - 1))}
-                      aria-label="Назад"
+                      aria-label={lang === 'FR' ? 'Précédent' : 'Назад'}
                     >‹</button>
                   )}
                   {Array.from({ length: VISIBLE_THUMBS }).map((_, relIdx) => {
@@ -154,7 +173,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
                       <div
                         key={idx}
                         className={`${styles.thumb} ${isActive ? styles.thumbActive : ''}`}
-                        style={{ backgroundImage: `url(${photo})` }}
+                        style={{ backgroundImage: `url(${photo.src})` }}
                         onClick={() => goTo(idx)}
                       >
                         {showMore && <div className={styles.thumbMore}>+{hiddenRight}</div>}
@@ -165,7 +184,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
                     <button
                       className={styles.thumbNav}
                       onClick={() => setThumbStart(s => Math.min(s + 1, allPhotos.length - VISIBLE_THUMBS))}
-                      aria-label="Вперёд"
+                      aria-label={lang === 'FR' ? 'Suivant' : 'Вперёд'}
                     >›</button>
                   )}
                 </div>
@@ -176,7 +195,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
 
         {/* Корешок (скрыт на мобиле) */}
         <div className={styles.spine} aria-hidden="true">
-          <span>Сезон 2025 / 2026 · Théâtre Tête-à-Tête · Nice</span>
+          <span>{lang === 'FR' ? 'Saison 2025 / 2026 · Théâtre Tête-à-Tête · Nice' : 'Сезон 2025 / 2026 · Théâtre Tête-à-Tête · Nice'}</span>
         </div>
 
         {/* Информация о спектакле */}

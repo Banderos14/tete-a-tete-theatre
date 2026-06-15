@@ -624,7 +624,7 @@ export function AdminPage() {
           </div>
 
           <button
-            className={styles.actionConfirm}
+            className={styles.newsletterSendBtn}
             onClick={handleNewsletter}
             disabled={nlSending}
           >

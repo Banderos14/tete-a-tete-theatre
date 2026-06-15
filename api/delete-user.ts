@@ -15,7 +15,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 function getAdminApp() {
   if (getApps().length > 0) return getApps()[0]!;
@@ -149,6 +149,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     // ── Delete Firestore user document ───────────────────────────────────────
     batch.delete(db.collection('users').doc(targetUid));
+
+    // ── Decrement audience counter ───────────────────────────────────────────
+    batch.update(db.collection('stats').doc('siteStats'), {
+      audienceCount: FieldValue.increment(-1),
+    });
 
     await batch.commit();
     const bookingsDeletedCount = bookingsSnap.size;

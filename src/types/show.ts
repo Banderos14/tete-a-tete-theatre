@@ -1,8 +1,15 @@
+export type ShowPhoto = {
+  src: string;
+  position?: string;    // object-position на фото, например "center 35%"
+  mobileScale?: number; // масштаб на мобиле: 1.2 = +20%, 1.4 = +40% (desktop игнорирует)
+  size?: string;        // устаревшее, оставлено для совместимости — не используется
+};
+
 export interface TicketType {
   id: 'standard' | 'student';
   label: string;
-  price: number; // EUR
-  available: number; // remaining seats
+  price: number;
+  available: number;
 }
 
 export interface Show {
@@ -25,7 +32,8 @@ export interface Show {
   descFR: string;
   palette: string;
   image?: string;
-  photos?: string[];
+  imagePosition?: string;
+  photos?: Array<string | ShowPhoto>;
   ticketTypes: TicketType[];
   totalSeats: number;
 }
@@ -41,6 +49,7 @@ export interface RepertoireItem {
   age: string;
   palette: string;
   image?: string;
+  imagePosition?: string;
   description?: string;
   descriptionFR?: string;
   duration?: string;

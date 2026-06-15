@@ -9,9 +9,9 @@ import styles from './Repertoire.module.scss';
 
 // Постер спектакля: показываем фото если есть, иначе цветной плейсхолдер
 function ShowPoster({
-  image, palette, title, lazy = true,
+  image, imagePosition, palette, title, lazy = true,
 }: {
-  image?: string; palette: string; title: string; lazy?: boolean;
+  image?: string; imagePosition?: string; palette: string; title: string; lazy?: boolean;
 }) {
   const [err, setErr] = useState(false);
   if (image && !err) {
@@ -23,6 +23,7 @@ function ShowPoster({
           loading={lazy ? 'lazy' : 'eager'}
           onError={() => { console.warn('[show image failed]', title, image); setErr(true); }}
           className={styles.posterImgEl}
+          style={imagePosition ? { objectPosition: imagePosition } : undefined}
         />
         <div className={styles.posterImgOverlay} aria-hidden="true" />
       </>
@@ -62,10 +63,10 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className={styles.modalPanel} role="dialog" aria-modal="true">
-        <button className={styles.modalClose} onClick={onClose} aria-label="Закрыть">✕</button>
+        <button className={styles.modalClose} onClick={onClose} aria-label={lang === 'FR' ? 'Fermer' : 'Закрыть'}>✕</button>
 
         <div className={styles.modalPoster}>
-          <ShowPoster image={item.image} palette={item.palette} title={title} lazy={false} />
+          <ShowPoster image={item.image} imagePosition={item.imagePosition} palette={item.palette} title={title} lazy={false} />
         </div>
 
         <div className={styles.modalInfo}>
@@ -92,7 +93,7 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
               onClick={() => { onClose(); onBook(linkedShow); }}
               type="button"
             >
-              <span>{lang === 'FR' ? 'Acheter un billet' : 'Купить билет'}</span>
+              <span>{t.showModal.book}</span>
               <span>→</span>
             </button>
           )}
@@ -178,7 +179,7 @@ export function Repertoire({ onBook }: Props) {
             type="button"
           >
             <div className={styles.poster}>
-              <ShowPoster image={item.image} palette={item.palette} title={cardTitle} />
+              <ShowPoster image={item.image} imagePosition={item.imagePosition} palette={item.palette} title={cardTitle} />
               <span className={[
                 styles.mobilePosterAge,
                 item.status !== 'active' ? styles.mobilePosterAgePast : '',

@@ -3,6 +3,27 @@ import type { Show, RepertoireItem } from '../types';
 const showImage = (fileName: string) => `${import.meta.env.BASE_URL}images/shows/${fileName}`;
 const showPhoto = (fileName: string) => `${import.meta.env.BASE_URL}images/showPhotos/${fileName}`;
 
+// imagePosition двигает постер внутри рамки (CSS background-position / object-position):
+//   "center center"  — по умолчанию, центр кадра
+//   "center 30%"     — поднимает кадр выше (лица/верх в фокусе)
+//   "center 70%"     — опускает кадр ниже
+//   "top center"     — верхний край фото
+//   "center bottom"  — нижний край фото
+// Применяется к карточке в Афише и главному фото в модалке спектакля.
+// Пример: добавь  imagePosition: 'center 30%'  в нужный спектакль.
+//
+// Для позиционирования конкретных фото в галерее модалки используй объект вместо строки:
+//   photos: [
+//     showPhoto('photo1.webp'),   // строка — defaults: position center center, без доп. масштаба
+//     {
+//       src: showPhoto('photo2.webp'),
+//       position: 'center 35%',  // сдвигает фокус (object-position), работает на desktop и mobile
+//       mobileScale: 1.35,       // увеличивает фото только на мобиле: 1.2 = +20%, 1.4 = +40%
+//     },
+//   ]
+// Desktop всегда показывает фото целиком (object-fit: contain).
+// Mobile использует object-fit: cover + mobileScale для крупного кадра.
+
 export const SHOWS: Show[] = [
   {
     id: 'romantika',
@@ -16,7 +37,12 @@ export const SHOWS: Show[] = [
     descFR: "Spectacle littéraire et musical inspiré de la biographie de Marina Tsvetaïeva — l'histoire de la vie, du destin et de l'œuvre de l'une des figures les plus marquantes et les plus tragiques de la poésie russe.",
     palette: 'var(--ph-1)',
     image: showImage('romantika.webp'),
-    photos: [showPhoto('romantika1.webp'), showPhoto('romantika2.webp'), showPhoto('romantika3.webp'), showPhoto('romantika4.webp')],
+    photos: [
+      { src: showPhoto('romantika1.webp'), position: 'center 50%', size: '110%' },
+      { src: showPhoto('romantika2.webp'), position: 'left 60%', size: '130%' },
+      { src: showPhoto('romantika3.webp'), position: 'center 35%', size: '100%' },
+      { src: showPhoto('romantika4.webp'), position: 'center 70%', size: '150%' },
+    ],
     totalSeats: 100,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 15, available: 40 },
@@ -34,6 +60,13 @@ export const SHOWS: Show[] = [
     descFR: 'Deux comédies en un acte de Tchekhov — «L\'Anniversaire» et «La Demande en mariage». Sur les disputes, les nerfs, l\'amour et à quel point nous sommes comiques quand nous nous prenons au sérieux.',
     palette: 'var(--ph-2)',
     image: showImage('shutka.webp'),
+    photos: [
+      { src: showPhoto('shutka1.webp'), position: 'center 20%', mobileScale: 1},
+      { src: showPhoto('shutka2.webp'), position: 'center 30%', mobileScale: 1},
+      { src: showPhoto('shutka3.webp'), position: 'center 35%', mobileScale: 1},
+      { src: showPhoto('shutka4.webp'), position: 'center 25%', mobileScale: 1},
+      { src: showPhoto('shutka5.webp'), position: 'center 30%', mobileScale: 1},
+    ],
     totalSeats: 100,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 15, available: 38 },
@@ -52,7 +85,13 @@ export const SHOWS: Show[] = [
     descFR: "Un poème plein d'esprit et d'élégance, où le comique et le lyrique s'entremêlent avec autant de légèreté que les vers d'A. S. Pouchkine. L'histoire d'une rencontre fortuite qui a bouleversé l'ordre habituel d'un domaine provincial. Le jeune comte Nouline se retrouve chez Natalia Pavlovna en l'absence de son époux — et une soirée ordinaire se transforme en un jeu subtil de caractères, de regards et d'intentions. L'atmosphère d'un manoir russe du XIXe siècle prend vie sur scène : manières mondaines, jeu des caractères et légèreté de la parole poétique.",
     palette: 'var(--ph-1)',
     image: showImage('nulin.webp'),
-    photos: [showPhoto('nulin1.webp'), showPhoto('nulin2.webp'), showPhoto('nulin3.webp'), showPhoto('nulin4.webp'), showPhoto('nulin5.webp')],
+    photos: [
+      { src: showPhoto('nulin1.webp'), position: 'center 30%', mobileScale: 1},
+      { src: showPhoto('nulin2.webp'), position: 'center 40%', mobileScale: 1},
+      { src: showPhoto('nulin3.webp'), position: 'center 35%', mobileScale: 1},
+      { src: showPhoto('nulin4.webp'), position: 'center 40%', mobileScale: 1},
+      { src: showPhoto('nulin5.webp'), position: 'center 40%', mobileScale: 1},
+    ],
     totalSeats: 100,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 30, available: 45 },
@@ -72,6 +111,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     tag: 'Поэзия', age: '12+',
     palette: 'var(--ph-1)',
     image: showImage('romantika.webp'),
+    imagePosition: 'center 53%',
     description: 'Литературно-музыкальный спектакль по мотивам биографии Марины Цветаевой. История о жизни, судьбе и творчестве одной из самых трагических фигур русской поэзии.',
     descriptionFR: 'Spectacle littéraire et musical inspiré de la biographie de Marina Tsvetaïeva. L\'histoire de la vie, du destin et de l\'œuvre de l\'une des figures les plus tragiques de la poésie russe.',
     duration: '60 мин', durationFR: '60 min',
@@ -98,6 +138,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     tag: 'Поэма', age: '12+',
     palette: 'var(--ph-1)',
     image: showImage('nulin.webp'),
+    imagePosition: 'center 30%',
     description: 'Лёгкая и остроумная поэма в театральном прочтении. Смешное и лирическое переплетаются так же легко, как строки Пушкина. Вечер для тех, кто любит слово.',
     descriptionFR: "Un poème léger et plein d'esprit. Le comique et le lyrique s'entrelacent comme les vers de Pouchkine. Une soirée pour ceux qui aiment les mots.",
     duration: '1 ч 10 мин (с антрактом)', durationFR: '1 h 10 min (avec entracte)',

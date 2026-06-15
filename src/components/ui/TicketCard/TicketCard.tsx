@@ -244,8 +244,8 @@ export function StampBadge({ booking: b, isFR }: { booking: Booking; isFR: boole
 
   let rotation = 'rotate(4deg)';
   if (payStatus === 'expired')                                         rotation = 'rotate(2deg)';
-  else if (status === 'cancelled')                                     rotation = 'rotate(-6deg)';
-  else if (b.paymentMethod === 'on_site' && payStatus === 'not_paid') rotation = 'rotate(7deg)';
+  else if (status === 'cancelled')                                     rotation = 'rotate(-5deg)';
+  else if (b.paymentMethod === 'on_site' && payStatus === 'not_paid') rotation = 'rotate(0deg)';
   else if (payStatus === 'awaiting_transfer' || status === 'pending')  rotation = 'rotate(-3deg)';
 
   let stampClass: string;

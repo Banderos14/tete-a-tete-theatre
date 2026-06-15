@@ -74,12 +74,16 @@ export function BookingFormStep({
   const showTitle  = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
   const monthLabel = t.months[show.month] ?? show.month;
   const seatsLeftLabel = lang === 'FR'
-    ? `Places restantes: ${availableSeats}`
+    ? `Places restantes : ${availableSeats}`
     : `Свободно мест: ${availableSeats}`;
   const showYearNumber = Number(show.year);
   const seasonLabel = Number.isFinite(showYearNumber)
-    ? `СЕЗОН ${showYearNumber - 1} / ${showYearNumber} · THÉÂTRE TÊTE-À-TÊTE · NICE`
-    : 'СЕЗОН · THÉÂTRE TÊTE-À-TÊTE · NICE';
+    ? (lang === 'FR'
+        ? `SAISON ${showYearNumber - 1} / ${showYearNumber} · THÉÂTRE TÊTE-À-TÊTE · NICE`
+        : `СЕЗОН ${showYearNumber - 1} / ${showYearNumber} · THÉÂTRE TÊTE-À-TÊTE · NICE`)
+    : (lang === 'FR'
+        ? 'SAISON · THÉÂTRE TÊTE-À-TÊTE · NICE'
+        : 'СЕЗОН · THÉÂTRE TÊTE-À-TÊTE · NICE');
 
   function ticketLabel(id: string | undefined) {
     return id === 'standard' ? t.admin.ticketStandard
@@ -182,6 +186,7 @@ export function BookingFormStep({
         {/* Заголовок правой колонки */}
         <div className={styles.formRightHeader}>
           <div className={styles.formRightLabel}>{lang === 'FR' ? 'RÉSERVATION' : 'БРОНИРОВАНИЕ'}</div>
+          {/* NOTE: 'RÉSERVATION' / 'БРОНИРОВАНИЕ' is decorative header — intentionally uppercase */}
           <div className={styles.formRightAccentLine} />
         </div>
 
