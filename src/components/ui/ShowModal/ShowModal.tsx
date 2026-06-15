@@ -135,6 +135,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
                   } as React.CSSProperties}
                   alt=""
                   draggable={false}
+                  decoding="async"
                 />
               </div>
             ) : (
