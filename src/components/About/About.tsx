@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLang } from '../../i18n/LangContext';
 import { subscribeToAudienceCount } from '../../services/statsService';
+import { LazyBgVideo } from '../ui/LazyBgVideo';
 import styles from './About.module.scss';
 
 const IMAGES = [
@@ -62,32 +63,35 @@ export function About() {
               className={`${styles.img} ${img.cls === 'tall' ? styles.tall : ''} ${img.cls === 'wide' ? styles.wide : ''}`}
             >
               {i === 0 && (
-                <video
-                  className={styles.videoBg} autoPlay muted loop playsInline preload="none"
-                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
-                  aria-hidden="true"
-                >
-                  <source src="/images/video/premiere.webm" type="video/webm" />
-                </video>
+                <LazyBgVideo
+                  className={styles.videoBg}
+                  poster="/images/video/posters/premiere.webp"
+                  sources={[
+                    { src: '/images/video/premiere.webm', type: 'video/webm' },
+                    { src: '/images/video/premiere.mp4', type: 'video/mp4' },
+                  ]}
+                />
               )}
               {i === 2 && (
-                <video
-                  className={styles.videoBg} autoPlay muted loop playsInline preload="none"
-                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
-                  aria-hidden="true"
-                >
-                  <source src="/images/video/deviz.webm" type="video/webm" />
-                </video>
+                <LazyBgVideo
+                  className={styles.videoBg}
+                  poster="/images/video/posters/deviz.webp"
+                  sources={[
+                    { src: '/images/video/deviz.webm', type: 'video/webm' },
+                    { src: '/images/video/deviz.mp4', type: 'video/mp4' },
+                  ]}
+                />
               )}
               {i === 3 && (
-                <video
-                  className={styles.videoBg} autoPlay muted loop playsInline preload="none"
-                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
-                  aria-hidden="true"
+                <LazyBgVideo
+                  className={styles.videoBg}
+                  poster="/images/video/posters/poklon.webp"
                   style={{ objectPosition: 'center 100%' }}
-                >
-                  <source src="/images/video/poklon2.webm" type="video/webm" />
-                </video>
+                  sources={[
+                    { src: '/images/video/poklon.webm', type: 'video/webm' },
+                    { src: '/images/video/poklon.mp4', type: 'video/mp4' },
+                  ]}
+                />
               )}
               {i === 0 && <div className={styles.videoOverlay} aria-hidden="true" />}
               <div className={styles.cardInner}>

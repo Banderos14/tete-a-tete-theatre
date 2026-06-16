@@ -79,6 +79,7 @@ export function AdminPage() {
       const timer = setTimeout(() => navigate('/'), 1500);
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/immutability
     fetchAll();
   }, [loading, isAdmin, navigate]);
 
