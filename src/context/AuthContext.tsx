@@ -1,24 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import {
-  onAuthStateChanged,
-  signInWithPopup,
-  GoogleAuthProvider,
-  FacebookAuthProvider,
-  linkWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile as firebaseUpdateProfile,
-  signOut as firebaseSignOut,
-  sendPasswordResetEmail,
-  type User,
-} from 'firebase/auth';
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+// Type-only import — stripped at build time, no runtime firebase dependency.
+import type { User } from 'firebase/auth';
 import { ensureAudienceCounterAndIncrement } from '../services/statsService';
 
 export type UserRole  = 'user' | 'admin';
@@ -56,13 +38,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Всегда записывает updatedAt — ключ API не попадает во frontend
-async function upsertProfile(uid: string, data: Partial<UserProfile> & Record<string, unknown>) {
-  await setDoc(
-    doc(db, 'users', uid),
-    { ...data, updatedAt: serverTimestamp() },
-    { merge: true },
-  );
+// Firebase is loaded lazily after first paint to keep it out of the critical JS path.
+// The 344KB firebase chunk becomes an async dependency instead of a synchronous one,
+// which allows the main bundle to execute without waiting for Firebase to download.
+type FirebaseConfig = typeof import('../firebase/config');
+let _config: Promise<FirebaseConfig> | null = null;
+
+function loadFirebase(): Promise<FirebaseConfig> {
+  return (_config ??= import('../firebase/config'));
 }
 
 function defaultProfile(overrides: Partial<UserProfile> = {}): UserProfile {
@@ -76,32 +59,34 @@ function defaultProfile(overrides: Partial<UserProfile> = {}): UserProfile {
   };
 }
 
-// Определяет строку провайдера из Firebase providerData
-function resolveProvider(firebaseUser: import('firebase/auth').User): UserProfile['provider'] {
+function resolveProvider(firebaseUser: User): UserProfile['provider'] {
   const pid = firebaseUser.providerData[0]?.providerId;
   return pid === 'google.com' ? 'google' : 'email';
 }
 
-// Гарантирует актуальность документа users/{uid}.
-// Если документ есть — обновляет lastLoginAt и дозаполняет photoURL/provider (не затрагивает
-// role, phone, displayName и другие поля, заданные пользователем).
-// Если документа нет — создаёт с role:'user' (безопасно для сирот Auth и новых Google-аккаунтов).
-// Возвращает профиль из Firestore в том виде, каким он был до обновления.
-async function ensureUserDocument(firebaseUser: import('firebase/auth').User): Promise<UserProfile> {
+async function upsertProfile(uid: string, data: Partial<UserProfile> & Record<string, unknown>) {
+  const { db, doc, setDoc, serverTimestamp } = await loadFirebase();
+  await setDoc(
+    doc(db, 'users', uid),
+    { ...data, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+}
+
+async function ensureUserDocument(firebaseUser: User): Promise<UserProfile> {
+  const { db, doc, getDoc, setDoc, serverTimestamp } = await loadFirebase();
   const ref  = doc(db, 'users', firebaseUser.uid);
   const snap = await getDoc(ref);
 
   if (snap.exists()) {
     const existing = snap.data() as UserProfile;
-    // Мержим только системные поля — role и пользовательские данные не трогаем
     const updates: Record<string, unknown> = { lastLoginAt: serverTimestamp() };
     if (!existing.photoURL && firebaseUser.photoURL) updates.photoURL  = firebaseUser.photoURL;
     if (!existing.provider)                          updates.provider   = resolveProvider(firebaseUser);
-    await upsertProfile(firebaseUser.uid, updates);  // also writes updatedAt
+    await setDoc(ref, { ...updates, updatedAt: serverTimestamp() }, { merge: true });
     return existing;
   }
 
-  // Документа нет — новый пользователь: создаём профиль и учитываем в счётчике зрителей
   const profile = defaultProfile({
     displayName: firebaseUser.displayName ?? '',
     email:       firebaseUser.email ?? '',
@@ -117,7 +102,6 @@ async function ensureUserDocument(firebaseUser: import('firebase/auth').User): P
   return profile;
 }
 
-// Преобразует Facebook-дату рождения MM/DD/YYYY → YYYY-MM-DD
 function parseFbBirthday(fb: string): string {
   const parts = fb.split('/');
   if (parts.length === 3) return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
@@ -130,16 +114,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading,     setLoading]     = useState(true);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        const profile = await ensureUserDocument(firebaseUser);
-        setUserProfile(profile);
-      } else {
-        setUserProfile(null);
-      }
-      setLoading(false);
+    let unsubscribe: (() => void) | undefined;
+    let mounted = true;
+
+    loadFirebase().then(({ auth, onAuthStateChanged }) => {
+      if (!mounted) return;
+      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (!mounted) return;
+        setUser(firebaseUser);
+        if (firebaseUser) {
+          const profile = await ensureUserDocument(firebaseUser);
+          if (mounted) setUserProfile(profile);
+        } else {
+          setUserProfile(null);
+        }
+        if (mounted) setLoading(false);
+      });
     });
+
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+    };
   }, []);
 
   async function saveProfile(data: Partial<UserProfile>) {
@@ -149,8 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signInWithGoogle() {
+    const { auth, GoogleAuthProvider, signInWithPopup } = await loadFirebase();
     const provider = new GoogleAuthProvider();
-    // Всегда показываем выбор аккаунта, чтобы можно было переключиться
     provider.setCustomParameters({ prompt: 'select_account' });
     const result  = await signInWithPopup(auth, provider);
     const profile = await ensureUserDocument(result.user);
@@ -158,41 +154,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signInWithEmail(email: string, password: string) {
+    const { auth, signInWithEmailAndPassword } = await loadFirebase();
     const result  = await signInWithEmailAndPassword(auth, email, password);
     const profile = await ensureUserDocument(result.user);
     setUserProfile(profile);
   }
 
-  // Пишем напрямую (не через ensureUserDocument), чтобы displayName из формы
-  // гарантированно попал в Firestore до того, как сработает onAuthStateChanged
-  // и прочитает ещё-null displayName из Auth.
   async function signUpWithEmail(email: string, password: string, name: string) {
+    const { auth, createUserWithEmailAndPassword, firebaseUpdateProfile } = await loadFirebase();
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await firebaseUpdateProfile(result.user, { displayName: name });
     const profile = defaultProfile({ displayName: name, email, provider: 'email' });
     await upsertProfile(result.user.uid, {
       ...profile,
-      createdAt:   serverTimestamp(),
-      lastLoginAt: serverTimestamp(),
+      createdAt:   (await loadFirebase()).serverTimestamp(),
+      lastLoginAt: (await loadFirebase()).serverTimestamp(),
     });
-    // Email-регистрация пишет документ напрямую (минуя ветку new-doc в ensureUserDocument),
-    // поэтому инкремент счётчика зрителей делаем здесь явно.
     void ensureAudienceCounterAndIncrement();
     setUserProfile(profile);
   }
 
   async function logout() {
+    const { auth, firebaseSignOut } = await loadFirebase();
     await firebaseSignOut(auth);
   }
 
   async function resetPassword(email: string) {
+    const { auth, sendPasswordResetEmail } = await loadFirebase();
     await sendPasswordResetEmail(auth, email);
   }
 
-  // Привязка Facebook — получаем имя и дату рождения из Graph API
   async function linkFacebook(): Promise<{ name?: string; birthday?: string }> {
     if (!user) throw new Error('Not authenticated');
 
+    const { FacebookAuthProvider, linkWithPopup } = await loadFirebase();
     const fbProvider = new FacebookAuthProvider();
     fbProvider.addScope('user_birthday');
     fbProvider.addScope('public_profile');
@@ -226,10 +221,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (fbBirthday)   { updates.birthday    = fbBirthday; updates.birthdayFromFb = true; }
 
     if (resolvedName && !user.displayName) {
+      const { firebaseUpdateProfile } = await loadFirebase();
       await firebaseUpdateProfile(user, { displayName: resolvedName });
     }
 
-    // Чистим старый кривой socialLink (старый код сохранял access token как URL)
     const currentSocial = userProfile?.socialLink ?? '';
     if (currentSocial.startsWith('https://facebook.com/EAA')) {
       updates.socialLink = '';

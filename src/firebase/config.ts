@@ -14,3 +14,28 @@ const firebaseConfig = {
 export const app  = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db   = getFirestore(app);
+
+// Re-exports for lazy consumers (AuthContext, statsService).
+// These modules import firebase/config dynamically after first paint,
+// so a single import('../firebase/config') gives them everything they need.
+export {
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  linkWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile as firebaseUpdateProfile,
+  signOut as firebaseSignOut,
+  sendPasswordResetEmail,
+} from 'firebase/auth';
+
+export {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  onSnapshot,
+  increment,
+} from 'firebase/firestore';
