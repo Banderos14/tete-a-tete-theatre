@@ -47,38 +47,37 @@ export function Socials({ theme }: Props) {
               data-tile={i}
             >
               {i === 0 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
                   <source src="/images/video/zakulis.webm" type="video/webm" />
                 </video>
               )}
               {i === 1 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
                   <source src="/images/video/mashka.webm" type="video/webm" />
-
                 </video>
               )}
               {i === 2 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
                   <source src="/images/video/techPart.webm" type="video/webm" />
                 </video>
               )}
               {i === 3 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
                   <source src="/images/video/newYear.webm" type="video/webm" />
                 </video>
               )}
               {i === 4 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
                   <source src="/images/video/ludaCouch.webm" type="video/webm" />
                 </video>
               )}
               {i === 5 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
                   <source src="/images/video/mladshie.webm" type="video/webm" />
                 </video>
