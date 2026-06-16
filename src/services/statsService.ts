@@ -1,17 +1,30 @@
-import { doc, getDoc, onSnapshot, setDoc, increment } from 'firebase/firestore';
-import { db } from '../firebase/config';
+// Firebase is loaded lazily after first paint — keeps it out of the critical JS path.
+// The module-level statsRef is intentionally removed: doc() is called inside each function
+// after the dynamic import resolves.
 
-const statsRef = doc(db, 'stats', 'siteStats');
+type FirebaseConfig = typeof import('../firebase/config');
+let _config: Promise<FirebaseConfig> | null = null;
+
+function loadFirebase(): Promise<FirebaseConfig> {
+  return (_config ??= import('../firebase/config'));
+}
 
 export function subscribeToAudienceCount(cb: (count: number) => void): () => void {
-  return onSnapshot(
-    statsRef,
-    (snap) => {
-      const data = snap.data();
-      if (typeof data?.audienceCount === 'number') cb(data.audienceCount);
-    },
-    () => { /* silent — UI shows hardcoded fallback */ },
-  );
+  let unsubscribe: (() => void) | undefined;
+
+  loadFirebase().then(({ db, doc, onSnapshot }) => {
+    const statsRef = doc(db, 'stats', 'siteStats');
+    unsubscribe = onSnapshot(
+      statsRef,
+      (snap) => {
+        const data = snap.data();
+        if (typeof data?.audienceCount === 'number') cb(data.audienceCount);
+      },
+      () => { /* silent — UI shows hardcoded fallback */ },
+    );
+  });
+
+  return () => { unsubscribe?.(); };
 }
 
 /**
@@ -22,6 +35,8 @@ export function subscribeToAudienceCount(cb: (count: number) => void): () => voi
  */
 export async function ensureAudienceCounterAndIncrement(): Promise<void> {
   try {
+    const { db, doc, getDoc, setDoc, increment } = await loadFirebase();
+    const statsRef = doc(db, 'stats', 'siteStats');
     const snap = await getDoc(statsRef);
     const data = snap.data();
     if (!snap.exists() || typeof data?.audienceCount !== 'number') {
