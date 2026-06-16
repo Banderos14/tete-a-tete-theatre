@@ -1,5 +1,6 @@
 import { LINKS } from '../../constants/links';
 import { useLang } from '../../i18n/LangContext';
+import { LazyBgVideo } from '../ui/LazyBgVideo';
 import styles from './Socials.module.scss';
 
 const TILES = [
@@ -47,40 +48,64 @@ export function Socials({ theme }: Props) {
               data-tile={i}
             >
               {i === 0 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
-                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
-                  <source src="/images/video/zakulis.webm" type="video/webm" />
-                </video>
+                <LazyBgVideo
+                  className={styles.videoBg}
+                  poster="/images/video/posters/zakulis.webp"
+                  sources={[
+                    { src: '/images/video/zakulis.webm', type: 'video/webm' },
+                    { src: '/images/video/zakulis.mp4', type: 'video/mp4' },
+                  ]}
+                />
               )}
               {i === 1 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
-                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
-                  <source src="/images/video/mashka.webm" type="video/webm" />
-                </video>
+                <LazyBgVideo
+                  className={styles.videoBg}
+                  poster="/images/video/posters/mashka.webp"
+                  sources={[
+                    { src: '/images/video/mashka.webm', type: 'video/webm' },
+                    { src: '/images/video/mashka.mp4', type: 'video/mp4' },
+                  ]}
+                />
               )}
               {i === 2 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
-                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
-                  <source src="/images/video/techPart.webm" type="video/webm" />
-                </video>
+                <LazyBgVideo
+                  className={styles.videoBg}
+                  poster="/images/video/posters/techPart.webp"
+                  sources={[
+                    { src: '/images/video/techPart.webm', type: 'video/webm' },
+                    { src: '/images/video/techPart.mp4', type: 'video/mp4' },
+                  ]}
+                />
               )}
               {i === 3 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
-                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
-                  <source src="/images/video/newYear.webm" type="video/webm" />
-                </video>
+                <LazyBgVideo
+                  className={styles.videoBg}
+                  poster="/images/video/posters/newYear.webp"
+                  sources={[
+                    { src: '/images/video/newYear.webm', type: 'video/webm' },
+                    { src: '/images/video/newYear.mp4', type: 'video/mp4' },
+                  ]}
+                />
               )}
               {i === 4 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
-                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
-                  <source src="/images/video/ludaCouch.webm" type="video/webm" />
-                </video>
+                <LazyBgVideo
+                  className={styles.videoBg}
+                  poster="/images/video/posters/ludaCouch.webp"
+                  sources={[
+                    { src: '/images/video/ludaCouch.webm', type: 'video/webm' },
+                    { src: '/images/video/ludaCouch.mp4', type: 'video/mp4' },
+                  ]}
+                />
               )}
               {i === 5 && (
-                <video className={styles.videoBg} autoPlay muted loop playsInline preload="none"
-                  onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }} aria-hidden="true">
-                  <source src="/images/video/mladshie.webm" type="video/webm" />
-                </video>
+                <LazyBgVideo
+                  className={styles.videoBg}
+                  poster="/images/video/posters/mladshie.webp"
+                  sources={[
+                    { src: '/images/video/mladshie.webm', type: 'video/webm' },
+                    { src: '/images/video/mladshie.mp4', type: 'video/mp4' },
+                  ]}
+                />
               )}
               <div className={styles.videoOverlay} aria-hidden="true" />
               <div className={styles.badge}>{t.socials.tileLabels[i]}</div>

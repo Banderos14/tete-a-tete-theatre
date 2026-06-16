@@ -11,7 +11,7 @@
     <meta property="og:site_name"   content="Театр ТЕТ-А-ТЕТ" />
     <meta property="og:title"       content="ТЕТ-А-ТЕТ · Русскоязычный театр в Ницце" />
     <meta property="og:description" content="Независимый русскоязычный театр в Ницце. Спектакли, афиша, репертуар." />
-    <meta property="og:url"         content="https://tete-a-tete-theatre.vercel.app/" />
+    <meta property="og:url" content="https://www.theatre-teteatete.fr/" />
     <meta property="og:image"       content="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" />
 
     <!-- Twitter Card -->
@@ -38,8 +38,10 @@
     <noscript>
       <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet" />
     </noscript>
-    <!-- Self-hosted fonts (Bad Russian, Forum, Ekaterina) loaded via @font-face in CSS — no preload needed -->
-    
+    <!-- Bad Russian is the critical hero font (font-display: swap) — preload so iOS Safari applies it on first paint -->
+    <link rel="preload" href="/fonts/bad-russian.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- Forum, Ekaterina remain self-hosted via @font-face only (font-display: optional, no preload needed) -->
+
     <!-- Google tag (gtag.js) -->
       <script async src="https://www.googletagmanager.com/gtag/js?id=G-LPLQXLMV7D"></script>
       <script>
