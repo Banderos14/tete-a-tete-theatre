@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Карта сайта для поисковых роботов (Google, Bing и др.).
+     Перечисляет все страницы сайта с приоритетом и частотой обновления.
+     Помогает поисковикам быстрее находить и индексировать страницы. -->
+
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <url>
+    <loc>https://www.theatre-teteatete.fr/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+</urlset>
