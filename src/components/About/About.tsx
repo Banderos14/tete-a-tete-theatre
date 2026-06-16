@@ -63,7 +63,7 @@ export function About() {
             >
               {i === 0 && (
                 <video
-                  className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  className={styles.videoBg} autoPlay muted loop playsInline preload="none"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
                   aria-hidden="true"
                 >
@@ -72,7 +72,7 @@ export function About() {
               )}
               {i === 2 && (
                 <video
-                  className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  className={styles.videoBg} autoPlay muted loop playsInline preload="none"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
                   aria-hidden="true"
                 >
@@ -81,7 +81,7 @@ export function About() {
               )}
               {i === 3 && (
                 <video
-                  className={styles.videoBg} autoPlay muted loop playsInline preload="metadata"
+                  className={styles.videoBg} autoPlay muted loop playsInline preload="none"
                   onError={e => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
                   aria-hidden="true"
                   style={{ objectPosition: 'center 100%' }}
