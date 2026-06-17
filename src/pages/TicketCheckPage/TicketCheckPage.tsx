@@ -346,6 +346,7 @@ export function TicketCheckPage() {
             accept="image/*,application/pdf"
             style={{ display: 'none' }}
             onChange={handleFileSelect}
+            aria-label="Изображение или PDF билета"
           />
         </div>
       )}

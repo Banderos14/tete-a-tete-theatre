@@ -61,6 +61,10 @@ export interface T {
     phoneVerified: string;
     socialLink: string;
     socialLinkPlaceholder: string;
+    instagram: string;
+    instagramPlaceholder: string;
+    instagramInvalid: string;
+    instagramOpenProfile: string;
     connectFacebook: string;
     facebookConnected: string;
     notifyShows: string;

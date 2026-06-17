@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent, type ReactNode } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
-import { IconLock, IconCalendarEvent, IconUser, IconTicket, IconMasksTheater, IconSettings, IconLoader2, IconPhone, IconBrandWhatsapp, IconBrandTelegram, IconLogout } from '@tabler/icons-react';
+import { IconLock, IconCalendarEvent, IconUser, IconTicket, IconMasksTheater, IconSettings, IconLoader2, IconPhone, IconBrandWhatsapp, IconBrandTelegram, IconBrandInstagram, IconLogout } from '@tabler/icons-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from '../../../services/bookingService';
@@ -9,6 +9,7 @@ import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Booking, BookingStatus } from '../../../types/booking';
 import type { Messenger } from '../../../context/AuthContext';
 import { formatPhone, isCompleteFrenchPhone } from '../../../utils/phone';
+import { extractInstagramUsername, isValidInstagramUsername, instagramProfileUrl } from '../../../utils/instagram';
 import styles from './ProfileDrawer.module.scss';
 
 function formatBirthdayDisplay(dateStr: string, lang: 'RU' | 'FR'): string {
@@ -87,6 +88,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const [messenger,         setMessenger]         = useState<Messenger>('whatsapp');
   const [preferredContact,  setPreferredContact]  = useState<string[]>(['whatsapp']);
   const [socialLink,  setSocialLink]  = useState('');
+  const [instagramUsername, setInstagramUsername] = useState('');
   const [notify,      setNotify]      = useState(true);
 
   const [saving,    setSaving]    = useState(false);
@@ -127,6 +129,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     const isBadUrl = social.startsWith('https://facebook.com/EAA');
     setSocialLink(isBadUrl ? '' : social);
     if (isBadUrl) saveProfile({ socialLink: '' });
+    setInstagramUsername(userProfile.instagramUsername ?? (social.includes('instagram.com') ? extractInstagramUsername(social) : ''));
     setNotify(userProfile.notifications ?? true);
     setIsDirty(false);
     setErrors({});
@@ -239,7 +242,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
       return;
     }
     setSaving(true);
-    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, notifications: notify });
+    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
@@ -273,6 +276,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setPreferredContact(userProfile?.preferredContact ?? (userProfile?.phoneMessenger ? [userProfile.phoneMessenger] : ['whatsapp']));
     const social = userProfile?.socialLink ?? '';
     setSocialLink(social.startsWith('https://facebook.com/EAA') ? '' : social);
+    setInstagramUsername(userProfile?.instagramUsername ?? (social.includes('instagram.com') ? extractInstagramUsername(social) : ''));
     setNotify(userProfile?.notifications ?? true);
     setIsDirty(false);
     setErrors({});
@@ -289,7 +293,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setSaving(true);
-    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, notifications: notify });
+    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
@@ -298,7 +302,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
   async function handleMobileSettingsSave() {
     setSaving(true);
-    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, notifications: notify });
+    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
@@ -319,6 +323,9 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const fbLinked         = userProfile?.facebookLinked ?? false;
   const birthdayFromFb   = userProfile?.birthdayFromFb ?? false;
   const missingCount     = Object.keys(validate(displayName, birthday, phone, t.profile.required, t.profile.phoneInvalid)).length;
+  const instagramNormalized = extractInstagramUsername(instagramUsername);
+  const instagramValid      = instagramNormalized.length > 0 && isValidInstagramUsername(instagramNormalized);
+  const instagramShowError  = instagramUsername.trim().length > 0 && instagramNormalized.length === 0;
   const activeBookings   = bookings.filter(b =>
     !computedIsAttended(b) &&
     b.status !== 'cancelled' &&
@@ -592,6 +599,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
                 <PersonalField
                   label={t.profile.displayName}
+                  htmlFor="profile-display-name"
                   providerLabel={
                     fbLinked
                       ? (lang === 'FR' ? 'via Facebook' : 'через Facebook')
@@ -602,6 +610,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
                   error={errors.displayName}
                 >
                   <input
+                    id="profile-display-name"
                     type="text"
                     className={`${styles.personalInput} ${errors.displayName ? styles.personalInputError : ''}`}
                     value={displayName}
@@ -658,9 +667,10 @@ export function ProfileDrawer({ open, onClose }: Props) {
                     {lang === 'FR' ? 'Contacts' : 'Контакты'}
                   </h3>
 
-                  <PersonalField label={lang === 'FR' ? 'Téléphone' : 'Телефон'} error={errors.phone}>
+                  <PersonalField label={lang === 'FR' ? 'Téléphone' : 'Телефон'} htmlFor="profile-phone-personal" error={errors.phone}>
                     <div className={styles.phoneInputWrap}>
                       <input
+                        id="profile-phone-personal"
                         type="tel"
                         inputMode="tel"
                         value={phone}
@@ -736,8 +746,9 @@ export function ProfileDrawer({ open, onClose }: Props) {
               <div className={styles.section}>
                 <h2 className={styles.sectionTitle}>{t.profile.sectionContacts}</h2>
 
-                <Field label={t.profile.phone} error={errors.phone}>
+                <Field label={t.profile.phone} htmlFor="profile-phone-contacts" error={errors.phone}>
                   <input
+                    id="profile-phone-contacts"
                     type="tel"
                     inputMode="tel"
                     value={phone}
@@ -783,14 +794,15 @@ export function ProfileDrawer({ open, onClose }: Props) {
                 </button>
                 {fbError && <p className={styles.fieldError}>{fbError}</p>}
 
-                <Field label={t.profile.socialLink} style={{ marginTop: 16 }}>
-                  <input
-                    type="url"
-                    value={socialLink}
-                    onChange={e => { setSocialLink(e.target.value); markDirty(); }}
-                    placeholder={t.profile.socialLinkPlaceholder}
-                  />
-                </Field>
+                <InstagramField
+                  t={t}
+                  htmlFor="profile-instagram"
+                  value={instagramUsername}
+                  onChange={v => { setInstagramUsername(v); markDirty(); }}
+                  normalized={instagramNormalized}
+                  valid={instagramValid}
+                  showError={instagramShowError}
+                />
               </div>
             )}
 
@@ -905,14 +917,15 @@ export function ProfileDrawer({ open, onClose }: Props) {
                   {fbLoading ? '…' : fbLinked ? t.profile.facebookConnected : t.profile.connectFacebook}
                 </button>
                 {fbError && <p className={styles.fieldError}>{fbError}</p>}
-                <Field label={t.profile.socialLink} style={{ marginTop: 16 }}>
-                  <input
-                    type="url"
-                    value={socialLink}
-                    onChange={e => { setSocialLink(e.target.value); markDirty(); }}
-                    placeholder={t.profile.socialLinkPlaceholder}
-                  />
-                </Field>
+                <InstagramField
+                  t={t}
+                  htmlFor="profile-instagram-settings"
+                  value={instagramUsername}
+                  onChange={v => { setInstagramUsername(v); markDirty(); }}
+                  normalized={instagramNormalized}
+                  valid={instagramValid}
+                  showError={instagramShowError}
+                />
 
                 <div className={styles.settingsDivider} />
 
@@ -1019,16 +1032,17 @@ export function ProfileDrawer({ open, onClose }: Props) {
 }
 
 function Field({
-  label, error, children, style,
+  label, error, children, style, htmlFor,
 }: {
   label: ReactNode;
   error?: string;
   children: ReactNode;
   style?: React.CSSProperties;
+  htmlFor?: string;
 }) {
   return (
     <div className={styles.field} style={style}>
-      <label>{label}</label>
+      <label htmlFor={htmlFor}>{label}</label>
       {children}
       {error && <p className={styles.fieldError}>{error}</p>}
     </div>
@@ -1036,17 +1050,18 @@ function Field({
 }
 
 function PersonalField({
-  label, providerLabel, error, children,
+  label, providerLabel, error, children, htmlFor,
 }: {
   label: ReactNode;
   providerLabel?: string;
   error?: string;
   children: ReactNode;
+  htmlFor?: string;
 }) {
   return (
     <div className={styles.personalFieldWrap}>
       <div className={styles.personalFieldLabel}>
-        <span className={styles.personalFieldLabelText}>{label}</span>
+        <label className={styles.personalFieldLabelText} htmlFor={htmlFor}>{label}</label>
         {providerLabel && (
           <span className={styles.providerLabel}>
             <IconLock size={10} stroke={1.5} />
@@ -1057,6 +1072,49 @@ function PersonalField({
       {children}
       {error && <p className={styles.fieldError}>{error}</p>}
     </div>
+  );
+}
+
+function InstagramField({ t, htmlFor, value, onChange, normalized, valid, showError }: {
+  t: T;
+  htmlFor: string;
+  value: string;
+  onChange: (v: string) => void;
+  normalized: string;
+  valid: boolean;
+  showError: boolean;
+}) {
+  return (
+    <Field
+      label={
+        <span className={styles.instagramLabel}>
+          <IconBrandInstagram size={14} stroke={1.5} />
+          {t.profile.instagram}
+        </span>
+      }
+      htmlFor={htmlFor}
+      style={{ marginTop: 16 }}
+    >
+      <input
+        id={htmlFor}
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={t.profile.instagramPlaceholder}
+        autoComplete="off"
+      />
+      {showError && <p className={styles.fieldError}>{t.profile.instagramInvalid}</p>}
+      {valid && (
+        <a
+          href={instagramProfileUrl(normalized)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.instagramOpenLink}
+        >
+          @{normalized} · {t.profile.instagramOpenProfile}
+        </a>
+      )}
+    </Field>
   );
 }
 
@@ -1427,6 +1485,7 @@ function BookingCard({ booking: b, t, isDismissing = false, onStartDismiss, onCa
                   value={cancelComment}
                   onChange={e => setCancelComment(e.target.value)}
                   placeholder={t.booking.cancelCommentPlaceholder}
+                  aria-label={t.booking.cancelCommentPlaceholder}
                   rows={2}
                 />
               )}

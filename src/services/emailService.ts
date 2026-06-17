@@ -554,7 +554,12 @@ function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: str
   return { subject, html, text };
 }
 
-async function callEndpoint(payload: { to: string; subject: string; html: string; text: string }): Promise<void> {
+// Возвращает true/false по реальному результату запроса.
+// Бронирование остаётся best-effort: вызывающий код для писем брони
+// игнорирует возвращаемое значение и/или ловит ошибку через .catch(() => {}).
+// Рассылка (newsletter) использует именно это значение, чтобы показывать
+// честный результат отправки в админке.
+async function callEndpoint(payload: { to: string; subject: string; html: string; text: string }): Promise<boolean> {
   // По умолчанию /api/send-email — работает на Vercel без настройки env во frontend
   const endpoint = (import.meta.env.VITE_EMAIL_ENDPOINT as string | undefined) ?? '/api/send-email';
 
@@ -567,13 +572,18 @@ async function callEndpoint(payload: { to: string; subject: string; html: string
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({})) as Record<string, unknown>;
       console.warn('[emailService] Endpoint returned', resp.status, err);
+      return false;
     }
+    return true;
   } catch (err) {
-    // Сетевая ошибка — бронирование не блокируем
+    // Сетевая ошибка — бронирование не блокируем, но сообщаем вызывающему коду об отказе
     console.warn('[emailService] Fetch error:', err);
+    return false;
   }
 }
 
+// Письма брони отправляются best-effort: бронирование не должно блокироваться
+// или считаться неуспешным из-за сбоя почты, поэтому наружу остаётся Promise<void>.
 export async function sendBookingConfirmationEmail(data: BookingEmailData): Promise<void> {
   if (!data.userEmail) {
     console.warn('[emailService] sendBookingConfirmationEmail: no recipient email, skipping');
@@ -598,9 +608,11 @@ export async function sendPaymentPaidEmail(data: PaymentPaidEmailData): Promise<
 
 // Анонс нового спектакля — отправлять по одному получателю;
 // AdminPage перебирает список через getUsersForNewsletter().
-export async function sendNewShowAnnouncementEmail(data: NewShowEmailData): Promise<void> {
-  if (!data.userEmail) return;
+// В отличие от писем брони, рассылка должна честно сообщать админу об успехе/отказе,
+// поэтому возвращаем boolean по реальному ответу API, а не глотаем ошибку.
+export async function sendNewShowAnnouncementEmail(data: NewShowEmailData): Promise<boolean> {
+  if (!data.userEmail) return false;
   const { subject, html, text } = buildNewShowEmail(data);
-  await callEndpoint({ to: data.userEmail, subject, html, text });
+  return callEndpoint({ to: data.userEmail, subject, html, text });
 }
 

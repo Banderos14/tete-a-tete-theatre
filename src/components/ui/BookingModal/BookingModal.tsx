@@ -367,18 +367,24 @@ export function BookingModal({ show, onClose }: Props) {
                   <input
                     className={styles.input}
                     type="text" value={authName} placeholder={t.auth.nameLabel}
+                    aria-label={t.auth.nameLabel}
                     onChange={e => setAuthName(e.target.value)} required disabled={authLoading}
+                    autoComplete="name"
                   />
                 )}
                 <input
                   className={styles.input}
                   type="email" value={authEmail} placeholder={t.auth.emailLabel}
+                  aria-label={t.auth.emailLabel}
                   onChange={e => setAuthEmail(e.target.value)} required disabled={authLoading}
+                  autoComplete="email"
                 />
                 <input
                   className={styles.input}
                   type="password" value={authPassword} placeholder={t.auth.passwordLabel}
+                  aria-label={t.auth.passwordLabel}
                   onChange={e => setAuthPassword(e.target.value)} required disabled={authLoading}
+                  autoComplete={authTab === 'signIn' ? 'current-password' : 'new-password'}
                 />
                 {authError && <p className={styles.error}>{authError}</p>}
                 <button type="submit" className={styles.submitBtn} disabled={authLoading}>
