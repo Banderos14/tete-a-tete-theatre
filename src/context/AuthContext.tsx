@@ -17,6 +17,7 @@ export interface UserProfile {
   facebookLinked?: boolean;
   photoURL?:       string;
   provider?:       'email' | 'google' | 'facebook';
+  language?:       'ru' | 'fr';
   notifications:   boolean;
   role:            UserRole;
 }
@@ -52,9 +53,15 @@ function defaultProfile(overrides: Partial<UserProfile> = {}): UserProfile {
     displayName: '', email: '', phone: '',
     birthday: '',
     facebookLinked: false,
+    language: getStoredProfileLanguage(),
     notifications: true, role: 'user',
     ...overrides,
   };
+}
+
+function getStoredProfileLanguage(): UserProfile['language'] {
+  if (typeof window === 'undefined') return 'ru';
+  return localStorage.getItem('lang') === 'FR' ? 'fr' : 'ru';
 }
 
 // Не пишем в Firestore пустые/неинформативные значения — поле либо несёт
@@ -94,8 +101,9 @@ async function ensureUserDocument(firebaseUser: User): Promise<UserProfile> {
     const updates: Record<string, unknown> = { lastLoginAt: serverTimestamp() };
     if (!existing.photoURL && firebaseUser.photoURL) updates.photoURL  = firebaseUser.photoURL;
     if (!existing.provider)                          updates.provider   = resolveProvider(firebaseUser);
+    if (!existing.language)                          updates.language   = getStoredProfileLanguage();
     await setDoc(ref, { ...updates, updatedAt: serverTimestamp() }, { merge: true });
-    return existing;
+    return { ...existing, ...(updates.language ? { language: updates.language as UserProfile['language'] } : {}) };
   }
 
   const profile = defaultProfile({

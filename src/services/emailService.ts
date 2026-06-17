@@ -490,7 +490,7 @@ export interface NewShowEmailData {
   showTime:    string;
   price?:      string;
   description?: string;
-  siteUrl:     string;
+  showUrl:     string;
   lang:        'RU' | 'FR';
 }
 
@@ -499,11 +499,11 @@ function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: str
   const dateStr = localeDate(data.showDate, data.lang);
 
   const subject = isRU
-    ? `${THEATRE_NAME} — новый спектакль в афише: ${data.showTitle}`
-    : `${THEATRE_NAME} — nouveau spectacle à l'affiche : ${data.showTitle}`;
+    ? `Новый спектакль в театре ТЕТ-А-ТЕТ: ${data.showTitle}`
+    : `Nouveau spectacle au Théâtre Tête-à-Tête : ${data.showTitle}`;
 
-  const headerTitle = isRU ? 'Новый спектакль в афише' : 'Nouveau spectacle à l\'affiche';
-  const greeting    = isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName} !`;
+  const headerTitle = isRU ? 'Новый спектакль в театре ТЕТ-А-ТЕТ' : 'Nouveau spectacle au Théâtre Tête-à-Tête';
+  const greeting    = isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName}&nbsp;!`;
 
   const rows: [string, string][] = isRU ? [
     ['Спектакль', data.showTitle],
@@ -519,14 +519,18 @@ function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: str
     ? noteBlock(data.description)
     : '';
 
-  const ctaLabel = isRU ? 'Смотреть афишу' : 'Voir l\'affiche';
+  const intro = isRU
+    ? `В афише театра ТЕТ-А-ТЕТ появился спектакль ${data.showTitle}. Вы можете открыть страницу спектакля, посмотреть описание и забронировать билет онлайн.`
+    : 'Un nouveau spectacle est disponible au Théâtre Tête-à-Tête à Nice. Vous pouvez ouvrir la page du spectacle, consulter la description et réserver votre billet en ligne.';
+  const ctaLabel = isRU ? 'Открыть спектакль' : 'Voir le spectacle';
 
   const bodyHtml = `
     <p style="margin:0 0 20px;font-size:15px;color:#333;">${greeting}</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#333;line-height:1.6;">${intro}</p>
     ${infoTable(rows)}
     ${descBlock}
     <p style="margin:20px 0 0;text-align:center;">
-      <a href="${data.siteUrl}"
+      <a href="${data.showUrl}"
          style="display:inline-block;background:#111;color:#fff;padding:12px 28px;
                 border-radius:4px;text-decoration:none;font-size:13px;
                 letter-spacing:2px;font-family:Arial,sans-serif;">
@@ -539,13 +543,13 @@ function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: str
   const text = [
     THEATRE_NAME, '',
     isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName} !`,
-    isRU ? 'Новый спектакль в афише:' : 'Nouveau spectacle à l\'affiche :',
+    intro,
     '',
     isRU ? `Спектакль: ${data.showTitle}` : `Spectacle : ${data.showTitle}`,
     isRU ? `Дата: ${dateStr} · ${data.showTime}` : `Date : ${dateStr} · ${data.showTime}`,
     ...(data.price ? [isRU ? `Билеты: ${data.price}` : `Billets : ${data.price}`] : []),
     '',
-    data.siteUrl,
+    data.showUrl,
     '',
     THEATRE_ADDRESS,
     `${THEATRE_EMAIL} · ${THEATRE_PHONE}`,
@@ -615,4 +619,3 @@ export async function sendNewShowAnnouncementEmail(data: NewShowEmailData): Prom
   const { subject, html, text } = buildNewShowEmail(data);
   return callEndpoint({ to: data.userEmail, subject, html, text });
 }
-

@@ -637,7 +637,7 @@
   padding: 14px 16px;
   background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-xl);
   font-size: 13px;
   color: var(--fg);
   line-height: 1.6;
@@ -712,6 +712,58 @@
     font-size: 16px;
     min-height: 48px;
     padding: 12px 36px 12px 12px;
+  }
+}
+
+.showLinkRow {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 10px;
+
+  @include mixins.small {
+    flex-direction: column;
+  }
+}
+
+.showLinkInput {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--bg-2);
+  color: var(--fg-mute);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.copyLinkBtn {
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  color: var(--fg-dim);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: border-color 0.2s, color 0.2s;
+
+  &:hover:not(:disabled) {
+    color: var(--fg);
+    border-color: var(--accent);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  @include mixins.small {
+    min-height: 42px;
   }
 }
 

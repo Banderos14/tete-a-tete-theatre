@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { LangContext } from './i18n/LangContext';
 import { translations } from './i18n/translations';
 import type { Lang } from './i18n/translations';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import type { Show } from './types';
 
 import { CurtainIntro }  from './components/CurtainIntro';
@@ -64,6 +64,19 @@ function LandingPage({
       <Footer />
     </>
   );
+}
+
+function UserLanguageSync({ lang }: { lang: Lang }) {
+  const { user, userProfile, saveProfile } = useAuth();
+
+  useEffect(() => {
+    if (!user || !userProfile) return;
+    const language = lang === 'FR' ? 'fr' : 'ru';
+    if (userProfile.language === language) return;
+    void saveProfile({ language });
+  }, [lang, saveProfile, user, userProfile]);
+
+  return null;
 }
 
 export default function App() {
@@ -136,6 +149,7 @@ export default function App() {
   return (
     <AuthProvider>
       <LangContext.Provider value={langCtx}>
+        <UserLanguageSync lang={lang} />
 
         <Routes>
           <Route

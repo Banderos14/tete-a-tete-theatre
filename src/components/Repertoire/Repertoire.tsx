@@ -4,7 +4,9 @@ import { createPortal } from 'react-dom';
 import { REPERTOIRE, SHOWS } from '../../data/shows';
 import { useLang } from '../../i18n/LangContext';
 import { PosterPlaceholder } from '../ui/PosterPlaceholder';
+import { ShowModal } from '../ui/ShowModal';
 import type { RepertoireItem, Show } from '../../types';
+import { getShowIdFromLocation } from '../../utils/showUrl';
 import styles from './Repertoire.module.scss';
 
 // Постер спектакля: показываем фото если есть, иначе цветной плейсхолдер
@@ -111,24 +113,32 @@ interface Props {
 export function Repertoire({ onBook }: Props) {
   const { lang, t } = useLang();
   const [selected,      setSelected]      = useState<RepertoireItem | null>(null);
+  const [deepLinkShow,  setDeepLinkShow]  = useState<Show | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [allForceVisible, setAllForceVisible] = useState(false);
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   const handleClose = useCallback(() => setSelected(null), []);
 
-  // Скролл к спектаклю и подсветка по ?show= в URL-параметре.
+  // Скролл к спектаклю, подсветка и открытие модалки по ?show= в URL/HashRouter.
   useEffect(() => {
-    const slug = new URLSearchParams(window.location.search).get('show');
-    if (!slug || !REPERTOIRE.find(item => item.id === slug)) return;
+    const slug = getShowIdFromLocation();
+    const linkedItem = slug ? REPERTOIRE.find(item => item.id === slug) : null;
+    const linkedShow = slug ? SHOWS.find(show => show.id === slug) : null;
+    if (!slug || !linkedItem) return;
+
+    let handled = false;
 
     const doScroll = () => {
+      if (handled) return;
       const el = cardRefs.current.get(slug);
       if (!el) return;
+      handled = true;
 
       // Делаем все карточки видимыми через React, чтобы className не терял 'visible'
       setAllForceVisible(true);
       setHighlightedId(slug);
+      if (linkedShow) setDeepLinkShow(linkedShow);
       setTimeout(() => setHighlightedId(null), 2000);
 
       // Небольшая задержка через rAF, чтобы React закоммитил visible-стейт перед скроллом
@@ -137,8 +147,12 @@ export function Repertoire({ onBook }: Props) {
       });
     };
 
+    const timer = window.setTimeout(doScroll, 0);
     window.addEventListener('theatre:intro-done', doScroll);
-    return () => window.removeEventListener('theatre:intro-done', doScroll);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('theatre:intro-done', doScroll);
+    };
   }, []);
 
   return (
@@ -227,6 +241,7 @@ export function Repertoire({ onBook }: Props) {
       {selected && (
         <RepertoireModal item={selected} onClose={handleClose} onBook={onBook} />
       )}
+      <ShowModal show={deepLinkShow} onClose={() => setDeepLinkShow(null)} onBook={onBook} />
     </section>
   );
 }
