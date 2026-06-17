@@ -971,11 +971,6 @@
   }
 }
 
-.birthdayFieldReadonly {
-  cursor: default;
-  &:hover { border-color: rgba(243, 231, 220, 0.14); }
-}
-
 .birthdayFieldError {
   border-color: var(--accent) !important;
 }
@@ -1013,16 +1008,6 @@
   height: 100%;
   opacity: 0;
   cursor: pointer;
-}
-
-.providerTagFb {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  color: #6e675f;
-  font-family: var(--font-mono);
-  flex-shrink: 0;
 }
 
 .birthdayHint {
@@ -2178,7 +2163,6 @@
   .savedStatusMobile,
   .personalSinceLabel,
   .providerLabel,
-  .providerTagFb,
   .logoutBtn,
   .settingsLogoutBtn {
     color: var(--fg-mute);

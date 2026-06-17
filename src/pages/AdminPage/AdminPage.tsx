@@ -6,6 +6,7 @@ import { getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPa
 import { getPaymentAccount, PAYMENT_CONFIG } from '../../config/payment';
 import { markEligibleBookingsAsAttended } from '../../services/attendanceService';
 import { getAllUsers, getUsersForNewsletter, deleteUserCompletely } from '../../services/userService';
+import { resolveInstagramUsername, instagramProfileUrl } from '../../utils/instagram';
 import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail, sendNewShowAnnouncementEmail } from '../../services/emailService';
 import { SHOWS } from '../../data/shows';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -35,6 +36,20 @@ function formatTimestamp(ts: unknown): string {
   } catch {
     return '—';
   }
+}
+
+const MESSENGER_LABELS: Record<string, string> = { whatsapp: 'WhatsApp', telegram: 'Telegram' };
+const PROVIDER_LABELS:  Record<string, string> = { email: 'Email', google: 'Google', facebook: 'Facebook' };
+
+function contactLabel(u: AdminUser): string {
+  const contacts = u.preferredContact ?? [];
+  return contacts.map(m => MESSENGER_LABELS[m] ?? m).join(' / ');
+}
+
+function formatBirthday(b?: string): string | null {
+  if (!b) return null;
+  const [y, m, d] = b.split('-');
+  return (y && m && d) ? `${d}.${m}.${y}` : b;
 }
 
 const PAY_STATUS_LABELS: Record<PaymentStatus, string> = {
@@ -557,24 +572,70 @@ export function AdminPage() {
                     <th>{t.admin.email}</th>
                     <th>{t.admin.phone}</th>
                     <th>Роль</th>
+                    <th>Соцсети</th>
                     <th>Уведомления</th>
                     <th>{t.admin.userCreatedAt}</th>
                     <th>Действия</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map(u => (
+                  {users.map(u => {
+                    const igUsername = resolveInstagramUsername(u);
+                    const contacts   = contactLabel(u);
+                    const hasSocials = !!igUsername || u.facebookLinked || !!contacts;
+                    const birthday   = formatBirthday(u.birthday);
+                    return (
                     <tr key={u.uid}>
-                      <td className={styles.cellName}>{u.displayName || '—'}</td>
-                      <td><a href={`mailto:${u.email}`} className={styles.emailLink}>{u.email}</a></td>
+                      <td className={styles.cellName}>
+                        {u.displayName || '—'}
+                        {birthday && <p className={styles.cellShowMeta}>Д.р.: {birthday}</p>}
+                      </td>
+                      <td>
+                        <a href={`mailto:${u.email}`} className={styles.emailLink}>{u.email}</a>
+                        {u.provider && (
+                          <p className={styles.cellShowMeta}>{PROVIDER_LABELS[u.provider] ?? u.provider}</p>
+                        )}
+                      </td>
                       <td>{u.phone || '—'}</td>
                       <td>
                         <span className={`${styles.badge} ${u.role === 'admin' ? styles.badgeAdmin : ''}`}>
                           {u.role}
                         </span>
                       </td>
+                      <td>
+                        {hasSocials ? (
+                          <>
+                            {igUsername && (
+                              <p className={styles.cellShowMeta}>
+                                Instagram:{' '}
+                                <a
+                                  href={instagramProfileUrl(igUsername)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={styles.emailLink}
+                                >
+                                  @{igUsername}
+                                </a>
+                              </p>
+                            )}
+                            <p className={styles.cellShowMeta}>
+                              Facebook: {u.facebookLinked ? 'подключён' : 'не подключён'}
+                            </p>
+                            {contacts && (
+                              <p className={styles.cellShowMeta}>Связь: {contacts}</p>
+                            )}
+                          </>
+                        ) : (
+                          <span className={styles.cellMuted}>Не указано</span>
+                        )}
+                      </td>
                       <td className={styles.cellCenter}>{u.notifications ? '✓' : '—'}</td>
-                      <td className={styles.cellMono}>{formatTimestamp(u.createdAt)}</td>
+                      <td>
+                        <span className={styles.cellMono}>{formatTimestamp(u.createdAt)}</span>
+                        {u.lastLoginAt && (
+                          <p className={styles.cellShowMeta}>Вход: {formatTimestamp(u.lastLoginAt)}</p>
+                        )}
+                      </td>
                       <td>
                         {u.role !== 'admin' && u.uid !== user?.uid && (
                           <button
@@ -591,7 +652,8 @@ export function AdminPage() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

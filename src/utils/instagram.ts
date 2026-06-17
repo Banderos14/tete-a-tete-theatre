@@ -18,3 +18,16 @@ export function isValidInstagramUsername(username: string): boolean {
 export function instagramProfileUrl(username: string): string {
   return `https://instagram.com/${username}`;
 }
+
+interface InstagramSource {
+  instagramUsername?: string;
+  socialLink?: string;
+}
+
+// Источник правды — instagramUsername. Если его нет, достаём username из
+// legacy socialLink (старые профили хранили там полную ссылку на Instagram).
+export function resolveInstagramUsername({ instagramUsername, socialLink }: InstagramSource): string {
+  if (instagramUsername) return instagramUsername;
+  if (socialLink && socialLink.includes('instagram.com')) return extractInstagramUsername(socialLink);
+  return '';
+}

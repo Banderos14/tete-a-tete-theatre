@@ -38,4 +38,5 @@ export {
   serverTimestamp,
   onSnapshot,
   increment,
+  deleteField,
 } from 'firebase/firestore';

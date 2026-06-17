@@ -7,9 +7,8 @@ import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from
 import { markEligibleBookingsAsAttended } from '../../../services/attendanceService';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Booking, BookingStatus } from '../../../types/booking';
-import type { Messenger } from '../../../context/AuthContext';
 import { formatPhone, isCompleteFrenchPhone } from '../../../utils/phone';
-import { extractInstagramUsername, isValidInstagramUsername, instagramProfileUrl } from '../../../utils/instagram';
+import { extractInstagramUsername, isValidInstagramUsername, instagramProfileUrl, resolveInstagramUsername } from '../../../utils/instagram';
 import styles from './ProfileDrawer.module.scss';
 
 function formatBirthdayDisplay(dateStr: string, lang: 'RU' | 'FR'): string {
@@ -80,14 +79,12 @@ interface Props {
 
 export function ProfileDrawer({ open, onClose }: Props) {
   const { lang, t } = useLang();
-  const { user, userProfile, loading, logout, saveProfile, linkFacebook } = useAuth();
+  const { user, userProfile, loading, logout, saveProfile, linkFacebook, clearBadSocialLink } = useAuth();
 
   const [displayName, setDisplayName] = useState('');
   const [birthday,    setBirthday]    = useState('');
   const [phone,       setPhone]       = useState('');
-  const [messenger,         setMessenger]         = useState<Messenger>('whatsapp');
   const [preferredContact,  setPreferredContact]  = useState<string[]>(['whatsapp']);
-  const [socialLink,  setSocialLink]  = useState('');
   const [instagramUsername, setInstagramUsername] = useState('');
   const [notify,      setNotify]      = useState(true);
 
@@ -122,14 +119,10 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setDisplayName(userProfile.displayName || user?.displayName || '');
     setBirthday(userProfile.birthday ?? '');
     setPhone(userProfile.phone ?? '');
-    setMessenger(userProfile.phoneMessenger ?? 'whatsapp');
-    setPreferredContact(userProfile.preferredContact ?? (userProfile.phoneMessenger ? [userProfile.phoneMessenger] : ['whatsapp']));
-    const social = userProfile.socialLink ?? '';
+    setPreferredContact(userProfile.preferredContact ?? ['whatsapp']);
     // Старый баг: Facebook access token сохранялся как socialLink — чистим.
-    const isBadUrl = social.startsWith('https://facebook.com/EAA');
-    setSocialLink(isBadUrl ? '' : social);
-    if (isBadUrl) saveProfile({ socialLink: '' });
-    setInstagramUsername(userProfile.instagramUsername ?? (social.includes('instagram.com') ? extractInstagramUsername(social) : ''));
+    if ((userProfile.socialLink ?? '').startsWith('https://facebook.com/EAA')) clearBadSocialLink();
+    setInstagramUsername(resolveInstagramUsername(userProfile));
     setNotify(userProfile.notifications ?? true);
     setIsDirty(false);
     setErrors({});
@@ -242,7 +235,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
       return;
     }
     setSaving(true);
-    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
+    await saveProfile({ displayName, birthday, phone, preferredContact, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
@@ -272,11 +265,8 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setDisplayName(userProfile?.displayName || user?.displayName || '');
     setBirthday(userProfile?.birthday ?? '');
     setPhone(userProfile?.phone ?? '');
-    setMessenger(userProfile?.phoneMessenger ?? 'whatsapp');
-    setPreferredContact(userProfile?.preferredContact ?? (userProfile?.phoneMessenger ? [userProfile.phoneMessenger] : ['whatsapp']));
-    const social = userProfile?.socialLink ?? '';
-    setSocialLink(social.startsWith('https://facebook.com/EAA') ? '' : social);
-    setInstagramUsername(userProfile?.instagramUsername ?? (social.includes('instagram.com') ? extractInstagramUsername(social) : ''));
+    setPreferredContact(userProfile?.preferredContact ?? ['whatsapp']);
+    setInstagramUsername(userProfile ? resolveInstagramUsername(userProfile) : '');
     setNotify(userProfile?.notifications ?? true);
     setIsDirty(false);
     setErrors({});
@@ -293,7 +283,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setSaving(true);
-    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
+    await saveProfile({ displayName, birthday, phone, preferredContact, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
@@ -302,7 +292,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
   async function handleMobileSettingsSave() {
     setSaving(true);
-    await saveProfile({ displayName, birthday, phone, phoneMessenger: messenger, preferredContact, socialLink, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
+    await saveProfile({ displayName, birthday, phone, preferredContact, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
@@ -321,7 +311,6 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const email            = user?.email ?? userProfile?.email ?? '';
   const photoURL         = user?.photoURL ?? null;
   const fbLinked         = userProfile?.facebookLinked ?? false;
-  const birthdayFromFb   = userProfile?.birthdayFromFb ?? false;
   const missingCount     = Object.keys(validate(displayName, birthday, phone, t.profile.required, t.profile.phoneInvalid)).length;
   const instagramNormalized = extractInstagramUsername(instagramUsername);
   const instagramValid      = instagramNormalized.length > 0 && isValidInstagramUsername(instagramNormalized);
@@ -630,35 +619,23 @@ export function ProfileDrawer({ open, onClose }: Props) {
                 </PersonalField>
 
                 <PersonalField label={t.profile.birthday} error={errors.birthday}>
-                  {birthdayFromFb && birthday ? (
-                    <div className={`${styles.birthdayField} ${styles.birthdayFieldReadonly}`}>
-                      <span className={styles.birthdayText}>
-                        {formatBirthdayDisplay(birthday, lang)}
-                      </span>
-                      <span className={styles.providerTagFb}>
-                        <IconLock size={11} stroke={1.5} />
-                        Facebook
-                      </span>
-                    </div>
-                  ) : (
-                    <div
-                      className={`${styles.birthdayField} ${errors.birthday ? styles.birthdayFieldError : ''} ${pulseBirthday && !errors.birthday ? styles.fieldPulse : ''}`}
-                    >
-                      <span className={`${styles.birthdayText} ${!birthday ? styles.birthdayPlaceholder : ''}`}>
-                        {birthday
-                          ? formatBirthdayDisplay(birthday, lang)
-                          : (lang === 'FR' ? 'Choisir une date' : 'Выбрать дату')}
-                      </span>
-                      <IconCalendarEvent size={16} stroke={1.5} className={styles.birthdayIcon} />
-                      <input
-                        type="date"
-                        value={birthday}
-                        onChange={e => { setBirthday(e.target.value); markDirty(); }}
-                        className={styles.hiddenDateInput}
-                        aria-label={lang === 'FR' ? 'Date de naissance' : 'Дата рождения'}
-                      />
-                    </div>
-                  )}
+                  <div
+                    className={`${styles.birthdayField} ${errors.birthday ? styles.birthdayFieldError : ''} ${pulseBirthday && !errors.birthday ? styles.fieldPulse : ''}`}
+                  >
+                    <span className={`${styles.birthdayText} ${!birthday ? styles.birthdayPlaceholder : ''}`}>
+                      {birthday
+                        ? formatBirthdayDisplay(birthday, lang)
+                        : (lang === 'FR' ? 'Choisir une date' : 'Выбрать дату')}
+                    </span>
+                    <IconCalendarEvent size={16} stroke={1.5} className={styles.birthdayIcon} />
+                    <input
+                      type="date"
+                      value={birthday}
+                      onChange={e => { setBirthday(e.target.value); markDirty(); }}
+                      className={styles.hiddenDateInput}
+                      aria-label={lang === 'FR' ? 'Date de naissance' : 'Дата рождения'}
+                    />
+                  </div>
                 </PersonalField>
 
                 {/* Contacts subsection — mobile profile tab only */}
@@ -762,12 +739,15 @@ export function ProfileDrawer({ open, onClose }: Props) {
                 <div className={styles.messengerRow}>
                   <span className={styles.messengerLabel}>{t.profile.messengerLabel}</span>
                   <div className={styles.messengerOptions}>
-                    {(['whatsapp', 'telegram'] as Messenger[]).map(m => (
+                    {(['whatsapp', 'telegram'] as const).map(m => (
                       <button
                         key={m}
                         type="button"
-                        className={`${styles.messengerBtn} ${messenger === m ? styles.active : ''}`}
-                        onClick={() => { setMessenger(m); markDirty(); }}
+                        className={`${styles.messengerBtn} ${preferredContact.includes(m) ? styles.active : ''}`}
+                        onClick={() => {
+                          setPreferredContact(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
+                          markDirty();
+                        }}
                       >
                         {m === 'whatsapp' ? <WhatsAppIcon /> : <TelegramIcon />}
                         {m === 'whatsapp' ? t.profile.messengerWhatsapp : t.profile.messengerTelegram}

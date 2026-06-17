@@ -52,8 +52,8 @@ export function Socials({ theme }: Props) {
                   className={styles.videoBg}
                   poster="/images/video/posters/zakulis.webp"
                   sources={[
-                    { src: '/images/video/zakulis.webm', type: 'video/webm' },
                     { src: '/images/video/zakulis.mp4', type: 'video/mp4' },
+                    { src: '/images/video/zakulis.webm', type: 'video/webm' },
                   ]}
                 />
               )}
@@ -62,8 +62,8 @@ export function Socials({ theme }: Props) {
                   className={styles.videoBg}
                   poster="/images/video/posters/mashka.webp"
                   sources={[
-                    { src: '/images/video/mashka.webm', type: 'video/webm' },
                     { src: '/images/video/mashka.mp4', type: 'video/mp4' },
+                    { src: '/images/video/mashka.webm', type: 'video/webm' },
                   ]}
                 />
               )}
@@ -72,8 +72,8 @@ export function Socials({ theme }: Props) {
                   className={styles.videoBg}
                   poster="/images/video/posters/techPart.webp"
                   sources={[
-                    { src: '/images/video/techPart.webm', type: 'video/webm' },
                     { src: '/images/video/techPart.mp4', type: 'video/mp4' },
+                    { src: '/images/video/techPart.webm', type: 'video/webm' },
                   ]}
                 />
               )}
@@ -82,8 +82,8 @@ export function Socials({ theme }: Props) {
                   className={styles.videoBg}
                   poster="/images/video/posters/newYear.webp"
                   sources={[
-                    { src: '/images/video/newYear.webm', type: 'video/webm' },
                     { src: '/images/video/newYear.mp4', type: 'video/mp4' },
+                    { src: '/images/video/newYear.webm', type: 'video/webm' },
                   ]}
                 />
               )}
@@ -92,8 +92,8 @@ export function Socials({ theme }: Props) {
                   className={styles.videoBg}
                   poster="/images/video/posters/ludaCouch.webp"
                   sources={[
-                    { src: '/images/video/ludaCouch.webm', type: 'video/webm' },
                     { src: '/images/video/ludaCouch.mp4', type: 'video/mp4' },
+                    { src: '/images/video/ludaCouch.webm', type: 'video/webm' },
                   ]}
                 />
               )}
@@ -102,8 +102,8 @@ export function Socials({ theme }: Props) {
                   className={styles.videoBg}
                   poster="/images/video/posters/mladshie.webp"
                   sources={[
-                    { src: '/images/video/mladshie.webm', type: 'video/webm' },
                     { src: '/images/video/mladshie.mp4', type: 'video/mp4' },
+                    { src: '/images/video/mladshie.webm', type: 'video/webm' },
                   ]}
                 />
               )}
