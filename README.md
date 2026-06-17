@@ -1,28 +1,76 @@
-# Tete-a-Tete Theatre
+# Tête-à-Tête Theatre
 
-A website for a small Russian-language theatre in Nice. It started as a simple showcase with events, repertoire, team, and contact sections, then grew into a booking platform with user profiles and an admin dashboard. The site supports Russian and French.
+Production version of the official website for the Russian-language theatre Tête-à-Tête in Nice, France.
 
-## Features
+Live website: https://www.theatre-teteatete.fr
 
-- Upcoming performances with ticket booking
-- Repertoire cards with show descriptions
-- Theatre and team information
-- Booking form with ticket type selection, on-site payment, and bank transfer options
-- User profile with Google/email sign-in and saved phone number
-- Admin dashboard with bookings, payment statuses, and revenue overview
-- Dark theme by default, with a light theme available
+The project started as a simple theatre showcase and gradually evolved into a complete booking and audience management platform. Visitors can explore performances, book tickets online, manage their bookings, and receive theatre updates. Administrators can manage bookings, attendance, users, and email campaigns from a dedicated dashboard.
+
+## Main Features
+
+### Public Website
+
+- Upcoming performances and repertoire
+- Detailed show pages with descriptions and media
+- Theatre history, team, and contact information
+- Russian and French language support
+- Responsive design for desktop, tablet, and mobile devices
+- Dark and light themes
+
+### Ticket Booking
+
+- Online ticket reservations
+- On-site payment and bank transfer options
+- Real-time seat availability
+- Booking confirmation emails
+- QR-code tickets for check-in
+- Deep links for direct access to specific performances
+
+### User Accounts
+
+- Email/password authentication
+- Google and Facebook sign-in
+- Personal profile management
+- Booking history
+- Preferred contact methods
+- Instagram profile support
+
+### Administration
+
+- Booking management
+- Ticket validation and attendance tracking
+- User management
+- Audience statistics
+- Email campaigns and announcements
+- Localized newsletters (Russian / French)
 
 ## Tech Stack
 
-Vite + React + TypeScript, Firebase Auth + Firestore, and SCSS Modules. No UI component libraries.
+- React
+- TypeScript
+- Vite
+- Firebase Authentication
+- Cloud Firestore
+- SCSS Modules
+- Resend Email API
 
-## Running Locally
+No UI component libraries are used. All interface components and styling are custom-built for the project.
+
+## Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Deployment
+## Build
 
-GitHub Pages deployment runs automatically through GitHub Actions after changes are merged into `main`.
+```bash
+npm run build
+```
+
+## Status
+
+Version 1.0 — Production Ready
+
+The platform is actively used by the theatre and currently serves real visitors, bookings, and administrative operations.
