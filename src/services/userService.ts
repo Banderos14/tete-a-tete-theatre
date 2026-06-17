@@ -16,6 +16,7 @@ export interface AdminUser {
   role:         UserRole;
   notifications: boolean;
   provider?:    UserProfile['provider'];
+  language?:    UserProfile['language'];
   createdAt?:   { seconds: number } | null;
   lastLoginAt?: { seconds: number } | null;
   socialLink?:        string;
@@ -30,13 +31,17 @@ export async function getAllUsers(): Promise<AdminUser[]> {
   return snap.docs.map(d => ({ uid: d.id, ...(d.data() as Omit<AdminUser, 'uid'>) }));
 }
 
-export async function getUsersForNewsletter(): Promise<{ email: string; displayName: string }[]> {
+export async function getUsersForNewsletter(): Promise<{ email: string; displayName: string; language: NonNullable<UserProfile['language']> }[]> {
   const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);
   return snap.docs
     .map(d => d.data() as AdminUser)
     .filter(u => u.notifications === true && u.email && u.role !== 'admin')
-    .map(u => ({ email: u.email, displayName: u.displayName || '' }));
+    .map(u => ({
+      email: u.email,
+      displayName: u.displayName || '',
+      language: u.language === 'fr' ? 'fr' : 'ru',
+    }));
 }
 
 export interface DeleteUserResult {

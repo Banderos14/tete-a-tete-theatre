@@ -7,6 +7,7 @@ import { getPaymentAccount, PAYMENT_CONFIG } from '../../config/payment';
 import { markEligibleBookingsAsAttended } from '../../services/attendanceService';
 import { getAllUsers, getUsersForNewsletter, deleteUserCompletely } from '../../services/userService';
 import { resolveInstagramUsername, instagramProfileUrl } from '../../utils/instagram';
+import { getShowPublicUrl } from '../../utils/showUrl';
 import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail, sendNewShowAnnouncementEmail } from '../../services/emailService';
 import { SHOWS } from '../../data/shows';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -17,6 +18,7 @@ import styles from './AdminPage.module.scss';
 type FilterShowId    = 'all' | string;
 type FilterStatus    = 'all' | BookingStatus;
 type AdminTab        = 'bookings' | 'users' | 'newsletter';
+type NewsletterResult = { sent: number; sentRU: number; sentFR: number; errors: string[] };
 type ConfirmAction   =
   | { type: 'paid';       bookingId: string }
   | { type: 'unpaid';     bookingId: string }
@@ -84,7 +86,8 @@ export function AdminPage() {
 
   const [nlShowId,    setNlShowId]    = useState<string>(SHOWS[0]?.id ?? '');
   const [nlSending,   setNlSending]   = useState(false);
-  const [nlResult,    setNlResult]    = useState<{ sent: number; errors: string[] } | null>(null);
+  const [nlResult,    setNlResult]    = useState<NewsletterResult | null>(null);
+  const [copiedShowLink, setCopiedShowLink] = useState(false);
 
   const isAdmin = userProfile?.role === 'admin';
 
@@ -188,7 +191,7 @@ export function AdminPage() {
 
     const recipients = await getUsersForNewsletter();
     if (recipients.length === 0) {
-      setNlResult({ sent: 0, errors: [] });
+      setNlResult({ sent: 0, sentRU: 0, sentFR: 0, errors: [] });
       return;
     }
 
@@ -202,23 +205,31 @@ export function AdminPage() {
 
     const errors: string[] = [];
     let sent = 0;
+    let sentRU = 0;
+    let sentFR = 0;
     const showDate = `${show.day} ${show.month} ${show.year}`;
+    const showUrl = getShowPublicUrl(show.id);
 
     for (const recipient of recipients) {
+      const lang = recipient.language === 'fr' ? 'FR' : 'RU';
       try {
         const ok = await sendNewShowAnnouncementEmail({
           userEmail:   recipient.email,
           userName:    recipient.displayName || recipient.email,
-          showTitle:   show.titleFR ?? show.title,
+          showTitle:   lang === 'FR' ? (show.titleFR ?? show.title) : show.title,
           showDate,
           showTime:    show.time,
-          price:       show.priceFR ?? show.price,
-          description: show.descFR ?? show.desc,
-          siteUrl:     window.location.origin,
-          lang:        'FR',
+          price:       lang === 'FR' ? (show.priceFR ?? show.price) : show.price,
+          description: lang === 'FR' ? (show.descFR ?? show.desc) : show.desc,
+          showUrl,
+          lang,
         });
         // Честный результат: считаем письмо успешным только если API реально подтвердил отправку.
-        if (ok) sent++;
+        if (ok) {
+          sent++;
+          if (lang === 'FR') sentFR++;
+          else sentRU++;
+        }
         else errors.push(recipient.email);
       } catch {
         errors.push(recipient.email);
@@ -226,7 +237,16 @@ export function AdminPage() {
     }
 
     setNlSending(false);
-    setNlResult({ sent, errors });
+    setNlResult({ sent, sentRU, sentFR, errors });
+  }
+
+  async function handleCopyShowLink() {
+    const show = SHOWS.find(s => s.id === nlShowId);
+    if (!show) return;
+    const url = getShowPublicUrl(show.id);
+    await navigator.clipboard.writeText(url);
+    setCopiedShowLink(true);
+    window.setTimeout(() => setCopiedShowLink(false), 1800);
   }
 
   async function handleDeleteUser(uid: string) {
@@ -574,6 +594,7 @@ export function AdminPage() {
                     <th>Роль</th>
                     <th>Соцсети</th>
                     <th>Уведомления</th>
+                    <th>Язык</th>
                     <th>{t.admin.userCreatedAt}</th>
                     <th>Действия</th>
                   </tr>
@@ -630,6 +651,7 @@ export function AdminPage() {
                         )}
                       </td>
                       <td className={styles.cellCenter}>{u.notifications ? '✓' : '—'}</td>
+                      <td className={styles.cellCenter}>{(u.language ?? 'ru').toUpperCase()}</td>
                       <td>
                         <span className={styles.cellMono}>{formatTimestamp(u.createdAt)}</span>
                         {u.lastLoginAt && (
@@ -686,6 +708,22 @@ export function AdminPage() {
                 <option key={s.id} value={s.id}>{s.title}</option>
               ))}
             </select>
+            <div className={styles.showLinkRow}>
+              <input
+                className={styles.showLinkInput}
+                value={nlShowId ? getShowPublicUrl(nlShowId) : ''}
+                readOnly
+                aria-label="Публичная ссылка на спектакль"
+              />
+              <button
+                className={styles.copyLinkBtn}
+                onClick={handleCopyShowLink}
+                type="button"
+                disabled={!nlShowId}
+              >
+                {copiedShowLink ? 'Скопировано' : 'Копировать ссылку'}
+              </button>
+            </div>
           </div>
 
           <button
@@ -699,6 +737,9 @@ export function AdminPage() {
           {nlResult && (
             <div className={`${styles.newsletterResult} ${nlResult.errors.length > 0 ? styles.newsletterResultError : ''}`}>
               <p>Отправлено успешно: <strong>{nlResult.sent}</strong></p>
+              <p>Отправлено RU: <strong>{nlResult.sentRU}</strong></p>
+              <p>Отправлено FR: <strong>{nlResult.sentFR}</strong></p>
+              <p>Ошибок: <strong>{nlResult.errors.length}</strong></p>
               {nlResult.errors.length > 0 && (
                 <>
                   <p>Не удалось отправить ({nlResult.errors.length}):</p>

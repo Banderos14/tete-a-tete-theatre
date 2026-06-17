@@ -74,17 +74,23 @@ export function TicketCheckPage() {
     if (loading || !isAdmin || !ticketFromUrl || urlLookupDone.current) return;
     urlLookupDone.current = true;
 
-    const code = parseTicketCodeFromScan(ticketFromUrl);
+    let cancelled = false;
 
-    if (!code) {
-      setErrorMsg('QR-код не похож на билет Théâtre Tête-à-Tête.');
-      setScanState('error');
-      return;
-    }
+    const lookup = async () => {
+      const code = parseTicketCodeFromScan(ticketFromUrl);
+      await Promise.resolve();
+      if (cancelled) return;
 
-    setScanState('loading');
-    getBookingByTicketCode(code)
-      .then(found => {
+      if (!code) {
+        setErrorMsg('QR-код не похож на билет Théâtre Tête-à-Tête.');
+        setScanState('error');
+        return;
+      }
+
+      setScanState('loading');
+      try {
+        const found = await getBookingByTicketCode(code);
+        if (cancelled) return;
         if (!found) {
           setErrorMsg(`Билет с кодом ${code} не найден.`);
           setScanState('error');
@@ -92,11 +98,15 @@ export function TicketCheckPage() {
         }
         setBooking(found);
         setScanState('found');
-      })
-      .catch(() => {
+      } catch {
+        if (cancelled) return;
         setErrorMsg('Ошибка при поиске брони.');
         setScanState('error');
-      });
+      }
+    };
+
+    void lookup();
+    return () => { cancelled = true; };
   }, [loading, isAdmin, ticketFromUrl]);
 
   function startScanning() {

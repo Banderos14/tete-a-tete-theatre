@@ -130,7 +130,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
                   className={styles.photoImg}
                   src={currentPhoto.src}
                   style={{
-                    objectPosition: currentPhoto.position ?? 'center center',
+                    '--photo-mobile-position': currentPhoto.position ?? 'center center',
                     '--photo-mobile-scale': String(currentPhoto.mobileScale ?? 1),
                   } as React.CSSProperties}
                   alt=""
