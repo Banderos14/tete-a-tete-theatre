@@ -5,16 +5,23 @@ import {
   query,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-import type { UserRole } from '../context/AuthContext';
+import type { UserRole, UserProfile } from '../context/AuthContext';
 
 export interface AdminUser {
   uid:          string;
   displayName:  string;
   email:        string;
   phone:        string;
+  birthday?:    string;
   role:         UserRole;
   notifications: boolean;
+  provider?:    UserProfile['provider'];
   createdAt?:   { seconds: number } | null;
+  lastLoginAt?: { seconds: number } | null;
+  socialLink?:        string;
+  instagramUsername?: string;
+  facebookLinked?:    boolean;
+  preferredContact?:  string[];
 }
 
 export async function getAllUsers(): Promise<AdminUser[]> {

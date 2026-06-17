@@ -4,18 +4,15 @@ import type { User } from 'firebase/auth';
 import { ensureAudienceCounterAndIncrement } from '../services/statsService';
 
 export type UserRole  = 'user' | 'admin';
-export type Messenger = 'whatsapp' | 'telegram';
 
 export interface UserProfile {
   displayName:     string;
   email:           string;
   phone:           string;
-  phoneVerified?:  boolean;
-  phoneMessenger?:   Messenger;
-  preferredContact?: string[];   // multiselect: ['whatsapp', 'telegram']
+  preferredContact?: string[];   // multiselect: ['whatsapp', 'telegram'] — source of truth for contact method
   birthday?:         string;     // 'YYYY-MM-DD'
-  birthdayFromFb?: boolean;
-  socialLink:      string;
+  // Legacy full profile URL — no longer written, kept only as a fallback source for instagramUsername.
+  socialLink?:     string;
   instagramUsername?: string;
   facebookLinked?: boolean;
   photoURL?:       string;
@@ -35,6 +32,7 @@ interface AuthContextType {
   resetPassword:    (email: string) => Promise<void>;
   saveProfile:      (data: Partial<UserProfile>) => Promise<void>;
   linkFacebook:     () => Promise<{ name?: string; birthday?: string }>;
+  clearBadSocialLink: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -52,12 +50,24 @@ function loadFirebase(): Promise<FirebaseConfig> {
 function defaultProfile(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
     displayName: '', email: '', phone: '',
-    phoneVerified: false, phoneMessenger: 'whatsapp',
-    birthday: '', birthdayFromFb: false,
-    socialLink: '', facebookLinked: false,
+    birthday: '',
+    facebookLinked: false,
     notifications: true, role: 'user',
     ...overrides,
   };
+}
+
+// Не пишем в Firestore пустые/неинформативные значения — поле либо несёт
+// реальные данные, либо отсутствует в документе вовсе.
+function pruneEmpty<T extends Record<string, unknown>>(data: T): Partial<T> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) continue;
+    if (value === '') continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    result[key] = value;
+  }
+  return result as Partial<T>;
 }
 
 function resolveProvider(firebaseUser: User): UserProfile['provider'] {
@@ -69,7 +79,7 @@ async function upsertProfile(uid: string, data: Partial<UserProfile> & Record<st
   const { db, doc, setDoc, serverTimestamp } = await loadFirebase();
   await setDoc(
     doc(db, 'users', uid),
-    { ...data, updatedAt: serverTimestamp() },
+    { ...pruneEmpty(data), updatedAt: serverTimestamp() },
     { merge: true },
   );
 }
@@ -139,10 +149,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Старые документы users/{uid} могут содержать поля, которых больше нет в
+  // UserProfile (birthdayFromFb, phoneMessenger, phoneVerified) — реальной
+  // миграции не делаем, просто стираем их при первом же обычном сохранении.
   async function saveProfile(data: Partial<UserProfile>) {
     if (!user) return;
-    await upsertProfile(user.uid, data as Record<string, unknown>);
-    setUserProfile(prev => (prev ? { ...prev, ...data } : defaultProfile(data)));
+    const { deleteField } = await loadFirebase();
+    const merged = { ...(userProfile ?? defaultProfile()), ...data } as UserProfile;
+
+    const cleanup: Record<string, unknown> = {
+      birthdayFromFb: deleteField(),
+      phoneMessenger: deleteField(),
+      phoneVerified:  deleteField(),
+    };
+    const socialLinkStale = !merged.socialLink || !!merged.instagramUsername;
+    if (socialLinkStale) cleanup.socialLink = deleteField();
+
+    await upsertProfile(user.uid, { ...data, ...cleanup });
+    setUserProfile(prev => {
+      if (!prev) return defaultProfile(data);
+      const next: UserProfile = { ...prev, ...data };
+      if (socialLinkStale) next.socialLink = undefined;
+      return next;
+    });
   }
 
   async function signInWithGoogle() {
@@ -185,6 +214,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   }
 
+  // Старый баг: Facebook access token иногда сохранялся как socialLink.
+  // deleteField() реально убирает поле из документа, а не оставляет пустую строку.
+  async function clearBadSocialLink() {
+    if (!user) return;
+    const { db, doc, setDoc, deleteField, serverTimestamp } = await loadFirebase();
+    await setDoc(
+      doc(db, 'users', user.uid),
+      { socialLink: deleteField(), updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+    setUserProfile(prev => (prev ? { ...prev, socialLink: undefined } : prev));
+  }
+
   async function linkFacebook(): Promise<{ name?: string; birthday?: string }> {
     if (!user) throw new Error('Not authenticated');
 
@@ -219,19 +261,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const resolvedName = fbName ?? result.user.displayName ?? undefined;
     if (resolvedName) updates.displayName   = resolvedName;
-    if (fbBirthday)   { updates.birthday    = fbBirthday; updates.birthdayFromFb = true; }
+    if (fbBirthday)   updates.birthday      = fbBirthday;
 
     if (resolvedName && !user.displayName) {
       const { firebaseUpdateProfile } = await loadFirebase();
       await firebaseUpdateProfile(user, { displayName: resolvedName });
     }
 
+    await saveProfile(updates);
+
     const currentSocial = userProfile?.socialLink ?? '';
     if (currentSocial.startsWith('https://facebook.com/EAA')) {
-      updates.socialLink = '';
+      await clearBadSocialLink();
     }
 
-    await saveProfile(updates);
     return { name: resolvedName, birthday: fbBirthday };
   }
 
@@ -240,7 +283,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, userProfile, loading,
       signInWithGoogle, signInWithEmail, signUpWithEmail,
       logout, resetPassword, saveProfile,
-      linkFacebook,
+      linkFacebook, clearBadSocialLink,
     }}>
       {children}
     </AuthContext.Provider>

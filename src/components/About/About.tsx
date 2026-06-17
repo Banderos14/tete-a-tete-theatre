@@ -67,8 +67,8 @@ export function About() {
                   className={styles.videoBg}
                   poster="/images/video/posters/premiere.webp"
                   sources={[
-                    { src: '/images/video/premiere.webm', type: 'video/webm' },
                     { src: '/images/video/premiere.mp4', type: 'video/mp4' },
+                    { src: '/images/video/premiere.webm', type: 'video/webm' },
                   ]}
                 />
               )}
@@ -77,8 +77,8 @@ export function About() {
                   className={styles.videoBg}
                   poster="/images/video/posters/deviz.webp"
                   sources={[
-                    { src: '/images/video/deviz.webm', type: 'video/webm' },
                     { src: '/images/video/deviz.mp4', type: 'video/mp4' },
+                    { src: '/images/video/deviz.webm', type: 'video/webm' },
                   ]}
                 />
               )}
@@ -88,8 +88,8 @@ export function About() {
                   poster="/images/video/posters/poklon.webp"
                   style={{ objectPosition: 'center 100%' }}
                   sources={[
-                    { src: '/images/video/poklon.webm', type: 'video/webm' },
                     { src: '/images/video/poklon.mp4', type: 'video/mp4' },
+                    { src: '/images/video/poklon.webm', type: 'video/webm' },
                   ]}
                 />
               )}

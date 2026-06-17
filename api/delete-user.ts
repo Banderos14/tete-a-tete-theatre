@@ -151,9 +151,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     batch.delete(db.collection('users').doc(targetUid));
 
     // ── Decrement audience counter ───────────────────────────────────────────
-    batch.update(db.collection('stats').doc('siteStats'), {
-      audienceCount: FieldValue.increment(-1),
-    });
+    // batch.update() throws NOT_FOUND (and aborts the whole batch) if the doc
+    // doesn't exist yet — stats/siteStats is only lazily created on first
+    // registration, so it may genuinely be missing. Never let that block deletion.
+    const statsRef  = db.collection('stats').doc('siteStats');
+    const statsSnap = await statsRef.get();
+    if (statsSnap.exists) {
+      batch.update(statsRef, { audienceCount: FieldValue.increment(-1) });
+    }
 
     await batch.commit();
     const bookingsDeletedCount = bookingsSnap.size;
