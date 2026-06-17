@@ -191,7 +191,7 @@ export function AdminPage() {
 
     for (const recipient of recipients) {
       try {
-        await sendNewShowAnnouncementEmail({
+        const ok = await sendNewShowAnnouncementEmail({
           userEmail:   recipient.email,
           userName:    recipient.displayName || recipient.email,
           showTitle:   show.titleFR ?? show.title,
@@ -202,7 +202,9 @@ export function AdminPage() {
           siteUrl:     window.location.origin,
           lang:        'FR',
         });
-        sent++;
+        // Честный результат: считаем письмо успешным только если API реально подтвердил отправку.
+        if (ok) sent++;
+        else errors.push(recipient.email);
       } catch {
         errors.push(recipient.email);
       }
@@ -633,11 +635,11 @@ export function AdminPage() {
           </button>
 
           {nlResult && (
-            <div className={styles.newsletterResult}>
+            <div className={`${styles.newsletterResult} ${nlResult.errors.length > 0 ? styles.newsletterResultError : ''}`}>
               <p>Отправлено успешно: <strong>{nlResult.sent}</strong></p>
               {nlResult.errors.length > 0 && (
                 <>
-                  <p>Ошибки ({nlResult.errors.length}):</p>
+                  <p>Не удалось отправить ({nlResult.errors.length}):</p>
                   <ul>
                     {nlResult.errors.map(e => <li key={e}>{e}</li>)}
                   </ul>

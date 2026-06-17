@@ -473,3 +473,44 @@
     cursor: not-allowed;
   }
 }
+
+:global([data-theme='light']) {
+  // .paperBody / .qrWrap / .details stay paper-coloured in both themes —
+  // it's meant to read as an actual paper ticket coupon, not a themed surface.
+  .ticket {
+    background: var(--bg-3);
+    border-color: rgba(90, 60, 45, 0.14);
+  }
+
+  .panelInner {
+    background: var(--bg-3);
+  }
+
+  .panelOpen > .panelInner {
+    border-color: rgba(90, 60, 45, 0.14);
+  }
+
+  .tearOffLeft,
+  .tearOffRight {
+    background: var(--bg);
+  }
+
+  .showTitle { color: var(--fg); }
+
+  .compositionLine,
+  .compositionCount,
+  .compositionAmount { color: var(--fg-mute); }
+
+  .compositionSep { color: var(--fg-dim); }
+
+  .ticketCode { color: var(--fg-mute); }
+
+  .actionMuted { color: var(--fg-mute); }
+  .actionAmber { color: #8a6418; }
+
+  // Stamp colours are tuned darker for legibility on a light/cream surface —
+  // the dark-theme hex values from the design system read as near-invisible here.
+  .stampGreen { border-color: #4a7a4a; color: #2f6b3a; }
+  .stampAmber { border-color: #9c7a2e; color: #7a5a1a; }
+  .stampMuted { border-color: rgba(60, 50, 42, 0.35); color: #6e675f; }
+}

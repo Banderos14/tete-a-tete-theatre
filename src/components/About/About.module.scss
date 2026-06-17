@@ -272,8 +272,12 @@
 }
 
 :global([data-theme='light']) {
+  // card 1 ("Зрительный зал") has no video — it's a static photo via
+  // background-image. Only the gradient fallback colour is themed here;
+  // background-image/-size/-position must stay untouched or the photo
+  // disappears behind the shorthand reset.
   .img[data-card="0"] { background: linear-gradient(135deg, #b89098, #9a7280); }
-  .img[data-card="1"] { background: linear-gradient(135deg, #9088a0, #7a7090); }
+  .img[data-card="1"] { background-color: #9088a0; }
   .img[data-card="2"] { background: linear-gradient(135deg, #a09070, #887858); }
   .img[data-card="3"] { background: linear-gradient(135deg, #aa8890, #927078); }
 

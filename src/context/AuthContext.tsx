@@ -16,6 +16,7 @@ export interface UserProfile {
   birthday?:         string;     // 'YYYY-MM-DD'
   birthdayFromFb?: boolean;
   socialLink:      string;
+  instagramUsername?: string;
   facebookLinked?: boolean;
   photoURL?:       string;
   provider?:       'email' | 'google' | 'facebook';

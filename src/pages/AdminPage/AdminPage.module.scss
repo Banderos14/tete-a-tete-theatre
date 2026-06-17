@@ -634,8 +634,9 @@
 .newsletterResult {
   margin-top: 20px;
   padding: 14px 16px;
-  background: var(--card-bg, #f8f8f8);
-  border-radius: 40px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
   font-size: 13px;
   color: var(--fg);
   line-height: 1.6;
@@ -643,6 +644,11 @@
   p { margin: 0 0 4px; }
   ul { margin: 4px 0 0 16px; padding: 0; }
   li { margin-bottom: 2px; color: var(--fg-mute); }
+}
+
+.newsletterResultError {
+  background: rgba(184, 0, 0, 0.08);
+  border-color: rgba(184, 0, 0, 0.3);
 }
 
 .section {

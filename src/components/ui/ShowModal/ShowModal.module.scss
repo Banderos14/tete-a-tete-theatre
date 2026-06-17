@@ -571,6 +571,16 @@
     &:first-child { border-top-color: var(--line); }
   }
 
+  .author,
+  .readMoreBtn,
+  .seatsLeft {
+    color: var(--fg-mute);
+  }
+
+  .seatsCount {
+    color: #8a6418;
+  }
+
   .bookRow {
     background: var(--bg-2);
   }

@@ -626,6 +626,24 @@
   font-family: var(--font-mono);
 }
 
+.instagramLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.instagramOpenLink {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--fg-mute);
+  text-decoration: none;
+  transition: color 0.2s ease;
+
+  &:hover { color: var(--accent); }
+}
+
 .inputError {
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 3px rgba(184, 0, 0, 0.12) !important;
@@ -2025,7 +2043,7 @@
 }
 
 :global([data-theme='light']) {
-  .panel {
+  .modal {
     box-shadow: 0 24px 80px rgba(40, 20, 10, 0.18);
     border-color: rgba(90, 60, 45, 0.18);
   }
@@ -2081,6 +2099,26 @@
     color: var(--fg);
   }
 
+  .bookingCompositionLine,
+  .bookingCompositionAmount,
+  .bookingCode,
+  .bookingActionMuted {
+    color: var(--fg-mute);
+  }
+
+  .bookingCompositionSep {
+    color: var(--fg-dim);
+  }
+
+  .bookingActionAmber {
+    color: #8a6418;
+  }
+
+  .bookingStubCutoutTop,
+  .bookingStubCutoutBottom {
+    background: var(--bg-2);
+  }
+
   .visitCounter {
     background: var(--bg-3);
     border-color: rgba(90, 60, 45, 0.14);
@@ -2091,7 +2129,58 @@
     color: var(--fg);
   }
 
+  .visitCounterLabel,
+  .visitCaption {
+    color: var(--fg-mute);
+  }
+
   .visitSeat {
     border-color: var(--line-strong);
+  }
+
+  // .incompleteBadge intentionally untouched — it lives on the always-burgundy
+  // sidebarTop/mobileHeader panel, which stays dark in both themes.
+
+  .attendedRow {
+    border-bottom-color: rgba(90, 60, 45, 0.12);
+  }
+
+  .attendedRowTitle {
+    color: var(--fg);
+  }
+
+  .attendedRowMeta {
+    color: var(--fg-mute);
+  }
+
+  .attendedRowRepeat {
+    color: #8a6418;
+  }
+
+  .attendedStamp {
+    border-color: #4a7a4a;
+    color: #2f6b3a;
+  }
+
+  // .mobileLoyaltyCard and friends intentionally untouched — they live inside
+  // .mobileHeader, the always-burgundy panel that stays dark in both themes.
+
+  .transferMiniLabel {
+    color: #8a6418;
+  }
+
+  .bookingTransferReminder {
+    color: #8a6418;
+    border-left-color: #8a6418;
+  }
+
+  .savedStatus,
+  .savedStatusMobile,
+  .personalSinceLabel,
+  .providerLabel,
+  .providerTagFb,
+  .logoutBtn,
+  .settingsLogoutBtn {
+    color: var(--fg-mute);
   }
 }

@@ -109,7 +109,7 @@
 -+- QR видно только в раскрытой карточке (lazy-loaded при первом открытии)
 -+- Одновременно раскрыта одна карточка (предыдущая сворачивается)
 -+- Мобильный вид личного кабинета — вкладки работают, полировка возможна
---- Привязка соц сети через кнопку входа, а не вручную
+-+- Привязка соц сети через кнопку входа, а не вручную (linkFacebook использует linkWithPopup, AuthContext.tsx)
 
 ## Loyalty (система лояльности)
 
@@ -221,7 +221,7 @@
 
 -+- Мета-описание, title, lang
 -+- OpenGraph и Twitter Card
---- Sitemap.xml и robots.txt
+-+- Sitemap.xml и robots.txt
 
 ## Инфраструктура
 
@@ -229,7 +229,7 @@
 -+- iframe-заголовки настроены
 -+- Cloudflare — DNS, безопасность, кэш, аналитика
 --- Мониторинг ошибок (Sentry)
---- Custom domain (уже есть: theatre-teteatete.fr зарегистрирован в OVHcloud, подключён к Vercel)
+-+- Custom domain (уже есть: theatre-teteatete.fr зарегистрирован в OVHcloud, подключён к Vercel)
 
 ## Email & Domain Setup (June 2026)
 
