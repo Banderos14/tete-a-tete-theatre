@@ -105,5 +105,23 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // ── Stats collection ─────────────────────────────────────────────────────
+    // stats/siteStats — public "N spectators" counter shown on the landing page.
+    // Public read so anyone can see the number without signing in.
+    // Writes are limited to authenticated users bumping audienceCount by
+    // exactly +1 (new registration) so the counter can't be reset or inflated
+    // from the client. The admin delete-user API decrements via the Admin SDK,
+    // which bypasses these rules entirely.
+    match /stats/{statsId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && request.resource.data.audienceCount is int;
+
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['audienceCount'])
+        && request.resource.data.audienceCount == resource.data.audienceCount + 1;
+    }
+
   }
 }
