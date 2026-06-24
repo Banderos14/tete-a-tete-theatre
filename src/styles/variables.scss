@@ -4,7 +4,9 @@
        url('/fonts/bad-russian.woff')  format('woff');
   font-weight: 400;
   font-style: normal;
-  font-display: swap;
+  // fallback: 100ms block + 3s swap window. With preload (9.9 KB) font arrives
+  // before block expires → no FOUT. swap caused a visible jump on cold load.
+  font-display: fallback;
 }
 
 @font-face {
@@ -12,7 +14,9 @@
   src: url('/fonts/Forum.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
-  font-display: optional;
+  // fallback: preloaded above (35 KB). Block 100ms, then swap if needed.
+  // optional had no preload → fell back to sans-serif permanently on first visit.
+  font-display: fallback;
 }
 
 @font-face {

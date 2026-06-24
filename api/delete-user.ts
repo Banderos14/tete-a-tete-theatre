@@ -47,14 +47,18 @@ function getAdminApp() {
   }
 }
 
-const ALLOWED_ORIGINS = new Set(
-  [process.env.ALLOWED_ORIGIN, 'https://tete-a-tete-theatre.vercel.app'].filter(Boolean) as string[],
-);
+const ALLOWED_ORIGINS = new Set([
+  process.env.ALLOWED_ORIGIN,
+  'https://www.theatre-teteatete.fr',
+  'https://tete-a-tete-theatre.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://localhost:3000',
+].filter(Boolean) as string[]);
 
 function corsOrigin(req: IncomingMessage): string {
   const o = String(req.headers['origin'] ?? '');
-  if (ALLOWED_ORIGINS.has(o) || o.endsWith('.vercel.app')) return o;
-  return 'https://tete-a-tete-theatre.vercel.app';
+  return ALLOWED_ORIGINS.has(o) ? o : 'https://www.theatre-teteatete.fr';
 }
 
 function send(res: ServerResponse, status: number, body: object, req?: IncomingMessage): void {

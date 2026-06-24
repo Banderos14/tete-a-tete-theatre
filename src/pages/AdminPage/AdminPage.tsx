@@ -196,9 +196,18 @@ export function AdminPage() {
     }
 
     const confirmed = window.confirm(
-      `Будет отправлено ${recipients.length} писем${recipients.length > 100 ? '\n\n⚠️ Больше 100 получателей — проверьте лимиты Resend.' : ''}. Продолжить?`
+      `Будет отправлено ${recipients.length} писем${recipients.length > 100 ? '\n\nБольше 100 получателей — проверьте лимиты Resend.' : ''}. Продолжить?`
     );
     if (!confirmed) return;
+
+    // Получаем ID token текущего пользователя для аутентификации рассылки на сервере.
+    // Сервер проверит, что роль — 'admin', прежде чем отправлять письма.
+    let adminToken: string | undefined;
+    try {
+      if (user) adminToken = await user.getIdToken();
+    } catch (e) {
+      console.warn('[AdminPage] handleNewsletter: failed to get ID token', e);
+    }
 
     setNlSending(true);
     setNlResult(null);
@@ -223,7 +232,7 @@ export function AdminPage() {
           description: lang === 'FR' ? (show.descFR ?? show.desc) : show.desc,
           showUrl,
           lang,
-        });
+        }, adminToken);
         // Честный результат: считаем письмо успешным только если API реально подтвердил отправку.
         if (ok) {
           sent++;
