@@ -88,7 +88,12 @@ export function BookingModal({ show, onClose }: Props) {
   // Realtime subscription — остаток мест для текущего спектакля.
   useEffect(() => {
     if (!show) return;
-    return subscribeToShowBookedSeats(show.id, setBookedSeats);
+    return subscribeToShowBookedSeats(show.id, setBookedSeats, (err) => {
+      // Permission-denied is expected for non-admin users: the query returns all bookings
+      // for a show, which violates the rule resource.data.userId == request.auth.uid.
+      // In this case bookedSeats stays 0 and availableSeats defaults to THEATRE_CAPACITY.
+      console.warn('[BookingModal] subscribeToShowBookedSeats error (availableSeats defaulting to max):', err.message);
+    });
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ограничиваем количество билетов при изменении доступных мест.

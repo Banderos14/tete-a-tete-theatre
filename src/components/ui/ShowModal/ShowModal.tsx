@@ -50,7 +50,9 @@ export function ShowModal({ show, onClose, onBook }: Props) {
   // Realtime остаток мест: подписываемся при открытии спектакля, отписываемся при закрытии/смене
   useEffect(() => {
     if (!show) return;
-    return subscribeToShowBookedSeats(show.id, setBookedSeats);
+    return subscribeToShowBookedSeats(show.id, setBookedSeats, (err) => {
+      console.warn('[ShowModal] subscribeToShowBookedSeats error (availableSeats defaulting to max):', err.message);
+    });
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const availableSeats = Math.max(0, THEATRE_CAPACITY - bookedSeats);

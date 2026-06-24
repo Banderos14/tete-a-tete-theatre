@@ -220,6 +220,8 @@ export function ProfileDrawer({ open, onClose }: Props) {
       clearTimeout(warnTimer.current);
       warnTimer.current = setTimeout(() => setWarnVisible(false), 2500);
     } else {
+      // Blur before onClose to prevent "aria-hidden on element with focused descendant" warning.
+      (document.activeElement as HTMLElement)?.blur();
       onClose();
     }
   }
@@ -257,6 +259,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   }, [linkFacebook, markDirty, lang]);
 
   async function handleLogout() {
+    (document.activeElement as HTMLElement)?.blur();
     onClose();
     await logout();
   }

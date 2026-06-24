@@ -563,14 +563,22 @@ function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: str
 // игнорирует возвращаемое значение и/или ловит ошибку через .catch(() => {}).
 // Рассылка (newsletter) использует именно это значение, чтобы показывать
 // честный результат отправки в админке.
-async function callEndpoint(payload: { to: string; subject: string; html: string; text: string }): Promise<boolean> {
+//
+// authToken — Firebase ID token, требуется только для type='newsletter'.
+// Для остальных типов не передаётся.
+async function callEndpoint(
+  payload: { type: string; to: string; subject: string; html: string; text: string },
+  authToken?: string,
+): Promise<boolean> {
   // По умолчанию /api/send-email — работает на Vercel без настройки env во frontend
   const endpoint = (import.meta.env.VITE_EMAIL_ENDPOINT as string | undefined) ?? '/api/send-email';
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
   try {
     const resp = await fetch(endpoint, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body:    JSON.stringify(payload),
     });
     if (!resp.ok) {
@@ -594,28 +602,31 @@ export async function sendBookingConfirmationEmail(data: BookingEmailData): Prom
     return;
   }
   const { subject, html, text } = buildConfirmationEmail(data);
-  await callEndpoint({ to: data.userEmail, subject, html, text });
+  await callEndpoint({ type: 'booking-confirmation', to: data.userEmail, subject, html, text });
 }
 
 // Обновление статуса брони (confirmed / cancelled / attended) — отправляется из AdminPage.
 export async function sendBookingStatusUpdateEmail(data: BookingStatusEmailData): Promise<void> {
   const { subject, html, text } = buildStatusEmail(data);
-  await callEndpoint({ to: data.userEmail, subject, html, text });
+  await callEndpoint({ type: 'booking-status', to: data.userEmail, subject, html, text });
 }
 
 // Подтверждение оплаты — отправляется когда admin отмечает бронь как оплаченную.
 export async function sendPaymentPaidEmail(data: PaymentPaidEmailData): Promise<void> {
   if (!data.userEmail) return;
   const { subject, html, text } = buildPaymentPaidEmail(data);
-  await callEndpoint({ to: data.userEmail, subject, html, text });
+  await callEndpoint({ type: 'payment-paid', to: data.userEmail, subject, html, text });
 }
 
 // Анонс нового спектакля — отправлять по одному получателю;
 // AdminPage перебирает список через getUsersForNewsletter().
 // В отличие от писем брони, рассылка должна честно сообщать админу об успехе/отказе,
 // поэтому возвращаем boolean по реальному ответу API, а не глотаем ошибку.
-export async function sendNewShowAnnouncementEmail(data: NewShowEmailData): Promise<boolean> {
+//
+// authToken — Firebase ID token текущего admin-пользователя.
+// Сервер проверяет его и отклоняет запрос если роль не 'admin'.
+export async function sendNewShowAnnouncementEmail(data: NewShowEmailData, authToken?: string): Promise<boolean> {
   if (!data.userEmail) return false;
   const { subject, html, text } = buildNewShowEmail(data);
-  return callEndpoint({ to: data.userEmail, subject, html, text });
+  return callEndpoint({ type: 'newsletter', to: data.userEmail, subject, html, text }, authToken);
 }

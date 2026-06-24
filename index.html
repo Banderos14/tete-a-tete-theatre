@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Critical font preloads — must be first resource hints to maximise download window.
+         Both fonts are used in Hero above the fold; preload prevents FOUT on first paint. -->
+    <link rel="preload" href="/fonts/Forum.woff2"       as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/bad-russian.woff2" as="font" type="font/woff2" crossorigin />
+
     <meta name="description" content="Театр ТЕТ-А-ТЕТ в Ницце. Афиша спектаклей, онлайн-бронирование билетов, новости театра и мероприятия для зрителей во Франции." />
     <link rel="canonical" href="https://www.theatre-teteatete.fr/" />
 
@@ -69,10 +75,6 @@
     <noscript>
       <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet" />
     </noscript>
-    <!-- Bad Russian is the critical hero font (font-display: swap) — preload so iOS Safari applies it on first paint -->
-    <link rel="preload" href="/fonts/bad-russian.woff2" as="font" type="font/woff2" crossorigin />
-    <!-- Forum, Ekaterina remain self-hosted via @font-face only (font-display: optional, no preload needed) -->
-
     <!-- Google tag (gtag.js) -->
       <script async src="https://www.googletagmanager.com/gtag/js?id=G-LPLQXLMV7D"></script>
       <script>
