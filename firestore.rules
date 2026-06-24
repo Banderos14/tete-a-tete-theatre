@@ -84,7 +84,24 @@ service cloud.firestore {
               && request.resource.data.paymentExpiresAt > request.time
             )
           : !('paymentExpiresAt' in request.resource.data)
-        );
+        )
+
+        // Admin-only timestamp fields must never be set by the client.
+        && !('confirmedAt'  in request.resource.data)
+        && !('attendedAt'   in request.resource.data)
+
+        // Price / ticket-count sanity.
+        // Min: 1 student ticket at 50 % loyalty discount = 10 € × 0.5 = 5 €.
+        // Max: 10 premium tickets = 30 € × 10 = 300 €.
+        // Prevents totalAmount: 0 / 1 / 8 attacks from the browser DevTools.
+        && request.resource.data.totalAmount is number
+        && request.resource.data.totalAmount >= 5
+        && request.resource.data.totalAmount <= 300
+
+        // Ticket count must be a positive integer within a reasonable range.
+        && request.resource.data.ticketsCount is int
+        && request.resource.data.ticketsCount >= 1
+        && request.resource.data.ticketsCount <= 10;
 
       // ── Update (user — expiry only) ────────────────────────────────────────
       // A normal user may expire ONLY their own booking, ONLY when

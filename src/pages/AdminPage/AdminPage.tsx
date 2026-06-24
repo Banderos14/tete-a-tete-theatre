@@ -135,6 +135,7 @@ export function AdminPage() {
 
       // Письма отправляются только для ручного подтверждения и отмены.
       if (status === 'confirmed' || status === 'cancelled') {
+        const adminToken = await user?.getIdToken().catch(() => undefined);
         sendBookingStatusUpdateEmail({
           userEmail:    booking.userEmail,
           userName:     booking.userName,
@@ -146,7 +147,7 @@ export function AdminPage() {
           ticketCode:   booking.ticketCode,
           newStatus:    status,
           lang:         booking.lang ?? 'FR',
-        }).catch(() => {});
+        }, adminToken).catch(() => {});
       }
     } finally { setUpdatingId(null); }
   }
@@ -165,6 +166,7 @@ export function AdminPage() {
           b.id === bookingId ? { ...b, paymentStatus: 'paid', status: 'confirmed' } : b
         ));
         // Одно письмо на получение оплаты.
+        const adminToken = await user?.getIdToken().catch(() => undefined);
         sendPaymentPaidEmail({
           userEmail:     booking.userEmail,
           userName:      booking.userName,
@@ -176,7 +178,7 @@ export function AdminPage() {
           ticketCode:    booking.ticketCode,
           bookingStatus: 'confirmed',
           lang:          booking.lang ?? 'FR',
-        }).catch(() => {});
+        }, adminToken).catch(() => {});
       } else {
         // Снятие оплаты меняет только paymentStatus и не отправляет письмо.
         await updatePaymentStatus(bookingId, paymentStatus);
