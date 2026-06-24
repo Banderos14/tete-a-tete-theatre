@@ -126,6 +126,22 @@ async function isAdminToken(idToken: string): Promise<boolean> {
   }
 }
 
+// Returns true only if the Bearer token's email matches recipientEmail.
+// Used to ensure booking-confirmation emails can only be sent to the
+// authenticated caller's own address — prevents using the endpoint as
+// an open relay to send arbitrary emails to third parties.
+async function verifyRecipientIsCallerEmail(idToken: string, recipientEmail: string): Promise<boolean> {
+  try {
+    const app     = getAdminApp();
+    const decoded = await getAuth(app).verifyIdToken(idToken);
+    const record  = await getAuth(app).getUser(decoded.uid);
+    return typeof record.email === 'string' &&
+      record.email.toLowerCase() === recipientEmail.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export default async function handler(
@@ -162,19 +178,37 @@ export default async function handler(
     return;
   }
 
-  // ── Newsletter: verify admin Bearer token ────────────────────────────────────
-  if (type === 'newsletter') {
-    const authHeader = String(req.headers['authorization'] ?? '');
-    if (!authHeader.startsWith('Bearer ')) {
-      respond(res, 401, { error: 'Newsletter requires Authorization: Bearer <token>' }, req);
+  // ── Per-type auth checks ─────────────────────────────────────────────────────
+  //
+  //  booking-confirmation → caller must be authenticated; the recipient 'to' must
+  //    match the authenticated user's own email (prevents open-relay phishing).
+  //
+  //  booking-status / payment-paid → sent by admin from the dashboard; caller
+  //    must hold the admin role.
+  //
+  //  newsletter → admin-only (existing behaviour, unchanged).
+  //
+  const rawAuth = String(req.headers['authorization'] ?? '');
+  const idToken = rawAuth.startsWith('Bearer ') ? rawAuth.slice(7) : null;
+
+  if (type === 'newsletter' || type === 'booking-status' || type === 'payment-paid') {
+    if (!idToken) {
+      respond(res, 401, { error: `${String(type)} requires Authorization: Bearer <token>` }, req);
       return;
     }
-    const idToken = authHeader.slice(7);
     const adminOk = await isAdminToken(idToken).catch(() => false);
     if (!adminOk) {
-      respond(res, 403, { error: 'Newsletter is admin-only' }, req);
+      respond(res, 403, { error: `${String(type)} is admin-only` }, req);
       return;
     }
+  }
+
+  if (type === 'booking-confirmation') {
+    if (!idToken) {
+      respond(res, 401, { error: 'booking-confirmation requires Authorization: Bearer <token>' }, req);
+      return;
+    }
+    // Recipient verification is deferred until after `to` is extracted and validated below.
   }
 
   // ── Validate fields ──────────────────────────────────────────────────────────
@@ -199,6 +233,16 @@ export default async function handler(
   ) {
     respond(res, 400, { error: 'Missing or invalid html body' }, req);
     return;
+  }
+
+  // ── booking-confirmation: verify recipient == authenticated user ──────────────
+  // idToken is guaranteed non-null here (checked in the auth block above).
+  if (type === 'booking-confirmation') {
+    const ok = await verifyRecipientIsCallerEmail(idToken!, String(to)).catch(() => false);
+    if (!ok) {
+      respond(res, 403, { error: 'Recipient email must match the authenticated user' }, req);
+      return;
+    }
   }
 
   // ── Check env ────────────────────────────────────────────────────────────────

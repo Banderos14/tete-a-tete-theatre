@@ -245,6 +245,8 @@ export function BookingModal({ show, onClose }: Props) {
       await createBooking(bookingPayload);
 
       // Не блокируем — бронь уже сохранена, провал email её не затронет.
+      // Передаём ID token: сервер проверит, что получатель совпадает с email текущего пользователя.
+      const idToken = await user.getIdToken().catch(() => undefined);
       sendBookingConfirmationEmail({
         userEmail,
         userName,
@@ -264,7 +266,7 @@ export function BookingModal({ show, onClose }: Props) {
           loyaltyDiscountApplied: true,
           loyaltyDiscountAmount:  discountAmount,
         } : {}),
-      }).catch(() => {/* email failure must never affect a saved booking */});
+      }, idToken).catch(() => {/* email failure must never affect a saved booking */});
 
       setTicketCode(code);
       setSavedAmount(totalAmount);
