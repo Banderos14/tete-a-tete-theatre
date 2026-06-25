@@ -57,51 +57,11 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
 
       // ── Create ─────────────────────────────────────────────────────────────
-      // User can create a booking for themselves, with strictly constrained
-      // initial field values.  No privileged fields can be set on create.
-      allow create: if isSignedIn()
-        && request.resource.data.userId == request.auth.uid
-
-        // Initial booking status must always be 'pending'.
-        // 'confirmed', 'attended', 'cancelled' are admin-only transitions.
-        && request.resource.data.status == 'pending'
-
-        // paymentStatus can only be 'not_paid' (on_site) or 'awaiting_transfer'
-        // (bank_transfer).  'paid' and 'expired' are admin/system transitions.
-        && request.resource.data.paymentStatus in ['not_paid', 'awaiting_transfer']
-
-        // paidAt must never be present on creation — it is set by admin only.
-        && !('paidAt' in request.resource.data)
-
-        // paymentExpiresAt rules:
-        //   bank_transfer → must be present, must be a future timestamp.
-        //   on_site        → must NOT be present.
-        && (
-          request.resource.data.paymentMethod == 'bank_transfer'
-          ? (
-              'paymentExpiresAt' in request.resource.data
-              && request.resource.data.paymentExpiresAt is timestamp
-              && request.resource.data.paymentExpiresAt > request.time
-            )
-          : !('paymentExpiresAt' in request.resource.data)
-        )
-
-        // Admin-only timestamp fields must never be set by the client.
-        && !('confirmedAt'  in request.resource.data)
-        && !('attendedAt'   in request.resource.data)
-
-        // Price / ticket-count sanity.
-        // Min: 1 student ticket at 50 % loyalty discount = 10 € × 0.5 = 5 €.
-        // Max: 10 premium tickets = 30 € × 10 = 300 €.
-        // Prevents totalAmount: 0 / 1 / 8 attacks from the browser DevTools.
-        && request.resource.data.totalAmount is number
-        && request.resource.data.totalAmount >= 5
-        && request.resource.data.totalAmount <= 300
-
-        // Ticket count must be a positive integer within a reasonable range.
-        && request.resource.data.ticketsCount is int
-        && request.resource.data.ticketsCount >= 1
-        && request.resource.data.ticketsCount <= 10;
+      // Direct client writes are disabled. Bookings are created exclusively
+      // via /api/create-booking (Vercel serverless function) using the Firebase
+      // Admin SDK, which bypasses these rules. This prevents any client-side
+      // price manipulation (e.g. totalAmount: 0 / 8 via DevTools or curl).
+      allow create: if false;
 
       // ── Update (user — expiry only) ────────────────────────────────────────
       // A normal user may expire ONLY their own booking, ONLY when

@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
-import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
-import { createBooking, subscribeToUserBookings, subscribeToShowBookedSeats } from '../../../services/bookingService';
-import { generateTicketCode } from '../../../services/ticketService';
+import { createBookingViaApi, subscribeToUserBookings, subscribeToShowBookedSeats } from '../../../services/bookingService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
 import { formatPhone, isValidPhone } from '../../../utils/phone';
@@ -13,10 +11,9 @@ import { THEATRE_CAPACITY } from '../../../config/theatre';
 import {
   hasAvailableLoyaltyReward,
   calculateLoyaltyDiscount,
-  getUserAttendedCount,
 } from '../../../services/loyaltyService';
 import type { Show, TicketType } from '../../../types';
-import type { Booking, PaymentMethod, BookingStatus, PaymentStatus } from '../../../types/booking';
+import type { Booking, PaymentMethod } from '../../../types/booking';
 import { BookingFormStep } from './BookingFormStep';
 import { BookingSuccessStep } from './BookingSuccessStep';
 import styles from './BookingModal.module.scss';
@@ -71,10 +68,6 @@ export function BookingModal({ show, onClose }: Props) {
     () => hasAvailableLoyaltyReward(userBookings),
     [userBookings],
   );
-  const attendedCount = useMemo(
-    () => getUserAttendedCount(userBookings),
-    [userBookings],
-  );
   const discountAmount = loyaltyAvailable ? calculateLoyaltyDiscount(baseAmount) : 0;
   const totalAmount    = baseAmount - discountAmount;
 
@@ -111,9 +104,9 @@ export function BookingModal({ show, onClose }: Props) {
   }, [user, step]);
 
   useEffect(() => {
-    // Подставляем телефон из профиля, если он сохранён
+    // Подставляем телефон из профиля, форматируя на случай если хранился без пробелов
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (userProfile?.phone) setPhone(userProfile.phone);
+    if (userProfile?.phone) setPhone(formatPhone(userProfile.phone));
   }, [userProfile]);
 
   useEffect(() => {
@@ -195,81 +188,47 @@ export function BookingModal({ show, onClose }: Props) {
 
     setSubmitLoading(true); setSubmitError(''); setPhoneError('');
     try {
-      const code      = generateTicketCode();
-      const userName  = user.displayName ?? userProfile?.displayName ?? '';
-      const userEmail = user.email ?? userProfile?.email ?? '';
-      const showDate  = `${show.day} ${show.month} ${show.year}`;
+      // idToken нужен до вызова API — если получить не удаётся, прерываем бронирование.
+      const idToken = await user.getIdToken();
 
-      const isBankTransfer   = payment === 'bank_transfer';
-      const paymentExpiresAt = isBankTransfer
-        ? Timestamp.fromDate(new Date(Date.now() + PAYMENT_CONFIG.paymentExpiryHours * 60 * 60 * 1000))
-        : undefined;
-      const paymentReference = isBankTransfer
-        ? `${PAYMENT_CONFIG.paymentReferencePrefix}-${code}`
-        : undefined;
-
-      const priceInfo = loyaltyAvailable
-        ? `${activeTicket.label} · ${activeTicket.price}€ × ${tickets} = ${baseAmount}€, скидка 50% = ${totalAmount}€`
-        : `${activeTicket.label} · ${activeTicket.price}€ × ${tickets} = ${totalAmount}€`;
-
-      const bookingPayload = {
+      // Сервер сам считает totalAmount, status, paymentStatus, ticketCode —
+      // любые значения этих полей из клиента игнорируются.
+      const result = await createBookingViaApi({
         showId:        show.id,
-        showTitle:     show.title,
-        showDate,
-        showTime:      show.time,
-        userId:        user.uid,
-        userName,
-        userEmail,
-        userPhone:     phone,
-        ticketsCount:  tickets,
         ticketType:    activeTicket.id,
-        priceInfo,
-        totalAmount,
-        ticketCode:    code,
-        status:        'pending' as BookingStatus,
+        ticketsCount:  tickets,
         paymentMethod: payment,
-        paymentStatus: (isBankTransfer ? 'awaiting_transfer' : 'not_paid') as PaymentStatus,
         comment,
+        phone,
         lang,
-        ...(isBankTransfer ? { paymentAccountId: PAYMENT_CONFIG.paymentAccounts[0].id } : {}),
-        ...(paymentReference ? { paymentReference } : {}),
-        ...(paymentExpiresAt ? { paymentExpiresAt } : {}),
-        ...(loyaltyAvailable ? {
-          originalAmount:                  baseAmount,
-          loyaltyDiscountApplied:          true,
-          loyaltyDiscountAmount:           discountAmount,
-          loyaltyRewardUsedFromVisitCount: attendedCount,
-        } : {}),
-      };
-
-      await createBooking(bookingPayload);
+      }, idToken);
 
       // Не блокируем — бронь уже сохранена, провал email её не затронет.
-      // Передаём ID token: сервер проверит, что получатель совпадает с email текущего пользователя.
-      const idToken = await user.getIdToken().catch(() => undefined);
+      // Сервер проверит, что получатель совпадает с email текущего пользователя.
+      const userName = user.displayName ?? userProfile?.displayName ?? '';
       sendBookingConfirmationEmail({
-        userEmail,
+        userEmail:        userEmail,
         userName,
         showTitle:        show.title,
         showTitleFR:      show.titleFR,
-        showDate,
-        showTime:         show.time,
+        showDate:         result.showDate,
+        showTime:         result.showTime,
         ticketsCount:     tickets,
         ticketType:       activeTicket.id,
-        totalAmount,
-        ticketCode:       code,
+        totalAmount:      result.totalAmount,
+        ticketCode:       result.ticketCode,
         paymentMethod:    payment,
-        paymentAccountId: isBankTransfer ? PAYMENT_CONFIG.paymentAccounts[0].id : undefined,
+        paymentAccountId: payment === 'bank_transfer' ? PAYMENT_CONFIG.paymentAccounts[0].id : undefined,
         lang,
-        ...(loyaltyAvailable ? {
-          originalAmount:         baseAmount,
+        ...(result.loyaltyDiscountApplied ? {
+          originalAmount:         result.originalAmount,
           loyaltyDiscountApplied: true,
-          loyaltyDiscountAmount:  discountAmount,
+          loyaltyDiscountAmount:  result.loyaltyDiscountAmount,
         } : {}),
       }, idToken).catch(() => {/* email failure must never affect a saved booking */});
 
-      setTicketCode(code);
-      setSavedAmount(totalAmount);
+      setTicketCode(result.ticketCode);
+      setSavedAmount(result.totalAmount);
       setStep('success');
 
       // Синхронизируем телефон в профиль если он там пустой (не блокируем).
@@ -293,7 +252,6 @@ export function BookingModal({ show, onClose }: Props) {
         phoneRaw:        phone,
         phoneValid:      isValidPhone(phone),
         paymentMethod:   payment,
-        totalAmount,
         isAuthenticated: !!user,
         userDocPresent:  !!userProfile,
         userDocPhone:    userProfile?.phone ?? null,

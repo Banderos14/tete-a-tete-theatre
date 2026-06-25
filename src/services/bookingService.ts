@@ -13,6 +13,53 @@ import {
 import { db } from '../firebase/config';
 import type { Booking, NewBooking, BookingStatus, PaymentStatus } from '../types/booking';
 
+// ── Server-side booking API ───────────────────────────────────────────────────
+
+export interface CreateBookingRequest {
+  showId:        string;
+  ticketType:    'standard' | 'student';
+  ticketsCount:  number;
+  paymentMethod: 'on_site' | 'bank_transfer';
+  comment:       string;
+  phone:         string;
+  lang:          'RU' | 'FR';
+}
+
+export interface CreateBookingResult {
+  bookingId:               string;
+  ticketCode:              string;
+  totalAmount:             number;
+  priceInfo:               string;
+  showDate:                string;
+  showTime:                string;
+  showTitle:               string;
+  showTitleFR?:            string;
+  paymentReference?:       string;
+  paymentExpiresAt?:       number;
+  originalAmount?:         number;
+  loyaltyDiscountApplied?: boolean;
+  loyaltyDiscountAmount?:  number;
+}
+
+export async function createBookingViaApi(
+  request: CreateBookingRequest,
+  idToken: string,
+): Promise<CreateBookingResult> {
+  const resp = await fetch('/api/create-booking', {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(request),
+  });
+  const data = await resp.json() as Record<string, unknown>;
+  if (!resp.ok) {
+    throw new Error(typeof data['error'] === 'string' ? data['error'] : `HTTP ${resp.status}`);
+  }
+  return data as unknown as CreateBookingResult;
+}
+
 function getTimestampMs(ts: unknown): number {
   if (!ts) return 0;
   const t = ts as { toDate?: () => Date; seconds?: number };

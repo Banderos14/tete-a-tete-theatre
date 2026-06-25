@@ -1,28 +1,33 @@
 // Форматирование телефонов для BookingModal и ProfileDrawer.
-// Французские локальные (07…, 06…) → +33 X XX XX XX XX.
-// +33 → то же. Другие +CC → страна + двузначные группы. Голые цифры — без изменений.
+// Французские локальные (07…, 06…, 0033…) → +33 X XX XX XX XX.
+// +33… → то же. Другие +CC → страна + двузначные группы. Голые цифры — без изменений.
 export function formatPhone(raw: string): string {
   const hasPlus = raw.trimStart().startsWith('+');
   const digits  = raw.replace(/\D/g, '');
 
   if (!digits) return hasPlus ? '+' : '';
 
-  // +33…
-  if (hasPlus && digits.startsWith('33')) {
-    const local = digits.slice(2, 11); // max 9 local digits
+  // Вспомогательная функция для форматирования 9 локальных цифр в +33 X XX XX XX XX
+  function formatFrench(local: string): string {
     if (!local) return '+33';
     let out = '+33 ' + local[0];
     for (let i = 1; i < local.length; i += 2) out += ' ' + local.slice(i, i + 2);
     return out;
   }
 
-  // 07… / 06… → +33 7…
+  // 0033… — международный формат французского номера (до +33…)
+  if (digits.startsWith('0033')) {
+    return formatFrench(digits.slice(4, 13));
+  }
+
+  // +33…
+  if (hasPlus && digits.startsWith('33')) {
+    return formatFrench(digits.slice(2, 11));
+  }
+
+  // 07… / 06… / 0X… → +33 X…
   if (!hasPlus && digits.startsWith('0')) {
-    const local = digits.slice(1, 10); // strip leading 0, max 9 digits
-    if (!local) return '+33';
-    let out = '+33 ' + local[0];
-    for (let i = 1; i < local.length; i += 2) out += ' ' + local.slice(i, i + 2);
-    return out;
+    return formatFrench(digits.slice(1, 10));
   }
 
   // +CC… — международный, максимум 15 цифр (E.164)

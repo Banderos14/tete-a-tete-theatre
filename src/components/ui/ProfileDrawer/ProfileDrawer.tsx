@@ -118,7 +118,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDisplayName(userProfile.displayName || user?.displayName || '');
     setBirthday(userProfile.birthday ?? '');
-    setPhone(userProfile.phone ?? '');
+    setPhone(formatPhone(userProfile.phone ?? ''));
     setPreferredContact(userProfile.preferredContact ?? ['whatsapp']);
     // Старый баг: Facebook access token сохранялся как socialLink — чистим.
     if ((userProfile.socialLink ?? '').startsWith('https://facebook.com/EAA')) clearBadSocialLink();
@@ -267,7 +267,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
   function handleResetForm() {
     setDisplayName(userProfile?.displayName || user?.displayName || '');
     setBirthday(userProfile?.birthday ?? '');
-    setPhone(userProfile?.phone ?? '');
+    setPhone(formatPhone(userProfile?.phone ?? ''));
     setPreferredContact(userProfile?.preferredContact ?? ['whatsapp']);
     setInstagramUsername(userProfile ? resolveInstagramUsername(userProfile) : '');
     setNotify(userProfile?.notifications ?? true);
@@ -655,6 +655,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
                         inputMode="tel"
                         value={phone}
                         onChange={e => { setPhone(formatPhone(e.target.value)); markDirty(); }}
+                        onPaste={e => { e.preventDefault(); setPhone(formatPhone(e.clipboardData.getData('text'))); markDirty(); }}
                         placeholder="+33 6 00 00 00 00"
                         autoComplete="tel"
                         className={`${styles.personalInput} ${errors.phone ? styles.personalInputError : ''} ${pulsePhone && !errors.phone ? styles.fieldPulse : ''}`}
@@ -733,6 +734,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
                     inputMode="tel"
                     value={phone}
                     onChange={e => { setPhone(formatPhone(e.target.value)); markDirty(); }}
+                    onPaste={e => { e.preventDefault(); setPhone(formatPhone(e.clipboardData.getData('text'))); markDirty(); }}
                     placeholder="+33 6 00 00 00 00"
                     autoComplete="tel"
                     className={`${errors.phone ? styles.inputError : ''} ${pulsePhone && !errors.phone ? styles.fieldPulse : ''}`}

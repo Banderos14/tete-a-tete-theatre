@@ -1,9 +1,33 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+
+// Moves the Vite-injected <link rel="stylesheet"> to appear before
+// the main <script type="module"> so the browser's preload scanner
+// discovers the CSS bundle earlier and downloads it in parallel with JS.
+function prioritizeCssPlugin(): Plugin {
+  return {
+    name: 'prioritize-css',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html: string): string {
+        let cssTag = '';
+        const withoutCss = html.replace(
+          /\n?[ \t]*<link rel="stylesheet" crossorigin href="\/assets\/[^"]+\.css">/,
+          (m) => { cssTag = m.trim(); return ''; },
+        );
+        if (!cssTag) return html;
+        return withoutCss.replace(
+          '<script type="module" crossorigin',
+          `${cssTag}\n    <script type="module" crossorigin`,
+        );
+      },
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), prioritizeCssPlugin()],
   base: '/',
   server: {
     port: 5174,
