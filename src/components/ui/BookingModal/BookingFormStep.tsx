@@ -195,7 +195,9 @@ export function BookingFormStep({
           <label className={styles.sectionLabel} htmlFor="bk-phone">{t.booking.phone}</label>
           <input id="bk-phone" className={styles.input} type="tel" inputMode="tel"
             autoComplete="tel"
-            value={phone} onChange={e => onPhoneChange(e.target.value)}
+            value={phone}
+            onChange={e => onPhoneChange(e.target.value)}
+            onPaste={e => { e.preventDefault(); onPhoneChange(e.clipboardData.getData('text')); }}
             placeholder="+33 6 00 00 00 00"
             maxLength={20}
             style={{ fontSize: '16px' }} />

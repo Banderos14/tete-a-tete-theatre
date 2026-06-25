@@ -9,6 +9,39 @@
     <link rel="preload" href="/fonts/Forum.woff2"       as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/bad-russian.woff2" as="font" type="font/woff2" crossorigin />
 
+    <!-- Critical inline CSS: registers @font-face and :root variables immediately,
+         so the page has correct colours/fonts from first paint even while the
+         main CSS bundle (index-*.css) is still downloading on a cold cache. -->
+    <style>
+      @font-face{font-family:'Bad Russian';src:url('/fonts/bad-russian.woff2') format('woff2'),url('/fonts/bad-russian.woff') format('woff');font-weight:400;font-style:normal;font-display:fallback}
+      @font-face{font-family:Forum;src:url('/fonts/Forum.woff2') format('woff2');font-weight:400;font-style:normal;font-display:fallback}
+      :root{
+        --bg:#000000;--bg-2:#14100e;--bg-3:#1c1714;
+        --fg:#f5f1ea;--fg-dim:#b8b0a4;--fg-mute:#6b6359;
+        --accent:#B80000;--accent-bright:#a01818;--accent-glow:#c8102e;
+        --line:rgba(245,241,234,.10);--line-strong:rgba(245,241,234,.22);
+        --grain-opacity:.06;
+        --font-display:"Bad Russian";
+        --font-title:"Forum",sans-serif;
+        --font-title-blocks:"Dela Gothic One",sans-serif;
+        --font-sub:"Ekaterina Velikaya Two",serif;
+        --font-display-spacing:.08em;
+        --font-body:'Inter',-apple-system,system-ui,sans-serif;
+        --font-mono:"Dela Gothic One",sans-serif;
+        --radius-xxs:4px;--radius-xs:8px;--radius-s:12px;--radius-sm:16px;
+        --radius-md:24px;--radius-lg:32px;--radius-xl:40px;
+      }
+      [data-theme=light]{
+        --bg:#f7f3ec;--bg-2:#ede6d8;--bg-3:#e2d8c6;
+        --fg:#1a1715;--fg-dim:#3d3830;--fg-mute:#7a7268;
+        --accent:#B80000;--accent-bright:#930000;--accent-glow:#d40000;
+        --line:rgba(26,23,21,.10);--line-strong:rgba(26,23,21,.22);
+        --grain-opacity:.03;
+      }
+      *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+      html,body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+    </style>
+
     <meta name="description" content="Театр ТЕТ-А-ТЕТ в Ницце. Афиша спектаклей, онлайн-бронирование билетов, новости театра и мероприятия для зрителей во Франции." />
     <link rel="canonical" href="https://www.theatre-teteatete.fr/" />
 
