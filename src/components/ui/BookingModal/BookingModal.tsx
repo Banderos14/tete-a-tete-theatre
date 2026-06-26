@@ -5,7 +5,7 @@ import { useLang } from '../../../i18n/LangContext';
 import { createBookingViaApi, subscribeToUserBookings, subscribeToShowBookedSeats } from '../../../services/bookingService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
-import { formatPhone, isValidPhone } from '../../../utils/phone';
+import { formatPhone, normalizePhone, isValidPhone } from '../../../utils/phone';
 import { PAYMENT_CONFIG } from '../../../config/payment';
 import { THEATRE_CAPACITY } from '../../../config/theatre';
 import {
@@ -199,7 +199,7 @@ export function BookingModal({ show, onClose }: Props) {
         ticketsCount:  tickets,
         paymentMethod: payment,
         comment,
-        phone,
+        phone:         normalizePhone(phone),
         lang,
       }, idToken);
 
@@ -234,7 +234,7 @@ export function BookingModal({ show, onClose }: Props) {
       // Синхронизируем телефон в профиль если он там пустой (не блокируем).
       // Бронь уже сохранена — сбой обновления профиля не должен её затронуть.
       if (phone && !userProfile?.phone) {
-        saveProfile({ phone }).catch(e => console.warn('[booking] phone sync to profile failed', e));
+        saveProfile({ phone: normalizePhone(phone) }).catch(e => console.warn('[booking] phone sync to profile failed', e));
       }
     } catch (err) {
       const fe = err as { code?: string; message?: string; stack?: string };
