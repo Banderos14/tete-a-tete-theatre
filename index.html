@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Critical font preloads — must be first resource hints to maximise download window.
-         Both fonts are used in Hero above the fold; preload prevents FOUT on first paint. -->
-    <link rel="preload" href="/fonts/Forum.woff2"       as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/bad-russian.woff2" as="font" type="font/woff2" crossorigin />
+         All three fonts are used in Hero above the fold; preload prevents FOUT on first paint.
+         Ekaterina (68 KB) is used for accentLetter and subAccent — both in the first viewport. -->
+    <link rel="preload" href="/fonts/Forum.woff2"                as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/bad-russian.woff2"          as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/ekaterinavelikayatwo.woff2" as="font" type="font/woff2" crossorigin />
 
     <!-- Critical inline CSS: registers @font-face and :root variables immediately,
          so the page has correct colours/fonts from first paint even while the
@@ -15,6 +17,7 @@
     <style>
       @font-face{font-family:'Bad Russian';src:url('/fonts/bad-russian.woff2') format('woff2'),url('/fonts/bad-russian.woff') format('woff');font-weight:400;font-style:normal;font-display:fallback}
       @font-face{font-family:Forum;src:url('/fonts/Forum.woff2') format('woff2');font-weight:400;font-style:normal;font-display:fallback}
+      @font-face{font-family:'Ekaterina Velikaya Two';src:url('/fonts/ekaterinavelikayatwo.woff2') format('woff2');font-weight:400;font-style:normal;font-display:fallback}
       :root{
         --bg:#000000;--bg-2:#14100e;--bg-3:#1c1714;
         --fg:#f5f1ea;--fg-dim:#b8b0a4;--fg-mute:#6b6359;
@@ -53,18 +56,20 @@
     <meta property="og:title"       content="Théâtre Tête-à-Tête à Nice" />
     <meta property="og:description" content="Театр в Ницце: спектакли, афиша, репертуар и онлайн-бронирование билетов." />
     <meta property="og:url" content="https://www.theatre-teteatete.fr/" />
-    <meta property="og:image"       content="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" />
+    <meta property="og:image"       content="https://www.theatre-teteatete.fr/images/about/zal-v2.webp" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card"        content="summary_large_image" />
     <meta name="twitter:title"       content="Théâtre Tête-à-Tête à Nice" />
     <meta name="twitter:description" content="Театр в Ницце: спектакли, афиша, репертуар и онлайн-бронирование билетов." />
-    <meta name="twitter:image"       content="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" />
+    <meta name="twitter:image"       content="https://www.theatre-teteatete.fr/images/about/zal-v2.webp" />
 
     <title>Théâtre Tête-à-Tête à Nice — Spectacles en russe et billetterie</title>
-    <!-- Favicon: black mark on light browser chrome, white mark on dark browser chrome (prefers-color-scheme) -->
-    <link rel="icon" type="image/png" media="(prefers-color-scheme: light)" href="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" />
-    <link rel="icon" type="image/png" media="(prefers-color-scheme: dark)" href="/images/favicon-white.png" />
+    <!-- Favicons: SVG for modern browsers, PNG fallback, Apple touch icon, manifest -->
+    <link rel="icon" type="image/svg+xml"     href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon"              href="/apple-touch-icon.png" />
+    <link rel="manifest"                      href="/site.webmanifest" />
 
     <!-- Schema.org structured data -->
     <script type="application/ld+json">
@@ -88,8 +93,8 @@
           "https://www.instagram.com/theatre_tete_a_tete/",
           "https://www.facebook.com/TheatreTeteAtete/"
         ],
-        "logo": "https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG",
-        "image": "https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG"
+        "logo": "https://www.theatre-teteatete.fr/images/favicon-white.png",
+        "image": "https://www.theatre-teteatete.fr/images/about/zal-v2.webp"
       }
     </script>
 

@@ -24,7 +24,9 @@
   src: url('/fonts/ekaterinavelikayatwo.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
-  font-display: optional;
+  // fallback: preloaded above (68 KB). Block 100ms, then swap if needed.
+  // Changed from optional — font is used above the fold in Hero (accentLetter, subAccent).
+  font-display: fallback;
 }
 
 :root {

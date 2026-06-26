@@ -7,7 +7,7 @@ import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from
 import { markEligibleBookingsAsAttended } from '../../../services/attendanceService';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Booking, BookingStatus } from '../../../types/booking';
-import { formatPhone, isCompleteFrenchPhone } from '../../../utils/phone';
+import { formatPhone, normalizePhone, isCompleteFrenchPhone } from '../../../utils/phone';
 import { extractInstagramUsername, isValidInstagramUsername, instagramProfileUrl, resolveInstagramUsername } from '../../../utils/instagram';
 import styles from './ProfileDrawer.module.scss';
 
@@ -237,7 +237,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
       return;
     }
     setSaving(true);
-    await saveProfile({ displayName, birthday, phone, preferredContact, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
+    await saveProfile({ displayName, birthday, phone: normalizePhone(phone), preferredContact, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
@@ -286,7 +286,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setSaving(true);
-    await saveProfile({ displayName, birthday, phone, preferredContact, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
+    await saveProfile({ displayName, birthday, phone: normalizePhone(phone), preferredContact, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
@@ -295,7 +295,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
 
   async function handleMobileSettingsSave() {
     setSaving(true);
-    await saveProfile({ displayName, birthday, phone, preferredContact, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
+    await saveProfile({ displayName, birthday, phone: normalizePhone(phone), preferredContact, instagramUsername: extractInstagramUsername(instagramUsername), notifications: notify });
     setSaving(false);
     setSavedMsg(true);
     setIsDirty(false);
