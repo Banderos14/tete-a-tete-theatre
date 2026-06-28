@@ -45,11 +45,13 @@ export function useScrollLock(active: boolean): void {
     body.style.left              = '0';
     body.style.right             = '0';
     body.style.width             = '100%';
-    body.style.height            = '100%';
+    // Не ограничиваем высоту: body остаётся высотой контента, что гарантирует
+    // покрытие всего вьюпорта при position:fixed + top:-scrollY.
+    // height:100% обрезало бы body до viewport-height и оставляло чёрную
+    // полосу внизу (html-фон) размером scrollY пикселей.
     body.style.overflow          = 'hidden';
     body.style.overscrollBehavior = 'none';
     html.style.overflow          = 'hidden';
-    html.style.height            = '100%';
     html.style.overscrollBehavior = 'none';
 
     // capture:true — срабатывает раньше любого обработчика элемента, даже при stopPropagation.
@@ -62,11 +64,9 @@ export function useScrollLock(active: boolean): void {
       body.style.left               = '';
       body.style.right              = '';
       body.style.width              = '';
-      body.style.height             = '';
       body.style.overflow           = '';
       body.style.overscrollBehavior = '';
       html.style.overflow           = '';
-      html.style.height             = '';
       html.style.overscrollBehavior = '';
       window.scrollTo(0, scrollY);
       document.removeEventListener('touchstart', onDocTouchStart, { capture: true });
