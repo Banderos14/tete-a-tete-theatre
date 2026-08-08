@@ -81,9 +81,9 @@
 }
 
 .activeBadge {
-  @include mixins.mono(9px, 0.18em);
+  @include mixins.mono(11px, 0.18em);
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-text);
   border: 1px solid currentColor;
   padding: 3px 7px;
   border-radius: var(--radius-xs);
@@ -92,7 +92,7 @@
 }
 
 .pastBadge {
-  @include mixins.mono(9px, 0.18em);
+  @include mixins.mono(11px, 0.18em);
   text-transform: uppercase;
   color: var(--fg-mute);
   border: 1px solid var(--line);
@@ -444,10 +444,10 @@
 
   .mobileGenre {
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--accent-text);
     margin-bottom: 3px;
   }
 

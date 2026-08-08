@@ -52,15 +52,19 @@ function LandingPage({
         onAuthOpen={onAuthOpen}
         onProfileOpen={onProfileOpen}
       />
-      <Hero />
-      <Marquee />
-      <Afisha onBook={onBook} />
-      <Marquee />
-      <Socials theme={theme} />
-      <About />
-      <Repertoire onBook={onBook} />
-      <Team />
-      <Contacts />
+      {/* <main> — единственный main-лендмарк страницы: без него скринридер
+          не может перейти сразу к содержимому мимо шапки и навигации. */}
+      <main id="main">
+        <Hero />
+        <Marquee />
+        <Afisha onBook={onBook} />
+        <Marquee />
+        <Socials theme={theme} />
+        <About />
+        <Repertoire onBook={onBook} />
+        <Team />
+        <Contacts />
+      </main>
       <Footer />
     </>
   );

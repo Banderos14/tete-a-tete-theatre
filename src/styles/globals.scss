@@ -55,7 +55,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
   .num {
     @include mixins.mono(11px, 0.26em);
-    color: var(--accent);
+    color: var(--accent-text);
     font-weight: 600;
   }
 

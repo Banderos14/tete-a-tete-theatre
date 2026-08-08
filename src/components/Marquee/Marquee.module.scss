@@ -34,8 +34,10 @@
 
   @media (max-width: 600px) {
     --base: 10s;
-    font-size: 9px;
-    letter-spacing: 0.2em;
+    // Было 9px. Бегущая строка несёт даты премьер — её читают на ходу,
+    // и 9px с трекингом 0.2em на телефоне уже за гранью читаемости.
+    font-size: 11px;
+    letter-spacing: 0.18em;
     padding: 11px 0;
   }
 }

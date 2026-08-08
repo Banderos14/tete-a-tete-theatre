@@ -86,6 +86,10 @@
     transition: color 0.25s ease;
     overflow-wrap: anywhere;
     word-break: break-word;
+    // Ссылка «позвонить» была высотой 17px — ниже минимума 24×24 (WCAG 2.2, 2.5.8).
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
 
     @media (hover: hover) and (pointer: fine) {
       &:hover { color: var(--accent); }
@@ -113,6 +117,11 @@
   overflow-wrap: anywhere;
   word-break: break-word;
   transition: color 0.25s ease;
+  // Высота строки была 22px — ниже минимума 24×24 (WCAG 2.2, 2.5.8).
+  // inline-flex + min-height поднимают хит-бокс, не меняя кегль.
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 
   @media (hover: hover) and (pointer: fine) {
     &:hover { color: #f3e7dc; }
@@ -158,27 +167,37 @@
 
   @include mixins.small {
     padding: 10px 18px;
-    font-size: 9px;
+    // Было 9px — подпись действия на кнопке не должна быть мельче 11px.
+    font-size: 11px;
   }
 }
 
 .socials {
   display: flex;
-  gap: 15px;
+  gap: 4px;
   flex-wrap: wrap;
+  // Иконки получили собственный хит-бокс 40×40 — внешний gap уменьшен,
+  // чтобы визуальный ритм ряда остался прежним (~15px между глифами).
+  margin-left: -10px;
 
   @include mixins.mobile {
-    gap: 12px;
+    gap: 2px;
   }
 
   @include mixins.small {
     justify-content: center;
+    margin-left: 0;
   }
 }
 
 .socialIcon {
   display: inline-flex;
   align-items: center;
+  // Хит-бокс 40×40: было 20×20 — вдвое меньше минимума WCAG 2.2 (2.5.8 → 24×24).
+  // Глиф остаётся 20px, растёт только область нажатия.
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   color: #9c938a;
   transition: color 0.2s ease;
 

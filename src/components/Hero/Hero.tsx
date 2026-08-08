@@ -42,7 +42,7 @@ export function Hero() {
         </div>
 
         <div className={styles.headline}>
-          <h1 className={`${styles.title} display`}>
+          <h1 className={`${styles.title} display`} aria-label={t.hero.titleLabel}>
             <span className={styles.titleBefore}>{t.hero.title.before}</span>
             <span className={styles.accentGroup}>
               <span className={styles.accentLetter}>{t.hero.title.letter}</span>

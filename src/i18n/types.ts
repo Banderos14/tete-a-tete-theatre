@@ -192,6 +192,9 @@ export interface T {
   hero: {
     eyebrow: string;
     title: { before: string; letter: string; after: string };
+    // Доступное имя h1: визуально заголовок разбит на три span-а,
+    // и скринридер читает их слитно («тетатет»).
+    titleLabel: string;
     sub: { accent: string; rest: string };
     ctaAfisha: string;
     ctaRep: string;

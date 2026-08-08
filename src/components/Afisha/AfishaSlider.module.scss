@@ -76,6 +76,16 @@
   overflow: hidden;
   cursor: pointer;
   background: var(--bg);
+  border-radius: var(--radius-s);
+
+  // Зазор между карточками сделан бордером цвета фона, а не gap/margin.
+  // Причина: applyOffset() считает период цикла как track.scrollWidth / copies.
+  // Любой gap добавляет (N·C − 1) промежутков на C копий, период перестаёт быть
+  // кратным — бесконечная лента копит ошибку gap/C за оборот и дёргается.
+  // border-inline входит в width (box-sizing: border-box), период не меняется,
+  // а абсолютно спозиционированные .poster/.overlay/.body прижаты к padding-box,
+  // то есть визуально отступают внутрь ровно на ширину бордера.
+  border-inline: 8px solid var(--bg);
   // Prevent browser from drag-opening images
   -webkit-user-drag: none;
   transition:
@@ -87,7 +97,6 @@
       transform: scale(1.05) translateY(-4px);
       z-index: 10;
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
-      border-radius: var(--radius-s);
 
       .poster { opacity: 0.75; transform: scale(1.04); }
       .overlay { opacity: 0.85; }
@@ -98,6 +107,7 @@
   @include mixins.mobile {
     height: clamp(320px, 56vh, 420px);
     transition: none;
+    border-inline-width: 6px;
   }
 
   // Active (tap) feedback on touch devices — mirrors desktop hover palette reveal
@@ -162,11 +172,14 @@
   align-items: flex-start;
 }
 
+// Мета-подписи карточки. Размеры были 8–9px при альфе 0.28–0.40 —
+// это 2.27–3.66:1 по WCAG, ниже порога AA (4.5:1) и ниже читаемого кегля.
+// 11px + альфа 0.62 дают 7.8:1 и сохраняют «тихий» характер подписи.
 .counter {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.22em;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.62);
   text-transform: uppercase;
 }
 
@@ -174,8 +187,8 @@
   background: var(--accent);
   color: #fff;
   font-family: var(--font-mono);
-  font-size: 8px;
-  padding: 3px 8px;
+  font-size: 10px;
+  padding: 4px 9px;
   letter-spacing: 0.08em;
   border-radius: 4px;
 }
@@ -200,9 +213,9 @@
 
 .showAuthor {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 0.14em;
-  color: rgba(255, 255, 255, 0.40);
+  color: rgba(255, 255, 255, 0.62);
   text-transform: uppercase;
 }
 
@@ -236,17 +249,17 @@
 
 .month {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 0.16em;
-  color: rgba(255, 255, 255, 0.40);
+  color: rgba(255, 255, 255, 0.72);
   text-transform: uppercase;
 }
 
 .time {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .openHint {
@@ -265,13 +278,24 @@
 
 .hintText {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   padding: 7px 10px;
   border-radius: var(--radius-xs);
+
+  // На узких экранах карточка ~237px, из них под контент остаётся 193px,
+  // а нижний ряд (дата 73px + подсказка 150px + зазор) требует 234px —
+  // стрелка вылезала за карточку. Подсказка схлопывается до одной стрелки:
+  // карточка целиком кликабельна и несёт aria-label с названием спектакля,
+  // так что действие остаётся считываемым и для мыши, и для скринридера.
+  // 360px — граница, ниже которой ряд перестаёт помещаться. На 375px
+  // (iPhone SE 2/3, 13 mini) подпись ещё влезает и остаётся видимой.
+  @media (max-width: 360px) {
+    display: none;
+  }
 }
 
 .hintArrow {

@@ -15,6 +15,7 @@ export const RU: T = {
   hero: {
     eyebrow:     'Сезон 2026 / 2027 · Nice, France',
     title:       { before: 'тет', letter: 'а', after: 'тет' },
+    titleLabel:  'Тет-а-Тет — русскоязычный театр в Ницце',
     sub:         { accent: 'Русскоязычный', rest: 'театр' },
     ctaAfisha:   'Смотреть афишу',
     ctaRep:      'Репертуар',
@@ -45,7 +46,7 @@ export const RU: T = {
     tileLabels: ['Закулисье', 'Премьера', 'Техническая часть', 'Сцена', 'Репетиция', 'Сцена'],
   },
   about: {
-    num:       '03 / About',
+    num:       '03 / О театре',
     title:     'О',
     titleIt:   'театре',
     meta:      'Основан в 2018\nNICE · FRANCE',
@@ -79,7 +80,7 @@ export const RU: T = {
     roles: {},
   },
   contacts: {
-    num:          '07 / Контакты',
+    num:          '06 / Контакты',
     title:        'Найти',
     titleIt:      'театр',
     metaLine1:    'ПТ–СБ · 14:00–19:00',

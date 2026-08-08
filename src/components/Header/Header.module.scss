@@ -446,6 +446,8 @@
   gap: 10px;
   cursor: pointer;
   flex-shrink: 0;
+  // Хит-бокс был 96×22 — по высоте ниже минимума 24×24 (WCAG 2.2, 2.5.8).
+  min-height: 44px;
 }
 
 .menuThemeLabel {
@@ -509,7 +511,7 @@
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-text);
   background: transparent;
   border: 1px solid var(--accent);
   border-radius: var(--radius-s);

@@ -15,6 +15,7 @@ export const FR: T = {
   hero: {
     eyebrow:     'Saison 2026 / 2027 · Nice, Côte d\'Azur',
     title:       { before: 'tête', letter: 'à', after: 'tête' },
+    titleLabel:  'Tête-à-Tête — théâtre russophone à Nice',
     sub:         { accent: 'Théâtre', rest: 'russophone' },
     ctaAfisha:   'Voir l\'affiche',
     ctaRep:      'Répertoire',
@@ -45,7 +46,7 @@ export const FR: T = {
     tileLabels: ['Coulisses', 'Première', 'Partie technique', 'Scène', 'Répétition', 'Scène'],
   },
   about: {
-    num:       '03 / About',
+    num:       '03 / À propos',
     title:     'À propos',
     titleIt:   'du théâtre',
     meta:      'Fondé en 2018\nNICE · FRANCE',
@@ -88,7 +89,7 @@ export const FR: T = {
     },
   },
   contacts: {
-    num:          '07 / Contacts',
+    num:          '06 / Contacts',
     title:        'Trouver',
     titleIt:      'le théâtre',
     metaLine1:    'VE–SA · 14:00–19:00',

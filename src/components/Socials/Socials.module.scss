@@ -196,8 +196,8 @@
   position: absolute;
   bottom: 10px;
   left: 12px;
-  @include mixins.mono(9px, 0.18em);
-  color: rgba(245, 241, 234, 0.75);
+  @include mixins.mono(11px, 0.18em);
+  color: rgba(245, 241, 234, 0.86);
   text-transform: uppercase;
   z-index: 2;
 }
