@@ -5,6 +5,7 @@ import { translations } from './i18n/translations';
 import type { Lang } from './i18n/translations';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import type { Show } from './types';
+import { ErrorBoundary, RouteErrorScreen } from './components/ui/ErrorBoundary';
 
 import { CurtainIntro }  from './components/CurtainIntro';
 import { Header }        from './components/Header';
@@ -93,6 +94,12 @@ export default function App() {
   const [authOpen,    setAuthOpen]    = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [bookingShow, setBookingShow] = useState<Show | null>(null);
+  // Модалки монтируются только после первого открытия: до этого их чанки
+  // (а вместе с ними и Firebase SDK) не нужны для показа лендинга. Флаг «липкий»,
+  // чтобы не ломать анимацию закрытия — она играет на уже смонтированном узле.
+  const [modalsMounted, setModalsMounted] = useState(false);
+  // Производный стейт по время рендера — тот же паттерн, что в ShowModal.
+  if (!modalsMounted && (authOpen || profileOpen || bookingShow !== null)) setModalsMounted(true);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -120,9 +127,11 @@ export default function App() {
     const schedule = (window as typeof window & { requestIdleCallback?: (fn: () => void) => void })
       .requestIdleCallback ?? ((fn: () => void) => setTimeout(fn, 400));
     schedule(() => {
-      import('./components/ui/AuthModal');
-      import('./components/ui/ProfileDrawer');
-      import('./components/ui/BookingModal');
+      // Промахи прогрева не должны становиться unhandled rejection: чанк всё равно
+      // будет запрошен повторно при реальном открытии модалки.
+      void import('./components/ui/AuthModal').catch(() => {});
+      void import('./components/ui/ProfileDrawer').catch(() => {});
+      void import('./components/ui/BookingModal').catch(() => {});
     });
   }, [introState]);
 
@@ -169,20 +178,40 @@ export default function App() {
               />
             }
           />
-          <Route path="/admin" element={<Suspense fallback={null}><AdminPage /></Suspense>} />
-          <Route path="/admin/checkin" element={<Suspense fallback={null}><TicketCheckPage /></Suspense>} />
+          <Route path="/admin" element={
+            <ErrorBoundary label="AdminPage" fallback={<RouteErrorScreen />}>
+              <Suspense fallback={null}><AdminPage /></Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="/admin/checkin" element={
+            <ErrorBoundary label="TicketCheckPage" fallback={<RouteErrorScreen />}>
+              <Suspense fallback={null}><TicketCheckPage /></Suspense>
+            </ErrorBoundary>
+          } />
         </Routes>
 
-        {/* Глобальные модалки — ленивые, вне Routes чтобы не пересоздаваться при навигации */}
-        <Suspense fallback={null}>
-          <AuthModal     open={authOpen}      onClose={() => setAuthOpen(false)} />
-        </Suspense>
-        <Suspense fallback={null}>
-          <ProfileDrawer open={profileOpen}   onClose={() => setProfileOpen(false)} />
-        </Suspense>
-        <Suspense fallback={null}>
-          <BookingModal  show={bookingShow}   onClose={() => setBookingShow(null)} />
-        </Suspense>
+        {/* Глобальные модалки — ленивые, вне Routes чтобы не пересоздаваться при навигации.
+            Каждая под своей границей ошибок: сбой загрузки чанка модалки не должен
+            уносить весь лендинг. */}
+        {modalsMounted && (
+          <>
+            <ErrorBoundary label="AuthModal">
+              <Suspense fallback={null}>
+                <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+              </Suspense>
+            </ErrorBoundary>
+            <ErrorBoundary label="ProfileDrawer">
+              <Suspense fallback={null}>
+                <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
+              </Suspense>
+            </ErrorBoundary>
+            <ErrorBoundary label="BookingModal">
+              <Suspense fallback={null}>
+                <BookingModal show={bookingShow} onClose={() => setBookingShow(null)} />
+              </Suspense>
+            </ErrorBoundary>
+          </>
+        )}
 
       </LangContext.Provider>
     </AuthProvider>

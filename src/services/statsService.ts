@@ -22,6 +22,9 @@ export function subscribeToAudienceCount(cb: (count: number) => void): () => voi
       },
       () => { /* silent — UI shows hardcoded fallback */ },
     );
+  }).catch(() => {
+    // Firebase не загрузился — счётчик некритичен, UI покажет запасное значение.
+    // Без catch это остаётся unhandled rejection в консоли каждого посетителя.
   });
 
   return () => { unsubscribe?.(); };

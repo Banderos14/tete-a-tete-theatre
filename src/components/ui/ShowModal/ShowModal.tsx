@@ -3,7 +3,7 @@ import { useScrollLock } from '../../../hooks/useScrollLock';
 import { createPortal } from 'react-dom';
 import { useLang } from '../../../i18n/LangContext';
 import type { Show, ShowPhoto } from '../../../types';
-import { fetchShowAvailability } from '../../../services/bookingService';
+import { fetchShowAvailability } from '../../../services/availabilityService';
 import styles from './ShowModal.module.scss';
 
 interface Props {

@@ -142,13 +142,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
         setUser(firebaseUser);
         if (firebaseUser) {
-          const profile = await ensureUserDocument(firebaseUser);
-          if (mounted) setUserProfile(profile);
+          try {
+            const profile = await ensureUserDocument(firebaseUser);
+            if (mounted) setUserProfile(profile);
+          } catch (e) {
+            // Профиль не загрузился — остаёмся без него, но не подвешиваем приложение.
+            console.error('[auth] failed to load user profile:', (e as Error)?.name);
+            if (mounted) setUserProfile(null);
+          }
         } else {
           setUserProfile(null);
         }
         if (mounted) setLoading(false);
       });
+    }).catch((e: unknown) => {
+      // Firebase не загрузился (обрыв сети, блокировщик, устаревший чанк).
+      // Без этого catch loading навсегда остаётся true и страницы админки
+      // и проверки билетов показывают вечный спиннер.
+      console.error('[auth] Firebase failed to load:', (e as Error)?.name ?? 'unknown');
+      if (mounted) { setUser(null); setUserProfile(null); setLoading(false); }
     });
 
     return () => {

@@ -206,26 +206,6 @@ function snapshotToBookings(snapshot: Awaited<ReturnType<typeof getDocs>>): Book
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as object) } as Booking));
 }
 
-// Остаток мест по спектаклю.
-//
-// Считать это на клиенте невозможно: правила Firestore не разрешают читать чужие
-// брони, поэтому прежняя realtime-подписка всегда падала с permission-denied и
-// в интерфейсе висело постоянное «Свободно мест: 100». Теперь число приходит с
-// сервера, а null означает «остаток неизвестен» — тогда индикатор не показывается,
-// вместо того чтобы показывать выдуманное значение.
-export async function fetchShowAvailability(showId: string): Promise<number | null> {
-  try {
-    const resp = await fetch('/api/show-availability', { headers: { Accept: 'application/json' } });
-    if (!resp.ok) return null;
-    const data = await resp.json() as { shows?: Record<string, { remaining?: number }> };
-    const remaining = data.shows?.[showId]?.remaining;
-    return typeof remaining === 'number' ? remaining : null;
-  } catch {
-    // Локальный `npm run dev` не поднимает /api/* — это штатная ситуация.
-    return null;
-  }
-}
-
 // Отмена по инициативе пользователя.
 //
 // Идёт через /api/cancel-booking, а не напрямую в Firestore: правила безопасности
