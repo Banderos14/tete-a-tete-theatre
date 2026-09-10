@@ -26,3 +26,18 @@ describe('маршруты', () => {
     }
   });
 });
+
+describe('версия роутера закрывает известные advisories', () => {
+  it('react-router-dom не ниже 7.18.2', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')) as {
+      dependencies: Record<string, string>;
+    };
+    const range = pkg.dependencies['react-router-dom']!;
+    const [major, minor, patch] = range.replace(/^[^\d]*/, '').split('.').map(Number);
+    expect(major).toBe(7);
+    // Диапазон уязвимостей заканчивается на 7.18.2 (CSRF в RSC-режиме).
+    expect(minor! > 18 || (minor === 18 && patch! >= 2)).toBe(true);
+  });
+});
