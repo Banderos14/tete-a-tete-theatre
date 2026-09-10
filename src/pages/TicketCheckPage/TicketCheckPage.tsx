@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { convertPdfFirstPageToImageFile, isPdfFile, scanQrFromImageFile } from '../../services/pdfScanService';
 import { useAuth } from '../../context/AuthContext';
 import { checkinTicket, type CheckinBooking } from '../../services/checkinService';
 import { parseTicketCodeFromScan } from '../../utils/parseTicketCode';
+import { mapAuthError, isPopupClosedError } from '../../utils/authErrors';
+import { RU } from '../../i18n';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import styles from './TicketCheckPage.module.scss';
 
@@ -13,7 +15,7 @@ type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'error';
 export function TicketCheckPage() {
   const navigate       = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, userProfile, loading } = useAuth();
+  const { user, userProfile, loading, signInWithEmail, signInWithGoogle } = useAuth();
   const isAdmin = userProfile?.role === 'admin';
 
   const ticketFromUrl = searchParams.get('ticket') ?? '';
@@ -26,17 +28,25 @@ export function TicketCheckPage() {
   const [operating,    setOperating]    = useState(false);
   const [confirmType,  setConfirmType]  = useState<ConfirmType>(null);
   const [cameraError,  setCameraError]  = useState('');
+  // Вход прямо на странице проверки — чтобы не терять отсканированный код.
+  const [authEmail,    setAuthEmail]    = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError,    setAuthError]    = useState('');
+  const [authLoading,  setAuthLoading]  = useState(false);
   const scannerRef    = useRef<Html5Qrcode | null>(null);
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const urlLookupDone = useRef(false);
 
   useEffect(() => {
     if (loading) return;
-    if (!isAdmin) {
+    // Если в адресе есть код билета — НЕ уводим со страницы. Сотрудник на входе
+    // отсканировал QR; выбросить его на главную значит потерять код и заставить
+    // сканировать заново. Вместо редиректа показываем вход прямо здесь.
+    if (!isAdmin && !ticketFromUrl) {
       const t = setTimeout(() => navigate('/'), 1500);
       return () => clearTimeout(t);
     }
-  }, [loading, isAdmin, navigate]);
+  }, [loading, isAdmin, navigate, ticketFromUrl]);
 
   // Защищает от двойного запроса при StrictMode.
   useEffect(() => {
@@ -86,6 +96,26 @@ export function TicketCheckPage() {
     const idToken = await user?.getIdToken();
     if (!idToken) throw new Error('no-token');
     return checkinTicket(code, action, idToken);
+  }
+
+  async function handleSignIn(e: FormEvent) {
+    e.preventDefault();
+    setAuthLoading(true); setAuthError('');
+    try {
+      await signInWithEmail(authEmail, authPassword);
+    } catch (err) {
+      setAuthError(mapAuthError(err, RU.auth.errors));
+    } finally { setAuthLoading(false); }
+  }
+
+  async function handleGoogleSignIn() {
+    setAuthLoading(true); setAuthError('');
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      if (isPopupClosedError(err)) { setAuthLoading(false); return; }
+      setAuthError(mapAuthError(err, RU.auth.errors));
+    } finally { setAuthLoading(false); }
   }
 
   function startScanning() {
@@ -267,13 +297,55 @@ export function TicketCheckPage() {
   }
 
   if (!isAdmin) {
+    // Кода билета в адресе нет — обычный отказ, эффект выше уводит на главную.
+    if (!ticketFromUrl) {
+      return (
+        <div className={styles.centered}>
+          <p className={styles.accessDenied}>Доступ запрещён</p>
+        </div>
+      );
+    }
+
+    // Код есть: он не должен потеряться. Показываем вход и подтверждаем,
+    // что билет распознан — после успешного входа проверка продолжится сама.
+    const scannedCode = parseTicketCodeFromScan(ticketFromUrl) ?? ticketFromUrl;
+
     return (
       <div className={styles.centered}>
         <p className={styles.accessDenied}>
-          {ticketFromUrl
-            ? 'Для проверки билетов войдите как администратор'
-            : 'Доступ запрещён'}
+          {user
+            ? 'У этой учётной записи нет прав на проверку билетов'
+            : 'Войдите как администратор, чтобы проверить билет'}
         </p>
+
+        <p className={styles.scanHint}>
+          Билет <span className={styles.mono}>{scannedCode}</span> распознан —
+          после входа проверка продолжится автоматически.
+        </p>
+
+        {!user && (
+          <form onSubmit={handleSignIn} className={styles.authForm}>
+            <input
+              className={styles.authInput}
+              type="email" value={authEmail} placeholder="E-mail"
+              aria-label="E-mail" autoComplete="email" required disabled={authLoading}
+              onChange={e => setAuthEmail(e.target.value)}
+            />
+            <input
+              className={styles.authInput}
+              type="password" value={authPassword} placeholder="Пароль"
+              aria-label="Пароль" autoComplete="current-password" required disabled={authLoading}
+              onChange={e => setAuthPassword(e.target.value)}
+            />
+            {authError && <p className={styles.authError}>{authError}</p>}
+            <button type="submit" className={styles.scanStartBtn} disabled={authLoading}>
+              {authLoading ? '…' : 'Войти'}
+            </button>
+            <button type="button" className={styles.secondaryBtn} onClick={handleGoogleSignIn} disabled={authLoading}>
+              Войти через Google
+            </button>
+          </form>
+        )}
       </div>
     );
   }

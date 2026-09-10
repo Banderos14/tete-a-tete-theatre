@@ -91,3 +91,28 @@ describe('страница проверки больше не пишет в Fire
     expect(page).toContain('if (!booking || operating) return;');
   });
 });
+
+describe('TTT-16: код билета не теряется при отсутствии admin-сессии', () => {
+  it('редиректа на главную нет, если в адресе есть ticket', () => {
+    expect(page).toContain('if (!isAdmin && !ticketFromUrl)');
+  });
+
+  it('на странице показывается вход, а не только отказ', () => {
+    expect(page).toContain('handleSignIn');
+    expect(page).toContain('handleGoogleSignIn');
+    expect(page).toContain('signInWithEmail');
+  });
+
+  it('отсканированный код показывается пользователю', () => {
+    expect(page).toContain('scannedCode');
+    expect(page).toContain('распознан');
+  });
+
+  it('после входа проверка продолжается сама — эффект зависит от isAdmin', () => {
+    expect(page).toMatch(/\}, \[loading, isAdmin, ticketFromUrl\]\)/);
+  });
+
+  it('авторизованному без прав объясняется причина', () => {
+    expect(page).toContain('нет прав на проверку билетов');
+  });
+});
