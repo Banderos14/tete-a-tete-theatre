@@ -25,15 +25,26 @@
 //   - CORS is restricted to explicit origins; no *.vercel.app wildcard.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth }      from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getAdminApp }  from './_lib/firebaseAdmin.js';
+import { consumeRateLimit } from './_lib/rateLimit.js';
+import { respond, readBody, bearerToken } from './_lib/http.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const RESEND_API_URL  = 'https://api.resend.com/emails';
 const MAX_SUBJECT_LEN = 500;
 const MAX_HTML_LEN    = 120_000; // ~120 KB — well above any normal email
+
+// ── Лимиты отправки ──────────────────────────────────────────────────────────
+// Без них любой зарегистрированный пользователь мог в цикле слать себе письма
+// и выжечь квоту Resend театра.
+const HOUR_MS = 60 * 60 * 1000;
+// Обычный зритель: подтверждений брони столько не бывает даже в самый активный день.
+const USER_EMAIL_LIMIT_PER_HOUR  = 12;
+// Администратор: рассылка идёт по одному письму на получателя, поэтому запас большой.
+const ADMIN_EMAIL_LIMIT_PER_HOUR = 600;
 
 // Whitelist of email types the client is allowed to request.
 // Any payload without a recognised type is rejected with 400.
@@ -44,75 +55,18 @@ const ALLOWED_TYPES = new Set([
   'newsletter',       // admin-only — requires Bearer token (see below)
 ]);
 
-// ── CORS ─────────────────────────────────────────────────────────────────────
-
-// Restrict CORS to explicitly known origins only.
-// VITE_PUBLIC_SITE_URL is a frontend build var and is NOT available here at runtime;
-// use ALLOWED_ORIGIN (plain server-side env var) in Vercel Dashboard instead.
-const ALLOWED_ORIGINS = new Set([
-  process.env.ALLOWED_ORIGIN,           // Vercel env — set to https://www.theatre-teteatete.fr
-  'https://www.theatre-teteatete.fr',   // production domain (explicit fallback)
-  'https://tete-a-tete-theatre.vercel.app', // legacy Vercel domain
-  'http://localhost:5173',              // Vite dev server
-  'http://localhost:4173',              // Vite preview
-  'http://localhost:3000',              // alternative dev port
-].filter(Boolean) as string[]);
-
-function getCorsOrigin(req: IncomingMessage): string {
-  const origin = String(req.headers['origin'] ?? '');
-  return ALLOWED_ORIGINS.has(origin) ? origin : 'https://www.theatre-teteatete.fr';
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function respond(res: ServerResponse, status: number, body: object, req?: IncomingMessage): void {
-  const payload = JSON.stringify(body);
-  res.writeHead(status, {
-    'Content-Type':                'application/json',
-    'Access-Control-Allow-Origin': req ? getCorsOrigin(req) : 'https://www.theatre-teteatete.fr',
-  });
-  res.end(payload);
-}
+// CORS, чтение тела и ответы — общие для всех функций (api/_lib/http.ts):
+// один и тот же набор заголовков, включая Access-Control-Allow-Headers,
+// без которого preflight с Authorization не проходил.
 
 function isValidEmail(s: string): boolean {
   // Minimal RFC-compliant check — enough for user input validation
   return typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s) && s.length <= 254;
 }
 
-async function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (chunk: unknown) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-    });
-    req.on('end',   () => resolve(Buffer.concat(chunks).toString('utf8')));
-    req.on('error', reject);
-  });
-}
-
 // ── Firebase Admin — newsletter auth ─────────────────────────────────────────
 // Reuses warm instance across invocations in the same Vercel function container.
-
-function getAdminApp() {
-  if (getApps().length > 0) return getApps()[0]!;
-
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT env var is not set');
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let sa: Record<string, any>;
-  try { sa = JSON.parse(raw); }
-  catch { throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON'); }
-
-  // Vercel stores env vars as single-line strings; private_key ends up with literal \n
-  if (typeof sa.private_key === 'string') sa.private_key = sa.private_key.replace(/\\n/g, '\n');
-
-  if (!sa.project_id)   throw new Error('FIREBASE_SERVICE_ACCOUNT missing project_id');
-  if (!sa.client_email) throw new Error('FIREBASE_SERVICE_ACCOUNT missing client_email');
-  if (!sa.private_key)  throw new Error('FIREBASE_SERVICE_ACCOUNT missing private_key');
-
-  return initializeApp({ credential: cert(sa) });
-}
 
 // Returns true only if the Bearer token belongs to an admin user.
 async function isAdminToken(idToken: string): Promise<boolean> {
@@ -121,6 +75,32 @@ async function isAdminToken(idToken: string): Promise<boolean> {
     const decoded = await getAuth(app).verifyIdToken(idToken);
     const snap    = await getFirestore(app).collection('users').doc(decoded.uid).get();
     return snap.exists && snap.data()?.role === 'admin';
+  } catch {
+    return false;
+  }
+}
+
+// uid вызывающего или null, если токен недействителен.
+async function resolveUid(idToken: string): Promise<string | null> {
+  try {
+    return (await getAuth(getAdminApp()).verifyIdToken(idToken)).uid;
+  } catch {
+    return null;
+  }
+}
+
+// Письмо-подтверждение можно отправить только по СВОЕЙ реальной брони.
+// Без этой проверки endpoint работал генератором произвольных писем от имени
+// театра: любой авторизованный пользователь мог отправить себе что угодно.
+async function ownsBookingWithTicketCode(uid: string, ticketCode: string): Promise<boolean> {
+  try {
+    const snap = await getFirestore(getAdminApp())
+      .collection('bookings')
+      .where('ticketCode', '==', ticketCode)
+      .limit(1)
+      .get();
+    if (snap.empty) return false;
+    return snap.docs[0]!.data()?.userId === uid;
   } catch {
     return false;
   }
@@ -188,27 +168,50 @@ export default async function handler(
   //
   //  newsletter → admin-only (existing behaviour, unchanged).
   //
-  const rawAuth = String(req.headers['authorization'] ?? '');
-  const idToken = rawAuth.startsWith('Bearer ') ? rawAuth.slice(7) : null;
+  const idToken = bearerToken(req);
+
+  // Любой тип письма требует авторизации: анонимных отправок не бывает.
+  if (!idToken) {
+    respond(res, 401, { error: `${String(type)} requires Authorization: Bearer <token>` }, req);
+    return;
+  }
+
+  const callerUid = await resolveUid(idToken);
+  if (!callerUid) {
+    respond(res, 401, { error: 'Invalid or expired token' }, req);
+    return;
+  }
+
+  const isAdmin = await isAdminToken(idToken).catch(() => false);
 
   if (type === 'newsletter' || type === 'booking-status' || type === 'payment-paid') {
-    if (!idToken) {
-      respond(res, 401, { error: `${String(type)} requires Authorization: Bearer <token>` }, req);
-      return;
-    }
-    const adminOk = await isAdminToken(idToken).catch(() => false);
-    if (!adminOk) {
+    if (!isAdmin) {
       respond(res, 403, { error: `${String(type)} is admin-only` }, req);
       return;
     }
   }
 
-  if (type === 'booking-confirmation') {
-    if (!idToken) {
-      respond(res, 401, { error: 'booking-confirmation requires Authorization: Bearer <token>' }, req);
+  // ── Лимит отправки ──────────────────────────────────────────────────────────
+  // Считается по вызывающему, а не по получателю: цель — не дать выжечь квоту
+  // Resend, кем бы получатель ни был.
+  try {
+    const limited = await consumeRateLimit(getFirestore(getAdminApp()), {
+      bucket:   `${isAdmin ? 'email-admin' : 'email-user'}:${callerUid}`,
+      limit:    isAdmin ? ADMIN_EMAIL_LIMIT_PER_HOUR : USER_EMAIL_LIMIT_PER_HOUR,
+      windowMs: HOUR_MS,
+    });
+    if (!limited.allowed) {
+      res.writeHead(429, {
+        'Content-Type': 'application/json',
+        'Retry-After':  String(Math.max(1, Math.ceil((limited.resetAtMs - Date.now()) / 1000))),
+      });
+      res.end(JSON.stringify({ error: 'Too many emails, try again later' }));
       return;
     }
-    // Recipient verification is deferred until after `to` is extracted and validated below.
+  } catch (err) {
+    // Сбой лимитера не должен ломать отправку подтверждения брони —
+    // но и молча пропускать его нельзя, поэтому пишем в лог.
+    console.error('[send-email] rate limit check failed:', err);
   }
 
   // ── Validate fields ──────────────────────────────────────────────────────────
@@ -235,12 +238,24 @@ export default async function handler(
     return;
   }
 
-  // ── booking-confirmation: verify recipient == authenticated user ──────────────
-  // idToken is guaranteed non-null here (checked in the auth block above).
+  // ── booking-confirmation: получатель == вызывающий И бронь принадлежит ему ───
   if (type === 'booking-confirmation') {
-    const ok = await verifyRecipientIsCallerEmail(idToken!, String(to)).catch(() => false);
+    const ok = await verifyRecipientIsCallerEmail(idToken, String(to)).catch(() => false);
     if (!ok) {
       respond(res, 403, { error: 'Recipient email must match the authenticated user' }, req);
+      return;
+    }
+
+    // Письмо должно относиться к реальной брони вызывающего. Без этой привязки
+    // endpoint оставался генератором произвольных писем от имени театра.
+    const ticketCode = typeof body.ticketCode === 'string' ? body.ticketCode.trim() : '';
+    if (!ticketCode) {
+      respond(res, 400, { error: 'ticketCode is required for booking-confirmation' }, req);
+      return;
+    }
+    const owns = await ownsBookingWithTicketCode(callerUid, ticketCode);
+    if (!owns) {
+      respond(res, 403, { error: 'Booking not found for this user' }, req);
       return;
     }
   }

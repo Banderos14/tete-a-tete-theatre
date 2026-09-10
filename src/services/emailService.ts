@@ -567,7 +567,7 @@ function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: str
 // authToken — Firebase ID token, требуется только для type='newsletter'.
 // Для остальных типов не передаётся.
 async function callEndpoint(
-  payload: { type: string; to: string; subject: string; html: string; text: string },
+  payload: { type: string; to: string; subject: string; html: string; text: string; ticketCode?: string },
   authToken?: string,
 ): Promise<boolean> {
   // По умолчанию /api/send-email — работает на Vercel без настройки env во frontend
@@ -604,7 +604,12 @@ export async function sendBookingConfirmationEmail(data: BookingEmailData, authT
     return;
   }
   const { subject, html, text } = buildConfirmationEmail(data);
-  await callEndpoint({ type: 'booking-confirmation', to: data.userEmail, subject, html, text }, authToken);
+  // ticketCode обязателен: сервер проверяет, что письмо относится к реальной
+  // брони этого пользователя, иначе endpoint был бы генератором произвольных писем.
+  await callEndpoint(
+    { type: 'booking-confirmation', to: data.userEmail, subject, html, text, ticketCode: data.ticketCode },
+    authToken,
+  );
 }
 
 // Обновление статуса брони (confirmed / cancelled / attended) — отправляется из AdminPage.
