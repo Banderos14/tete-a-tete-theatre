@@ -19,17 +19,19 @@ The project started as a simple theatre showcase and gradually evolved into a co
 
 ### Ticket Booking
 
-- Online ticket reservations
+- Online ticket reservations (created server-side; the browser never writes bookings)
 - On-site payment and bank transfer options
-- Real-time seat availability
+- Server-enforced hall capacity — the seat count left is calculated on the server
+- User-initiated cancellation until the ticket is paid
 - Booking confirmation emails
-- QR-code tickets for check-in
+- QR-code tickets with atomic check-in
 - Deep links for direct access to specific performances
 
 ### User Accounts
 
 - Email/password authentication
-- Google and Facebook sign-in
+- Google sign-in
+- Facebook account linking (used to enrich the profile — signing in with Facebook is not offered)
 - Personal profile management
 - Booking history
 - Preferred contact methods

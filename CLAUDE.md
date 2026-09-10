@@ -11,11 +11,14 @@ npm run dev      # Vite dev server на порту 5174 (host: true — дост
 npm run build    # tsc -b && vite build — обязательная проверка после любой задачи
 npm run lint     # eslint .
 npm run preview  # предпросмотр собранного dist
+npm test         # юнит-тесты (vitest)
+npm run test:rules  # тесты правил Firestore в эмуляторе (нужна Java)
 ```
 
-- **Тестов нет.** Test-раннер не настроен; регрессии ловятся `npm run build` (TypeScript) + ручной прогон чеклиста в `AUTH_TESTING.md` после изменений в авторизации, бронировании или письмах.
-- **`/api/*` не работает под `npm run dev`.** Vite не поднимает serverless-функции. Для работы с `api/create-booking`, `api/send-email`, `api/delete-user` запускай `vercel dev` (нужен `vercel link` и заполненный `.env`).
+- **Тесты:** `npm test` (vitest, только чистая логика и проверки исходников — без сети и Firebase). Правила Firestore покрыты отдельно: `npm run test:rules`, требует Firebase Emulator и установленную Java. Ручной чеклист в `AUTH_TESTING.md` остаётся для авторизации, бронирования и писем.
+- **`/api/*` не работает под `npm run dev`.** Vite не поднимает serverless-функции. Для работы с любым endpoint из `api/` запускай `vercel dev` (нужен `vercel link` и заполненный `.env`). Без этого остаток мест неизвестен (индикатор скрывается), а бронирование, отмена и проверка билетов недоступны.
 - Правила Firestore деплоятся отдельно: `npx -y firebase-tools@latest deploy --only firestore:rules`.
+- **Тесты правил требуют Java.** `npm run test:rules` поднимает Firebase Emulator, а он работает на JVM. Без установленной Java команда завершится сообщением `Unable to locate a Java Runtime` — это не ошибка проекта.
 
 ## Архитектура
 
@@ -37,9 +40,23 @@ Firebase грузится лениво из `AuthContext` (`loadFirebase()` ме
 2. `createBookingViaApi()` (`src/services/bookingService.ts`) шлёт это в `/api/create-booking` с `Authorization: Bearer <Firebase ID token>`.
 3. `api/create-booking.ts` через Admin SDK сам считает цену, скидку лояльности, `ticketCode`, `status`, `paymentStatus` — клиентские значения игнорируются.
 
-**Цены и даты спектаклей продублированы в двух местах:** константа `SHOWS` в `api/create-booking.ts` (сервер, source of truth) и `src/data/shows.ts` (фронт). При изменении расписания или цен нужно править **оба** файла, иначе сервер отклонит бронь или посчитает не ту сумму.
+**Цены и даты спектаклей продублированы в двух местах:** каталог `SHOWS` в `api/_lib/shows.ts` (сервер, source of truth) и `src/data/shows.ts` (фронт). При изменении расписания или цен нужно править **оба** файла. Расхождение ловится тестом `tests/unit/pastShows.test.ts` — он сверяет id, дату, время и цены всех типов билетов.
 
-Пользователь может обновить бронь только одним способом — «протухание» ожидания перевода (`awaiting_transfer → expired`), и правила Firestore проверяют это по `affectedKeys()`.
+**Клиент вообще не пишет в `bookings`.** Все изменения идут через серверные функции:
+
+| Действие | Endpoint | Что проверяет сервер |
+|---|---|---|
+| создание брони | `POST /api/create-booking` | токен, вместимость зала, «спектакль не в прошлом», лояльность, идемпотентность — всё в одной транзакции |
+| отмена зрителем | `POST /api/cancel-booking` | владение бронью и правила отмены (оплаченную и посещённую отменить нельзя) |
+| проверка билета и проход | `POST /api/checkin-ticket` | роль admin, состояние брони и актуальность даты — атомарно |
+| остаток мест | `GET /api/show-availability` | публичный, отдаёт только числа |
+| учёт нового зрителя | `POST /api/register-audience` | ровно один инкремент на пользователя |
+
+**Вместимость** проверяется на сервере внутри транзакции. Отменённые и протухшие брони места не занимают. Документы `showCounters/{showId}` и `loyaltyState/{uid}` служат точками конфликта, чтобы параллельные транзакции гарантированно сериализовались, — авторитетное число мест при этом всегда пересчитывается запросом.
+
+**Правила отмены зрителем:** `paid` — нельзя (оплата окончательна, автовозвратов нет), `attended` — нельзя, `cancelled` — повторно нельзя, иначе можно до начала спектакля.
+
+**Время спектакля** считается одной реализацией (`api/_lib/showTime.ts`): настенное время Europe/Paris переводится в абсолютный момент с учётом перехода на летнее/зимнее время. Новые брони хранят `showStartAt`.
 
 ### Роль admin
 
@@ -49,7 +66,7 @@ Firebase грузится лениво из `AuthContext` (`loadFirebase()` ме
 
 ### Билеты и посещения
 
-- `ticketService.generateTicketCode()` — формат `XXXX-XXXX`, алфавит без похожих символов (`0/O`, `1/I/L`), `crypto.getRandomValues`.
+- Код билета генерируется **только на сервере** (`generateTicketCode()` в `api/create-booking.ts`): формат `XXXX-XXXX`, алфавит без похожих символов (`0/O`, `1/I/L`), `randomInt` без modulo bias. Клиентского `ticketService` больше нет.
 - QR ведёт на `/#/admin/checkin?ticket=CODE`; `parseTicketCodeFromScan()` разбирает hash-URL, обычный URL, легаси-JSON и голый код.
 - `attendanceService` парсит `showDate` формата `"17 Май 2026"` (русские трёхбуквенные месяцы) — бронь считается посещённой через 2 часа после начала при `confirmed` + `paid`. `computedIsAttended()` даёт статус до записи в Firestore, поэтому UI не ждёт бэкенд.
 - `loyaltyService`: 1 посещение = 1 бронь (не билет); каждые 5 посещений — скидка 50%, округление вниз. Учёт использованных бонусов идёт по флагу `loyaltyDiscountApplied` в брони.
