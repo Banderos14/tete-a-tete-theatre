@@ -112,3 +112,46 @@ describe('подписки Firestore по-прежнему отписывают�
     expect(r('src/services/statsService.ts')).toMatch(/export function subscribeToAudienceCount[\s\S]{0,200}\): \(\) => void/);
   });
 });
+
+describe('ручной чеклист описывает реальную систему', () => {
+  const checklist = r('AUTH_TESTING.md');
+
+  it('покрывает потоки, появившиеся после аудита', () => {
+    for (const topic of [
+      'Отмена брони зрителем',
+      'Вместимость зала',
+      'Протухание неоплаченного перевода',
+      'Проверка билета и проход',
+      'Повторная отправка формы',
+      'Согласие на cookie',
+    ]) {
+      expect(checklist, topic).toContain(topic);
+    }
+  });
+
+  it('перечисляет все обязательные переменные окружения', () => {
+    for (const v of ['RESEND_API_KEY', 'EMAIL_FROM', 'FIREBASE_SERVICE_ACCOUNT', 'ALLOWED_ORIGIN', 'CRON_SECRET']) {
+      expect(checklist, v).toContain(v);
+    }
+  });
+
+  it('упоминает служебные коллекции, закрытые для клиента', () => {
+    for (const c of ['showCounters', 'loyaltyState', 'idempotencyKeys', 'rateLimits', 'audienceCounted', 'emailLog']) {
+      expect(checklist, c).toContain(c);
+    }
+  });
+
+  it('не утверждает больше, что счётчик зрителей меняет клиент', () => {
+    expect(checklist).toContain('увеличивает СЕРВЕР');
+  });
+
+  it('каждая переменная из .env.example описана в чеклисте или в CLAUDE.md', () => {
+    const env  = r('.env.example');
+    const docs = checklist + r('CLAUDE.md');
+    const serverVars = [...env.matchAll(/^([A-Z][A-Z0-9_]+)=/gm)]
+      .map(m => m[1]!)
+      .filter(v => !v.startsWith('VITE_'));
+    const missing = serverVars.filter(v => !docs.includes(v));
+    expect(missing).toEqual([]);
+  });
+});
