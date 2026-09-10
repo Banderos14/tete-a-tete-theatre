@@ -41,6 +41,13 @@ export interface CreateBookingResult {
   loyaltyDiscountAmount?:  number;
 }
 
+// Ошибка API бронирования с машиночитаемой причиной — чтобы UI показал
+// осмысленный текст, а не общее «что-то пошло не так».
+export interface BookingApiError extends Error {
+  reason?:    string;
+  remaining?: number;
+}
+
 export async function createBookingViaApi(
   request: CreateBookingRequest,
   idToken: string,
@@ -55,7 +62,12 @@ export async function createBookingViaApi(
   });
   const data = await resp.json() as Record<string, unknown>;
   if (!resp.ok) {
-    throw new Error(typeof data['error'] === 'string' ? data['error'] : `HTTP ${resp.status}`);
+    const err = new Error(
+      typeof data['error'] === 'string' ? data['error'] : `HTTP ${resp.status}`,
+    ) as BookingApiError;
+    if (typeof data['reason'] === 'string') err.reason = data['reason'];
+    if (typeof data['remaining'] === 'number') err.remaining = data['remaining'];
+    throw err;
   }
   return data as unknown as CreateBookingResult;
 }
@@ -194,31 +206,24 @@ function snapshotToBookings(snapshot: Awaited<ReturnType<typeof getDocs>>): Book
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as object) } as Booking));
 }
 
-// Realtime-подписка на количество занятых мест по спектаклю.
-// Активные статусы (pending / confirmed / attended) резервируют места; cancelled — не резервирует.
-export function subscribeToShowBookedSeats(
-  showId: string,
-  onUpdate: (bookedSeats: number) => void,
-  onError?: (err: Error) => void,
-): () => void {
-  const q = query(
-    collection(db, COLLECTION),
-    where('showId', '==', showId),
-  );
-  return onSnapshot(
-    q,
-    (snap) => {
-      let total = 0;
-      snap.forEach((d) => {
-        const b = d.data() as Booking;
-        if (b.status !== 'cancelled') {
-          total += (b.ticketsCount ?? 1);
-        }
-      });
-      onUpdate(total);
-    },
-    (err) => onError?.(err as Error),
-  );
+// Остаток мест по спектаклю.
+//
+// Считать это на клиенте невозможно: правила Firestore не разрешают читать чужие
+// брони, поэтому прежняя realtime-подписка всегда падала с permission-denied и
+// в интерфейсе висело постоянное «Свободно мест: 100». Теперь число приходит с
+// сервера, а null означает «остаток неизвестен» — тогда индикатор не показывается,
+// вместо того чтобы показывать выдуманное значение.
+export async function fetchShowAvailability(showId: string): Promise<number | null> {
+  try {
+    const resp = await fetch('/api/show-availability', { headers: { Accept: 'application/json' } });
+    if (!resp.ok) return null;
+    const data = await resp.json() as { shows?: Record<string, { remaining?: number }> };
+    const remaining = data.shows?.[showId]?.remaining;
+    return typeof remaining === 'number' ? remaining : null;
+  } catch {
+    // Локальный `npm run dev` не поднимает /api/* — это штатная ситуация.
+    return null;
+  }
 }
 
 // Отмена по инициативе пользователя.

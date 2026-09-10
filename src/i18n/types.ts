@@ -130,6 +130,8 @@ export interface T {
     loyaltyTotal: string;
     seatsAvailable: (n: number, total: number) => string;
     soldOut: string;
+    notEnoughSeats: (n: number) => string;
+    showAlreadyStarted: string;
     cancelBooking: string;
     cancelBookingTitle: string;
     cancelBookingText: string;

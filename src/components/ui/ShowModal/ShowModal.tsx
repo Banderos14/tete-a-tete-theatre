@@ -3,8 +3,7 @@ import { useScrollLock } from '../../../hooks/useScrollLock';
 import { createPortal } from 'react-dom';
 import { useLang } from '../../../i18n/LangContext';
 import type { Show, ShowPhoto } from '../../../types';
-import { subscribeToShowBookedSeats } from '../../../services/bookingService';
-import { THEATRE_CAPACITY } from '../../../config/theatre';
+import { fetchShowAvailability } from '../../../services/bookingService';
 import styles from './ShowModal.module.scss';
 
 interface Props {
@@ -21,7 +20,9 @@ export function ShowModal({ show, onClose, onBook }: Props) {
   const [activeIdx,    setActiveIdx]    = useState(0);
   const [thumbStart,   setThumbStart]   = useState(0);
   const [descExpanded, setDescExpanded] = useState(false);
-  const [bookedSeats,  setBookedSeats]  = useState(0);
+  // null = остаток неизвестен (например, /api недоступен) — тогда ничего не показываем,
+  // вместо того чтобы выводить выдуманное число.
+  const [seatsLeft,    setSeatsLeft]    = useState<number | null>(null);
 
   // Производный стейт: сбрасываем при смене спектакля (render-time setState — паттерн из документации React)
   const [stateShowId, setStateShowId] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
     setActiveIdx(0);
     setThumbStart(0);
     setDescExpanded(false);
-    setBookedSeats(0);
+    setSeatsLeft(null);
     if (currentId !== null) setClosing(false);
   }
 
@@ -47,15 +48,15 @@ export function ShowModal({ show, onClose, onBook }: Props) {
     return [];
   }, [show]);
 
-  // Realtime остаток мест: подписываемся при открытии спектакля, отписываемся при закрытии/смене
+  // Остаток мест приходит с сервера: клиент не имеет права читать чужие брони.
   useEffect(() => {
     if (!show) return;
-    return subscribeToShowBookedSeats(show.id, setBookedSeats, (err) => {
-      console.warn('[ShowModal] subscribeToShowBookedSeats error (availableSeats defaulting to max):', err.message);
+    let cancelled = false;
+    void fetchShowAvailability(show.id).then((remaining) => {
+      if (!cancelled) setSeatsLeft(remaining);
     });
+    return () => { cancelled = true; };
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const availableSeats = Math.max(0, THEATRE_CAPACITY - bookedSeats);
 
   const handleClose = useCallback(() => {
     setClosing(true);
@@ -237,11 +238,11 @@ export function ShowModal({ show, onClose, onBook }: Props) {
             >
               {t.showModal.book} →
             </button>
-            {availableSeats > 0 && (
+            {seatsLeft !== null && seatsLeft > 0 && (
               <span className={styles.seatsLeft}>
                 {lang === 'FR'
-                  ? <>Reste <span className={styles.seatsCount}>{availableSeats}</span> places</>
-                  : <>Осталось <span className={styles.seatsCount}>{availableSeats}</span> мест</>
+                  ? <>Reste <span className={styles.seatsCount}>{seatsLeft}</span> places</>
+                  : <>Осталось <span className={styles.seatsCount}>{seatsLeft}</span> мест</>
                 }
               </span>
             )}

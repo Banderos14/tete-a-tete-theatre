@@ -218,6 +218,8 @@ export const RU: T = {
     loyaltyTotal:  'К оплате',
     seatsAvailable: (n, total) => `Свободно мест: ${n} из ${total}`,
     soldOut: 'На этот спектакль мест больше нет.',
+    notEnoughSeats: (n) => `Осталось только ${n} мест. Уменьшите количество билетов.`,
+    showAlreadyStarted: 'Спектакль уже начался — бронирование закрыто.',
     cancelBooking: 'Отменить бронь',
     cancelBookingTitle: 'Отмена бронирования',
     cancelBookingText: 'Пожалуйста, укажите причину отмены.',

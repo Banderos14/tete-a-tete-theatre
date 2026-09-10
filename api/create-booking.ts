@@ -1,152 +1,87 @@
-// Vercel Serverless Function — server-side booking creation.
+// Vercel Serverless Function — серверное создание брони.
 //
-// Security model:
-//   - Requires Authorization: Bearer <Firebase ID token>
-//   - Client sends ONLY: showId, ticketType, ticketsCount, paymentMethod, comment, phone, lang
-//   - totalAmount, status, paymentStatus, ticketCode are computed here — never read from client
-//   - Loyalty discount is computed from the user's Firestore booking history
-//   - Booking is written via Admin SDK (bypasses Firestore security rules)
+// Модель безопасности:
+//   - требуется Authorization: Bearer <Firebase ID token>
+//   - клиент присылает ТОЛЬКО: showId, ticketType, ticketsCount, paymentMethod,
+//     comment, phone, lang
+//   - totalAmount, status, paymentStatus, ticketCode считаются здесь и никогда
+//     не читаются из запроса
+//   - скидка лояльности вычисляется из истории броней пользователя
+//   - вместимость зала проверяется в транзакции: параллельные запросы не могут
+//     продать больше мест, чем есть
+//   - бронь пишется через Admin SDK (в обход правил Firestore)
 //
-// Required env variables (same as send-email):
-//   FIREBASE_SERVICE_ACCOUNT — full service account JSON
-//
-// Optional:
-//   ALLOWED_ORIGIN — e.g. https://www.theatre-teteatete.fr
-//
-// IMPORTANT: When show dates/prices change, update the SHOWS map below
-// AND src/data/shows.ts in the frontend.
+// Обязательные переменные окружения:
+//   FIREBASE_SERVICE_ACCOUNT
+// Опционально:
+//   ALLOWED_ORIGIN
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { randomBytes } from 'node:crypto';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { randomInt } from 'node:crypto';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, Timestamp, type Transaction } from 'firebase-admin/firestore';
+import { getAdminApp } from './_lib/firebaseAdmin.js';
+import { respond, readBody, bearerToken } from './_lib/http.js';
+import { sumOccupiedTickets, checkCapacity } from './_lib/bookingRules.js';
+import { parseShowStartUtcMs } from './_lib/showTime.js';
+import {
+  SHOWS, THEATRE_CAPACITY, MAX_TICKETS_PER_BOOKING,
+  showDateString, showStartUtcMs,
+  type TicketTypeId,
+} from './_lib/shows.js';
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
-
-const ALLOWED_ORIGINS = new Set(
-  [
-    process.env.ALLOWED_ORIGIN,
-    'https://www.theatre-teteatete.fr',
-    'https://tete-a-tete-theatre.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:4173',
-    'http://localhost:3000',
-  ].filter(Boolean) as string[],
-);
-
-function getCorsOrigin(req: IncomingMessage): string {
-  const origin = String(req.headers['origin'] ?? '');
-  return ALLOWED_ORIGINS.has(origin) ? origin : 'https://www.theatre-teteatete.fr';
-}
-
-// ── Server-side show & ticket pricing ────────────────────────────────────────
-// Canonical source of truth — client cannot override these values.
-
-type TicketTypeId = 'standard' | 'student';
-
-interface TicketInfo {
-  label:   string;
-  labelFR: string;
-  price:   number;
-}
-
-interface ShowInfo {
-  title:   string;
-  titleFR: string;
-  day:     string;
-  month:   string;
-  time:    string;
-  year:    string;
-  tickets: Partial<Record<TicketTypeId, TicketInfo>>;
-}
-
-const SHOWS: Record<string, ShowInfo> = {
-  romantika: {
-    title: '«Романтика обреченности»', titleFR: '«La Romanesque de la Fatalité»',
-    day: '14', month: 'Июн', time: '19:00', year: '2026',
-    tickets: {
-      standard: { label: 'Стандарт', labelFR: 'Standard', price: 15 },
-    },
-  },
-  shutka: {
-    title: '«И в шутку, и всерьёз»', titleFR: '«Sérieusement ou pas»',
-    day: '28', month: 'Июн', time: '20:00', year: '2026',
-    tickets: {
-      standard: { label: 'Стандарт', labelFR: 'Standard', price: 15 },
-      student:  { label: 'Студенческий', labelFR: 'Étudiant', price: 10 },
-    },
-  },
-  nulin: {
-    title: '«Граф Нулин»', titleFR: '«Le Comte Nouline»',
-    day: '12', month: 'Июл', time: '20:00', year: '2026',
-    tickets: {
-      standard: { label: 'Стандарт', labelFR: 'Standard', price: 30 },
-      student:  { label: 'Студенческий', labelFR: 'Étudiant', price: 20 },
-    },
-  },
-};
-
-// ── Payment constants ─────────────────────────────────────────────────────────
+// ── Константы оплаты ─────────────────────────────────────────────────────────
 
 const PAYMENT_REF_PREFIX   = 'TETEATETE';
 const PAYMENT_EXPIRY_HOURS = 24;
 const PAYMENT_ACCOUNT_ID   = 'fr_eu_bank';
 
-// ── Ticket code (Node.js crypto — same charset as frontend ticketService.ts) ──
+// ── Ограничения пользовательского ввода ──────────────────────────────────────
+
+const MAX_COMMENT_LEN = 1000;
+const MAX_PHONE_LEN   = 32;
+const MIN_PHONE_LEN   = 5;
+
+// ── Код билета ───────────────────────────────────────────────────────────────
+// Алфавит без визуально похожих символов (0/O, 1/I/L): код диктуют голосом
+// и переписывают от руки. randomInt даёт равномерное распределение без
+// modulo bias, в отличие от прежнего randomBytes()[i] % 31.
 
 const CHARSET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 function generateTicketCode(): string {
-  const bytes = randomBytes(8);
   let code = '';
   for (let i = 0; i < 8; i++) {
     if (i === 4) code += '-';
-    code += CHARSET[bytes[i]! % CHARSET.length];
+    code += CHARSET[randomInt(CHARSET.length)];
   }
   return code;
 }
 
-// ── Loyalty (mirrors loyaltyService.ts + attendanceService.ts) ───────────────
-
-const MONTH_RU: Record<string, number> = {
-  'Янв': 0, 'Фев': 1, 'Мар': 2, 'Апр': 3,
-  'Май': 4, 'Июн': 5, 'Июл': 6, 'Авг': 7,
-  'Сен': 8, 'Окт': 9, 'Ноя': 10, 'Дек': 11,
-};
-
-function parseShowEnd(showDate: string, showTime: string): Date | null {
-  const parts = showDate.trim().split(/\s+/);
-  if (parts.length !== 3) return null;
-  const [dayStr, monthStr, yearStr] = parts;
-  const month = MONTH_RU[monthStr!];
-  if (month === undefined) return null;
-  const [hStr, mStr] = showTime.split(':');
-  const day  = parseInt(dayStr!,    10);
-  const year = parseInt(yearStr!,   10);
-  const hour = parseInt(hStr!,      10);
-  const min  = parseInt(mStr ?? '0', 10);
-  if (isNaN(day) || isNaN(year) || isNaN(hour)) return null;
-  return new Date(year, month, day, hour + 2, min, 0);
-}
+// ── Лояльность ───────────────────────────────────────────────────────────────
+// Зеркалит src/services/loyaltyService.ts: 1 посещение = 1 бронь,
+// каждые 5 посещений — одна скидка 50 %.
 
 interface RawBooking {
   status?:                 string;
   paymentStatus?:          string;
   showDate?:               string;
   showTime?:               string;
+  ticketsCount?:           number;
   loyaltyDiscountApplied?: boolean;
 }
 
-function computedIsAttended(b: RawBooking): boolean {
+function computedIsAttended(b: RawBooking, nowMs: number): boolean {
   if (b.status === 'attended') return true;
   if (b.status !== 'confirmed' || b.paymentStatus !== 'paid') return false;
-  const end = parseShowEnd(b.showDate ?? '', b.showTime ?? '');
-  return !!end && end < new Date();
+  const start = parseShowStartUtcMs(b.showDate ?? '', b.showTime ?? '');
+  return start !== null && start + 2 * 60 * 60 * 1000 < nowMs;
 }
 
-function computeLoyalty(bookings: RawBooking[]): { loyaltyAvailable: boolean; attendedCount: number } {
-  const attended  = bookings.filter(computedIsAttended).length;
+function computeLoyalty(
+  bookings: RawBooking[], nowMs: number,
+): { loyaltyAvailable: boolean; attendedCount: number } {
+  const attended  = bookings.filter(b => computedIsAttended(b, nowMs)).length;
   const usedCount = bookings.filter(b => b.loyaltyDiscountApplied === true).length;
   return {
     loyaltyAvailable: attended >= 5 && Math.floor(attended / 5) > usedCount,
@@ -154,49 +89,36 @@ function computeLoyalty(bookings: RawBooking[]): { loyaltyAvailable: boolean; at
   };
 }
 
-// ── Firebase Admin ─────────────────────────────────────────────────────────────
+// ── Вместимость ──────────────────────────────────────────────────────────────
+// Считается ВНУТРИ транзакции по актуальным броням, поэтому отдельного счётчика
+// (который мог бы разъехаться с реальностью) не существует. Отменённые и
+// протухшие брони места не занимают.
 
-function getAdminApp() {
-  if (getApps().length > 0) return getApps()[0]!;
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT env var is not set');
+async function readSoldTickets(
+  tx: Transaction,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let sa: Record<string, any>;
-  try { sa = JSON.parse(raw); }
-  catch { throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON'); }
-  if (typeof sa.private_key === 'string') sa.private_key = sa.private_key.replace(/\\n/g, '\n');
-  return initializeApp({ credential: cert(sa) });
+  bookingsRef: any,
+  showId: string,
+): Promise<number> {
+  const snap = await tx.get(bookingsRef.where('showId', '==', showId));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return sumOccupiedTickets(snap.docs.map((d: any) => {
+    const data = d.data() as RawBooking;
+    return {
+      status:        String(data.status ?? ''),
+      paymentStatus: String(data.paymentStatus ?? ''),
+      ticketsCount:  data.ticketsCount,
+    };
+  }));
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (chunk: unknown) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-    });
-    req.on('end',   () => resolve(Buffer.concat(chunks).toString('utf8')));
-    req.on('error', reject);
-  });
-}
-
-function respond(res: ServerResponse, status: number, body: object, req?: IncomingMessage): void {
-  res.writeHead(status, {
-    'Content-Type':                'application/json',
-    'Access-Control-Allow-Origin': req ? getCorsOrigin(req) : 'https://www.theatre-teteatete.fr',
-  });
-  res.end(JSON.stringify(body));
-}
-
-// ── Handler ───────────────────────────────────────────────────────────────────
+// ── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
 
   if (req.method === 'OPTIONS') { respond(res, 204, {}, req); return; }
   if (req.method !== 'POST')    { respond(res, 405, { error: 'Method not allowed' }, req); return; }
 
-  // ── Parse body ──────────────────────────────────────────────────────────────
   let body: Record<string, unknown>;
   try {
     body = JSON.parse(await readBody(req)) as Record<string, unknown>;
@@ -205,9 +127,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
-  const rawAuth = String(req.headers['authorization'] ?? '');
-  const idToken = rawAuth.startsWith('Bearer ') ? rawAuth.slice(7) : null;
+  const idToken = bearerToken(req);
   if (!idToken) {
     respond(res, 401, { error: 'Authorization: Bearer <token> required' }, req);
     return;
@@ -216,14 +136,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const app = getAdminApp();
   let uid: string;
   try {
-    const decoded = await getAuth(app).verifyIdToken(idToken);
-    uid = decoded.uid;
+    uid = (await getAuth(app).verifyIdToken(idToken)).uid;
   } catch {
     respond(res, 401, { error: 'Invalid or expired token' }, req);
     return;
   }
 
-  // ── Validate input (ignore any price/status/ticketCode from client) ─────────
+  // ── Валидация входа (цена/статус/ticketCode из клиента игнорируются) ────────
   const { showId, ticketType, ticketsCount, paymentMethod, comment, phone, lang } = body;
 
   if (typeof showId !== 'string' || !(showId in SHOWS)) {
@@ -238,21 +157,26 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     typeof ticketsCount !== 'number' ||
     !Number.isInteger(ticketsCount) ||
     ticketsCount < 1 ||
-    ticketsCount > 10
+    ticketsCount > MAX_TICKETS_PER_BOOKING
   ) {
-    respond(res, 400, { error: 'ticketsCount must be integer 1–10' }, req);
+    respond(res, 400, { error: `ticketsCount must be integer 1–${MAX_TICKETS_PER_BOOKING}` }, req);
     return;
   }
   if (paymentMethod !== 'on_site' && paymentMethod !== 'bank_transfer') {
     respond(res, 400, { error: 'paymentMethod must be on_site or bank_transfer' }, req);
     return;
   }
-  if (typeof phone !== 'string' || phone.trim().length < 5) {
+  const phoneValue = typeof phone === 'string' ? phone.trim() : '';
+  if (phoneValue.length < MIN_PHONE_LEN || phoneValue.length > MAX_PHONE_LEN) {
     respond(res, 400, { error: 'phone is required' }, req);
     return;
   }
+  if (typeof comment === 'string' && comment.length > MAX_COMMENT_LEN) {
+    respond(res, 400, { error: `comment must be at most ${MAX_COMMENT_LEN} characters` }, req);
+    return;
+  }
 
-  const show       = SHOWS[showId as string]!;
+  const show       = SHOWS[showId]!;
   const ticketInfo = show.tickets[ticketType as TicketTypeId];
   if (!ticketInfo) {
     respond(res, 400, {
@@ -261,38 +185,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
-  // ── Compute totals server-side ──────────────────────────────────────────────
-  const db = getFirestore(app);
-
-  let userBookings: RawBooking[] = [];
-  try {
-    const snap = await db.collection('bookings').where('userId', '==', uid).get();
-    userBookings = snap.docs.map(d => d.data() as RawBooking);
-  } catch {
-    // Loyalty check fails gracefully — proceed without discount
+  // ── Спектакль не должен быть в прошлом ──────────────────────────────────────
+  // Даже если расписание в данных забудут обновить, сервер не продаёт билет в прошлое.
+  const startMs = showStartUtcMs(show);
+  if (startMs !== null && startMs <= Date.now()) {
+    respond(res, 409, { error: 'Show has already started', reason: 'show_started' }, req);
+    return;
   }
 
-  const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings);
-  const baseAmount     = ticketInfo.price * ticketsCount;
-  const discountAmount = loyaltyAvailable ? Math.floor(baseAmount / 2) : 0;
-  const totalAmount    = baseAmount - discountAmount;
+  const db = getFirestore(app);
 
-  // ── Build booking document ──────────────────────────────────────────────────
-  const ticketCode     = generateTicketCode();
-  const isBankTransfer = paymentMethod === 'bank_transfer';
-  const resolvedLang   = lang === 'FR' ? 'FR' : 'RU';
-  const ticketLabel    = resolvedLang === 'FR' ? ticketInfo.labelFR : ticketInfo.label;
-  const showDate       = `${show.day} ${show.month} ${show.year}`;
-
-  const priceInfo = loyaltyAvailable
-    ? `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${baseAmount}€, скидка 50% = ${totalAmount}€`
-    : `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${totalAmount}€`;
-
-  const paymentExpiresAt = isBankTransfer
-    ? Timestamp.fromDate(new Date(Date.now() + PAYMENT_EXPIRY_HOURS * 60 * 60 * 1000))
-    : null;
-  const paymentReference = isBankTransfer ? `${PAYMENT_REF_PREFIX}-${ticketCode}` : null;
-
+  // ── Данные пользователя из Firebase Auth ────────────────────────────────────
   let userName  = '';
   let userEmail = '';
   try {
@@ -300,67 +203,130 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     userName  = record.displayName ?? '';
     userEmail = record.email       ?? '';
   } catch {
-    // Proceed with empty strings — booking is still written
+    // Продолжаем с пустыми строками — бронь всё равно создаётся
   }
 
-  const bookingDoc: Record<string, unknown> = {
-    showId,
-    showTitle:    show.title,
-    showDate,
-    showTime:     show.time,
-    userId:       uid,
-    userName,
-    userEmail,
-    userPhone:    String(phone).trim(),
-    ticketsCount,
-    ticketType,
-    priceInfo,
-    totalAmount,
-    ticketCode,
-    status:        'pending',
-    paymentMethod,
-    paymentStatus: isBankTransfer ? 'awaiting_transfer' : 'not_paid',
-    comment:       typeof comment === 'string' ? comment.trim() : '',
-    lang:          resolvedLang,
-    createdAt:     FieldValue.serverTimestamp(),
-    ...(isBankTransfer  ? { paymentAccountId: PAYMENT_ACCOUNT_ID } : {}),
-    ...(paymentReference ? { paymentReference }                     : {}),
-    ...(paymentExpiresAt ? { paymentExpiresAt }                     : {}),
-    ...(loyaltyAvailable ? {
-      originalAmount:                  baseAmount,
-      loyaltyDiscountApplied:          true,
-      loyaltyDiscountAmount:           discountAmount,
-      loyaltyRewardUsedFromVisitCount: attendedCount,
-    } : {}),
-  };
+  const nowMs          = Date.now();
+  const isBankTransfer = paymentMethod === 'bank_transfer';
+  const resolvedLang   = lang === 'FR' ? 'FR' : 'RU';
+  const ticketLabel    = resolvedLang === 'FR' ? ticketInfo.labelFR : ticketInfo.label;
+  const showDate       = showDateString(show);
+  const bookingsRef    = db.collection('bookings');
 
-  // ── Write via Admin SDK (bypasses Firestore security rules) ─────────────────
-  let bookingId: string;
+  // ── Транзакция: вместимость + лояльность + запись брони ─────────────────────
+  type TxOk = {
+    ok: true; bookingId: string; ticketCode: string; totalAmount: number;
+    baseAmount: number; discountAmount: number; priceInfo: string;
+    loyaltyAvailable: boolean; paymentReference: string | null; paymentExpiresAt: Timestamp | null;
+  };
+  type TxFail = { ok: false; code: number; error: string; reason?: string; remaining?: number };
+
+  let result: TxOk | TxFail;
   try {
-    const ref = await db.collection('bookings').add(bookingDoc);
-    bookingId = ref.id;
+    result = await db.runTransaction<TxOk | TxFail>(async (tx) => {
+      // --- все чтения ДО записей (требование Firestore) ---
+      const sold = await readSoldTickets(tx, bookingsRef, showId);
+
+      const userSnap = await tx.get(bookingsRef.where('userId', '==', uid));
+      const userBookings = userSnap.docs.map(d => d.data() as RawBooking);
+
+      const capacity = checkCapacity(sold, ticketsCount, THEATRE_CAPACITY);
+      if (!capacity.allowed) {
+        return {
+          ok: false, code: 409,
+          error: capacity.soldOut ? 'Sold out' : 'Not enough seats left',
+          reason: 'capacity_exceeded',
+          remaining: capacity.remaining,
+        };
+      }
+
+      const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings, nowMs);
+      const baseAmount     = ticketInfo.price * ticketsCount;
+      const discountAmount = loyaltyAvailable ? Math.floor(baseAmount / 2) : 0;
+      const totalAmount    = baseAmount - discountAmount;
+
+      const ticketCode = generateTicketCode();
+      const priceInfo  = loyaltyAvailable
+        ? `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${baseAmount}€, скидка 50% = ${totalAmount}€`
+        : `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${totalAmount}€`;
+
+      const paymentExpiresAt = isBankTransfer
+        ? Timestamp.fromDate(new Date(nowMs + PAYMENT_EXPIRY_HOURS * 60 * 60 * 1000))
+        : null;
+      const paymentReference = isBankTransfer ? `${PAYMENT_REF_PREFIX}-${ticketCode}` : null;
+
+      const bookingRef = bookingsRef.doc();
+      tx.create(bookingRef, {
+        showId,
+        showTitle:    show.title,
+        showDate,
+        showTime:     show.time,
+        // Абсолютный момент начала — чтобы бизнес-логика не зависела от разбора
+        // строки «14 Июн 2026» в чьей-то локальной таймзоне.
+        showStartAt:  Timestamp.fromMillis(startMs ?? nowMs),
+        userId:       uid,
+        userName,
+        userEmail,
+        userPhone:    phoneValue,
+        ticketsCount,
+        ticketType,
+        priceInfo,
+        totalAmount,
+        ticketCode,
+        status:        'pending',
+        paymentMethod,
+        paymentStatus: isBankTransfer ? 'awaiting_transfer' : 'not_paid',
+        comment:       typeof comment === 'string' ? comment.trim().slice(0, MAX_COMMENT_LEN) : '',
+        lang:          resolvedLang,
+        createdAt:     FieldValue.serverTimestamp(),
+        ...(isBankTransfer   ? { paymentAccountId: PAYMENT_ACCOUNT_ID } : {}),
+        ...(paymentReference ? { paymentReference }                     : {}),
+        ...(paymentExpiresAt ? { paymentExpiresAt }                     : {}),
+        ...(loyaltyAvailable ? {
+          originalAmount:                  baseAmount,
+          loyaltyDiscountApplied:          true,
+          loyaltyDiscountAmount:           discountAmount,
+          loyaltyRewardUsedFromVisitCount: attendedCount,
+        } : {}),
+      });
+
+      return {
+        ok: true, bookingId: bookingRef.id, ticketCode, totalAmount,
+        baseAmount, discountAmount, priceInfo, loyaltyAvailable,
+        paymentReference, paymentExpiresAt,
+      };
+    });
   } catch (err) {
-    console.error('[create-booking] Firestore write failed:', err);
+    console.error('[create-booking] transaction failed:', err);
     respond(res, 500, { error: 'Failed to create booking' }, req);
+    return;
+  }
+
+  if (!result.ok) {
+    respond(res, result.code, {
+      error: result.error,
+      ...(result.reason    !== undefined ? { reason: result.reason }       : {}),
+      ...(result.remaining !== undefined ? { remaining: result.remaining } : {}),
+    }, req);
     return;
   }
 
   respond(res, 200, {
     ok:            true,
-    bookingId,
-    ticketCode,
-    totalAmount,
-    priceInfo,
+    bookingId:     result.bookingId,
+    ticketCode:    result.ticketCode,
+    totalAmount:   result.totalAmount,
+    priceInfo:     result.priceInfo,
     showDate,
     showTime:      show.time,
     showTitle:     show.title,
     showTitleFR:   show.titleFR,
-    ...(paymentReference  ? { paymentReference }                            : {}),
-    ...(paymentExpiresAt  ? { paymentExpiresAt: paymentExpiresAt.toMillis() } : {}),
-    ...(loyaltyAvailable  ? {
-      originalAmount:          baseAmount,
+    ...(result.paymentReference ? { paymentReference: result.paymentReference }            : {}),
+    ...(result.paymentExpiresAt ? { paymentExpiresAt: result.paymentExpiresAt.toMillis() } : {}),
+    ...(result.loyaltyAvailable ? {
+      originalAmount:          result.baseAmount,
       loyaltyDiscountApplied:  true,
-      loyaltyDiscountAmount:   discountAmount,
+      loyaltyDiscountAmount:   result.discountAmount,
     } : {}),
   }, req);
 }

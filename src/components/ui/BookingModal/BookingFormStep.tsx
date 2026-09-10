@@ -28,6 +28,8 @@ interface Props {
       loyaltyTotal: string;
       seatsAvailable: (n: number, total: number) => string;
       soldOut: string;
+      notEnoughSeats: (n: number) => string;
+      showAlreadyStarted: string;
     };
     admin: {
       ticketStandard: string;
@@ -50,7 +52,8 @@ interface Props {
   discountAmount: number;
   loyaltyAvailable: boolean;
   maxTickets: number;
-  availableSeats: number;
+  // null = остаток мест неизвестен (сервер недоступен) — индикатор не показываем.
+  seatsLeft: number | null;
 
   phoneError?: string;
 
@@ -67,15 +70,16 @@ export function BookingFormStep({
   show, lang, t,
   tickets, payment, phone, comment,
   submitLoading, submitError, phoneError,
-  activeTicket, baseAmount, totalAmount, discountAmount, loyaltyAvailable, maxTickets, availableSeats,
+  activeTicket, baseAmount, totalAmount, discountAmount, loyaltyAvailable, maxTickets, seatsLeft,
   onTicketsChange, onSelectedTicketChange, onPaymentChange, onPhoneChange, onCommentChange,
   onSubmit,
 }: Props) {
   const showTitle  = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
   const monthLabel = t.months[show.month] ?? show.month;
   const seatsLeftLabel = lang === 'FR'
-    ? `Places restantes : ${availableSeats}`
-    : `Свободно мест: ${availableSeats}`;
+    ? `Places restantes : ${seatsLeft}`
+    : `Свободно мест: ${seatsLeft}`;
+  const soldOut = seatsLeft !== null && seatsLeft <= 0;
   const showYearNumber = Number(show.year);
   const seasonLabel = Number.isFinite(showYearNumber)
     ? (lang === 'FR'
@@ -133,16 +137,16 @@ export function BookingFormStep({
         <div className={styles.section}>
           <div className={styles.sectionLabelRow}>
             <div className={styles.sectionLabel}>{t.booking.tickets}</div>
-            {availableSeats > 0 && (
+            {seatsLeft !== null && seatsLeft > 0 && (
               <span className={styles.seatsInline}>{seatsLeftLabel}</span>
             )}
           </div>
-          {availableSeats === 0 && <p className={styles.soldOutHint}>{t.booking.soldOut}</p>}
+          {soldOut && <p className={styles.soldOutHint}>{t.booking.soldOut}</p>}
           <div className={styles.qtyRow}>
             <div className={styles.counter}>
               <button type="button" onClick={() => onTicketsChange(Math.max(1, tickets - 1))} disabled={tickets <= 1}>−</button>
               <span>{tickets}</span>
-              <button type="button" onClick={() => onTicketsChange(Math.min(maxTickets, tickets + 1))} disabled={tickets >= maxTickets || availableSeats === 0}>+</button>
+              <button type="button" onClick={() => onTicketsChange(Math.min(maxTickets, tickets + 1))} disabled={tickets >= maxTickets || soldOut}>+</button>
             </div>
             {activeTicket && (
               <div className={styles.totalBox}>
@@ -241,7 +245,7 @@ export function BookingFormStep({
 
         {submitError && <p className={styles.error}>{submitError}</p>}
 
-        <button type="submit" className={styles.submitBtn} disabled={submitLoading || !activeTicket || availableSeats === 0}>
+        <button type="submit" className={styles.submitBtn} disabled={submitLoading || !activeTicket || soldOut}>
           {submitLoading ? '…' : t.booking.submit}
           {!submitLoading && <span className={styles.submitArrow}>→</span>}
         </button>

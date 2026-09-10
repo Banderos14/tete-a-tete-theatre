@@ -227,6 +227,8 @@ export const FR: T = {
     loyaltyTotal:  'Total à payer',
     seatsAvailable: (n, total) => `Places disponibles : ${n} sur ${total}`,
     soldOut: 'Il n\'y a plus de places disponibles pour ce spectacle.',
+    notEnoughSeats: (n) => `Il ne reste que ${n} places. Réduisez le nombre de billets.`,
+    showAlreadyStarted: 'Le spectacle a déjà commencé — les réservations sont closes.',
     cancelBooking: 'Annuler la réservation',
     cancelBookingTitle: 'Annulation de la réservation',
     cancelBookingText: 'Veuillez indiquer la raison de l\'annulation.',

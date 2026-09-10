@@ -69,3 +69,34 @@ export type CancelReason = (typeof CANCEL_REASONS)[number];
 export function isValidCancelReason(value: unknown): value is CancelReason {
   return typeof value === 'string' && (CANCEL_REASONS as readonly string[]).includes(value);
 }
+
+// Сколько билетов реально занято по списку броней спектакля.
+// Отменённые и протухшие не считаются; бронь без ticketsCount считается за один билет.
+export function sumOccupiedTickets(
+  bookings: Array<BookingStateSnapshot & { ticketsCount?: number }>,
+): number {
+  let total = 0;
+  for (const b of bookings) {
+    if (!occupiesCapacity(b)) continue;
+    total += typeof b.ticketsCount === 'number' && b.ticketsCount > 0 ? b.ticketsCount : 1;
+  }
+  return total;
+}
+
+export interface CapacityDecision {
+  allowed:   boolean;
+  remaining: number;
+  soldOut:   boolean;
+}
+
+// Помещается ли запрошенное количество билетов в оставшуюся вместимость.
+export function checkCapacity(
+  soldTickets: number, requestedTickets: number, capacity: number,
+): CapacityDecision {
+  const remaining = Math.max(0, capacity - soldTickets);
+  return {
+    allowed:   requestedTickets <= remaining,
+    remaining,
+    soldOut:   remaining <= 0,
+  };
+}

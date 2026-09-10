@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
-import { createBookingViaApi, subscribeToUserBookings, subscribeToShowBookedSeats } from '../../../services/bookingService';
+import { createBookingViaApi, subscribeToUserBookings, fetchShowAvailability } from '../../../services/bookingService';
+import type { BookingApiError } from '../../../services/bookingService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
 import { formatPhone, normalizePhone, isValidPhone } from '../../../utils/phone';
 import { PAYMENT_CONFIG } from '../../../config/payment';
-import { THEATRE_CAPACITY } from '../../../config/theatre';
+import { MAX_TICKETS_PER_BOOKING } from '../../../../api/_lib/shows';
 import {
   hasAvailableLoyaltyReward,
   calculateLoyaltyDiscount,
@@ -50,7 +51,9 @@ export function BookingModal({ show, onClose }: Props) {
   const [ticketCode,       setTicketCode]       = useState('');
   const [savedAmount,      setSavedAmount]      = useState(0);
   const [copiedCode,       setCopiedCode]       = useState(false);
-  const [bookedSeats,      setBookedSeats]      = useState(0);
+  // null = остаток мест неизвестен. Раньше здесь всегда было 0, из-за чего
+  // интерфейс показывал постоянное «Свободно мест: 100».
+  const [seatsLeft,        setSeatsLeft]        = useState<number | null>(null);
 
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
 
@@ -61,8 +64,11 @@ export function BookingModal({ show, onClose }: Props) {
 
   const activeTicket   = selectedTicket ?? defaultTicket;
   const baseAmount     = (activeTicket?.price ?? 0) * tickets;
-  const availableSeats = Math.max(0, THEATRE_CAPACITY - bookedSeats);
-  const maxTickets     = Math.min(activeTicket?.available ?? 10, availableSeats || 1);
+  // Когда остаток неизвестен, ограничиваем только лимитом типа билета:
+  // авторитетную проверку вместимости всё равно делает сервер.
+  const maxTickets     = seatsLeft === null
+    ? (activeTicket?.available ?? MAX_TICKETS_PER_BOOKING)
+    : Math.min(activeTicket?.available ?? MAX_TICKETS_PER_BOOKING, Math.max(1, seatsLeft));
 
   const loyaltyAvailable = useMemo(
     () => hasAvailableLoyaltyReward(userBookings),
@@ -78,24 +84,23 @@ export function BookingModal({ show, onClose }: Props) {
     return subscribeToUserBookings(user.uid, setUserBookings, () => {});
   }, [user?.uid, show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Realtime subscription — остаток мест для текущего спектакля.
+  // Остаток мест приходит с сервера — клиент не имеет права читать чужие брони.
   useEffect(() => {
     if (!show) return;
-    return subscribeToShowBookedSeats(show.id, setBookedSeats, (err) => {
-      // Permission-denied is expected for non-admin users: the query returns all bookings
-      // for a show, which violates the rule resource.data.userId == request.auth.uid.
-      // In this case bookedSeats stays 0 and availableSeats defaults to THEATRE_CAPACITY.
-      console.warn('[BookingModal] subscribeToShowBookedSeats error (availableSeats defaulting to max):', err.message);
+    let cancelled = false;
+    void fetchShowAvailability(show.id).then((remaining) => {
+      if (!cancelled) setSeatsLeft(remaining);
     });
+    return () => { cancelled = true; };
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Ограничиваем количество билетов при изменении доступных мест.
+  // Ограничиваем количество билетов, когда остаток известен и меньше выбранного.
   useEffect(() => {
-    if (availableSeats >= 1 && tickets > availableSeats) {
+    if (seatsLeft !== null && seatsLeft >= 1 && tickets > seatsLeft) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTickets(availableSeats);
+      setTickets(seatsLeft);
     }
-  }, [availableSeats]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [seatsLeft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Переходим на форму сразу после авторизации, не дожидаясь следующего рендера
@@ -174,8 +179,10 @@ export function BookingModal({ show, onClose }: Props) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!user || !activeTicket || !show || authContextLoading) return;
-    if (availableSeats < tickets) {
-      setSubmitError(t.booking.soldOut);
+    // Клиентская проверка — только для быстрой обратной связи; отказать по-настоящему
+    // может лишь сервер, который считает вместимость в транзакции.
+    if (seatsLeft !== null && seatsLeft < tickets) {
+      setSubmitError(seatsLeft <= 0 ? t.booking.soldOut : t.booking.notEnoughSeats(seatsLeft));
       return;
     }
 
@@ -255,10 +262,19 @@ export function BookingModal({ show, onClose }: Props) {
         isAuthenticated: !!user,
         userDocPresent:  !!userProfile,
         userDocPhone:    userProfile?.phone ?? null,
-        bookedSeats,
-        availableSeats,
+        seatsLeft,
       });
-      setSubmitError(t.booking.submitError);
+      // Сервер присылает машиночитаемую причину — показываем её вместо общего текста.
+      const apiErr = err as BookingApiError;
+      if (apiErr?.reason === 'capacity_exceeded') {
+        const remaining = apiErr.remaining ?? 0;
+        setSeatsLeft(remaining);
+        setSubmitError(remaining <= 0 ? t.booking.soldOut : t.booking.notEnoughSeats(remaining));
+      } else if (apiErr?.reason === 'show_started') {
+        setSubmitError(t.booking.showAlreadyStarted);
+      } else {
+        setSubmitError(t.booking.submitError);
+      }
     } finally { setSubmitLoading(false); }
   }
 
@@ -379,7 +395,7 @@ export function BookingModal({ show, onClose }: Props) {
             discountAmount={discountAmount}
             loyaltyAvailable={loyaltyAvailable}
             maxTickets={maxTickets}
-            availableSeats={availableSeats}
+            seatsLeft={seatsLeft}
             onTicketsChange={setTickets}
             onSelectedTicketChange={tt => { setSelectedTicket(tt); setTickets(1); }}
             onPaymentChange={setPayment}
