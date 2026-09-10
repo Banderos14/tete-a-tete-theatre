@@ -583,8 +583,12 @@
   @include mixins.small {
     width: 100%;
     justify-content: center;
-    font-size: clamp(70px, 13vw, 80px);
-    gap: clamp(5px, 2.2vw, 10px);
+    // Раньше нижняя граница clamp была 70px: при ширине 320px это давало строку
+    // шире экрана, а white-space: nowrap не давал её перенести — «TÊTE À TÊTE»
+    // обрезалось с обеих сторон. Считаем размер от ширины экрана (18vw) и
+    // ограничиваем сверху; нижняя граница только страхует совсем узкие экраны.
+    font-size: clamp(44px, 18vw, 80px);
+    gap: clamp(4px, 2.2vw, 10px);
     letter-spacing: 0;
   }
 }
