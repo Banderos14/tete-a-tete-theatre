@@ -115,3 +115,26 @@ export function isBookingAttended(
   if (booking.status !== 'confirmed' || booking.paymentStatus !== 'paid') return false;
   return showStartUtcMs !== null && showEndUtcMs(showStartUtcMs) < nowMs;
 }
+
+// Бессмысленные сочетания статусов.
+//
+// Администратор должен иметь возможность починить реальную ситуацию вручную,
+// поэтому это НЕ запрет, а предупреждение: интерфейс просит подтверждение,
+// а не отказывает. Возвращает описание проблемы или null, если всё логично.
+export function describeStateIssue(
+  status: string, paymentStatus: string,
+): string | null {
+  if (status === 'attended' && paymentStatus !== 'paid') {
+    return 'Бронь отмечена как посещённая, но не оплачена';
+  }
+  if (status === 'confirmed' && paymentStatus === 'expired') {
+    return 'Бронь подтверждена, но срок оплаты помечен истёкшим';
+  }
+  if (status === 'cancelled' && paymentStatus === 'paid') {
+    return 'Отменённая бронь помечена оплаченной — деньги, возможно, придётся вернуть вручную';
+  }
+  if (paymentStatus === 'awaiting_transfer' && status === 'confirmed') {
+    return 'Бронь подтверждена, хотя перевод ещё ожидается';
+  }
+  return null;
+}

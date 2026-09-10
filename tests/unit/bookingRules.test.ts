@@ -108,3 +108,43 @@ describe('isValidCancelReason', () => {
     for (const r of ['', 'hack', null, 42, undefined]) expect(isValidCancelReason(r)).toBe(false);
   });
 });
+
+// ── Раздел 5: защита от бессмысленных состояний у администратора ────────────
+import { describeStateIssue } from '../../api/_lib/bookingRules.js';
+
+describe('describeStateIssue', () => {
+  it('ловит attended без оплаты — пример из задания', () => {
+    expect(describeStateIssue('attended', 'not_paid')).toMatch(/посещённая, но не оплачена/);
+    expect(describeStateIssue('attended', 'awaiting_transfer')).not.toBeNull();
+    expect(describeStateIssue('attended', 'expired')).not.toBeNull();
+  });
+
+  it('ловит подтверждение при истёкшей оплате', () => {
+    expect(describeStateIssue('confirmed', 'expired')).not.toBeNull();
+  });
+
+  it('ловит отменённую, но оплаченную бронь — возврат придётся делать вручную', () => {
+    expect(describeStateIssue('cancelled', 'paid')).toMatch(/вернуть вручную/);
+  });
+
+  it('ловит подтверждение до получения перевода', () => {
+    expect(describeStateIssue('confirmed', 'awaiting_transfer')).not.toBeNull();
+  });
+
+  it('нормальные сочетания проходят молча', () => {
+    expect(describeStateIssue('attended', 'paid')).toBeNull();
+    expect(describeStateIssue('confirmed', 'paid')).toBeNull();
+    expect(describeStateIssue('pending', 'not_paid')).toBeNull();
+    expect(describeStateIssue('pending', 'awaiting_transfer')).toBeNull();
+    expect(describeStateIssue('cancelled', 'expired')).toBeNull();
+    expect(describeStateIssue('cancelled', 'not_paid')).toBeNull();
+  });
+
+  it('это предупреждение, а не запрет — админка спрашивает подтверждение', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const admin = readFileSync(resolve(__dirname, '../../src/pages/AdminPage/AdminPage.tsx'), 'utf8');
+    expect(admin).toContain('describeStateIssue');
+    expect(admin).toContain('Всё равно сохранить?');
+  });
+});

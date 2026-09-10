@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { RU } from '../../i18n';
 import { getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPaid, expireOverdueBookings, hoursUntilExpiry, markEligibleBookingsAsAttended } from '../../services/bookingService';
 import { getPaymentAccount, PAYMENT_CONFIG } from '../../config/payment';
+import { describeStateIssue } from '../../../api/_lib/bookingRules';
 import { getAllUsers, getUsersForNewsletter, deleteUserCompletely } from '../../services/userService';
 import { resolveInstagramUsername, instagramProfileUrl } from '../../utils/instagram';
 import { getShowPublicUrl } from '../../utils/showUrl';
@@ -127,6 +128,11 @@ export function AdminPage() {
     // Если статус не изменился, письмо повторно не отправляем.
     if (!booking || booking.status === status) return;
 
+    // Бессмысленные сочетания статусов не запрещаем — театру может понадобиться
+    // починить реальную ситуацию вручную, — но переспрашиваем.
+    const issue = describeStateIssue(status, booking.paymentStatus ?? 'not_paid');
+    if (issue && !window.confirm(`${issue}.\n\nВсё равно сохранить?`)) return;
+
     setUpdatingId(bookingId);
     try {
       await updateBookingStatus(bookingId, status);
@@ -180,6 +186,8 @@ export function AdminPage() {
         }, adminToken).catch(() => {});
       } else {
         // Снятие оплаты меняет только paymentStatus и не отправляет письмо.
+        const issue = describeStateIssue(booking.status, paymentStatus);
+        if (issue && !window.confirm(`${issue}.\n\nВсё равно сохранить?`)) return;
         await updatePaymentStatus(bookingId, paymentStatus);
         setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, paymentStatus } : b));
       }
