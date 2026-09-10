@@ -10,7 +10,7 @@ import {
   serverTimestamp,
   type QueryConstraint,
 } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { auth, db } from '../firebase/config';
 import type { Booking, NewBooking, BookingStatus, PaymentStatus } from '../types/booking';
 
 // ── Server-side booking API ───────────────────────────────────────────────────
@@ -221,19 +221,32 @@ export function subscribeToShowBookedSeats(
   );
 }
 
-// Отмена по инициативе пользователя: сохраняет причину и необязательный комментарий.
+// Отмена по инициативе пользователя.
+//
+// Идёт через /api/cancel-booking, а не напрямую в Firestore: правила безопасности
+// пользовательских записей в bookings не разрешают вовсе, а бизнес-правила отмены
+// (нельзя отменить оплаченную, посещённую или уже начавшийся спектакль) должны
+// проверяться на сервере, а не в браузере.
 export async function cancelBookingByUser(
   bookingId: string,
   reason: string,
   comment?: string,
 ): Promise<void> {
-  const ref = doc(db, COLLECTION, bookingId);
-  await updateDoc(ref, {
-    status:      'cancelled',
-    cancelledBy: 'user',
-    cancelReason: reason,
-    ...(comment ? { cancelComment: comment } : {}),
-    cancelledAt: serverTimestamp(),
-    updatedAt:   serverTimestamp(),
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('Not authenticated');
+  const idToken = await currentUser.getIdToken();
+
+  const resp = await fetch('/api/cancel-booking', {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({ bookingId, reason, ...(comment ? { comment } : {}) }),
   });
+
+  const data = await resp.json().catch(() => ({})) as Record<string, unknown>;
+  if (!resp.ok) {
+    throw new Error(typeof data['error'] === 'string' ? data['error'] : `HTTP ${resp.status}`);
+  }
 }

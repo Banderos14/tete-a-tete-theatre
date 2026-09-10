@@ -5,6 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from '../../../services/bookingService';
 import { markEligibleBookingsAsAttended } from '../../../services/attendanceService';
+import { parseShowStartUtcMs } from '../../../../api/_lib/showTime';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Booking, BookingStatus } from '../../../types/booking';
 import { formatPhone, normalizePhone, isCompleteFrenchPhone } from '../../../utils/phone';
@@ -1263,7 +1264,19 @@ function BookingCard({ booking: b, t, isDismissing = false, onStartDismiss, onCa
   const isExpiredTransfer  = payStatus === 'expired';
   const isCancelled        = b.status === 'cancelled';
 
-  const canCancel = !isAttended && !isCancelled && b.status !== 'attended';
+  // Отмена зрителем: нельзя отменить посещённую, уже отменённую и ОПЛАЧЕННУЮ бронь
+  // (оплата окончательна, автоматических возвратов в системе нет), а также бронь
+  // на спектакль, который уже начался. Те же правила дублируются на сервере
+  // в /api/cancel-booking — здесь они лишь убирают заведомо нерабочую кнопку.
+  // Date.now() нельзя дёргать прямо в рендере — фиксируем момент один раз при монтировании
+  // карточки. Точности «спектакль уже начался» этого достаточно: кабинет открывают заново,
+  // а окончательное решение всё равно принимает сервер.
+  const [mountedAtMs] = useState(() => Date.now());
+  const showStartMs = parseShowStartUtcMs(b.showDate, b.showTime);
+  const showStarted = showStartMs !== null && showStartMs <= mountedAtMs;
+  const canCancel =
+    !isAttended && !isCancelled && b.status !== 'attended' &&
+    payStatus !== 'paid' && !showStarted;
 
   // Обратный отсчёт считаем только пока бронь ждёт оплаты.
   // Останавливаем при: cancelled, expired paymentStatus или в анимации dismiss.
