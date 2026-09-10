@@ -1,4 +1,5 @@
 import type { Booking } from '../types/booking';
+import { isSfntFontBinary, isPlausibleFontContentType } from '../utils/fontBinary';
 
 // Транслитерация кириллицы → латиница — запасной вариант, если кирилличные шрифты не загрузились.
 const CYR: Record<string, string> = {
@@ -61,11 +62,24 @@ const LABELS = {
   },
 } as const;
 
+// Возвращает base64 шрифта либо null, если по адресу лежит не шрифт.
+// Проверяем и Content-Type, и сигнатуру sfnt: SPA-rewrite отдаёт index.html
+// со статусом 200, так что res.ok сам по себе ничего не гарантирует.
 async function loadFontBase64(path: string): Promise<string | null> {
   try {
     const res = await fetch(path);
     if (!res.ok) return null;
+    if (!isPlausibleFontContentType(res.headers.get('content-type'))) {
+      console.warn(`[ticketPdf] ${path}: получен не шрифт (content-type), используется запасной вариант`);
+      return null;
+    }
+
     const bytes = new Uint8Array(await res.arrayBuffer());
+    if (!isSfntFontBinary(bytes)) {
+      console.warn(`[ticketPdf] ${path}: файл не является TTF/OTF, используется запасной вариант`);
+      return null;
+    }
+
     let binary = '';
     const chunk = 0x8000;
     for (let i = 0; i < bytes.length; i += chunk)
@@ -99,22 +113,35 @@ export async function generateTicketPdf(
     hasDecorFont = true;
   }
 
-  // Inter-Regular покрывает весь кириллический блок и доступен как TTF.
-  // Используется для подписей, имени гостя и футера в режиме RU.
-  const INTER_ID = 'InterRegular';
-  let hasInterFont = false;
-  if (isRU) {
-    const b64Inter = await loadFontBase64('/fonts/Inter-Regular.ttf');
-    if (b64Inter) {
-      doc.addFileToVFS(`${INTER_ID}.ttf`, b64Inter);
-      doc.addFont(`${INTER_ID}.ttf`, INTER_ID, 'normal');
-      hasInterFont = true;
+  // Кириллический шрифт для подписей, имени гостя и футера в режиме RU.
+  //
+  // Раньше здесь безусловно запрашивался Inter-Regular.ttf, которого в папке
+  // public/fonts нет: SPA-rewrite отдавал index.html со статусом 200, проверка
+  // res.ok проходила, hasInterFont становился true — и предусмотренная
+  // транслитерация (LABELS.RU_LATIN) не включалась НИКОГДА. jsPDF молча глотал
+  // ошибку разбора шрифта, и кириллица из билета просто пропадала.
+  //
+  // Подходящего кириллического шрифта для основного текста в проекте нет
+  // (Ekaterina Velikaya Two — рукописный акцидентный, для подписей билета не годится),
+  // поэтому RU-билет сейчас печатается транслитом. Чтобы включить настоящую
+  // кириллицу, достаточно положить лицензированный TTF в public/fonts/ и указать
+  // его здесь — остальной код уже готов.
+  const CYRILLIC_BODY_FONT_URL: string | null = null;
+
+  const CYR_ID = 'CyrillicBody';
+  let hasCyrillicFont = false;
+  if (isRU && CYRILLIC_BODY_FONT_URL) {
+    const b64Cyr = await loadFontBase64(CYRILLIC_BODY_FONT_URL);
+    if (b64Cyr) {
+      doc.addFileToVFS(`${CYR_ID}.ttf`, b64Cyr);
+      doc.addFont(`${CYR_ID}.ttf`, CYR_ID, 'normal');
+      hasCyrillicFont = true;
     }
   }
 
   // Выбираем набор подписей в зависимости от языка и доступности шрифта.
   const L = isRU
-    ? (hasInterFont ? LABELS.RU : LABELS.RU_LATIN)
+    ? (hasCyrillicFont ? LABELS.RU : LABELS.RU_LATIN)
     : LABELS.FR;
 
   const H = (style: 'normal' | 'bold' | 'italic' = 'normal') =>
@@ -122,12 +149,12 @@ export async function generateTicketPdf(
 
   // Для основного текста, который в RU-режиме может содержать кириллицу.
   const setBodyFont = () => {
-    if (isRU && hasInterFont) doc.setFont(INTER_ID, 'normal');
+    if (isRU && hasCyrillicFont) doc.setFont(CYR_ID, 'normal');
     else H('normal');
   };
 
   // Имя гостя: кириллица через Inter; иначе — транслит.
-  const guestName = (isRU && hasInterFont)
+  const guestName = (isRU && hasCyrillicFont)
     ? (booking.userName || booking.userEmail || 'Guest')
     : (transliterate(booking.userName).trim() || booking.userEmail || 'Guest');
 
@@ -192,7 +219,7 @@ export async function generateTicketPdf(
 
   for (const [label, value] of rows) {
     // Подпись (маленькая серая, uppercase)
-    if (isRU && hasInterFont) doc.setFont(INTER_ID, 'normal');
+    if (isRU && hasCyrillicFont) doc.setFont(CYR_ID, 'normal');
     else H('bold');
     doc.setFontSize(7.5);
     doc.setTextColor(155, 150, 142);
@@ -237,7 +264,7 @@ export async function generateTicketPdf(
   // Футер
   doc.setFontSize(8.5);
   doc.setTextColor(150, 146, 140);
-  if (isRU && hasInterFont) doc.setFont(INTER_ID, 'normal');
+  if (isRU && hasCyrillicFont) doc.setFont(CYR_ID, 'normal');
   else H('italic');
   doc.text(L.footer, W / 2, y, { align: 'center' });
 
