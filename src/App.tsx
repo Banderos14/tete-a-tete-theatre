@@ -20,6 +20,7 @@ import { Contacts }      from './components/Contacts';
 import { Footer }        from './components/Footer';
 const AdminPage       = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const TicketCheckPage = lazy(() => import('./pages/TicketCheckPage').then(m => ({ default: m.TicketCheckPage })));
+const NotFoundPage    = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 const AuthModal       = lazy(() => import('./components/ui/AuthModal').then(m => ({ default: m.AuthModal })));
 const ProfileDrawer   = lazy(() => import('./components/ui/ProfileDrawer').then(m => ({ default: m.ProfileDrawer })));
 const BookingModal    = lazy(() => import('./components/ui/BookingModal').then(m => ({ default: m.BookingModal })));
@@ -192,6 +193,12 @@ export default function App() {
           <Route path="/admin/checkin" element={
             <ErrorBoundary label="TicketCheckPage" fallback={<RouteErrorScreen />}>
               <Suspense fallback={null}><TicketCheckPage /></Suspense>
+            </ErrorBoundary>
+          } />
+          {/* Неизвестный адрес: человеческая страница вместо белого экрана. */}
+          <Route path="*" element={
+            <ErrorBoundary label="NotFoundPage" fallback={<RouteErrorScreen />}>
+              <Suspense fallback={null}><NotFoundPage /></Suspense>
             </ErrorBoundary>
           } />
         </Routes>
