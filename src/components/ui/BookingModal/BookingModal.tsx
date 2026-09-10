@@ -258,25 +258,24 @@ export function BookingModal({ show, onClose }: Props) {
       }
     } catch (err) {
       const fe = err as { code?: string; message?: string; stack?: string };
+      // Диагностика без персональных данных: uid, e-mail и телефон в консоль
+      // браузера не пишем — их видно в devtools и они могут утечь в сторонние
+      // логгеры и расширения. Для разбора инцидента хватает технических полей;
+      // связать их с пользователем можно по коду ошибки и серверным логам.
       console.error('[BookingModal] createBooking failed', {
         errorCode:       fe?.code,
         errorMessage:    fe?.message,
-        errorStack:      fe?.stack,
-        uid:             user?.uid,
-        email:           user?.email ?? null,
         showId:          show?.id,
-        showDate:        show ? `${show.day} ${show.month} ${show.year}` : null,
-        showTime:        show?.time,
         ticketType:      activeTicket?.id,
         ticketsCount:    tickets,
-        phoneRaw:        phone,
         phoneValid:      isValidPhone(phone),
         paymentMethod:   payment,
         isAuthenticated: !!user,
         userDocPresent:  !!userProfile,
-        userDocPhone:    userProfile?.phone ?? null,
+        hasProfilePhone: !!userProfile?.phone,
         seatsLeft,
       });
+
       // Сервер присылает машиночитаемую причину — показываем её вместо общего текста.
       const apiErr = err as BookingApiError;
       if (apiErr?.reason === 'capacity_exceeded') {

@@ -75,6 +75,20 @@ function localeDate(showDate: string, lang: 'RU' | 'FR'): string {
   return showDate.replace(/[А-ЯЁ][а-яё]+/, m => MONTHS_RU_TO_FR[m] ?? m);
 }
 
+// Экранирование пользовательских значений перед вставкой в HTML письма.
+//
+// userName приходит из displayName аккаунта, то есть управляется пользователем.
+// Почтовые клиенты скриптов не исполняют, но разметку вставить можно было —
+// достаточно, чтобы испортить вёрстку письма или подсунуть чужую ссылку.
+export function escapeEmailHtml(value: string): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function wrapHtml(lang: string, subject: string, headerTitle: string, bodyHtml: string): string {
   return `<!DOCTYPE html>
 <html lang="${lang}">
@@ -181,8 +195,8 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
 
   const headerTitle = isRU ? 'Бронирование принято' : 'Réservation reçue';
   const greeting    = isRU
-    ? `Здравствуйте, ${data.userName}!`
-    : `Bonjour, ${data.userName}&nbsp;!<br><span style="font-size:13px;color:#888;">Merci pour votre réservation&nbsp;!</span>`;
+    ? `Здравствуйте, ${escapeEmailHtml(data.userName)}!`
+    : `Bonjour, ${escapeEmailHtml(data.userName)}&nbsp;!<br><span style="font-size:13px;color:#888;">Merci pour votre réservation&nbsp;!</span>`;
   const ticketLabel = isRU ? 'Код брони' : 'Code de réservation';
 
   const payNote = isRU
@@ -211,13 +225,13 @@ function buildConfirmationEmail(data: BookingEmailData): { subject: string; html
         : [['Montant', `${data.totalAmount}&nbsp;€`]]);
 
   const rows: [string, string][] = isRU ? [
-    ['Зритель',   data.userName],
+    ['Зритель',   escapeEmailHtml(data.userName)],
     ['Спектакль', data.showTitle],
     ['Дата',      `${dateStr} · ${data.showTime}`],
     ['Билеты',    `${data.ticketsCount} шт.`],
     ...amountRows,
   ] : [
-    ['Spectateur', data.userName],
+    ['Spectateur', escapeEmailHtml(data.userName)],
     ['Spectacle',  data.showTitle],
     ['Date',       `${dateStr} · ${data.showTime}`],
     ['Billets',    `${data.ticketsCount} billet${data.ticketsCount > 1 ? 's' : ''}`],
@@ -384,7 +398,7 @@ function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html
   const subject = isRU ? copy.subjectRU : copy.subjectFR;
   const header  = isRU ? copy.headerRU  : copy.headerFR;
   const note    = isRU ? copy.noteRU    : copy.noteFR;
-  const greeting = isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName}&nbsp;!`;
+  const greeting = isRU ? `Здравствуйте, ${escapeEmailHtml(data.userName)}!` : `Bonjour, ${escapeEmailHtml(data.userName)}&nbsp;!`;
   const ticketLabel = isRU ? 'Код брони' : 'Code de réservation';
 
   const rows: [string, string][] = isRU ? [
@@ -432,7 +446,7 @@ function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: string; h
     : `${THEATRE_NAME} — paiement reçu · votre place est confirmée : ${data.showTitle}`;
 
   const headerTitle = isRU ? 'Оплата получена' : 'Paiement reçu';
-  const greeting    = isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName}&nbsp;!`;
+  const greeting    = isRU ? `Здравствуйте, ${escapeEmailHtml(data.userName)}!` : `Bonjour, ${escapeEmailHtml(data.userName)}&nbsp;!`;
   const ticketLabel = isRU ? 'Код брони' : 'Code de réservation';
 
   const nextNote = isRU
@@ -503,7 +517,7 @@ function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: str
     : `Nouveau spectacle au Théâtre Tête-à-Tête : ${data.showTitle}`;
 
   const headerTitle = isRU ? 'Новый спектакль в театре ТЕТ-А-ТЕТ' : 'Nouveau spectacle au Théâtre Tête-à-Tête';
-  const greeting    = isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName}&nbsp;!`;
+  const greeting    = isRU ? `Здравствуйте, ${escapeEmailHtml(data.userName)}!` : `Bonjour, ${escapeEmailHtml(data.userName)}&nbsp;!`;
 
   const rows: [string, string][] = isRU ? [
     ['Спектакль', data.showTitle],
