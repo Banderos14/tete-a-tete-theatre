@@ -117,7 +117,9 @@ async function ensureUserDocument(firebaseUser: User): Promise<UserProfile> {
     createdAt:   serverTimestamp(),
     lastLoginAt: serverTimestamp(),
   });
-  void ensureAudienceCounterAndIncrement();
+  // Один вызов на созданный профиль. Сервер дополнительно защищён отметкой
+  // audienceCounted/{uid}, поэтому повтор счётчик не увеличит.
+  void ensureAudienceCounterAndIncrement(() => firebaseUser.getIdToken());
   return profile;
 }
 
@@ -220,7 +222,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createdAt:   (await loadFirebase()).serverTimestamp(),
       lastLoginAt: (await loadFirebase()).serverTimestamp(),
     });
-    void ensureAudienceCounterAndIncrement();
+    // Счётчик зрителей увеличивает ТОЛЬКО ensureUserDocument — единственная точка
+    // вызова. Раньше инкремент шёл и отсюда, и из onAuthStateChanged, который не
+    // успевал увидеть только что созданный профиль, и один пользователь давал +2.
     setUserProfile(profile);
   }
 

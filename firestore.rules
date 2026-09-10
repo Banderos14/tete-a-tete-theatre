@@ -83,22 +83,32 @@ service cloud.firestore {
     }
 
     // ── Stats collection ─────────────────────────────────────────────────────
-    // stats/siteStats — public "N spectators" counter shown on the landing page.
-    // Public read so anyone can see the number without signing in.
-    // Writes are limited to authenticated users bumping audienceCount by
-    // exactly +1 (new registration) so the counter can't be reset or inflated
-    // from the client. The admin delete-user API decrements via the Admin SDK,
-    // which bypasses these rules entirely.
+    // stats/siteStats — публичный счётчик «N зрителей» на лендинге.
+    //
+    // Читать может кто угодно — число показывается всем.
+    // Писать не может НИКТО из клиентов: счётчик увеличивает только
+    // /api/register-audience через Admin SDK, ровно один раз на пользователя.
+    // Раньше правило разрешало любому авторизованному слать +1, и счётчик можно
+    // было накручивать в цикле, а также создавать произвольные stats/{id}.
     match /stats/{statsId} {
-      allow read: if true;
-
-      allow create: if isSignedIn()
-        && request.resource.data.audienceCount is int;
-
-      allow update: if isSignedIn()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['audienceCount'])
-        && request.resource.data.audienceCount == resource.data.audienceCount + 1;
+      allow read:  if true;
+      allow write: if false;
     }
+
+    // ── Служебные серверные коллекции ────────────────────────────────────────
+    // Все они пишутся исключительно Admin SDK, который правила не проверяет.
+    // Клиенту здесь не нужно ничего — ни читать, ни писать.
+    //
+    //   showCounters/{showId}      — точка сериализации транзакций бронирования
+    //   loyaltyState/{uid}         — израсходованные бонусы лояльности
+    //   idempotencyKeys/{key}      — защита от повторного создания брони
+    //   rateLimits/{bucket}        — лимиты отправки писем
+    //   audienceCounted/{uid}      — отметка, что зритель уже учтён в счётчике
+    match /showCounters/{showId}    { allow read, write: if false; }
+    match /loyaltyState/{uid}       { allow read, write: if false; }
+    match /idempotencyKeys/{keyId}  { allow read, write: if false; }
+    match /rateLimits/{bucket}      { allow read, write: if false; }
+    match /audienceCounted/{uid}    { allow read, write: if false; }
 
   }
 }
