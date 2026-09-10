@@ -83,26 +83,39 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return;
     }
 
-    // ── Delete bookings (batch) ──────────────────────────────────────────────
+    // ── Удаление броней порциями ─────────────────────────────────────────────
+    // В одном batch Firestore допускает не больше 500 операций. Раньше все брони
+    // складывались в один batch вместе с документом пользователя и счётчиком:
+    // у зрителя с большой историей удаление просто падало.
     const bookingsSnap = await db.collection('bookings').where('userId', '==', targetUid).get();
-    const batch = db.batch();
-    bookingsSnap.docs.forEach(d => batch.delete(d.ref));
+    const bookingsDeletedCount = bookingsSnap.size;
 
-    // ── Delete Firestore user document ───────────────────────────────────────
-    batch.delete(db.collection('users').doc(targetUid));
-
-    // ── Decrement audience counter ───────────────────────────────────────────
-    // batch.update() throws NOT_FOUND (and aborts the whole batch) if the doc
-    // doesn't exist yet — stats/siteStats is only lazily created on first
-    // registration, so it may genuinely be missing. Never let that block deletion.
-    const statsRef  = db.collection('stats').doc('siteStats');
-    const statsSnap = await statsRef.get();
-    if (statsSnap.exists) {
-      batch.update(statsRef, { audienceCount: FieldValue.increment(-1) });
+    const BATCH_LIMIT = 450; // запас до лимита 500 на прочие операции порции
+    for (let i = 0; i < bookingsSnap.docs.length; i += BATCH_LIMIT) {
+      const batch = db.batch();
+      for (const doc of bookingsSnap.docs.slice(i, i + BATCH_LIMIT)) batch.delete(doc.ref);
+      await batch.commit();
     }
 
-    await batch.commit();
-    const bookingsDeletedCount = bookingsSnap.size;
+    // ── Профиль, отметка счётчика и сам счётчик ──────────────────────────────
+    const finalBatch = db.batch();
+    finalBatch.delete(db.collection('users').doc(targetUid));
+
+    // Отметка «этот зритель уже учтён» удаляется вместе с пользователем:
+    // если человек зарегистрируется заново, он снова будет посчитан.
+    const markerRef  = db.collection('audienceCounted').doc(targetUid);
+    const markerSnap = await markerRef.get();
+    if (markerSnap.exists) finalBatch.delete(markerRef);
+
+    // batch.update() бросает NOT_FOUND и рушит всю порцию, если документа нет:
+    // stats/siteStats создаётся лениво, поэтому его может не существовать.
+    const statsRef  = db.collection('stats').doc('siteStats');
+    const statsSnap = await statsRef.get();
+    if (statsSnap.exists && markerSnap.exists) {
+      finalBatch.update(statsRef, { audienceCount: FieldValue.increment(-1) });
+    }
+
+    await finalBatch.commit();
 
     // ── Delete Firebase Auth user ────────────────────────────────────────────
     let authDeleted = false;
@@ -122,9 +135,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     respond(res, 200, { ok: true, userDeleted: true, authDeleted, bookingsDeletedCount }, req);
 
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const code    = (err as { code?: string }).code;
+    // Наружу — нейтральный текст. Раньше клиенту уходил внутренний err.message
+    // с деталями инфраструктуры; подробности должны оставаться в серверном логе.
     console.error('[delete-user]', err);
-    respond(res, 500, { ok: false, error: message, ...(code ? { code } : {}) }, req);
+    respond(res, 500, { ok: false, error: 'Failed to delete user' }, req);
   }
 }

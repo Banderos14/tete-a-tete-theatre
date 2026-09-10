@@ -96,9 +96,8 @@ export async function deleteUserCompletely(uid: string): Promise<DeleteUserResul
   try {
     data = JSON.parse(text) as Record<string, unknown>;
   } catch {
-    throw new Error(
-      `Delete user API вернул не-JSON (HTTP ${res.status}): ${text.slice(0, 200)}`,
-    );
+    // Тело ответа наружу не показываем: там может быть страница ошибки хостинга.
+    throw new Error(`Delete user API вернул не-JSON (HTTP ${res.status})`);
   }
 
   if (!res.ok) throw new Error(String(data.error ?? `HTTP ${res.status}`));
