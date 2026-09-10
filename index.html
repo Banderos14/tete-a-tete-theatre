@@ -116,15 +116,13 @@
     <noscript>
       <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet" />
     </noscript>
-    <!-- Google tag (gtag.js) -->
-      <script async src="https://www.googletagmanager.com/gtag/js?id=G-LPLQXLMV7D"></script>
-      <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-      
-        gtag('config', 'G-LPLQXLMV7D');
-      </script>
+    <!-- Google Analytics 4.
+         Скрипт НЕ подключается здесь: GA4 ставит cookie, а театр работает во
+         Франции, где для этого нужно согласие пользователя (GDPR / рекомендации
+         CNIL). Загрузка выполняется из src/services/analytics.ts и только после
+         явного согласия; отказ действительно означает, что gtag.js не грузится.
+         Идентификатор измерения хранится тут же, чтобы его было легко заменить. -->
+    <meta name="ga-measurement-id" content="G-LPLQXLMV7D" />
   </head>
   <body>
     <div id="root"></div>

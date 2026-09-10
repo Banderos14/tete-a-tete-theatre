@@ -6,6 +6,7 @@ import type { Lang } from './i18n/translations';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import type { Show } from './types';
 import { ErrorBoundary, RouteErrorScreen } from './components/ui/ErrorBoundary';
+import { CookieConsent } from './components/ui/CookieConsent';
 
 import { CurtainIntro }  from './components/CurtainIntro';
 import { Header }        from './components/Header';
@@ -225,6 +226,9 @@ export default function App() {
             </ErrorBoundary>
           </>
         )}
+
+        {/* Баннер согласия: GA4 не стартует, пока выбор не сделан. */}
+        <CookieConsent />
 
       </LangContext.Provider>
     </AuthProvider>
