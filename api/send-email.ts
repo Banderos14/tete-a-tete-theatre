@@ -26,7 +26,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuth }      from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp }  from './_lib/firebaseAdmin.js';
 import { consumeRateLimit } from './_lib/rateLimit.js';
 import { respond, readBody, bearerToken } from './_lib/http.js';
@@ -119,6 +119,27 @@ async function verifyRecipientIsCallerEmail(idToken: string, recipientEmail: str
       record.email.toLowerCase() === recipientEmail.toLowerCase();
   } catch {
     return false;
+  }
+}
+
+// Техническое состояние доставки.
+//
+// Раньше узнать, ушло ли письмо, из приложения было невозможно — только
+// в дашборде Resend. Пишем компактную запись: без адреса получателя (он уже
+// хранится в брони, дублировать персональные данные в лог незачем) — хватает
+// uid, типа письма и ответа провайдера.
+async function logEmailDelivery(entry: {
+  type: string; uid: string; status: 'sent' | 'failed' | 'skipped';
+  providerStatus?: number; ticketCode?: string;
+}): Promise<void> {
+  try {
+    await getFirestore(getAdminApp()).collection('emailLog').add({
+      ...entry,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    // Журнал доставки — вспомогательный: его сбой не должен влиять на письмо.
+    console.warn('[send-email] delivery log write failed:', err);
   }
 }
 
@@ -268,6 +289,7 @@ export default async function handler(
     // Env not configured — return 200 so the booking is never blocked.
     // The booking is already saved in Firestore at this point.
     console.warn('[send-email] RESEND_API_KEY or EMAIL_FROM not set — email skipped');
+    void logEmailDelivery({ type: String(type), uid: callerUid, status: 'skipped' });
     respond(res, 200, { ok: true, skipped: true, reason: 'Email provider not configured' }, req);
     return;
   }
@@ -295,6 +317,10 @@ export default async function handler(
     });
 
     if (resendRes.ok) {
+      void logEmailDelivery({
+        type: String(type), uid: callerUid, status: 'sent', providerStatus: resendRes.status,
+        ...(typeof body.ticketCode === 'string' ? { ticketCode: body.ticketCode } : {}),
+      });
       respond(res, 200, { ok: true }, req);
       return;
     }
@@ -302,10 +328,14 @@ export default async function handler(
     // Resend returned an error — log details server-side, send safe message client-side
     const errData = await resendRes.json().catch(() => ({})) as Record<string, unknown>;
     console.error('[send-email] Resend responded with error', resendRes.status, errData);
+    void logEmailDelivery({
+      type: String(type), uid: callerUid, status: 'failed', providerStatus: resendRes.status,
+    });
     respond(res, 500, { error: 'Email provider error' }, req);
 
   } catch (err) {
     console.error('[send-email] Network error calling Resend:', err);
+    void logEmailDelivery({ type: String(type), uid: callerUid, status: 'failed' });
     respond(res, 500, { error: 'Internal server error' }, req);
   }
 }

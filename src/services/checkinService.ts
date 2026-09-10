@@ -18,6 +18,8 @@ export interface CheckinBooking {
   showDate:      string;
   showTime:      string;
   userName:      string;
+  userEmail:     string;
+  lang:          'RU' | 'FR';
   ticketsCount:  number;
   totalAmount:   number;
   status:        string;

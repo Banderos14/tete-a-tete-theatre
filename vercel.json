@@ -117,5 +117,11 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/expire-bookings",
+      "schedule": "0 * * * *"
+    }
   ]
 }

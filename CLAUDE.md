@@ -51,6 +51,7 @@ Firebase грузится лениво из `AuthContext` (`loadFirebase()` ме
 | проверка билета и проход | `POST /api/checkin-ticket` | роль admin, состояние брони и актуальность даты — атомарно |
 | остаток мест | `GET /api/show-availability` | публичный, отдаёт только числа |
 | учёт нового зрителя | `POST /api/register-audience` | ровно один инкремент на пользователя |
+| протухание переводов | `GET /api/expire-bookings` | вызывается Vercel Cron каждый час, защищён `CRON_SECRET` |
 
 **Вместимость** проверяется на сервере внутри транзакции. Отменённые и протухшие брони места не занимают. Документы `showCounters/{showId}` и `loyaltyState/{uid}` служат точками конфликта, чтобы параллельные транзакции гарантированно сериализовались, — авторитетное число мест при этом всегда пересчитывается запросом.
 
@@ -87,7 +88,7 @@ Firebase грузится лениво из `AuthContext` (`loadFirebase()` ме
 
 Прод — Vercel (`vercel.json`: заголовки кеширования, `/api/*` функции), домен `https://www.theatre-teteatete.fr`. В репозитории есть ещё `.github/workflows/deploy.yml` для GitHub Pages, который собирает только фронт — там `/api/*` не существует, так что это не полноценное окружение.
 
-Секреты (`RESEND_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `ALLOWED_ORIGIN`) — **без префикса `VITE_`**, иначе они попадут в бандл. Описание всех переменных — в `.env.example`.
+Секреты (`RESEND_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `ALLOWED_ORIGIN`, `CRON_SECRET`) — **без префикса `VITE_`**, иначе они попадут в бандл. Описание всех переменных — в `.env.example`.
 
 ## Дизайн-система редизайна 2026 (модалки и кабинет)
 

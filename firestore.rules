@@ -104,11 +104,13 @@ service cloud.firestore {
     //   idempotencyKeys/{key}      — защита от повторного создания брони
     //   rateLimits/{bucket}        — лимиты отправки писем
     //   audienceCounted/{uid}      — отметка, что зритель уже учтён в счётчике
+    //   emailLog/{id}              — техническое состояние доставки писем
     match /showCounters/{showId}    { allow read, write: if false; }
     match /loyaltyState/{uid}       { allow read, write: if false; }
     match /idempotencyKeys/{keyId}  { allow read, write: if false; }
     match /rateLimits/{bucket}      { allow read, write: if false; }
     match /audienceCounted/{uid}    { allow read, write: if false; }
+    match /emailLog/{entryId}       { allow read, write: if false; }
 
   }
 }

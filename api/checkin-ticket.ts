@@ -107,6 +107,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         showDate:      String(data.showDate ?? ''),
         showTime:      String(data.showTime ?? ''),
         userName:      String(data.userName ?? ''),
+        // Нужны, чтобы страница проверки могла отправить то же письмо об оплате,
+        // что и админка: поведение наличной оплаты должно совпадать.
+        userEmail:     String(data.userEmail ?? ''),
+        lang:          data.lang === 'FR' ? 'FR' : 'RU',
         ticketsCount:  typeof data.ticketsCount === 'number' ? data.ticketsCount : 1,
         totalAmount:   typeof data.totalAmount === 'number' ? data.totalAmount : 0,
         status, paymentStatus, paymentMethod, showRelevance,

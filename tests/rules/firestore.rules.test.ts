@@ -263,7 +263,7 @@ describe('stats — публичный счётчик', () => {
 });
 
 describe('служебные серверные коллекции закрыты полностью', () => {
-  const collections = ['showCounters', 'loyaltyState', 'idempotencyKeys', 'rateLimits', 'audienceCounted'];
+  const collections = ['showCounters', 'loyaltyState', 'idempotencyKeys', 'rateLimits', 'audienceCounted', 'emailLog'];
 
   for (const name of collections) {
     it(`${name}: пользователь не читает`, async () => {

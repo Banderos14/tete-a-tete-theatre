@@ -4,6 +4,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { convertPdfFirstPageToImageFile, isPdfFile, scanQrFromImageFile } from '../../services/pdfScanService';
 import { useAuth } from '../../context/AuthContext';
 import { checkinTicket, type CheckinBooking } from '../../services/checkinService';
+import { sendPaymentPaidEmail } from '../../services/emailService';
 import { parseTicketCodeFromScan } from '../../utils/parseTicketCode';
 import { mapAuthError, isPopupClosedError } from '../../utils/authErrors';
 import { RU } from '../../i18n';
@@ -242,7 +243,28 @@ export function TicketCheckPage() {
     setOperating(true);
     try {
       const res = await callCheckin(booking.ticketCode, 'mark_paid');
-      if (res.ok && res.booking) { setBooking(res.booking); return; }
+      if (res.ok && res.booking) {
+        setBooking(res.booking);
+        // То же письмо, что отправляет админка: поведение наличной оплаты
+        // не должно зависеть от того, откуда её отметили.
+        const b = res.booking;
+        if (b.userEmail) {
+          const adminToken = await user?.getIdToken().catch(() => undefined);
+          void sendPaymentPaidEmail({
+            userEmail:     b.userEmail,
+            userName:      b.userName,
+            showTitle:     b.showTitle,
+            showDate:      b.showDate,
+            showTime:      b.showTime,
+            ticketsCount:  b.ticketsCount,
+            totalAmount:   b.totalAmount,
+            ticketCode:    b.ticketCode,
+            bookingStatus: 'confirmed',
+            lang:          b.lang,
+          }, adminToken).catch(() => {/* письмо не должно ломать проход */});
+        }
+        return;
+      }
       setErrorMsg(res.reason === 'already_paid'
         ? 'Эта бронь уже отмечена как оплаченная.'
         : 'Ошибка при подтверждении оплаты.');
