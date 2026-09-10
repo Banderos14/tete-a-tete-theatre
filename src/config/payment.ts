@@ -59,11 +59,6 @@ export function getPaymentAccount(id: string | undefined): PaymentAccount {
     ?? PAYMENT_CONFIG.paymentAccounts[0];
 }
 
-export function formatIban(iban: string): string {
-  const raw = iban.replace(/\s/g, '');
-  return raw.match(/.{1,4}/g)?.join(' ') ?? iban;
-}
-
 export function normalizeIban(iban: string): string {
   return iban.replace(/\s/g, '');
 }

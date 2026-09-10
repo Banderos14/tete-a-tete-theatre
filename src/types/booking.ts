@@ -44,5 +44,3 @@ export interface Booking {
   cancelComment?: string;
   cancelledAt?:   import('firebase/firestore').Timestamp;
 }
-
-export type NewBooking = Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>;

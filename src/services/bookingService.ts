@@ -1,6 +1,5 @@
 import {
   collection,
-  addDoc,
   getDocs,
   doc,
   updateDoc,
@@ -11,7 +10,7 @@ import {
   type QueryConstraint,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-import type { Booking, NewBooking, BookingStatus, PaymentStatus } from '../types/booking';
+import type { Booking, BookingStatus, PaymentStatus } from '../types/booking';
 import { shouldMarkAsAttended } from './attendanceService';
 
 // ── Server-side booking API ───────────────────────────────────────────────────
@@ -93,28 +92,6 @@ function getTimestampMs(ts: unknown): number {
 }
 
 const COLLECTION = 'bookings';
-
-export async function createBooking(data: NewBooking): Promise<string> {
-  // Проверка мест — на клиенте через subscribeToShowBookedSeats + guard в handleSubmit.
-  // getDocs с where('showId','==',id) нарушает правила безопасности Firestore для
-  // не-admin пользователей: правило требует resource.data.userId == auth.uid,
-  // поэтому любой запрос, способный вернуть чужие документы, отклоняется с permission-denied.
-  const ref = await addDoc(collection(db, COLLECTION), {
-    ...data,
-    createdAt: serverTimestamp(),
-  });
-  return ref.id;
-}
-
-// Одноразовый запрос истории броней пользователя (для проверки loyalty).
-export async function getUserBookingsOnce(userId: string): Promise<Booking[]> {
-  const q = query(collection(db, COLLECTION), where('userId', '==', userId));
-  return snapshotToBookings(await getDocs(q)).sort((a, b) => {
-    const ta = (a.createdAt as { seconds?: number })?.seconds ?? 0;
-    const tb = (b.createdAt as { seconds?: number })?.seconds ?? 0;
-    return tb - ta;
-  });
-}
 
 // Realtime-подписка без составного индекса (сортировка на клиенте).
 // Возвращает функцию отписки — вызывать при анмаунте компонента.
