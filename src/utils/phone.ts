@@ -41,20 +41,24 @@ export function formatPhone(raw: string): string {
     return formatFrench(digits.slice(1, 10));
   }
 
-  // +CC… — other international, max 15 digits (E.164)
+  // +CC… — прочие международные номера.
+  //
+  // Раньше код страны брался как первые ДВЕ цифры, и трёхзначные коды ломались:
+  // +380 67 123 45 67 показывался как «+38 06 71 23 45 67» — визуально это уже
+  // другой номер. Определить границу кода страны без полноценной телефонной
+  // библиотеки нельзя (коды бывают из 1, 2 и 3 цифр), поэтому мы не угадываем:
+  // показываем канонический E.164 без группировки. Он не украшен, зато никогда
+  // не искажает номер. Французские номера выше по-прежнему группируются
+  // привычным образом — для них формат нам известен точно.
   if (hasPlus) {
-    const country = digits.slice(0, 2);
-    const rest    = digits.slice(2, 13);
-    let out = '+' + country;
-    for (let i = 0; i < rest.length; i += 2) out += ' ' + rest.slice(i, i + 2);
-    return out;
+    return '+' + digits.slice(0, 15);
   }
 
   return digits.slice(0, 15);
 }
 
 // Returns E.164 compact form for Firestore storage (no spaces).
-// Examples: "+33 7 49 66 19 40" → "+33749661940", "+380 67 123 45 67" → "+380671234567"
+// Examples: "+33 7 49 66 19 40" → "+33749661940", "+380671234567" → "+380671234567"
 export function normalizePhone(raw: string): string {
   if (!raw.trim()) return '';
   const formatted = formatPhone(raw.trim());
