@@ -1,55 +1,52 @@
 import { updateBookingStatus } from './bookingService';
+import { parseShowStartUtcMs } from '../../api/_lib/showTime';
+import { isBookingAttended } from '../../api/_lib/bookingRules';
 import type { Booking } from '../types/booking';
 
-// 3-буквенные сокращения русских месяцев для разбора строк типа "17 Май 2026"
-const MONTH_RU: Record<string, number> = {
-  'Янв': 0, 'Фев': 1, 'Мар': 2, 'Апр': 3,
-  'Май': 4, 'Июн': 5, 'Июл': 6, 'Авг': 7,
-  'Сен': 8, 'Окт': 9, 'Ноя': 10, 'Дек': 11,
-};
+// Время спектакля считается ОДНОЙ реализацией — общей с сервером (api/_lib/showTime).
+//
+// Раньше здесь была своя копия разбора «17 Май 2026», которая собирала дату
+// локальным конструктором Date — то есть в таймзоне БРАУЗЕРА. Серверная копия
+// делала то же самое в таймзоне процесса (на Vercel это UTC) и вдобавок прибавляла
+// двухчасовой буфер прямо при сборке даты. В итоге один и тот же спектакль «заканчивался»
+// в разное время у зрителя из Ниццы, зрителя из Москвы и у сервера, а переход на
+// летнее/зимнее время сдвигал момент ещё раз.
 
-// Возвращает время, когда спектакль считается завершённым (начало + 2 часа буфера).
-function parseShowEnd(showDate: string, showTime: string): Date | null {
-  const parts = showDate.trim().split(/\s+/);
-  if (parts.length !== 3) return null;
-  const [dayStr, monthStr, yearStr] = parts;
-  const month = MONTH_RU[monthStr];
-  if (month === undefined) return null;
-  const [hStr, mStr] = showTime.split(':');
-  const day  = parseInt(dayStr, 10);
-  const year = parseInt(yearStr, 10);
-  const hour = parseInt(hStr, 10);
-  const min  = parseInt(mStr ?? '0', 10);
-  if (isNaN(day) || isNaN(year) || isNaN(hour)) return null;
-  const start = new Date(year, month, day, hour, min, 0);
-  return new Date(start.getTime() + 2 * 60 * 60 * 1000);
+// Абсолютный момент начала спектакля (мс UTC).
+// У новых броней он хранится полем showStartAt, у старых восстанавливается
+// из строковых showDate/showTime как настенное время Europe/Paris.
+export function bookingStartUtcMs(booking: Booking): number | null {
+  const raw = booking.showStartAt as unknown as
+    { toMillis?: () => number; seconds?: number } | undefined;
+
+  if (raw && typeof raw.toMillis === 'function') return raw.toMillis();
+  if (raw && typeof raw.seconds === 'number')    return raw.seconds * 1000;
+
+  return parseShowStartUtcMs(booking.showDate, booking.showTime);
 }
 
 // Чистая проверка: считать ли бронь посещённой?
-// Требует confirmed + paid + спектакль завершился 2+ часа назад.
-export function shouldMarkAsAttended(booking: Booking): boolean {
-  if (booking.status !== 'confirmed') return false;
-  if (booking.paymentStatus !== 'paid') return false;
-  const end = parseShowEnd(booking.showDate, booking.showTime);
-  if (!end) return false;
-  return end < new Date();
+// Требует confirmed + paid + спектакль завершился (начало + 2 часа буфера).
+export function shouldMarkAsAttended(booking: Booking, nowMs: number = Date.now()): boolean {
+  if (booking.status === 'attended') return false; // уже отмечена — писать нечего
+  return isBookingAttended(booking, bookingStartUtcMs(booking), nowMs);
 }
 
 // Вычисленный статус — используется в UI, чтобы сразу показать "посещено"
-// без ожидания обновления Firestore (AdminPage пишет async, ProfileDrawer считает сам).
-export function computedIsAttended(booking: Booking): boolean {
-  return booking.status === 'attended' || shouldMarkAsAttended(booking);
+// без ожидания обновления Firestore.
+export function computedIsAttended(booking: Booking, nowMs: number = Date.now()): boolean {
+  return isBookingAttended(booking, bookingStartUtcMs(booking), nowMs);
 }
 
 // Записывает статус attended в Firestore для всех подходящих броней.
-// После каждой успешной записи вызывает onUpdate(bookingId), чтобы caller
-// мог обновлять локальный стейт инкрементально.
+// Вызывается ТОЛЬКО из админки: правила Firestore не разрешают обычному
+// пользователю ставить attended, и раньше эти записи молча отклонялись.
 // Можно вызывать повторно: shouldMarkAsAttended защищает от дублирования.
 export async function markEligibleBookingsAsAttended(
   bookings: Booking[],
   onUpdate: (bookingId: string) => void,
 ): Promise<void> {
-  const eligible = bookings.filter(shouldMarkAsAttended);
+  const eligible = bookings.filter(b => shouldMarkAsAttended(b));
   for (const b of eligible) {
     await updateBookingStatus(b.id, 'attended');
     onUpdate(b.id);

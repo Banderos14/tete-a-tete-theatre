@@ -90,3 +90,62 @@ describe('окончание спектакля', () => {
     expect(hasShowEnded(start, start + 2 * 60 * 60 * 1000 + 1)).toBe(true);
   });
 });
+
+// ── TTT-12: единый расчёт посещаемости у клиента и сервера ──────────────────
+import { isBookingAttended } from '../../api/_lib/bookingRules.js';
+
+describe('isBookingAttended — одна реализация для клиента и сервера', () => {
+  // 14 июня 2026, 19:00 по Парижу = 17:00 UTC, конец = 19:00 UTC
+  const start = parseShowStartUtcMs('14 Июн 2026', '19:00')!;
+  const end   = showEndUtcMs(start);
+  const paid  = { status: 'confirmed', paymentStatus: 'paid' };
+
+  it('до окончания спектакля бронь не посещена', () => {
+    expect(isBookingAttended(paid, start, end - 1)).toBe(false);
+  });
+
+  it('после окончания — посещена', () => {
+    expect(isBookingAttended(paid, start, end + 1)).toBe(true);
+  });
+
+  it('момент не зависит от таймзоны процесса — это абсолютный UTC', () => {
+    expect(new Date(end).toISOString()).toBe('2026-06-14T19:00:00.000Z');
+  });
+
+  it('зимой то же правило даёт другое смещение (DST учтён)', () => {
+    const winterStart = parseShowStartUtcMs('14 Янв 2026', '19:00')!;
+    expect(new Date(showEndUtcMs(winterStart)).toISOString()).toBe('2026-01-14T20:00:00.000Z');
+  });
+
+  it('неоплаченная и неподтверждённая бронь никогда не посещена', () => {
+    expect(isBookingAttended({ status: 'pending',   paymentStatus: 'paid' },     start, end + 1)).toBe(false);
+    expect(isBookingAttended({ status: 'confirmed', paymentStatus: 'not_paid' }, start, end + 1)).toBe(false);
+    expect(isBookingAttended({ status: 'cancelled', paymentStatus: 'paid' },     start, end + 1)).toBe(false);
+  });
+
+  it('явный статус attended важнее расчёта', () => {
+    expect(isBookingAttended({ status: 'attended', paymentStatus: 'not_paid' }, null, 0)).toBe(true);
+  });
+
+  it('без известного времени начала расчётного посещения не бывает', () => {
+    expect(isBookingAttended(paid, null, Date.now())).toBe(false);
+  });
+});
+
+describe('дублирующих реализаций разбора времени спектакля больше нет', () => {
+  it('attendanceService не строит дату через new Date(year, month, ...)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const src = readFileSync(resolve(__dirname, '../../src/services/attendanceService.ts'), 'utf8');
+    expect(src).not.toMatch(/new Date\(\s*year/);
+    expect(src).not.toContain('MONTH_RU');
+  });
+
+  it('create-booking не содержит собственной таблицы месяцев', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const src = readFileSync(resolve(__dirname, '../../api/create-booking.ts'), 'utf8');
+    expect(src).not.toContain("'Янв': 0");
+    expect(src).not.toMatch(/hour \+ 2/);
+  });
+});

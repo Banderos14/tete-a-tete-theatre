@@ -11,6 +11,10 @@ export interface Booking {
   showTitle:           string;
   showDate:            string;
   showTime:            string;
+  // Абсолютный момент начала спектакля. Пишется сервером при создании брони;
+  // у старых броней отсутствует — тогда время восстанавливается из showDate/showTime
+  // как настенное Europe/Paris (см. attendanceService.bookingStartUtcMs).
+  showStartAt?:        Timestamp;
   userId:              string;
   userName:            string;
   userEmail:           string;

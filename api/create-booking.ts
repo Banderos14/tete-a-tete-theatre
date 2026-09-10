@@ -23,7 +23,7 @@ import { getFirestore, FieldValue, Timestamp, type Transaction } from 'firebase-
 import { getAdminApp } from './_lib/firebaseAdmin.js';
 import { respond, readBody, bearerToken } from './_lib/http.js';
 import { normalizeIdempotencyKey } from './_lib/idempotency.js';
-import { sumOccupiedTickets, checkCapacity } from './_lib/bookingRules.js';
+import { sumOccupiedTickets, checkCapacity, isBookingAttended } from './_lib/bookingRules.js';
 import { parseShowStartUtcMs } from './_lib/showTime.js';
 import {
   SHOWS, THEATRE_CAPACITY, MAX_TICKETS_PER_BOOKING,
@@ -64,6 +64,7 @@ function generateTicketCode(): string {
 // каждые 5 посещений — одна скидка 50 %.
 
 interface RawBooking {
+  showStartAtMs?:          number;
   status?:                 string;
   paymentStatus?:          string;
   showDate?:               string;
@@ -73,10 +74,16 @@ interface RawBooking {
 }
 
 function computedIsAttended(b: RawBooking, nowMs: number): boolean {
-  if (b.status === 'attended') return true;
-  if (b.status !== 'confirmed' || b.paymentStatus !== 'paid') return false;
-  const start = parseShowStartUtcMs(b.showDate ?? '', b.showTime ?? '');
-  return start !== null && start + 2 * 60 * 60 * 1000 < nowMs;
+  // Время начала: у новых броней хранится полем showStartAt, у старых
+  // восстанавливается из строк как настенное время Europe/Paris.
+  const start = typeof b.showStartAtMs === 'number'
+    ? b.showStartAtMs
+    : parseShowStartUtcMs(b.showDate ?? '', b.showTime ?? '');
+  return isBookingAttended(
+    { status: String(b.status ?? ''), paymentStatus: String(b.paymentStatus ?? '') },
+    start,
+    nowMs,
+  );
 }
 
 function computeLoyalty(
@@ -259,7 +266,15 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const sold = await readSoldTickets(tx, bookingsRef, showId);
 
       const userSnap = await tx.get(bookingsRef.where('userId', '==', uid));
-      const userBookings = userSnap.docs.map(d => d.data() as RawBooking);
+      const userBookings = userSnap.docs.map(d => {
+        const data = d.data() as RawBooking & { showStartAt?: { toMillis?: () => number } };
+        return {
+          ...data,
+          showStartAtMs: typeof data.showStartAt?.toMillis === 'function'
+            ? data.showStartAt.toMillis()
+            : undefined,
+        } as RawBooking;
+      });
 
       const capacity = checkCapacity(sold, ticketsCount, THEATRE_CAPACITY);
       if (!capacity.allowed) {
