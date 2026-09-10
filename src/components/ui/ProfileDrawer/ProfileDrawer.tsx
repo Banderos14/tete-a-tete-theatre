@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type FormEvent, type ReactNode } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
+import { useModalA11y } from '../../../hooks/useModalA11y';
 import { IconLock, IconCalendarEvent, IconUser, IconTicket, IconMasksTheater, IconSettings, IconLoader2, IconPhone, IconBrandWhatsapp, IconBrandTelegram, IconBrandInstagram, IconLogout } from '@tabler/icons-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
@@ -226,6 +227,12 @@ export function ProfileDrawer({ open, onClose }: Props) {
     }
   }
 
+  // Escape, начальный фокус, удержание фокуса и возврат его инициатору.
+  // Закрываем через tryClose, чтобы не потерять несохранённые изменения:
+  // при них показывается предупреждение вместо закрытия.
+  const dialogRef = useRef<HTMLFormElement>(null);
+  useModalA11y(open, tryClose, dialogRef);
+
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSubmitted(true);
@@ -396,6 +403,7 @@ export function ProfileDrawer({ open, onClose }: Props) {
       {/* Modal */}
       <form
         className={styles.modal}
+        ref={dialogRef}
         onSubmit={handleSave}
         noValidate
         onClick={e => e.stopPropagation()}

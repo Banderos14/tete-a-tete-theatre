@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
+import { useModalA11y } from '../../../hooks/useModalA11y';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { createBookingViaApi, subscribeToUserBookings, newIdempotencyKey } from '../../../services/bookingService';
@@ -128,6 +129,10 @@ export function BookingModal({ show, onClose }: Props) {
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useScrollLock(!!show);
+
+  // Escape, начальный фокус, удержание фокуса и возврат его инициатору.
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalA11y(!!show, onClose, modalRef);
 
   // Дополнительный non-passive listener прямо на оверлее — ловит события,
   // которые могли не всплыть из-за stopPropagation в дочерних элементах.
@@ -303,7 +308,7 @@ export function BookingModal({ show, onClose }: Props) {
       className={styles.overlay}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className={styles.modal} role="dialog" aria-modal="true">
+      <div ref={modalRef} className={styles.modal} role="dialog" aria-modal="true">
 
         <button className={styles.closeBtn} onClick={onClose} aria-label={lang === 'FR' ? 'Fermer' : 'Закрыть'}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

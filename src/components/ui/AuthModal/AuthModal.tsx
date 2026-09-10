@@ -1,5 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
+import { useModalA11y } from '../../../hooks/useModalA11y';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { mapAuthError, isEmailInUseError, isPopupClosedError } from '../../../utils/authErrors';
@@ -35,6 +36,10 @@ export function AuthModal({ open, onClose }: Props) {
   }, [open]);
 
   useScrollLock(open);
+
+  // Escape, начальный фокус, удержание фокуса и возврат его инициатору.
+  const modalRef = useRef<HTMLDivElement>(null);
+  useModalA11y(open, onClose, modalRef);
 
   function resetForm() {
     setError(''); setInfo('');
@@ -91,7 +96,7 @@ export function AuthModal({ open, onClose }: Props) {
       className={`${styles.overlay} ${open ? styles.overlayVisible : ''}`}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className={`${styles.modal} ${open ? styles.modalVisible : ''}`} role="dialog" aria-modal="true">
+      <div ref={modalRef} className={`${styles.modal} ${open ? styles.modalVisible : ''}`} role="dialog" aria-modal="true">
 
         {/* Close */}
         <button className={styles.closeBtn} onClick={onClose} aria-label={lang === 'FR' ? 'Fermer' : 'Закрыть'}>
