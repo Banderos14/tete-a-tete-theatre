@@ -1,3 +1,13 @@
+// Жанры спектаклей — значения поля tag в src/data/shows.ts.
+export type ShowTagKey =
+  | 'Поэзия' | 'Поэма' | 'Комедия' | 'Драма'
+  | 'Сказка' | 'Цикл' | 'Спектакль' | 'Мюзикл' | 'Моноспектакль';
+
+// Все 12 месяцев: showDate хранится как «14 Июн 2026».
+export type MonthKey =
+  | 'Янв' | 'Фев' | 'Мар' | 'Апр' | 'Май' | 'Июн'
+  | 'Июл' | 'Авг' | 'Сен' | 'Окт' | 'Ноя' | 'Дек';
+
 // интерфейсы T, Lang, Stat
 
 export type Lang = 'RU' | 'FR';
@@ -284,6 +294,9 @@ export interface T {
     readMore: string;
     readLess: string;
   };
-  showTags: Record<string, string>;
-  months: Record<string, string>;
+  // Ключи перечислены явно: раньше здесь стоял Record<string, string>, и
+  // компилятор молча пропускал пропуски — во французской версии выводились
+  // русские «Поэзия», «Сен», «Окт».
+  showTags: Record<ShowTagKey, string>;
+  months: Record<MonthKey, string>;
 }

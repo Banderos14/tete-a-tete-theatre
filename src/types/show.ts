@@ -1,3 +1,5 @@
+import type { MonthKey, ShowTagKey } from '../i18n/types';
+
 export type ShowPhoto = {
   src: string;
   position?: string;    // object-position на фото, например "center 35%"
@@ -20,7 +22,9 @@ export interface Show {
   authorFR?: string;
   date: string;
   day: string;
-  month: string;
+  // MonthKey, а не string: иначе пропуск месяца в словаре перевода
+  // компилятор не заметит и во французской версии появится «Окт».
+  month: MonthKey;
   time: string;
   year: string;
   age: string;
@@ -45,7 +49,8 @@ export interface RepertoireItem {
   titleFR?: string;
   author: string;
   authorFR?: string;
-  tag: string;
+  // ShowTagKey, а не string: тот же класс ошибки, что и с месяцами.
+  tag: ShowTagKey;
   age: string;
   palette: string;
   image?: string;
