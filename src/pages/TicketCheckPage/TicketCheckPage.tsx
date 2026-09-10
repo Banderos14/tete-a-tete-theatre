@@ -3,10 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { convertPdfFirstPageToImageFile, isPdfFile, scanQrFromImageFile } from '../../services/pdfScanService';
 import { useAuth } from '../../context/AuthContext';
-import { getBookingByTicketCode, updateBookingStatus, markBookingPaid } from '../../services/bookingService';
+import { checkinTicket, type CheckinBooking } from '../../services/checkinService';
 import { parseTicketCodeFromScan } from '../../utils/parseTicketCode';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import type { Booking } from '../../types/booking';
 import styles from './TicketCheckPage.module.scss';
 
 type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'error';
@@ -14,7 +13,7 @@ type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'error';
 export function TicketCheckPage() {
   const navigate       = useNavigate();
   const [searchParams] = useSearchParams();
-  const { userProfile, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const isAdmin = userProfile?.role === 'admin';
 
   const ticketFromUrl = searchParams.get('ticket') ?? '';
@@ -22,7 +21,7 @@ export function TicketCheckPage() {
   type ConfirmType = 'cash' | 'attended' | null;
 
   const [scanState,    setScanState]    = useState<ScanState>(ticketFromUrl ? 'loading' : 'idle');
-  const [booking,      setBooking]      = useState<Booking | null>(null);
+  const [booking,      setBooking]      = useState<CheckinBooking | null>(null);
   const [errorMsg,     setErrorMsg]     = useState('');
   const [operating,    setOperating]    = useState(false);
   const [confirmType,  setConfirmType]  = useState<ConfirmType>(null);
@@ -59,14 +58,16 @@ export function TicketCheckPage() {
 
       setScanState('loading');
       try {
-        const found = await getBookingByTicketCode(code);
+        const res = await callCheckin(code, 'inspect');
         if (cancelled) return;
-        if (!found) {
-          setErrorMsg(`Билет с кодом ${code} не найден.`);
+        if (!res.ok || !res.booking) {
+          setErrorMsg(res.reason === 'not_found'
+            ? `Билет с кодом ${code} не найден.`
+            : 'Ошибка при поиске брони.');
           setScanState('error');
           return;
         }
-        setBooking(found);
+        setBooking(res.booking);
         setScanState('found');
       } catch {
         if (cancelled) return;
@@ -77,7 +78,15 @@ export function TicketCheckPage() {
 
     void lookup();
     return () => { cancelled = true; };
-  }, [loading, isAdmin, ticketFromUrl]);
+  }, [loading, isAdmin, ticketFromUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Единая точка обращения к серверу: и просмотр, и отметка идут через
+  // /api/checkin-ticket, где операция выполняется атомарно.
+  async function callCheckin(code: string, action: 'inspect' | 'mark_attended' | 'mark_paid') {
+    const idToken = await user?.getIdToken();
+    if (!idToken) throw new Error('no-token');
+    return checkinTicket(code, action, idToken);
+  }
 
   function startScanning() {
     setCameraError('');
@@ -111,13 +120,15 @@ export function TicketCheckPage() {
             return;
           }
 
-          const found = await getBookingByTicketCode(code);
-          if (!found) {
-            setErrorMsg(`Билет с кодом ${code} не найден.`);
+          const res = await callCheckin(code, 'inspect');
+          if (!res.ok || !res.booking) {
+            setErrorMsg(res.reason === 'not_found'
+              ? `Билет с кодом ${code} не найден.`
+              : 'Ошибка при поиске брони.');
             setScanState('error');
             return;
           }
-          setBooking(found);
+          setBooking(res.booking);
           setScanState('found');
         } catch {
           setErrorMsg('Ошибка при поиске брони.');
@@ -144,7 +155,7 @@ export function TicketCheckPage() {
         scannerRef.current = null;
       }
     };
-  }, [scanState]);
+  }, [scanState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -176,13 +187,15 @@ export function TicketCheckPage() {
         return;
       }
 
-      const found = await getBookingByTicketCode(code);
-      if (!found) {
-        setErrorMsg(`Билет с кодом ${code} не найден.`);
+      const res = await callCheckin(code, 'inspect');
+      if (!res.ok || !res.booking) {
+        setErrorMsg(res.reason === 'not_found'
+          ? `Билет с кодом ${code} не найден.`
+          : 'Ошибка при поиске брони.');
         setScanState('error');
         return;
       }
-      setBooking(found);
+      setBooking(res.booking);
       setScanState('found');
     } catch {
       setErrorMsg(
@@ -195,11 +208,15 @@ export function TicketCheckPage() {
   }
 
   async function handleCashReceived() {
-    if (!booking) return;
+    if (!booking || operating) return;
     setOperating(true);
     try {
-      await markBookingPaid(booking.id);
-      setBooking(prev => prev ? { ...prev, paymentStatus: 'paid', status: 'confirmed' } : prev);
+      const res = await callCheckin(booking.ticketCode, 'mark_paid');
+      if (res.ok && res.booking) { setBooking(res.booking); return; }
+      setErrorMsg(res.reason === 'already_paid'
+        ? 'Эта бронь уже отмечена как оплаченная.'
+        : 'Ошибка при подтверждении оплаты.');
+      setScanState('error');
     } catch {
       setErrorMsg('Ошибка при подтверждении оплаты.');
       setScanState('error');
@@ -209,11 +226,22 @@ export function TicketCheckPage() {
   }
 
   async function handleMarkAttended() {
-    if (!booking) return;
+    if (!booking || operating) return;
     setOperating(true);
     try {
-      await updateBookingStatus(booking.id, 'attended');
-      setBooking(prev => prev ? { ...prev, status: 'attended' } : prev);
+      const res = await callCheckin(booking.ticketCode, 'mark_attended');
+      if (res.ok && res.booking) { setBooking(res.booking); return; }
+      // Второй одновременный скан того же кода приходит именно сюда:
+      // сервер выполнил проверку и запись одной транзакцией.
+      if (res.reason === 'already_attended') {
+        setBooking(prev => prev ? { ...prev, status: 'attended' } : prev);
+        setErrorMsg('');
+        return;
+      }
+      setErrorMsg(res.reason === 'not_paid'
+        ? 'Билет не оплачен — проход отмечать нельзя.'
+        : 'Ошибка при обновлении статуса.');
+      setScanState('error');
     } catch {
       setErrorMsg('Ошибка при обновлении статуса.');
       setScanState('error');
@@ -253,9 +281,13 @@ export function TicketCheckPage() {
   // Сценарии проверки билета: использован, оплата на месте, валиден или недействителен.
   const b = booking;
 
-  const isOnSiteUnpaid       = b?.paymentMethod === 'on_site'       && b.paymentStatus === 'not_paid';
-  const isBankTransferUnpaid = b?.paymentMethod === 'bank_transfer'  && b.paymentStatus !== 'paid';
-  const isPaidValid          = b?.paymentStatus === 'paid'           && b.status === 'confirmed';
+  // Билет прошедшего спектакля не должен считаться действительным только потому,
+  // что код существует в базе. Актуальность даты определяет сервер.
+  const isStaleShow          = b?.showRelevance === 'too_late';
+  const isEarlyShow          = b?.showRelevance === 'too_early';
+  const isOnSiteUnpaid       = !isStaleShow && b?.paymentMethod === 'on_site'      && b.paymentStatus === 'not_paid';
+  const isBankTransferUnpaid = b?.paymentMethod === 'bank_transfer' && b.paymentStatus !== 'paid';
+  const isPaidValid          = !isStaleShow && b?.paymentStatus === 'paid'         && b.status === 'confirmed';
   const isAttended           = b?.status === 'attended';
 
   function ticketsWord(n: number): string {
@@ -266,6 +298,7 @@ export function TicketCheckPage() {
 
   function getInvalidReason(): string {
     if (!b) return 'не найден';
+    if (isStaleShow)                              return `Билет на прошедший спектакль (${b.showDate})`;
     if (b.status === 'cancelled')                 return 'Бронь отменена';
     if (b.paymentStatus === 'expired')            return 'Срок оплаты истёк — бронь аннулирована';
     if (b.paymentStatus === 'awaiting_transfer')  return 'Перевод ещё не получен';
@@ -497,6 +530,14 @@ export function TicketCheckPage() {
                     <span className={styles.cardLabel}>Оплата</span>
                     <span className={styles.cardValue}>Оплачено</span>
                   </div>
+                  {isEarlyShow && (
+                    <div className={styles.cardRow}>
+                      <span className={styles.cardLabel}>Внимание</span>
+                      <span className={`${styles.cardValue} ${styles.cardValueReason}`}>
+                        Билет на другую дату — {b.showDate}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className={styles.actions}>
