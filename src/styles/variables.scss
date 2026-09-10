@@ -58,7 +58,13 @@
   --ph-4: linear-gradient(135deg, #1c1408 0%, #0c0a04 100%);   // earth
   --ph-5: linear-gradient(135deg, #18081c 0%, #08040a 100%);   // mauve
 
-  --font-display: "Bad Russian";
+  // Bad Russian не содержит НИ ОДНОГО французского акцентированного глифа
+  // (é è ê à â ç î ô û ü œ æ и заглавных) — в его cmap только латиница A–Z,
+  // кириллица и пунктуация. Без явного запасного семейства браузер подставлял
+  // такие символы из системного шрифта по одному, и французские заголовки
+  // разъезжались на два начертания посреди слова.
+  // Forum — тоже display-шрифт проекта, с полным французским покрытием.
+  --font-display: "Bad Russian", "Forum", serif;
   --font-title: "Forum", sans-serif;
   --font-title-blocks: "Dela Gothic One", sans-serif;
   --font-sub: "Ekaterina Velikaya Two", serif;
@@ -73,6 +79,16 @@
   --radius-md: 24px;
   --radius-lg: 32px;
   --radius-xl: 40px;
+}
+
+// Французская версия: Bad Russian физически не может набрать французский текст,
+// поэтому весь display-шрифт заменяется на Forum. Так заголовки набраны одним
+// начертанием, а не «Bad Russian + подстановка на каждой букве с акцентом».
+// Атрибут lang на <html> переключается в App.tsx вместе с языком интерфейса.
+html[lang='fr'] {
+  --font-display: "Forum", serif;
+  // Forum шире и легче Bad Russian — небольшая компенсация трекинга.
+  --font-display-spacing: 0.02em;
 }
 
 [data-theme='light'] {

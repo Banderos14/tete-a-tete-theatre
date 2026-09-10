@@ -105,6 +105,12 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // lang на <html> обязателен: от него зависит и озвучка скринридером, и выбор
+  // display-шрифта (Bad Russian не умеет во французские акценты — см. variables.scss).
+  useEffect(() => {
+    document.documentElement.setAttribute('lang', lang === 'FR' ? 'fr' : 'ru');
+  }, [lang]);
+
   useEffect(() => {
     if (IS_MOBILE) {
       window.dispatchEvent(new CustomEvent('theatre:intro-done'));
