@@ -3,7 +3,7 @@
 .stage {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: var(--z-intro);
   pointer-events: none;
   overflow: hidden;
 }

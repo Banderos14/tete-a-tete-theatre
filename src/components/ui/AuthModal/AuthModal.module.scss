@@ -6,7 +6,7 @@
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  z-index: 500;
+  z-index: var(--z-modal);
   display: grid;
   place-items: center;
   padding: 20px;

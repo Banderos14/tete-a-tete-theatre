@@ -172,7 +172,9 @@
   text-align: center;
   padding: 120px 40px 0;
   overflow: hidden;
-  border-top: none !important;
+  // Перебивает `section { border-top }` из globals.scss. !important не нужен:
+  // селектор класса специфичнее селектора элемента.
+  border-top: none;
   background: #000000;
 
   @include mixins.mobile {

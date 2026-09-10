@@ -116,7 +116,7 @@ section {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 200;
+  z-index: var(--z-skip-link);
   opacity: var(--grain-opacity);
   mix-blend-mode: multiply;
   @include mixins.grain-overlay;

@@ -6,7 +6,7 @@
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  z-index: 600;
+  z-index: var(--z-booking);
   display: grid;
   place-items: center;
   padding: 20px;
