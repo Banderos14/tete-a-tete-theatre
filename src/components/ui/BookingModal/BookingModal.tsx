@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react';
 import { useScrollLock } from '../../../hooks/useScrollLock';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
-import { createBookingViaApi, subscribeToUserBookings } from '../../../services/bookingService';
+import { createBookingViaApi, subscribeToUserBookings, newIdempotencyKey } from '../../../services/bookingService';
 import { fetchShowAvailability } from '../../../services/availabilityService';
 import type { BookingApiError } from '../../../services/bookingService';
 import { sendBookingConfirmationEmail } from '../../../services/emailService';
@@ -124,12 +124,17 @@ export function BookingModal({ show, onClose }: Props) {
     setComment(''); setSubmitError(''); setPhoneError('');
     setAuthEmail(''); setAuthPassword(''); setAuthName(''); setAuthError('');
     /* eslint-enable react-hooks/set-state-in-effect */
+    idempotencyKeyRef.current = newIdempotencyKey();
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useScrollLock(!!show);
 
   // Дополнительный non-passive listener прямо на оверлее — ловит события,
   // которые могли не всплыть из-за stopPropagation в дочерних элементах.
+  // Ключ идемпотентности одной попытки бронирования. Пересоздаётся эффектом
+  // открытия модалки, поэтому следующая осознанная бронь — уже новая операция,
+  // а повторы одной и той же отправки схлопываются на сервере.
+  const idempotencyKeyRef = useRef<string>(newIdempotencyKey());
   const overlayRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = overlayRef.current;
@@ -180,6 +185,8 @@ export function BookingModal({ show, onClose }: Props) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!user || !activeTicket || !show || authContextLoading) return;
+    // Двойной Enter успевает пройти раньше, чем React перерисует disabled у кнопки.
+    if (submitLoading) return;
     // Клиентская проверка — только для быстрой обратной связи; отказать по-настоящему
     // может лишь сервер, который считает вместимость в транзакции.
     if (seatsLeft !== null && seatsLeft < tickets) {
@@ -209,7 +216,7 @@ export function BookingModal({ show, onClose }: Props) {
         comment,
         phone:         normalizePhone(phone),
         lang,
-      }, idToken);
+      }, idToken, idempotencyKeyRef.current);
 
       // Не блокируем — бронь уже сохранена, провал email её не затронет.
       // Сервер проверит, что получатель совпадает с email текущего пользователя.

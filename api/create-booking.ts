@@ -22,6 +22,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue, Timestamp, type Transaction } from 'firebase-admin/firestore';
 import { getAdminApp } from './_lib/firebaseAdmin.js';
 import { respond, readBody, bearerToken } from './_lib/http.js';
+import { normalizeIdempotencyKey } from './_lib/idempotency.js';
 import { sumOccupiedTickets, checkCapacity } from './_lib/bookingRules.js';
 import { parseShowStartUtcMs } from './_lib/showTime.js';
 import {
@@ -133,6 +134,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
+  // Ключ идемпотентности: повторная отправка той же формы (двойной клик, двойной
+  // Enter, ретрай из-за обрыва сети) не должна создавать вторую бронь.
+  // Осознанная новая покупка отправляется с новым ключом и проходит штатно.
+  const idempotencyKey = normalizeIdempotencyKey(
+    req.headers['idempotency-key'] ?? (typeof body.idempotencyKey === 'string' ? body.idempotencyKey : null),
+  );
+
   const app = getAdminApp();
   let uid: string;
   try {
@@ -215,7 +223,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   // ── Транзакция: вместимость + лояльность + запись брони ─────────────────────
   type TxOk = {
-    ok: true; bookingId: string; ticketCode: string; totalAmount: number;
+    ok: true; replayed?: boolean; bookingId: string; ticketCode: string; totalAmount: number;
     baseAmount: number; discountAmount: number; priceInfo: string;
     loyaltyAvailable: boolean; paymentReference: string | null; paymentExpiresAt: Timestamp | null;
   };
@@ -225,6 +233,29 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try {
     result = await db.runTransaction<TxOk | TxFail>(async (tx) => {
       // --- все чтения ДО записей (требование Firestore) ---
+
+      // Идемпотентность: ключ принадлежит пользователю, чтобы чужой ключ
+      // нельзя было «занять».
+      const idemRef = idempotencyKey
+        ? db.collection('idempotencyKeys').doc(`booking_${uid}_${idempotencyKey}`)
+        : null;
+
+      if (idemRef) {
+        const idemSnap = await tx.get(idemRef);
+        if (idemSnap.exists) {
+          const prev = idemSnap.data() as { bookingId?: string; ticketCode?: string; totalAmount?: number };
+          // Повтор той же операции — отдаём тот же результат, новую бронь не создаём.
+          return {
+            ok: true, replayed: true,
+            bookingId:   String(prev.bookingId ?? ''),
+            ticketCode:  String(prev.ticketCode ?? ''),
+            totalAmount: Number(prev.totalAmount ?? 0),
+            baseAmount: 0, discountAmount: 0, priceInfo: '',
+            loyaltyAvailable: false, paymentReference: null, paymentExpiresAt: null,
+          };
+        }
+      }
+
       const sold = await readSoldTickets(tx, bookingsRef, showId);
 
       const userSnap = await tx.get(bookingsRef.where('userId', '==', uid));
@@ -290,6 +321,18 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         } : {}),
       });
 
+      if (idemRef) {
+        // Пишется в той же транзакции, что и бронь: либо есть и бронь, и ключ,
+        // либо нет ни того ни другого.
+        tx.create(idemRef, {
+          bookingId:   bookingRef.id,
+          ticketCode,
+          totalAmount,
+          userId:      uid,
+          createdAt:   FieldValue.serverTimestamp(),
+        });
+      }
+
       return {
         ok: true, bookingId: bookingRef.id, ticketCode, totalAmount,
         baseAmount, discountAmount, priceInfo, loyaltyAvailable,
@@ -307,6 +350,22 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       error: result.error,
       ...(result.reason    !== undefined ? { reason: result.reason }       : {}),
       ...(result.remaining !== undefined ? { remaining: result.remaining } : {}),
+    }, req);
+    return;
+  }
+
+  if (result.replayed) {
+    // Повторный запрос с тем же ключом: бронь уже создана, дубликата нет.
+    respond(res, 200, {
+      ok:          true,
+      replayed:    true,
+      bookingId:   result.bookingId,
+      ticketCode:  result.ticketCode,
+      totalAmount: result.totalAmount,
+      showDate,
+      showTime:    show.time,
+      showTitle:   show.title,
+      showTitleFR: show.titleFR,
     }, req);
     return;
   }

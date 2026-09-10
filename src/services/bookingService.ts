@@ -25,6 +25,14 @@ export interface CreateBookingRequest {
   lang:          'RU' | 'FR';
 }
 
+// Генерирует ключ идемпотентности для ОДНОЙ попытки бронирования.
+// Новый осознанный заказ получает новый ключ и создаётся штатно.
+export function newIdempotencyKey(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export interface CreateBookingResult {
   bookingId:               string;
   ticketCode:              string;
@@ -51,12 +59,15 @@ export interface BookingApiError extends Error {
 export async function createBookingViaApi(
   request: CreateBookingRequest,
   idToken: string,
+  idempotencyKey?: string,
 ): Promise<CreateBookingResult> {
   const resp = await fetch('/api/create-booking', {
     method:  'POST',
     headers: {
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${idToken}`,
+      // Повторная отправка той же формы не должна создавать вторую бронь.
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
     },
     body: JSON.stringify(request),
   });
