@@ -285,6 +285,7 @@ export const FR: T = {
     labelTime:     'Heure',
     labelDuration: 'Durée',
     labelPrice:    'Tarif',
+    showPast: 'Le spectacle a déjà eu lieu',
     book:          'Acheter un billet',
     readMore:      'Lire la suite',
     readLess:      'Réduire',

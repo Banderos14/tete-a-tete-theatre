@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { createPortal } from 'react-dom';
-import { REPERTOIRE, SHOWS } from '../../data/shows';
+import { REPERTOIRE, SHOWS, isShowPast } from '../../data/shows';
 import { useLang } from '../../i18n/LangContext';
 import { PosterPlaceholder } from '../ui/PosterPlaceholder';
 import { ShowModal } from '../ui/ShowModal';
@@ -90,14 +90,19 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
           {desc && <p className={styles.modalDesc}>{desc}</p>}
 
           {linkedShow && (
-            <button
-              className={styles.modalBuyBtn}
-              onClick={() => { onClose(); onBook(linkedShow); }}
-              type="button"
-            >
-              <span>{t.showModal.book}</span>
-              <span>→</span>
-            </button>
+            // Прошедший спектакль забронировать нельзя — см. проверку на сервере.
+            isShowPast(linkedShow)
+              ? <p className={styles.modalDesc}>{t.showModal.showPast}</p>
+              : (
+                <button
+                  className={styles.modalBuyBtn}
+                  onClick={() => { onClose(); onBook(linkedShow); }}
+                  type="button"
+                >
+                  <span>{t.showModal.book}</span>
+                  <span>→</span>
+                </button>
+              )
           )}
         </div>
       </div>

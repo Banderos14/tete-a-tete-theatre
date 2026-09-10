@@ -276,6 +276,7 @@ export const RU: T = {
     labelTime:     'Начало',
     labelDuration: 'Длительность',
     labelPrice:    'Стоимость',
+    showPast: 'Спектакль уже прошёл',
     book:          'Купить билет',
     readMore:      'Читать дальше',
     readLess:      'Свернуть',

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useLang } from '../../../i18n/LangContext';
 import type { Show, ShowPhoto } from '../../../types';
 import { fetchShowAvailability } from '../../../services/availabilityService';
+import { isShowPast } from '../../../data/shows';
 import styles from './ShowModal.module.scss';
 
 interface Props {
@@ -23,6 +24,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
   // null = остаток неизвестен (например, /api недоступен) — тогда ничего не показываем,
   // вместо того чтобы выводить выдуманное число.
   const [seatsLeft,    setSeatsLeft]    = useState<number | null>(null);
+  const [mountedAtMs] = useState(() => Date.now());
 
   // Производный стейт: сбрасываем при смене спектакля (render-time setState — паттерн из документации React)
   const [stateShowId, setStateShowId] = useState<string | null>(null);
@@ -57,6 +59,8 @@ export function ShowModal({ show, onClose, onBook }: Props) {
     });
     return () => { cancelled = true; };
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const showIsPast = !!show && isShowPast(show, mountedAtMs);
 
   const handleClose = useCallback(() => {
     setClosing(true);
@@ -232,11 +236,14 @@ export function ShowModal({ show, onClose, onBook }: Props) {
           )}
 
           <div className={styles.bookRow}>
+            {/* Прошедший спектакль забронировать нельзя — сервер такой запрос
+                всё равно отклонит, так что кнопка не должна вести в тупик. */}
             <button
               className={`btn btn-primary ${styles.bookBtn}`}
               onClick={() => { handleClose(); onBook(show); }}
+              disabled={showIsPast}
             >
-              {t.showModal.book} →
+              {showIsPast ? t.showModal.showPast : <>{t.showModal.book} →</>}
             </button>
             {seatsLeft !== null && seatsLeft > 0 && (
               <span className={styles.seatsLeft}>

@@ -1,4 +1,12 @@
 import type { Show, RepertoireItem } from '../types';
+import { parseShowStartUtcMs } from '../../api/_lib/showTime';
+
+// Спектакль уже начался? Время считается как настенное Europe/Paris —
+// той же функцией, которой пользуется сервер, чтобы клиент и сервер не расходились.
+export function isShowPast(show: Pick<Show, 'day' | 'month' | 'year' | 'time'>, nowMs: number = Date.now()): boolean {
+  const start = parseShowStartUtcMs(`${show.day} ${show.month} ${show.year}`, show.time);
+  return start !== null && start <= nowMs;
+}
 
 const showImage = (fileName: string) => `${import.meta.env.BASE_URL}images/shows/${fileName}`;
 const showPhoto = (fileName: string) => `${import.meta.env.BASE_URL}images/showPhotos/${fileName}`;

@@ -280,6 +280,7 @@ export interface T {
     labelDuration: string;
     labelPrice: string;
     book: string;
+    showPast: string;
     readMore: string;
     readLess: string;
   };
