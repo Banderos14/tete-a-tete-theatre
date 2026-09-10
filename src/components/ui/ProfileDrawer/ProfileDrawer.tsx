@@ -4,7 +4,6 @@ import { IconLock, IconCalendarEvent, IconUser, IconTicket, IconMasksTheater, Ic
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from '../../../services/bookingService';
-import { markEligibleBookingsAsAttended } from '../../../services/attendanceService';
 import { parseShowStartUtcMs } from '../../../../api/_lib/showTime';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Booking, BookingStatus } from '../../../types/booking';
@@ -146,9 +145,9 @@ export function ProfileDrawer({ open, onClose }: Props) {
         setHistoryLoading(false);
         setHistoryError(null);
 
-        markEligibleBookingsAsAttended(data, (id) => {
-          setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
-        }).catch(() => {});
+        // Статус attended пишет только админка: правила Firestore не разрешают
+        // это обычному пользователю, и прежние попытки молча отклонялись.
+        // Отображение посещения считается на лету через computedIsAttended.
 
         expireOverdueBookings(data, (id) => {
           setBookings(prev => prev.map(b =>

@@ -87,13 +87,15 @@ function computedIsAttended(b: RawBooking, nowMs: number): boolean {
 }
 
 function computeLoyalty(
-  bookings: RawBooking[], nowMs: number,
-): { loyaltyAvailable: boolean; attendedCount: number } {
-  const attended  = bookings.filter(b => computedIsAttended(b, nowMs)).length;
-  const usedCount = bookings.filter(b => b.loyaltyDiscountApplied === true).length;
+  bookings: RawBooking[], nowMs: number, usedFromState = 0,
+): { loyaltyAvailable: boolean; attendedCount: number; usedCount: number } {
+  const attended     = bookings.filter(b => computedIsAttended(b, nowMs)).length;
+  const usedFromHist = bookings.filter(b => b.loyaltyDiscountApplied === true).length;
+  const usedCount    = Math.max(usedFromHist, usedFromState);
   return {
     loyaltyAvailable: attended >= 5 && Math.floor(attended / 5) > usedCount,
     attendedCount:    attended,
+    usedCount,
   };
 }
 
@@ -265,6 +267,21 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
       const sold = await readSoldTickets(tx, bookingsRef, showId);
 
+      // ── Точки сериализации ───────────────────────────────────────────────
+      // Транзакция Firestore блокирует ПРОЧИТАННЫЕ документы, но не диапазон
+      // запроса: две параллельные транзакции могут не увидеть брони друг друга
+      // (phantom read) и обе решить, что место есть, а бонус не потрачен.
+      // Поэтому каждая бронь дополнительно читает И пишет два общих документа —
+      // счётчик спектакля и состояние лояльности пользователя. Конфликт записи
+      // в них заставляет Firestore перезапустить одну из транзакций, и на
+      // повторе она уже видит зафиксированную бронь.
+      const showCounterRef = db.collection('showCounters').doc(showId);
+      const loyaltyRef     = db.collection('loyaltyState').doc(uid);
+
+      // Чтение обязательно: именно оно ставит блокировку на документ.
+      await tx.get(showCounterRef);
+      const loyaltySnap     = await tx.get(loyaltyRef);
+
       const userSnap = await tx.get(bookingsRef.where('userId', '==', uid));
       const userBookings = userSnap.docs.map(d => {
         const data = d.data() as RawBooking & { showStartAt?: { toMillis?: () => number } };
@@ -286,7 +303,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         };
       }
 
-      const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings, nowMs);
+      // Сколько бонусов уже израсходовано. Берём максимум из двух источников:
+      // счётчика (обновляется атомарно) и фактической истории броней — так
+      // расхождение всегда трактуется в пользу театра, а не двойной скидки.
+      const usedFromState = typeof (loyaltySnap.data()?.rewardsUsed) === 'number'
+        ? Number(loyaltySnap.data()!.rewardsUsed)
+        : 0;
+
+      const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings, nowMs, usedFromState);
       const baseAmount     = ticketInfo.price * ticketsCount;
       const discountAmount = loyaltyAvailable ? Math.floor(baseAmount / 2) : 0;
       const totalAmount    = baseAmount - discountAmount;
@@ -300,6 +324,28 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         ? Timestamp.fromDate(new Date(nowMs + PAYMENT_EXPIRY_HOURS * 60 * 60 * 1000))
         : null;
       const paymentReference = isBankTransfer ? `${PAYMENT_REF_PREFIX}-${ticketCode}` : null;
+
+      // Запись в счётчик — это ТОЧКА КОНФЛИКТА, а не источник правды:
+      // авторитетное число мест всегда пересчитывается запросом по броням
+      // (в том числе в /api/show-availability), потому что отмена бронь не
+      // уменьшает этот счётчик. Значение хранится как диагностическое.
+      tx.set(showCounterRef, {
+        lastKnownSoldTickets: sold + ticketsCount,
+        updatedAt:            FieldValue.serverTimestamp(),
+      }, { merge: true });
+
+      if (loyaltyAvailable) {
+        // Бонус списывается в той же транзакции, что и создаётся бронь.
+        tx.set(loyaltyRef, {
+          rewardsUsed: (typeof loyaltySnap.data()?.rewardsUsed === 'number'
+            ? Number(loyaltySnap.data()!.rewardsUsed) : 0) + 1,
+          updatedAt:   FieldValue.serverTimestamp(),
+        }, { merge: true });
+      } else {
+        // Даже без скидки касаемся документа: он должен быть точкой конфликта
+        // для параллельных броней одного пользователя.
+        tx.set(loyaltyRef, { updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      }
 
       const bookingRef = bookingsRef.doc();
       tx.create(bookingRef, {

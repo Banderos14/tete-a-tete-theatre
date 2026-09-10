@@ -1,8 +1,11 @@
-import { updateBookingStatus } from './bookingService';
 import { parseShowStartUtcMs } from '../../api/_lib/showTime';
 import { isBookingAttended } from '../../api/_lib/bookingRules';
 import type { Booking } from '../types/booking';
 
+// Модуль намеренно НЕ импортирует Firebase: это чистые правила, которыми
+// пользуются и интерфейс, и расчёт лояльности, и тесты. Запись статуса
+// attended живёт в bookingService — её выполняет только админка.
+//
 // Время спектакля считается ОДНОЙ реализацией — общей с сервером (api/_lib/showTime).
 //
 // Раньше здесь была своя копия разбора «17 Май 2026», которая собирала дату
@@ -36,19 +39,4 @@ export function shouldMarkAsAttended(booking: Booking, nowMs: number = Date.now(
 // без ожидания обновления Firestore.
 export function computedIsAttended(booking: Booking, nowMs: number = Date.now()): boolean {
   return isBookingAttended(booking, bookingStartUtcMs(booking), nowMs);
-}
-
-// Записывает статус attended в Firestore для всех подходящих броней.
-// Вызывается ТОЛЬКО из админки: правила Firestore не разрешают обычному
-// пользователю ставить attended, и раньше эти записи молча отклонялись.
-// Можно вызывать повторно: shouldMarkAsAttended защищает от дублирования.
-export async function markEligibleBookingsAsAttended(
-  bookings: Booking[],
-  onUpdate: (bookingId: string) => void,
-): Promise<void> {
-  const eligible = bookings.filter(b => shouldMarkAsAttended(b));
-  for (const b of eligible) {
-    await updateBookingStatus(b.id, 'attended');
-    onUpdate(b.id);
-  }
 }

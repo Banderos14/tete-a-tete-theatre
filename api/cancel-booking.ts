@@ -112,6 +112,16 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         };
       }
 
+      // Касаемся счётчика спектакля: он служит точкой конфликта, поэтому отмена
+      // и параллельное бронирование того же спектакля не разъезжаются.
+      if (typeof data.showId === 'string' && data.showId) {
+        tx.set(
+          db.collection('showCounters').doc(data.showId),
+          { updatedAt: FieldValue.serverTimestamp() },
+          { merge: true },
+        );
+      }
+
       tx.update(ref, {
         status:       'cancelled',
         cancelledBy:  'user',

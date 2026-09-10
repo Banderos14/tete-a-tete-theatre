@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import type { Booking, NewBooking, BookingStatus, PaymentStatus } from '../types/booking';
+import { shouldMarkAsAttended } from './attendanceService';
 
 // ── Server-side booking API ───────────────────────────────────────────────────
 
@@ -244,5 +245,23 @@ export async function cancelBookingByUser(
   const data = await resp.json().catch(() => ({})) as Record<string, unknown>;
   if (!resp.ok) {
     throw new Error(typeof data['error'] === 'string' ? data['error'] : `HTTP ${resp.status}`);
+  }
+}
+
+// Проставляет attended для подходящих броней.
+//
+// Вызывается ТОЛЬКО из админки: правила Firestore не разрешают обычному
+// пользователю менять status, и раньше личный кабинет при каждом открытии
+// генерировал пачку заведомо отклоняемых записей (ошибки глушились .catch).
+// Интерфейс зрителя показывает посещение через computedIsAttended и в записи
+// не нуждается.
+export async function markEligibleBookingsAsAttended(
+  bookings: Booking[],
+  onUpdate: (bookingId: string) => void,
+): Promise<void> {
+  const eligible = bookings.filter(b => shouldMarkAsAttended(b));
+  for (const b of eligible) {
+    await updateBookingStatus(b.id, 'attended');
+    onUpdate(b.id);
   }
 }
