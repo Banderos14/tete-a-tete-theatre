@@ -23,6 +23,7 @@ import { getFirestore, FieldValue, Timestamp, type Transaction } from 'firebase-
 import { getAdminApp } from './_lib/firebaseAdmin.js';
 import { respond, readBody, bearerToken } from './_lib/http.js';
 import { normalizeIdempotencyKey } from './_lib/idempotency.js';
+import { MAX_COMMENT_LEN, MAX_PHONE_LEN, MIN_PHONE_LEN } from './_lib/limits.js';
 import { sumOccupiedTickets, checkCapacity, isBookingAttended } from './_lib/bookingRules.js';
 import { parseShowStartUtcMs } from './_lib/showTime.js';
 import {
@@ -37,11 +38,6 @@ const PAYMENT_REF_PREFIX   = 'TETEATETE';
 const PAYMENT_EXPIRY_HOURS = 24;
 const PAYMENT_ACCOUNT_ID   = 'fr_eu_bank';
 
-// ── Ограничения пользовательского ввода ──────────────────────────────────────
-
-const MAX_COMMENT_LEN = 1000;
-const MAX_PHONE_LEN   = 32;
-const MIN_PHONE_LEN   = 5;
 
 // ── Код билета ───────────────────────────────────────────────────────────────
 // Алфавит без визуально похожих символов (0/O, 1/I/L): код диктуют голосом

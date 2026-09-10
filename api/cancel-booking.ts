@@ -18,9 +18,9 @@ import { getAdminApp } from './_lib/firebaseAdmin.js';
 import { respond, readBody, bearerToken } from './_lib/http.js';
 import { canUserCancel, isValidCancelReason } from './_lib/bookingRules.js';
 import { parseShowStartUtcMs } from './_lib/showTime.js';
+import { MAX_CANCEL_COMMENT_LEN } from './_lib/limits.js';
 import { SHOWS, showStartUtcMs } from './_lib/shows.js';
 
-const MAX_CANCEL_COMMENT_LEN = 500;
 
 // Человекочитаемые отказы. Ключи совпадают с CancelRefusal.
 const REFUSAL_MESSAGES: Record<string, string> = {

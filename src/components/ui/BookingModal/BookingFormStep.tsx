@@ -2,6 +2,7 @@ import type { FormEvent } from 'react';
 import { IconBuildingBank, IconTransfer } from '@tabler/icons-react';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
+import { MAX_COMMENT_LEN } from '../../../../api/_lib/limits';
 import styles from './BookingModal.module.scss';
 
 interface Props {
@@ -238,8 +239,11 @@ export function BookingFormStep({
         {/* Comment */}
         <div className={styles.section}>
           <label className={styles.sectionLabel} htmlFor="bk-comment">{t.booking.comment}</label>
+          {/* maxLength согласован с серверным MAX_COMMENT_LEN в api/create-booking.ts:
+              сервер отклоняет более длинный текст, поэтому обрезаем заранее. */}
           <textarea id="bk-comment" className={styles.textarea}
-            value={comment} onChange={e => onCommentChange(e.target.value)}
+            value={comment} onChange={e => onCommentChange(e.target.value.slice(0, MAX_COMMENT_LEN))}
+            maxLength={MAX_COMMENT_LEN}
             placeholder={t.booking.commentPlaceholder} rows={3} />
         </div>
 
