@@ -1,43 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
+import { convertPdfFirstPageToImageFile, isPdfFile, scanQrFromImageFile } from '../../services/pdfScanService';
 import { useAuth } from '../../context/AuthContext';
 import { getBookingByTicketCode, updateBookingStatus, markBookingPaid } from '../../services/bookingService';
 import { parseTicketCodeFromScan } from '../../utils/parseTicketCode';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import type { Booking } from '../../types/booking';
 import styles from './TicketCheckPage.module.scss';
-
-// Конвертирует первую страницу PDF в PNG для сканирования QR.
-// pdfjs-dist загружается лениво — только когда пользователь выбирает PDF.
-async function convertPdfFirstPageToImageFile(pdfFile: File): Promise<File> {
-  const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-  ).href;
-
-  const bytes = await pdfFile.arrayBuffer();
-  const doc   = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
-  const page  = await doc.getPage(1);
-
-  // Scale 2.5: QR-код получается достаточно большим для надёжного распознавания
-  const viewport = page.getViewport({ scale: 2.5 });
-  const canvas   = document.createElement('canvas');
-  canvas.width   = viewport.width;
-  canvas.height  = viewport.height;
-
-  await page.render({ canvas, viewport }).promise;
-
-  return new Promise<File>((resolve, reject) => {
-    canvas.toBlob(
-      blob => blob
-        ? resolve(new File([blob], 'ticket-page.png', { type: 'image/png' }))
-        : reject(new Error('canvas.toBlob returned null')),
-      'image/png',
-    );
-  });
-}
 
 type ScanState = 'idle' | 'scanning' | 'loading' | 'found' | 'error';
 
@@ -183,7 +153,7 @@ export function TicketCheckPage() {
 
     setScanState('loading');
 
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isPdf = isPdfFile(file);
 
     let scanFile = file;
     if (isPdf) {
@@ -196,10 +166,8 @@ export function TicketCheckPage() {
       }
     }
 
-    const scanner = new Html5Qrcode('qr-file-scanner');
     try {
-      const text = await scanner.scanFile(scanFile, false);
-      scanner.clear();
+      const text = await scanQrFromImageFile(scanFile, 'qr-file-scanner');
 
       const code = parseTicketCodeFromScan(text);
       if (!code) {
@@ -217,7 +185,6 @@ export function TicketCheckPage() {
       setBooking(found);
       setScanState('found');
     } catch {
-      scanner.clear();
       setErrorMsg(
         isPdf
           ? 'QR-код не найден в PDF-файле.'
