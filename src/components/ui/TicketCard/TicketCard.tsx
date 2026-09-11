@@ -3,40 +3,13 @@ import { generateTicketQR } from '../../../services/qrService';
 import { generateTicketPdf } from '../../../services/ticketPdfService';
 import { useLang } from '../../../i18n/LangContext';
 import type { Booking } from '../../../types/booking';
+import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant } from '../../../utils/ticketStub';
 import styles from './TicketCard.module.scss';
 
 interface Props {
   booking: Booking;
   isExpanded: boolean;
   onToggle: () => void;
-}
-
-// 25-bar decorative barcode — uniform height, varying width
-const STUB_BARCODE_WIDTHS = [2,1,3,1,1,2,1,4,1,2,1,3,1,1,2,1,3,2,1,4,1,2,1,1,3] as const;
-
-const MONTH_FR_MAP: Record<string, string> = {
-  'Янв': 'Jan', 'Фев': 'Fév', 'Мар': 'Mar', 'Апр': 'Avr',
-  'Май': 'Mai', 'Июн': 'Juin', 'Июл': 'Juil', 'Авг': 'Août',
-  'Сен': 'Sep', 'Окт': 'Oct', 'Ноя': 'Nov', 'Дек': 'Déc',
-};
-
-function parseShowDate(showDate: string, isFR: boolean): { day: string; monthAbbrev: string } {
-  const parts = showDate.trim().split(/\s+/);
-  const day = parts[0] ?? '—';
-  const monthRu = parts[1] ?? '';
-  const monthAbbrev = isFR
-    ? (MONTH_FR_MAP[monthRu] ?? monthRu.toLowerCase())
-    : monthRu.toLowerCase();
-  return { day, monthAbbrev };
-}
-
-function getStubVariant(b: Booking): 'burgundy' | 'amber' | 'grey' {
-  const payStatus = b.paymentStatus ?? 'not_paid';
-  if (b.status === 'cancelled' || payStatus === 'expired') return 'grey';
-  if (payStatus === 'paid') return 'burgundy';
-  if (payStatus === 'awaiting_transfer') return 'amber';
-  if (b.paymentMethod === 'on_site' && payStatus === 'not_paid') return 'amber';
-  return 'burgundy';
 }
 
 export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
@@ -65,7 +38,7 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
   const stubVariant = getStubVariant(b);
   const payStatus  = b.paymentStatus ?? 'not_paid';
 
-  const { day, monthAbbrev } = parseShowDate(b.showDate, isFR);
+  const { day, monthAbbrev } = parseShowDateParts(b.showDate, isFR);
   const timeLabel = `${monthAbbrev} · ${b.showTime}`;
 
   const ticketTypeLabel =
