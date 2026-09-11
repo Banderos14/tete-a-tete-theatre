@@ -1,6 +1,6 @@
 // Программа лояльности на сервере.
 //
-// Зеркалит src/features/booking/services/loyalty.ts: 1 посещение = 1 бронь,
+// Зеркалит src/services/loyaltyService.ts: 1 посещение = 1 бронь,
 // каждые 5 посещений — одна скидка 50 %. Здесь функции чистые, чтобы правило
 // можно было проверить тестом, не поднимая Firestore.
 
@@ -11,12 +11,9 @@ export const LOYALTY_REWARD_INTERVAL = 5;
 const LOYALTY_DISCOUNT_DIVISOR = 2;
 
 // Бонус начисляется за ПРИХОД, а не за оплату: засчитываются только брони,
-// отмеченные check-in'ом на входе. Время спектакля здесь больше не нужно.
+// отмеченные check-in'ом на входе.
 function isAttendedBooking(b: RawBooking): boolean {
-  return isBookingAttended({
-    status:        String(b.status ?? ''),
-    paymentStatus: String(b.paymentStatus ?? ''),
-  });
+  return isBookingAttended({ status: b.status ?? '', paymentStatus: b.paymentStatus ?? '' });
 }
 
 export interface LoyaltyState {
@@ -32,9 +29,7 @@ export interface LoyaltyState {
  * Берём максимум из него и фактической истории броней: любое расхождение
  * трактуется в пользу театра, а не двойной скидки.
  */
-export function computeLoyalty(
-  bookings: RawBooking[], usedFromState = 0,
-): LoyaltyState {
+export function computeLoyalty(bookings: RawBooking[], usedFromState = 0): LoyaltyState {
   const attendedCount = bookings.filter(isAttendedBooking).length;
   const usedFromHist  = bookings.filter(b => b.loyaltyDiscountApplied === true).length;
   const usedCount     = Math.max(usedFromHist, usedFromState);

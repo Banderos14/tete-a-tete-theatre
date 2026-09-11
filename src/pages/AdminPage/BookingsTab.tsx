@@ -162,7 +162,7 @@ export function BookingsTab({
       </div>
 
       {deleteError && (
-        <div className={styles.deleteUserError}>
+        <div className={styles.adminError}>
           <strong>Ошибка удаления:</strong> {deleteError}
           <button className={styles.errorDismiss} onClick={onDismissDeleteError}>×</button>
         </div>

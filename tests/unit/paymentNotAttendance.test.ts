@@ -124,6 +124,31 @@ describe('переходы статуса при оплате', () => {
   });
 });
 
+describe('кабинет зрителя: прошедший спектакль не остаётся активным билетом', () => {
+  it('активный список отсекает прошедшие спектакли по календарю', () => {
+    // Раньше прошедшие уходили из «активных» потому, что оплата считалась
+    // посещением. Теперь посещение ставит только check-in, поэтому дату
+    // приходится проверять явно — иначе список не очищался бы никогда.
+    const hook = projectSource('src/components/ui/ProfileDrawer/useProfileBookings.ts');
+    expect(hook).toContain('isShowOver');
+    expect(hook).toMatch(/activeBookings = bookings\.filter\([\s\S]{0,200}!isShowOver\(b\)/);
+  });
+
+  it('«прошёл спектакль» и «зритель пришёл» — разные проверки', () => {
+    const svc = projectSource('src/services/attendanceService.ts');
+    // isShowOver про календарь, computedIsAttended про факт прохода.
+    const isShowOverFn = svc.slice(svc.indexOf('export function isShowOver'));
+    expect(isShowOverFn).not.toContain('paymentStatus');
+    expect(isShowOverFn).not.toContain('isBookingAttended');
+
+    const attendedFn = svc.slice(
+      svc.indexOf('export function computedIsAttended'),
+      svc.indexOf('function bookingStartUtcMs'),
+    );
+    expect(attendedFn).not.toContain('showEndUtcMs');
+  });
+});
+
 describe('лояльность считает приходы, а не платежи', () => {
   it('расчёт бонуса опирается на тот же isBookingAttended', () => {
     const loyalty = projectSource('server/booking/loyalty.ts');

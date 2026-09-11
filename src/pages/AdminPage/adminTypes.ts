@@ -11,9 +11,9 @@ export type NewsletterResult = { sent: number; sentRU: number; sentFR: number; e
 
 /** Действие, ожидающее подтверждения в модалке. */
 export type ConfirmAction =
-  | { type: 'paid';       bookingId: string }
-  | { type: 'unpaid';     bookingId: string }
-  | { type: 'cancel';     bookingId: string }
+  | { type: 'paid';          bookingId: string }
+  | { type: 'unpaid';        bookingId: string }
+  | { type: 'cancel';        bookingId: string }
   | { type: 'deleteBooking'; bookingId: string }
-  | { type: 'deleteUser'; uid: string; displayName: string }
+  | { type: 'deleteUser';    uid: string; displayName: string }
   | null;

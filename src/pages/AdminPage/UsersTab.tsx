@@ -32,7 +32,7 @@ export function UsersTab({
       </div>
 
       {deleteUserError && (
-        <div className={styles.deleteUserError}>
+        <div className={styles.adminError}>
           <strong>Ошибка удаления:</strong> {deleteUserError}
           {deleteUserError.includes('FIREBASE_SERVICE_ACCOUNT') && (
             <span> — добавьте переменную <code>FIREBASE_SERVICE_ACCOUNT</code> в настройках Vercel.</span>

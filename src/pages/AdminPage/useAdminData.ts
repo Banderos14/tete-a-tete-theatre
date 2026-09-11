@@ -65,8 +65,7 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
         setUsers(uData);
 
         // Посещение здесь НЕ проставляется: статус attended ставит только
-        // check-in по QR. Раньше админка отмечала посещёнными все оплаченные
-        // брони прошедших спектаклей — то есть и тех, кто не пришёл.
+        // check-in по QR (см. shared/domain/bookingRules.ts).
 
         // Просроченные банковские переводы отменяются фоном.
         expireOverdueBookings(bData, (id) => {

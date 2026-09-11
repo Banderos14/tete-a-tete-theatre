@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { subscribeToUserBookings, expireOverdueBookings } from '../../../services/bookingService';
-import { computedIsAttended } from '../../../services/attendanceService';
+import { computedIsAttended, isShowOver } from '../../../services/attendanceService';
 import type { Booking } from '../../../types/booking';
 import type { Lang } from '../../../i18n/translations';
 
@@ -75,10 +75,14 @@ export function useProfileBookings(open: boolean, user: User | null, lang: Lang)
     setTimeout(() => cancelDismiss(id), DISMISS_ANIMATION_MS);
   }, [cancelDismiss]);
 
+  // Активный билет — на спектакль, который ещё не прошёл. Посещение теперь
+  // ставит только check-in, поэтому календарь проверяется отдельно (isShowOver):
+  // иначе билет прошлогоднего спектакля висел бы в «Моих билетах» вечно.
   const activeBookings = bookings.filter(b =>
     !computedIsAttended(b) &&
     b.status !== 'cancelled' &&
-    b.paymentStatus !== 'expired'
+    b.paymentStatus !== 'expired' &&
+    !isShowOver(b)
   );
   const attendedBookings = bookings.filter(computedIsAttended);
   const ticketCount = activeBookings.filter(b =>

@@ -874,7 +874,9 @@
   white-space: nowrap;
 }
 
-.deleteUserError {
+// Баннер ошибки над таблицей. Общий для вкладок: и удаление пользователя,
+// и удаление брони сообщают о сбое одинаково.
+.adminError {
   display: flex;
   align-items: flex-start;
   gap: 10px;
