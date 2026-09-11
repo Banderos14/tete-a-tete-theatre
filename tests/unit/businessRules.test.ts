@@ -27,8 +27,18 @@ describe('протухание брони происходит надёжно, �
   });
 
   it('endpoint защищён секретом крона', () => {
+    // Поведение проверки — в tests/unit/cronAuth.test.ts; здесь достаточно,
+    // что защита на месте и стоит до бизнес-логики.
     expect(cron).toContain('CRON_SECRET');
-    expect(cron).toMatch(/bearerToken\(req\) !== secret/);
+    expect(cron).toContain('requireCronSecret(req)');
+  });
+
+  it('расписание укладывается в суточный лимит Hobby-плана Vercel', () => {
+    // Ежечасный cron ронял production deployment целиком: Vercel отвергает
+    // конфигурацию ещё на этапе сборки, а не молча игнорирует задание.
+    const [minute, hour] = vercel.crons![0]!.schedule.split(' ');
+    expect(minute, 'минута должна быть фиксированной').toMatch(/^\d+$/);
+    expect(hour, 'час должен быть фиксированным — не чаще раза в сутки').toMatch(/^\d+$/);
   });
 
   it('запись идёт порциями — лимит batch не рушит запуск', () => {

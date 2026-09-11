@@ -29,6 +29,24 @@ export async function requireCaller(req: IncomingMessage): Promise<Caller> {
   }
 }
 
+/**
+ * Доступ планировщика Vercel к cron-endpoint'у.
+ *
+ * Fail closed: раньше проверка выглядела как `if (secret && ...)`, то есть
+ * незаданная переменная окружения ОТКРЫВАЛА endpoint кому угодно. Теперь без
+ * CRON_SECRET на сервере задача не выполняется вовсе.
+ *
+ * Оба отказа отдают одинаковый 401: разные коды подсказывали бы постороннему,
+ * настроен секрет или нет. Само значение наружу не уходит и не логируется.
+ */
+export function requireCronSecret(req: IncomingMessage): void {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) throw unauthorized('Cron access denied');
+
+  const authorization = String(req.headers['authorization'] ?? '');
+  if (authorization !== `Bearer ${secret}`) throw unauthorized('Cron access denied');
+}
+
 /** Роль пользователя из Firestore. Источник правды для admin-проверок. */
 export async function isAdminUid(uid: string): Promise<boolean> {
   try {
