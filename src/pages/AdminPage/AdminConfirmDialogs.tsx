@@ -8,7 +8,7 @@ import type { ConfirmAction } from './adminTypes';
 
 export function AdminConfirmDialogs({
   action, onClose, updatingId, updatingUserId,
-  onSetPaymentStatus, onSetStatus, onDeleteUser,
+  onSetPaymentStatus, onSetStatus, onDeleteBooking, onDeleteUser,
 }: {
   action: ConfirmAction;
   onClose: () => void;
@@ -16,6 +16,7 @@ export function AdminConfirmDialogs({
   updatingUserId: string | null;
   onSetPaymentStatus: (bookingId: string, status: 'paid' | 'not_paid') => void;
   onSetStatus: (bookingId: string, status: 'cancelled') => void;
+  onDeleteBooking: (bookingId: string) => void;
   onDeleteUser: (uid: string) => void;
 }) {
   /** Закрываем модалку до запуска действия — индикатор живёт в строке таблицы. */
@@ -62,6 +63,20 @@ export function AdminConfirmDialogs({
         onConfirm={() => {
           if (action?.type !== 'cancel') return;
           run(() => onSetStatus(action.bookingId, 'cancelled'));
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={action?.type === 'deleteBooking'}
+        title="Удалить бронь?"
+        message="Вы уверены, что хотите безвозвратно удалить эту бронь? Это действие нельзя отменить."
+        confirmLabel="Да, удалить"
+        cancelLabel="Отмена"
+        loading={action?.type === 'deleteBooking' && updatingId === action.bookingId}
+        onCancel={onClose}
+        onConfirm={() => {
+          if (action?.type !== 'deleteBooking') return;
+          run(() => onDeleteBooking(action.bookingId));
         }}
       />
 

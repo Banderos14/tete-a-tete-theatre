@@ -198,8 +198,9 @@ describe('endpoint-файлы Vercel', () => {
   // Vercel делает endpoint'ом КАЖДЫЙ .ts верхнего уровня api/. Список
   // зафиксирован: переименование файла меняет публичный URL и ломает клиентов.
   const EXPECTED = [
-    'cancel-booking.ts', 'checkin-ticket.ts', 'create-booking.ts', 'delete-user.ts',
-    'expire-bookings.ts', 'register-audience.ts', 'send-email.ts', 'show-availability.ts',
+    'cancel-booking.ts', 'checkin-ticket.ts', 'create-booking.ts', 'delete-booking.ts',
+    'delete-user.ts', 'expire-bookings.ts', 'register-audience.ts', 'send-email.ts',
+    'show-availability.ts',
   ];
 
   it('набор endpoint-файлов не изменился', () => {

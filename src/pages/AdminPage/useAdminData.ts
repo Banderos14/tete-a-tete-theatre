@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import {
   getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPaid,
-  expireOverdueBookings,
+  expireOverdueBookings, deleteCancelledBooking,
 } from '../../services/bookingService';
 import { getAllUsers, deleteUserCompletely, type AdminUser } from '../../services/userService';
 import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail } from '../../services/email';
@@ -31,8 +31,12 @@ export interface AdminData {
   updatingUserId: string | null;
   deleteUserError: string | null;
   dismissDeleteUserError: () => void;
+  /** Ошибка удаления брони — показывается над таблицей и гасится вручную. */
+  deleteBookingError: string | null;
+  dismissDeleteBookingError: () => void;
   setStatus: (bookingId: string, status: BookingStatus) => Promise<void>;
   setPaymentStatus: (bookingId: string, paymentStatus: PaymentStatus) => Promise<void>;
+  deleteBooking: (bookingId: string) => Promise<void>;
   deleteUser: (uid: string) => Promise<void>;
 }
 
@@ -43,6 +47,7 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
   const [updatingId,     setUpdatingId]     = useState<string | null>(null);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [deleteUserError, setDeleteUserError] = useState<string | null>(null);
+  const [deleteBookingError, setDeleteBookingError] = useState<string | null>(null);
 
   // Первичная загрузка. Флаг stale — чтобы ответ отменённой загрузки не затирал
   // состояние: без него быстрый уход со страницы или повторный вход админом
@@ -149,6 +154,23 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
     } finally { setUpdatingId(null); }
   }
 
+  // Удаление отменённой брони. Запись убирается из списка ТОЛЬКО после успеха
+  // сервера: оптимистичное удаление оставило бы таблицу и счётчики в состоянии,
+  // не совпадающем с базой, если запрос упадёт.
+  async function deleteBooking(bookingId: string) {
+    if (updatingId === bookingId) return;
+    setUpdatingId(bookingId);
+    setDeleteBookingError(null);
+    try {
+      await deleteCancelledBooking(bookingId);
+      setBookings(prev => prev.filter(b => b.id !== bookingId));
+    } catch (e) {
+      setDeleteBookingError(e instanceof Error ? e.message : 'Ошибка удаления брони');
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   async function deleteUser(uid: string) {
     setUpdatingUserId(uid);
     setDeleteUserError(null);
@@ -170,6 +192,8 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
     updatingId, updatingUserId,
     deleteUserError,
     dismissDeleteUserError: () => setDeleteUserError(null),
-    setStatus, setPaymentStatus, deleteUser,
+    deleteBookingError,
+    dismissDeleteBookingError: () => setDeleteBookingError(null),
+    setStatus, setPaymentStatus, deleteBooking, deleteUser,
   };
 }

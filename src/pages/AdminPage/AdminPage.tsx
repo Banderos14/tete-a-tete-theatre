@@ -93,6 +93,8 @@ export function AdminPage() {
           bookings={data.bookings}
           fetching={data.fetching}
           updatingId={data.updatingId}
+          deleteError={data.deleteBookingError}
+          onDismissDeleteError={data.dismissDeleteBookingError}
           filterShow={filterShow}
           onFilterShow={setFilterShow}
           filterStatus={filterStatus}
@@ -122,6 +124,7 @@ export function AdminPage() {
         updatingUserId={data.updatingUserId}
         onSetPaymentStatus={(id, status) => { void data.setPaymentStatus(id, status); }}
         onSetStatus={(id, status) => { void data.setStatus(id, status); }}
+        onDeleteBooking={(id) => { void data.deleteBooking(id); }}
         onDeleteUser={(uid) => { void data.deleteUser(uid); }}
       />
 

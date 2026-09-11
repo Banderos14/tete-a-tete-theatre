@@ -1,5 +1,6 @@
 // Вкладка «Брони»: сводка по кассе, карточки спектаклей-фильтров и таблица.
 
+import { IconTrash } from '@tabler/icons-react';
 import { RU } from '../../i18n';
 import { hoursUntilExpiry } from '../../services/bookingService';
 import { getPaymentAccount, PAYMENT_CONFIG } from '../../config/payment';
@@ -63,12 +64,15 @@ function paidRevenue(list: Booking[]): number {
 
 export function BookingsTab({
   bookings, fetching, updatingId,
+  deleteError, onDismissDeleteError,
   filterShow, onFilterShow, filterStatus, onFilterStatus,
   onConfirmAction,
 }: {
   bookings: Booking[];
   fetching: boolean;
   updatingId: string | null;
+  deleteError: string | null;
+  onDismissDeleteError: () => void;
   filterShow: FilterShowId;
   onFilterShow: (v: FilterShowId | ((prev: FilterShowId) => FilterShowId)) => void;
   filterStatus: FilterStatus;
@@ -156,6 +160,13 @@ export function BookingsTab({
           ))}
         </div>
       </div>
+
+      {deleteError && (
+        <div className={styles.deleteUserError}>
+          <strong>Ошибка удаления:</strong> {deleteError}
+          <button className={styles.errorDismiss} onClick={onDismissDeleteError}>×</button>
+        </div>
+      )}
 
       {fetching ? (
         <div className={styles.centered}><span className={styles.spinner} /></div>
@@ -300,7 +311,20 @@ function BookingRow({ booking: b, isBusy, onConfirmAction }: {
       </td>
       <td>
         <div className={styles.actions}>
-          {bStatus !== 'cancelled' && (
+          {bStatus === 'cancelled' ? (
+            // Удалить можно только отменённую бронь — то же правило проверяет
+            // сервер в /api/delete-booking, кнопка лишь не предлагает лишнего.
+            <button
+              type="button"
+              className={styles.actionDelete}
+              disabled={isBusy}
+              title="Удалить бронь"
+              aria-label="Удалить бронь"
+              onClick={() => onConfirmAction({ type: 'deleteBooking', bookingId: b.id })}
+            >
+              <IconTrash size={16} stroke={1.5} aria-hidden />
+            </button>
+          ) : (
             <button
               className={styles.actionCancel}
               disabled={isBusy}

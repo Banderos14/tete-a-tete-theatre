@@ -194,6 +194,32 @@ function snapshotToBookings(snapshot: Awaited<ReturnType<typeof getDocs>>): Book
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as object) } as Booking));
 }
 
+// Окончательное удаление отменённой брони администратором.
+//
+// Идёт через /api/delete-booking: правила Firestore не дают клиенту писать
+// в bookings, а проверки «вызывающий — админ» и «бронь действительно отменена»
+// обязаны выполняться на сервере. UI лишь не показывает кнопку там, где её
+// быть не должно.
+export async function deleteCancelledBooking(bookingId: string): Promise<void> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('Not authenticated');
+  const idToken = await currentUser.getIdToken();
+
+  const resp = await fetch('/api/delete-booking', {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({ bookingId }),
+  });
+
+  const data = await resp.json().catch(() => ({})) as Record<string, unknown>;
+  if (!resp.ok) {
+    throw new Error(typeof data['error'] === 'string' ? data['error'] : `HTTP ${resp.status}`);
+  }
+}
+
 // Отмена по инициативе пользователя.
 //
 // Идёт через /api/cancel-booking, а не напрямую в Firestore: правила безопасности

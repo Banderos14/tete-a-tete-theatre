@@ -354,6 +354,23 @@
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
+// Корзина у отменённой брони. Красная, как и «Отменить», но компактнее —
+// в колонке она стоит вместо текстовой кнопки, а не рядом с ней.
+.actionDelete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--radius-xs);
+  background: rgba(184, 0, 0, 0.1);
+  color: var(--accent-glow);
+  border: 1px solid rgba(184, 0, 0, 0.2);
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) { background: rgba(184, 0, 0, 0.2); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
 .payBadge {
   display: inline-block;
   font-family: var(--font-mono);
