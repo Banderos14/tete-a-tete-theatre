@@ -1,8 +1,6 @@
 // Чистые правила жизненного цикла брони. Никаких обращений к сети и Firestore —
 // поэтому их можно и нужно покрывать юнит-тестами, а сервер лишь применяет вердикт.
 
-import { showEndUtcMs } from './showTime.js';
-
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'attended';
 export type PaymentStatus = 'not_paid' | 'paid' | 'awaiting_transfer' | 'expired';
 export type PaymentMethod = 'on_site' | 'bank_transfer';
@@ -106,14 +104,17 @@ export function checkCapacity(
 // Единственная реализация правила «бронь считается посещённой».
 // Используется и сервером (расчёт лояльности), и клиентом (отображение статуса),
 // поэтому разойтись они больше не могут.
-export function isBookingAttended(
-  booking: BookingStateSnapshot,
-  showStartUtcMs: number | null,
-  nowMs: number = Date.now(),
-): boolean {
-  if (booking.status === 'attended') return true;
-  if (booking.status !== 'confirmed' || booking.paymentStatus !== 'paid') return false;
-  return showStartUtcMs !== null && showEndUtcMs(showStartUtcMs) < nowMs;
+//
+// ОПЛАТА НЕ ОЗНАЧАЕТ ПОСЕЩЕНИЕ. Раньше правило выводило посещение из
+// «confirmed + paid + спектакль закончился», и оплаченный зритель, который
+// не пришёл, автоматически считался пришедшим. Хуже того, админка записывала
+// этот вывод в Firestore, так что оплата задним числом превращалась в
+// «посещено» без единого скана.
+//
+// Теперь посещение — это факт прохода, а не вывод из платежа: статус
+// 'attended' ставит только успешный check-in (server/checkin/checkin.service).
+export function isBookingAttended(booking: BookingStateSnapshot): boolean {
+  return booking.status === 'attended';
 }
 
 // Бессмысленные сочетания статусов.

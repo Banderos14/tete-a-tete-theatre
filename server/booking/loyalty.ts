@@ -5,24 +5,18 @@
 // можно было проверить тестом, не поднимая Firestore.
 
 import { isBookingAttended } from '../../shared/domain/bookingRules.js';
-import { parseShowStartUtcMs } from '../../shared/domain/showTime.js';
 import type { RawBooking } from './booking.types.js';
 
 export const LOYALTY_REWARD_INTERVAL = 5;
 const LOYALTY_DISCOUNT_DIVISOR = 2;
 
-function attendedAt(b: RawBooking, nowMs: number): boolean {
-  // Время начала: у новых броней хранится полем showStartAt, у старых
-  // восстанавливается из строк как настенное время Europe/Paris.
-  const start = typeof b.showStartAtMs === 'number'
-    ? b.showStartAtMs
-    : parseShowStartUtcMs(b.showDate ?? '', b.showTime ?? '');
-
-  return isBookingAttended(
-    { status: String(b.status ?? ''), paymentStatus: String(b.paymentStatus ?? '') },
-    start,
-    nowMs,
-  );
+// Бонус начисляется за ПРИХОД, а не за оплату: засчитываются только брони,
+// отмеченные check-in'ом на входе. Время спектакля здесь больше не нужно.
+function isAttendedBooking(b: RawBooking): boolean {
+  return isBookingAttended({
+    status:        String(b.status ?? ''),
+    paymentStatus: String(b.paymentStatus ?? ''),
+  });
 }
 
 export interface LoyaltyState {
@@ -39,16 +33,16 @@ export interface LoyaltyState {
  * трактуется в пользу театра, а не двойной скидки.
  */
 export function computeLoyalty(
-  bookings: RawBooking[], nowMs: number, usedFromState = 0,
+  bookings: RawBooking[], usedFromState = 0,
 ): LoyaltyState {
-  const attended     = bookings.filter(b => attendedAt(b, nowMs)).length;
-  const usedFromHist = bookings.filter(b => b.loyaltyDiscountApplied === true).length;
-  const usedCount    = Math.max(usedFromHist, usedFromState);
+  const attendedCount = bookings.filter(isAttendedBooking).length;
+  const usedFromHist  = bookings.filter(b => b.loyaltyDiscountApplied === true).length;
+  const usedCount     = Math.max(usedFromHist, usedFromState);
 
   return {
-    loyaltyAvailable: attended >= LOYALTY_REWARD_INTERVAL
-      && Math.floor(attended / LOYALTY_REWARD_INTERVAL) > usedCount,
-    attendedCount: attended,
+    loyaltyAvailable: attendedCount >= LOYALTY_REWARD_INTERVAL
+      && Math.floor(attendedCount / LOYALTY_REWARD_INTERVAL) > usedCount,
+    attendedCount,
     usedCount,
   };
 }

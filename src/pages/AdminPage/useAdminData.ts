@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import {
   getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPaid,
-  expireOverdueBookings, markEligibleBookingsAsAttended,
+  expireOverdueBookings,
 } from '../../services/bookingService';
 import { getAllUsers, deleteUserCompletely, type AdminUser } from '../../services/userService';
 import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail } from '../../services/email';
@@ -59,11 +59,9 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
         setBookings(bData);
         setUsers(uData);
 
-        // Автоматически отмечаем прошедшие оплаченные спектакли, не блокируя загрузку.
-        markEligibleBookingsAsAttended(bData, (id) => {
-          if (stale) return;
-          setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
-        }).catch(() => {});
+        // Посещение здесь НЕ проставляется: статус attended ставит только
+        // check-in по QR. Раньше админка отмечала посещёнными все оплаченные
+        // брони прошедших спектаклей — то есть и тех, кто не пришёл.
 
         // Просроченные банковские переводы отменяются фоном.
         expireOverdueBookings(bData, (id) => {

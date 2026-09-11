@@ -124,7 +124,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       ? Number(loyaltySnap.data()!.rewardsUsed)
       : 0;
 
-    const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings, nowMs, usedFromState);
+    const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings, usedFromState);
     const baseAmount     = ticketInfo.price * ticketsCount;
     const discountAmount = loyaltyAvailable ? loyaltyDiscount(baseAmount) : 0;
     const totalAmount    = baseAmount - discountAmount;
