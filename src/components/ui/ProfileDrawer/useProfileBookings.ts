@@ -65,16 +65,15 @@ export function useProfileBookings(open: boolean, user: User | null, lang: Lang)
     return unsub;
   }, [open, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const startDismiss = useCallback((id: string) => {
-    setDismissingIds(prev => new Set(prev).add(id));
-    setTimeout(() => {
-      setDismissingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
-    }, DISMISS_ANIMATION_MS);
-  }, []);
-
   const cancelDismiss = useCallback((id: string) => {
     setDismissingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
   }, []);
+
+  const startDismiss = useCallback((id: string) => {
+    setDismissingIds(prev => new Set(prev).add(id));
+    // Доиграв, карточка снимается с анимации тем же способом, что и при ошибке отмены.
+    setTimeout(() => cancelDismiss(id), DISMISS_ANIMATION_MS);
+  }, [cancelDismiss]);
 
   const activeBookings = bookings.filter(b =>
     !computedIsAttended(b) &&

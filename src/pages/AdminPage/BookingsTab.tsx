@@ -18,17 +18,47 @@ const PAY_STATUS_STYLE: Record<PaymentStatus, string> = {
 
 const t = RU;
 
+const STATUS_LABELS: Record<BookingStatus, string> = {
+  pending:   t.admin.statusPending,
+  confirmed: t.admin.statusConfirmed,
+  attended:  t.admin.statusAttended,
+  cancelled: t.admin.statusCancelled,
+};
+
+const STATUS_BADGE_STYLE: Record<BookingStatus, string> = {
+  pending:   styles.statusPending,
+  confirmed: styles.statusOk,
+  attended:  styles.statusAttended,
+  cancelled: styles.statusCancelled,
+};
+
+/** Подсветку получает вся строка — но только у отменённых и посещённых броней. */
+const ROW_STYLE: Partial<Record<BookingStatus, string>> = {
+  cancelled: styles.rowCancelled,
+  attended:  styles.rowAttended,
+};
+
 const BOOKING_STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
   { value: 'all',       label: 'Все' },
-  { value: 'pending',   label: t.admin.statusPending },
-  { value: 'confirmed', label: t.admin.statusConfirmed },
-  { value: 'attended',  label: t.admin.statusAttended },
-  { value: 'cancelled', label: t.admin.statusCancelled },
+  { value: 'pending',   label: STATUS_LABELS.pending },
+  { value: 'confirmed', label: STATUS_LABELS.confirmed },
+  { value: 'attended',  label: STATUS_LABELS.attended },
+  { value: 'cancelled', label: STATUS_LABELS.cancelled },
 ];
 
 /** Инициалы спектакля для карточки без афиши. */
 function showGlyph(title: string): string {
   return title.replace(/[«»]/g, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+
+/** Итоги считаются и по каждому спектаклю, и по всем броням сразу. */
+function countTickets(list: Booking[]): number {
+  return list.reduce((sum, b) => sum + b.ticketsCount, 0);
+}
+
+/** Касса — только по оплаченным броням: остальные денег ещё не принесли. */
+function paidRevenue(list: Booking[]): number {
+  return list.filter(b => b.paymentStatus === 'paid').reduce((sum, b) => sum + (b.totalAmount ?? 0), 0);
 }
 
 export function BookingsTab({
@@ -50,18 +80,18 @@ export function BookingsTab({
     .filter(b => filterStatus === 'all' || b.status === filterStatus);
 
   const statsByShow = SHOWS.map(show => {
-    const sb = bookings.filter(b => b.showId === show.id);
+    const showBookings = bookings.filter(b => b.showId === show.id);
     return {
       show,
-      count:   sb.length,
-      tickets: sb.reduce((s, b) => s + b.ticketsCount, 0),
-      revenue: sb.filter(b => b.paymentStatus === 'paid').reduce((s, b) => s + (b.totalAmount ?? 0), 0),
+      count:   showBookings.length,
+      tickets: countTickets(showBookings),
+      revenue: paidRevenue(showBookings),
     };
   });
 
   const totalBookings = bookings.length;
-  const totalTickets  = bookings.reduce((s, b) => s + b.ticketsCount, 0);
-  const totalRevenue  = bookings.filter(b => b.paymentStatus === 'paid').reduce((s, b) => s + (b.totalAmount ?? 0), 0);
+  const totalTickets  = countTickets(bookings);
+  const totalRevenue  = paidRevenue(bookings);
 
   return (
     <>
@@ -176,24 +206,8 @@ function BookingRow({ booking: b, isBusy, onConfirmAction }: {
   const account   = b.paymentMethod === 'bank_transfer' ? getPaymentAccount(b.paymentAccountId) : null;
   const hoursLeft = payStatus === 'awaiting_transfer' ? hoursUntilExpiry(b) : null;
 
-  const statusClass =
-    bStatus === 'confirmed' ? styles.statusOk :
-    bStatus === 'attended'  ? styles.statusAttended :
-    bStatus === 'pending'   ? styles.statusPending  :
-                              styles.statusCancelled;
-  const statusLabel =
-    bStatus === 'confirmed' ? t.admin.statusConfirmed :
-    bStatus === 'attended'  ? t.admin.statusAttended  :
-    bStatus === 'pending'   ? t.admin.statusPending   :
-                              t.admin.statusCancelled;
-
   return (
-    <tr
-      className={
-        bStatus === 'cancelled' ? styles.rowCancelled :
-        bStatus === 'attended'  ? styles.rowAttended  : ''
-      }
-    >
+    <tr className={ROW_STYLE[bStatus] ?? ''}>
       <td>
         <p className={styles.cellName}>{b.userName}</p>
         <p className={styles.cellShow}>{b.showTitle}</p>
@@ -267,7 +281,12 @@ function BookingRow({ booking: b, isBusy, onConfirmAction }: {
       <td className={styles.cellMono}>{b.ticketCode || '—'}</td>
       <td className={styles.cellMono}>{formatTimestamp(b.createdAt)}</td>
       <td>
-        <span className={`${styles.statusBadge} ${statusClass}`}>{statusLabel}</span>
+        {/* Фолбэк на cancelled: статус вне четырёх известных (повреждённая запись
+            или статус, добавленный на сервере раньше фронта) не должен
+            оборачиваться пустой ячейкой — админу нечего было бы читать. */}
+        <span className={`${styles.statusBadge} ${STATUS_BADGE_STYLE[bStatus] ?? styles.statusCancelled}`}>
+          {STATUS_LABELS[bStatus] ?? STATUS_LABELS.cancelled}
+        </span>
       </td>
       <td className={styles.cellComment}>
         {b.comment || '—'}

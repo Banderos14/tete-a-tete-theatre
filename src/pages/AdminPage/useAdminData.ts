@@ -12,6 +12,16 @@ import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail } from '../../servic
 import { describeStateIssue } from '../../../shared/domain/bookingRules';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/booking';
 
+/**
+ * Бессмысленные сочетания статусов не запрещаем — театру может понадобиться
+ * починить реальную ситуацию вручную, — но переспрашиваем. Один текст на оба
+ * места: разойдясь, формулировки путали бы администратора.
+ */
+function confirmDespiteStateIssue(status: BookingStatus, paymentStatus: PaymentStatus): boolean {
+  const issue = describeStateIssue(status, paymentStatus);
+  return !issue || window.confirm(`${issue}.\n\nВсё равно сохранить?`);
+}
+
 export interface AdminData {
   bookings: Booking[];
   users: AdminUser[];
@@ -81,10 +91,7 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
     // Если статус не изменился, письмо повторно не отправляем.
     if (!booking || booking.status === status) return;
 
-    // Бессмысленные сочетания статусов не запрещаем — театру может понадобиться
-    // починить реальную ситуацию вручную, — но переспрашиваем.
-    const issue = describeStateIssue(status, booking.paymentStatus ?? 'not_paid');
-    if (issue && !window.confirm(`${issue}.\n\nВсё равно сохранить?`)) return;
+    if (!confirmDespiteStateIssue(status, booking.paymentStatus ?? 'not_paid')) return;
 
     setUpdatingId(bookingId);
     try {
@@ -137,8 +144,7 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
         }, await adminToken()).catch(() => {});
       } else {
         // Снятие оплаты меняет только paymentStatus и не отправляет письмо.
-        const issue = describeStateIssue(booking.status, paymentStatus);
-        if (issue && !window.confirm(`${issue}.\n\nВсё равно сохранить?`)) return;
+        if (!confirmDespiteStateIssue(booking.status, paymentStatus)) return;
         await updatePaymentStatus(bookingId, paymentStatus);
         setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, paymentStatus } : b));
       }

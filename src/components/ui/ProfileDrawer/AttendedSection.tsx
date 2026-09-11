@@ -58,9 +58,8 @@ function AttendedRow({ group, stampAngle }: { group: GroupedShow; stampAngle: nu
   const repeatText = count > 1
     ? (isFR ? `· ${count} fois` : `· были ${count} ${pluralRaz(count)}`)
     : '';
-  const stampText = isFR
-    ? (count > 1 ? `VU ×${count}` : 'VU')
-    : (count > 1 ? `ПОСЕЩЕНО ×${count}` : 'ПОСЕЩЕНО');
+  const stampWord = isFR ? 'VU' : 'ПОСЕЩЕНО';
+  const stampText = count > 1 ? `${stampWord} ×${count}` : stampWord;
 
   return (
     <div className={styles.attendedRow}>

@@ -33,8 +33,7 @@ export function AdminConfirmDialogs({
         onCancel={onClose}
         onConfirm={() => {
           if (action?.type !== 'paid') return;
-          const id = action.bookingId;
-          run(() => onSetPaymentStatus(id, 'paid'));
+          run(() => onSetPaymentStatus(action.bookingId, 'paid'));
         }}
       />
 
@@ -48,8 +47,7 @@ export function AdminConfirmDialogs({
         onCancel={onClose}
         onConfirm={() => {
           if (action?.type !== 'unpaid') return;
-          const id = action.bookingId;
-          run(() => onSetPaymentStatus(id, 'not_paid'));
+          run(() => onSetPaymentStatus(action.bookingId, 'not_paid'));
         }}
       />
 
@@ -63,8 +61,7 @@ export function AdminConfirmDialogs({
         onCancel={onClose}
         onConfirm={() => {
           if (action?.type !== 'cancel') return;
-          const id = action.bookingId;
-          run(() => onSetStatus(id, 'cancelled'));
+          run(() => onSetStatus(action.bookingId, 'cancelled'));
         }}
       />
 
@@ -82,8 +79,7 @@ export function AdminConfirmDialogs({
         onCancel={onClose}
         onConfirm={() => {
           if (action?.type !== 'deleteUser') return;
-          const uid = action.uid;
-          run(() => onDeleteUser(uid));
+          run(() => onDeleteUser(action.uid));
         }}
       />
     </>

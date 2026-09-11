@@ -95,8 +95,9 @@ export function useNewsletter(user: User | null): Newsletter {
           sent++;
           if (lang === 'FR') sentFR++;
           else sentRU++;
+        } else {
+          errors.push(recipient.email);
         }
-        else errors.push(recipient.email);
       } catch {
         errors.push(recipient.email);
       }

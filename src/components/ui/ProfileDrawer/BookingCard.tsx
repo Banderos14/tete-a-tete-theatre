@@ -9,9 +9,22 @@ import { cancelBookingByUser, hoursUntilExpiry } from '../../../services/booking
 import { computedIsAttended } from '../../../services/attendanceService';
 import { parseShowStartUtcMs } from '../../../../shared/domain/showTime';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
-import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant } from '../../../utils/ticketStub';
+import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant, type StubVariant } from '../../../utils/ticketStub';
 import { StampBadge } from '../TicketCard';
 import styles from './ProfileDrawer.module.scss';
+
+const STUB_STYLE: Record<StubVariant, string> = {
+  burgundy: styles.bookingStubBurgundy,
+  amber:    styles.bookingStubAmber,
+  grey:     styles.bookingStubGrey,
+};
+
+/** У бордового корешка месяц красится базовым классом — отдельного ему не нужно. */
+const STUB_MONTH_STYLE: Record<StubVariant, string> = {
+  burgundy: '',
+  amber:    styles.bookingStubMonthAmber,
+  grey:     styles.bookingStubMonthGrey,
+};
 
 export function BookingCard({ booking: b, t, isDismissing = false, onStartDismiss, onCancelDismiss }: {
   booking: Booking;
@@ -72,16 +85,15 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
   let actionClass = styles.bookingActionMuted;
   if (payStatus === 'paid' && b.status === 'confirmed') {
     actionText = isFR ? 'Montrer à l\'entrée →' : 'Показать на входе →';
-    actionClass = styles.bookingActionMuted;
-  } else if (payStatus === 'awaiting_transfer') {
+  } else if (isAwaitingTransfer) {
     actionText = isFR ? 'Détails du virement →' : 'Реквизиты для перевода →';
     actionClass = styles.bookingActionAmber;
-  } else if (b.paymentMethod === 'on_site' && payStatus === 'not_paid' && b.status !== 'cancelled') {
+  } else if (b.paymentMethod === 'on_site' && payStatus === 'not_paid' && !isCancelled) {
     actionText = isFR ? 'Paiement sur place' : 'Оплата на месте';
     actionClass = styles.bookingActionAmber;
   }
 
-  const REASON_OPTIONS = [
+  const reasonOptions = [
     { value: 'time',    label: t.booking.cancelReasonTime    },
     { value: 'plans',   label: t.booking.cancelReasonPlans   },
     { value: 'mistake', label: t.booking.cancelReasonMistake },
@@ -110,9 +122,9 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
       <div className={styles.bookingTicketRow}>
 
         {/* LEFT STUB */}
-        <div className={`${styles.bookingStub} ${stubVariant === 'amber' ? styles.bookingStubAmber : stubVariant === 'grey' ? styles.bookingStubGrey : styles.bookingStubBurgundy}`}>
+        <div className={`${styles.bookingStub} ${STUB_STYLE[stubVariant]}`}>
           <div className={styles.bookingStubDay}>{day}</div>
-          <div className={`${styles.bookingStubMonth} ${stubVariant === 'amber' ? styles.bookingStubMonthAmber : stubVariant === 'grey' ? styles.bookingStubMonthGrey : ''}`}>{timeLabel}</div>
+          <div className={`${styles.bookingStubMonth} ${STUB_MONTH_STYLE[stubVariant]}`}>{timeLabel}</div>
           <div className={styles.bookingStubBarcode} aria-hidden="true">
             {STUB_BARCODE_WIDTHS.map((w, i) => (
               <div key={i} style={{ width: `${w}px` }} />
@@ -147,7 +159,7 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
               <code className={styles.bookingCode}>{b.ticketCode}</code>
             )}
             {/* Countdown for awaiting transfers */}
-            {isAwaitingTransfer && hoursLeft !== null && (
+            {hoursLeft !== null && (
               <span className={hoursLeft <= 0 ? styles.countdownExpired : styles.countdownHours}>
                 {hoursLeft <= 0
                   ? (isFR ? 'Expiré' : 'Истёкло')
@@ -201,17 +213,17 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
             </div>
           )}
 
-          {/* Notes */}
-          {!isAttended && displayStatus === 'confirmed' && (
+          {/* Notes. Посещённая бронь сюда не попадает: у неё displayStatus === 'attended'. */}
+          {displayStatus === 'confirmed' && (
             <p className={styles.bookingNoteOk}>{t.profile.bookingNoteConfirmed}</p>
           )}
           {!isAttended && isExpiredTransfer && (
             <p className={styles.bookingNoteBad}>{t.profile.bookingNoteExpired}</p>
           )}
-          {!isAttended && displayStatus === 'cancelled' && !isExpiredTransfer && (
+          {displayStatus === 'cancelled' && !isExpiredTransfer && (
             <p className={styles.bookingNoteBad}>{t.profile.bookingNoteCancelled}</p>
           )}
-          {!isAttended && payStatus === 'paid' && displayStatus === 'pending' && (
+          {payStatus === 'paid' && displayStatus === 'pending' && (
             <p className={styles.bookingNoteOk}>{t.profile.bookingNotePaid}</p>
           )}
 
@@ -232,7 +244,7 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
               <p className={styles.cancelDialogTitle}>{t.booking.cancelBookingTitle}</p>
               <p className={styles.cancelDialogText}>{t.booking.cancelBookingText}</p>
               <div className={styles.cancelReasonList}>
-                {REASON_OPTIONS.map(opt => (
+                {reasonOptions.map(opt => (
                   <button
                     key={opt.value}
                     type="button"

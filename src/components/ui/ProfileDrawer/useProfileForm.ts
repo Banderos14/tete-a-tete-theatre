@@ -15,6 +15,9 @@ import { validate, mapFbError, type ValidationErrors } from './profileValidation
 
 export type Messenger = 'whatsapp' | 'telegram';
 
+/** Порядок кнопок мессенджеров — общий у десктопных «Контактов» и мобильного профиля. */
+export const MESSENGERS = ['whatsapp', 'telegram'] as const satisfies readonly Messenger[];
+
 export interface ProfileForm {
   displayName: string;
   birthday: string;
@@ -101,6 +104,10 @@ export function useProfileForm(): ProfileForm {
     }
   }, [displayName, birthday, phone, submitted, t.profile.required, t.profile.phoneInvalid]);
 
+  // Ошибки текущих значений нужны и сохранению, и бейджу «не заполнено»,
+  // поэтому считаются на каждый рендер — а показываются только после отправки.
+  const currentErrors = validate(displayName, birthday, phone, t.profile.required, t.profile.phoneInvalid);
+
   const markDirty = useCallback(() => setIsDirty(true), []);
 
   const setDisplayName = useCallback((v: string) => { setDisplayNameState(v); markDirty(); }, [markDirty]);
@@ -117,9 +124,8 @@ export function useProfileForm(): ProfileForm {
   async function save({ withValidation = false }: { withValidation?: boolean } = {}): Promise<ValidationErrors> {
     if (withValidation) {
       setSubmitted(true);
-      const errs = validate(displayName, birthday, phone, t.profile.required, t.profile.phoneInvalid);
-      setErrors(errs);
-      if (Object.keys(errs).length > 0) return errs;
+      setErrors(currentErrors);
+      if (Object.keys(currentErrors).length > 0) return currentErrors;
     }
     setSaving(true);
     await saveProfile({
@@ -169,9 +175,7 @@ export function useProfileForm(): ProfileForm {
     displayName, birthday, phone, preferredContact, instagramUsername, notify,
     setDisplayName, setBirthday, setPhone, toggleMessenger, setInstagramUsername, setNotify,
     errors, saving, savedMsg, isDirty,
-    missingCount: Object.keys(
-      validate(displayName, birthday, phone, t.profile.required, t.profile.phoneInvalid),
-    ).length,
+    missingCount: Object.keys(currentErrors).length,
     missingBirthday: !birthday,
     missingPhone: !phone.trim() || !isCompleteFrenchPhone(phone),
     instagram: {

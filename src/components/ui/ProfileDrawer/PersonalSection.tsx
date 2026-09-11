@@ -7,7 +7,7 @@ import { useLang } from '../../../i18n/LangContext';
 import type { T } from '../../../i18n/translations';
 import { PersonalField } from './ProfileFields';
 import { formatBirthdayDisplay } from './profileValidation';
-import type { ProfileForm, Messenger } from './useProfileForm';
+import { MESSENGERS, type ProfileForm } from './useProfileForm';
 import styles from './ProfileDrawer.module.scss';
 
 export function PersonalSection({
@@ -101,7 +101,7 @@ export function PersonalSection({
             <span className={styles.personalFieldLabelText}>{isFR ? 'Via' : 'Связь через'}</span>
           </div>
           <div className={styles.contactMessengerOptions}>
-            {(['whatsapp', 'telegram'] as const satisfies readonly Messenger[]).map(m => (
+            {MESSENGERS.map(m => (
               <button
                 key={m}
                 type="button"

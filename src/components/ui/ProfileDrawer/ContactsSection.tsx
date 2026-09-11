@@ -4,7 +4,7 @@
 import type { T } from '../../../i18n/translations';
 import { Field } from './ProfileFields';
 import { WhatsAppIcon, TelegramIcon } from './BrandIcons';
-import type { ProfileForm, Messenger } from './useProfileForm';
+import { MESSENGERS, type ProfileForm } from './useProfileForm';
 import styles from './ProfileDrawer.module.scss';
 
 export function ContactsSection({ form, t, pulsePhone }: {
@@ -35,7 +35,7 @@ export function ContactsSection({ form, t, pulsePhone }: {
       <div className={styles.messengerRow}>
         <span className={styles.messengerLabel}>{t.profile.messengerLabel}</span>
         <div className={styles.messengerOptions}>
-          {(['whatsapp', 'telegram'] as const satisfies readonly Messenger[]).map(m => (
+          {MESSENGERS.map(m => (
             <button
               key={m}
               type="button"
