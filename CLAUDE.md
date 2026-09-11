@@ -61,12 +61,17 @@ src/
   app/          оболочка: App, UserLanguageSync, параметры интро
   pages/
     HomePage/   HomePage.tsx + sections/ (11 секций лендинга) + components/ (ShowModal, LazyBgVideo, PosterPlaceholder)
-    AdminPage/  NotFoundPage/  TicketCheckPage/
+    AdminPage/  AdminPage.tsx (оболочка) + *Tab.tsx + useAdminData / useNewsletter
+    NotFoundPage/  TicketCheckPage/
   components/ui/  переиспользуемый UI: модалки, ErrorBoundary, ConfirmDialog, TicketCard, CookieConsent
   context/ services/ hooks/ i18n/ data/ config/ constants/ types/ utils/ styles/
 ```
 
 Границы стережёт тот же `tests/unit/architecture.test.ts`: страницы не импортируют друг друга и не лезут в `src/app/`, общий UI не зависит от страниц, у каждой страницы есть `index.ts`. Компонент, понадобившийся второй странице, поднимается в `components/ui/` — а не импортируется из чужого каталога.
+
+**Крупные экраны разложены по ответственностям, а не по числу строк.** `ProfileDrawer/` и `AdminPage/` устроены одинаково: файл-оболочка отвечает за раскладку и переключение разделов, состояние живёт в хуках (`useProfileForm`, `useProfileBookings`, `useAdminData`, `useNewsletter`), содержимое разделов — в отдельных `*Section` / `*Tab`-файлах, а чистая логика (`profileValidation`, `attendedGrouping`, `adminFormatting`) выносится в модули без React и покрывается тестами.
+
+**Файлы такого разбиения лежат плоско, рядом со своим `*.module.scss`.** Подкаталоги здесь невозможны: `architecture.test.ts` запрещает импортировать модуль стилей из соседнего каталога, а дробить SCSS вслед за компонентами означало бы ломать общий каскад.
 
 Firebase грузится лениво из `AuthContext` (`loadFirebase()` мемоизирует `import('../firebase/config')`) — firebase-чанк вынесен в `manualChunks` и не блокирует первый рендер.
 
