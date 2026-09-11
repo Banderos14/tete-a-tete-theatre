@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const app = readFileSync(resolve(__dirname, '../../src/App.tsx'), 'utf8');
+const app = readFileSync(resolve(__dirname, '../../src/app/App.tsx'), 'utf8');
 
 describe('маршруты', () => {
   it('есть catch-all маршрут — неизвестный URL больше не даёт белый экран', () => {

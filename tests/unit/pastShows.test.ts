@@ -68,13 +68,13 @@ describe('расписание клиента и сервера совпадае
 
 describe('интерфейс не предлагает бронировать прошедший спектакль', () => {
   it('ShowModal блокирует кнопку', () => {
-    const src = readFileSync(resolve(ROOT, 'src/components/ui/ShowModal/ShowModal.tsx'), 'utf8');
+    const src = readFileSync(resolve(ROOT, 'src/pages/HomePage/components/ShowModal/ShowModal.tsx'), 'utf8');
     expect(src).toContain('disabled={showIsPast}');
     expect(src).toContain('t.showModal.showPast');
   });
 
   it('Repertoire не показывает кнопку покупки', () => {
-    const src = readFileSync(resolve(ROOT, 'src/components/Repertoire/Repertoire.tsx'), 'utf8');
+    const src = readFileSync(resolve(ROOT, 'src/pages/HomePage/sections/Repertoire/Repertoire.tsx'), 'utf8');
     expect(src).toContain('isShowPast(linkedShow)');
   });
 });

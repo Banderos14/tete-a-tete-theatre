@@ -36,8 +36,8 @@ describe('неиспользуемые зависимости удалены', (
   });
 
   it('карта на месте — компонент никуда не делся', () => {
-    expect(existsSync(join(ROOT, 'src/components/Contacts/LeafletMap.tsx'))).toBe(true);
-    const map = readFileSync(join(ROOT, 'src/components/Contacts/LeafletMap.tsx'), 'utf8');
+    expect(existsSync(join(ROOT, 'src/pages/HomePage/sections/Contacts/LeafletMap.tsx'))).toBe(true);
+    const map = readFileSync(join(ROOT, 'src/pages/HomePage/sections/Contacts/LeafletMap.tsx'), 'utf8');
     expect(map).toContain('<iframe');
   });
 });

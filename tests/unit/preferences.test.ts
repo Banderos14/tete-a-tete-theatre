@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const app = readFileSync(resolve(__dirname, '../../src/App.tsx'), 'utf8');
+const app  = readFileSync(resolve(__dirname, '../../src/app/App.tsx'), 'utf8');
+// Двусторонняя синхронизация языка вынесена из оболочки в отдельный компонент.
+const sync = readFileSync(resolve(__dirname, '../../src/app/UserLanguageSync.tsx'), 'utf8');
 
 describe('тема сохраняется между сессиями', () => {
   it('начальное значение читается из localStorage', () => {
@@ -32,15 +34,15 @@ describe('язык', () => {
 
   it('язык восстанавливается ИЗ профиля — синхронизация стала двусторонней', () => {
     expect(app).toContain('onLangFromProfile');
-    expect(app).toMatch(/profileLang !== lang/);
+    expect(sync).toMatch(/profileLang !== lang/);
   });
 
   it('защита от бесконечной петли синхронизации', () => {
-    expect(app).toContain('appliedRef');
-    expect(app).toMatch(/if \(!appliedRef\.current\)/);
+    expect(sync).toContain('appliedRef');
+    expect(sync).toMatch(/if \(!appliedRef\.current\)/);
   });
 
   it('смена пользователя сбрасывает флаг — новый профиль снова применяется', () => {
-    expect(app).toMatch(/if \(!user\) appliedRef\.current = false;/);
+    expect(sync).toMatch(/if \(!user\) appliedRef\.current = false;/);
   });
 });

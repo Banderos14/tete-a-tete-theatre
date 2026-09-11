@@ -17,7 +17,7 @@ export const db   = getFirestore(app);
 
 // Re-exports for lazy consumers (AuthContext, statsService).
 // These modules import firebase/config dynamically after first paint,
-// so a single import('../firebase/config') gives them everything they need.
+// so a single import('./config') gives them everything they need.
 export {
   onAuthStateChanged,
   signInWithPopup,

@@ -4,7 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import './styles/globals.scss';
-import App from './App.tsx';
+import App from './app/App.tsx';
 import { ErrorBoundary, RootErrorScreen } from './components/ui/ErrorBoundary';
 
 createRoot(document.getElementById('root')!).render(

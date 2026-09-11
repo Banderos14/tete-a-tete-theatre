@@ -1,0 +1,203 @@
+@use '../../../../styles/mixins';
+
+.section {
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(200, 16, 46, 0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  @include mixins.mobile {
+    :global(.section-head) {
+      h2 { text-align: center; }
+
+      .meta {
+        justify-self: end;
+        text-align: right;
+      }
+    }
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+
+  @include mixins.mobile {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+
+  @include mixins.small {
+    gap: 34px;
+  }
+}
+
+.text {
+  min-width: 0;
+
+  h3 {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+  }
+
+  p {
+    font-size: 18px;
+    color: var(--fg-dim);
+    line-height: 1.6;
+    max-width: 480px;
+    margin-bottom: 36px;
+    overflow-wrap: anywhere;
+  }
+
+  @include mixins.mobile {
+    text-align: center;
+
+    p {
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+}
+
+.it {
+  font-style: italic;
+  color: var(--accent-glow);
+}
+
+.socials {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  @include mixins.mobile {
+    justify-content: center;
+
+    :global(.btn) {
+      min-height: 48px;
+      min-width: min(150px, 100%);
+      justify-content: center;
+      border-radius: 14px;
+    }
+  }
+
+  @include mixins.small {
+    flex-direction: column;
+    align-items: stretch;
+
+    :global(.btn) {
+      width: 100%;
+    }
+  }
+}
+
+.mosaic {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 6px;
+  aspect-ratio: 1;
+}
+
+.tile {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.4s ease;
+  border-radius: var(--radius-xs);
+
+  &:hover { transform: scale(0.98); }
+
+  @media (hover: none), (pointer: coarse) {
+    &:hover { transform: none; }
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,0,0,0) 60%, rgba(0,0,0,0.4) 100%);
+  }
+}
+
+.feature {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.tall {
+  grid-row: span 2;
+}
+
+.wide {
+  grid-column: span 2;
+}
+
+.tile[data-tile="0"] { background: linear-gradient(135deg, #3a0a0e, #0a0605); }
+.tile[data-tile="1"] { background: linear-gradient(135deg, #1a1014, #08060a); }
+.tile[data-tile="2"] { background: linear-gradient(135deg, #2a1a0a, #14080a); }
+.tile[data-tile="3"] { background: linear-gradient(135deg, #1a141a, #08060a); }
+.tile[data-tile="4"] { background: linear-gradient(135deg, #2a0e14, #14060a); }
+.tile[data-tile="5"] { background: linear-gradient(135deg, #0e1420, #060810); }
+
+.mosaic[data-theme='light'] {
+  .tile[data-tile="0"] { background: linear-gradient(135deg, #b89098, #9a7280); }
+  .tile[data-tile="1"] { background: linear-gradient(135deg, #9090a0, #7a7888); }
+  .tile[data-tile="2"] { background: linear-gradient(135deg, #a09070, #887858); }
+  .tile[data-tile="3"] { background: linear-gradient(135deg, #9088a0, #7a7090); }
+  .tile[data-tile="4"] { background: linear-gradient(135deg, #aa8890, #927078); }
+  .tile[data-tile="5"] { background: linear-gradient(135deg, #8890a8, #6878a0); }
+
+  .badge { color: rgba(245, 241, 234, 0.85); }
+}
+
+.videoBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+}
+
+.videoOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.65),
+    rgba(0, 0, 0, 0.15)
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+// all tiles have video — suppress diagonal ::after overlay
+.tile::after { display: none; }
+
+.badge {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  @include mixins.mono(11px, 0.18em);
+  color: rgba(245, 241, 234, 0.86);
+  text-transform: uppercase;
+  z-index: 2;
+}

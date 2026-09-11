@@ -1,0 +1,31 @@
+@use '../../../../styles/mixins';
+
+.afisha {
+  background: var(--bg);
+  border-top: none;
+  padding: 0;
+  isolation: isolate;
+  overflow-x: clip;
+
+  @include mixins.mobile {
+    padding-left: 0;
+    padding-right: 0;
+
+    :global(.section-head) {
+      width: calc(100% - 32px);
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  @include mixins.tablet { grid-template-columns: repeat(2, 1fr); }
+  @include mixins.tinyXS { grid-template-columns: 1fr; }
+}

@@ -85,6 +85,48 @@ describe('граница server / client', () => {
   });
 });
 
+// ── Слои frontend ───────────────────────────────────────────────────────────
+
+describe('границы внутри src/', () => {
+  /** Имя страницы для файла из src/pages/<Page>/..., иначе null. */
+  const pageOf = (p: string) => p.startsWith('src/pages/') ? p.split('/')[2] ?? null : null;
+
+  it('страницы не импортируют друг друга — общий код поднимается выше', () => {
+    const leaks = srcFiles.flatMap(f => {
+      const from = pageOf(rel(f));
+      if (!from) return [];
+      return importsOf(f).map(sp => targetOf(f, sp))
+        .filter((t): t is string => !!t && !!pageOf(t) && pageOf(t) !== from)
+        .map(t => `${rel(f)} → ${t}`);
+    });
+    expect(leaks).toEqual([]);
+  });
+
+  it('общий UI не зависит от страниц', () => {
+    const leaks = srcFiles.filter(f => rel(f).startsWith('src/components/')).flatMap(f =>
+      importsOf(f).map(sp => targetOf(f, sp))
+        .filter((t): t is string => !!t && (t.startsWith('src/pages/') || t.startsWith('src/app/')))
+        .map(t => `${rel(f)} → ${t}`));
+    expect(leaks).toEqual([]);
+  });
+
+  it('страницы не импортируют оболочку приложения', () => {
+    const leaks = srcFiles.filter(f => rel(f).startsWith('src/pages/')).flatMap(f =>
+      importsOf(f).map(sp => targetOf(f, sp))
+        .filter((t): t is string => !!t && t.startsWith('src/app/'))
+        .map(t => `${rel(f)} → ${t}`));
+    expect(leaks).toEqual([]);
+  });
+
+  it('каждая страница лежит в собственном каталоге src/pages/<Page>/', () => {
+    const pages = readdirSync(join(ROOT, 'src/pages'));
+    for (const p of pages) {
+      expect(statSync(join(ROOT, 'src/pages', p)).isDirectory(), p).toBe(true);
+      expect(existsSync(join(ROOT, 'src/pages', p, 'index.ts')), `${p}/index.ts`).toBe(true);
+    }
+  });
+});
+
 describe('секреты остаются на сервере', () => {
   // Vite подставляет в бандл только VITE_*-переменные, но упоминание серверного
   // ключа во frontend-коде означает, что его туда собираются передать.

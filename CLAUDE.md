@@ -48,7 +48,21 @@ src/       frontend
 
 `main.tsx` оборачивает всё в **HashRouter** — это принципиально: все внешние ссылки, QR-коды и deep-links строятся в формате `/#/...` (см. `src/services/qrService.ts`, `src/utils/showUrl.ts`). Обычный path-роутинг сломает прямые переходы.
 
-`App.tsx` держит глобальный стейт (тема, язык, открытые модалки) и три роута: `/` (лендинг), `/admin`, `/admin/checkin`. Модалки (`AuthModal`, `ProfileDrawer`, `BookingModal`) вынесены **за пределы `<Routes>`** и лениво грузятся — чтобы не пересоздаваться при навигации. Их чанки префетчатся в `requestIdleCallback` после завершения интро.
+`src/app/App.tsx` — оболочка: провайдеры, глобальный стейт (тема, язык, открытые модалки) и четыре роута: `/` (`HomePage`), `/admin`, `/admin/checkin`, `*`. Модалки (`AuthModal`, `ProfileDrawer`, `BookingModal`) вынесены **за пределы `<Routes>`** и лениво грузятся — чтобы не пересоздаваться при навигации. Их чанки префетчатся в `requestIdleCallback` после завершения интро.
+
+Страницы лежат каждая в своём каталоге и держат рядом то, что используют только они:
+
+```
+src/
+  app/          оболочка: App, UserLanguageSync, параметры интро
+  pages/
+    HomePage/   HomePage.tsx + sections/ (11 секций лендинга) + components/ (ShowModal, LazyBgVideo, PosterPlaceholder)
+    AdminPage/  NotFoundPage/  TicketCheckPage/
+  components/ui/  переиспользуемый UI: модалки, ErrorBoundary, ConfirmDialog, TicketCard, CookieConsent
+  context/ services/ hooks/ i18n/ data/ config/ constants/ types/ utils/ styles/
+```
+
+Границы стережёт тот же `tests/unit/architecture.test.ts`: страницы не импортируют друг друга и не лезут в `src/app/`, общий UI не зависит от страниц, у каждой страницы есть `index.ts`. Компонент, понадобившийся второй странице, поднимается в `components/ui/` — а не импортируется из чужого каталога.
 
 Firebase грузится лениво из `AuthContext` (`loadFirebase()` мемоизирует `import('../firebase/config')`) — firebase-чанк вынесен в `manualChunks` и не блокирует первый рендер.
 

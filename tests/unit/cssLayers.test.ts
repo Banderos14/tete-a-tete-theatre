@@ -63,13 +63,13 @@ describe('!important задокументирован', () => {
   });
 
   it('избыточное объявление в Hero удалено', () => {
-    const hero = readFileSync(join(ROOT, 'src/components/Hero/Hero.module.scss'), 'utf8');
+    const hero = readFileSync(join(ROOT, 'src/pages/HomePage/sections/Hero/Hero.module.scss'), 'utf8');
     expect(hero).not.toContain('border-top: none !important');
     expect(hero).toContain('border-top: none;');
   });
 
   it('отключение анимаций для prefers-reduced-motion сохранено', () => {
-    const hero = readFileSync(join(ROOT, 'src/components/Hero/Hero.module.scss'), 'utf8');
+    const hero = readFileSync(join(ROOT, 'src/pages/HomePage/sections/Hero/Hero.module.scss'), 'utf8');
     expect(hero).toContain('animation: none !important');
   });
 });

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const scss = readFileSync(resolve(__dirname, '../../src/components/Hero/Hero.module.scss'), 'utf8');
+const scss = readFileSync(resolve(__dirname, '../../src/pages/HomePage/sections/Hero/Hero.module.scss'), 'utf8');
 
 // На узких экранах шрифт заголовка задавался как clamp(70px, 13vw, 80px):
 // при ширине 320px 13vw = 41.6px, поэтому срабатывала НИЖНЯЯ граница 70px,

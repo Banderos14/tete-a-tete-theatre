@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ROOT = resolve(__dirname, '../..');
-const app  = readFileSync(resolve(ROOT, 'src/App.tsx'), 'utf8');
+const app  = readFileSync(resolve(ROOT, 'src/app/App.tsx'), 'utf8');
 const html = readFileSync(resolve(ROOT, 'index.html'), 'utf8');
 
 describe('атрибут lang на <html>', () => {

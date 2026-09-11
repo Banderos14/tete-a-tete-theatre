@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 const ROOT      = resolve(__dirname, '../..');
 const indexHtml = readFileSync(resolve(ROOT, 'index.html'), 'utf8');
 const analytics = readFileSync(resolve(ROOT, 'src/services/analytics.ts'), 'utf8');
-const app       = readFileSync(resolve(ROOT, 'src/App.tsx'), 'utf8');
+const app       = readFileSync(resolve(ROOT, 'src/app/App.tsx'), 'utf8');
 const mainTsx   = readFileSync(resolve(ROOT, 'src/main.tsx'), 'utf8');
 
 describe('GA4 не стартует без согласия', () => {

@@ -83,7 +83,7 @@ describe('границы ошибок подключены', () => {
   });
 
   it('каждая ленивая модалка в App.tsx под своей границей', () => {
-    const app = readFileSync(join(SRC, 'App.tsx'), 'utf8');
+    const app = readFileSync(join(SRC, 'app/App.tsx'), 'utf8');
     for (const label of ['AuthModal', 'ProfileDrawer', 'BookingModal']) {
       expect(app).toContain(`<ErrorBoundary label="${label}">`);
     }
