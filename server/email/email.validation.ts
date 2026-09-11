@@ -7,10 +7,10 @@
 import { badRequest } from '../shared/errors.js';
 import { ALLOWED_EMAIL_TYPES, type EmailType, type SendEmailRequest } from './email.types.js';
 
-export const MAX_SUBJECT_LEN = 500;
-export const MAX_HTML_LEN    = 120_000; // ~120 КБ — заметно больше любого нормального письма
+const MAX_SUBJECT_LEN = 500;
+const MAX_HTML_LEN    = 120_000; // ~120 КБ — заметно больше любого нормального письма
 
-export function isValidEmail(value: string): boolean {
+function isValidEmail(value: string): boolean {
   // Минимальная проверка формы — её достаточно для пользовательского ввода.
   return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value) && value.length <= 254;
 }

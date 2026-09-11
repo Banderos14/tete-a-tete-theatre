@@ -33,7 +33,7 @@ export function newIdempotencyKey(): string {
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export interface CreateBookingResult {
+interface CreateBookingResult {
   bookingId:               string;
   ticketCode:              string;
   totalAmount:             number;
@@ -149,7 +149,7 @@ export async function markBookingPaid(bookingId: string): Promise<void> {
 
 // Истекшая бронь: paymentStatus='expired', status='cancelled'.
 // Документ не удаляется — история сохраняется.
-export async function expireBooking(bookingId: string): Promise<void> {
+async function expireBooking(bookingId: string): Promise<void> {
   await updateDoc(doc(db, COLLECTION, bookingId), {
     paymentStatus: 'expired',
     status: 'cancelled',

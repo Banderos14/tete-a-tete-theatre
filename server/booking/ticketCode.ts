@@ -6,7 +6,7 @@
 
 import { randomInt } from 'node:crypto';
 
-export const TICKET_CODE_CHARSET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const TICKET_CODE_CHARSET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 export function generateTicketCode(): string {
   let code = '';

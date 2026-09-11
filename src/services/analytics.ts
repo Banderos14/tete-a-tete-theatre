@@ -8,7 +8,7 @@
 // не загружается вовсе. Vercel Analytics и Speed Insights не затрагиваются —
 // они работают без cookie.
 
-export type ConsentValue = 'granted' | 'denied';
+type ConsentValue = 'granted' | 'denied';
 
 const STORAGE_KEY = 'cookie-consent';
 
@@ -29,7 +29,7 @@ export function storeConsent(value: ConsentValue): void {
   try { localStorage.setItem(STORAGE_KEY, value); } catch { /* не критично */ }
 }
 
-export function getMeasurementId(): string | null {
+function getMeasurementId(): string | null {
   const meta = document.querySelector('meta[name="ga-measurement-id"]');
   const id = meta?.getAttribute('content')?.trim();
   return id ? id : null;

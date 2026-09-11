@@ -22,7 +22,7 @@ export function bookingsRef() {
 }
 
 /** Разворачивает документ Firestore в RawBooking с числовыми временами. */
-export function toRawBooking(data: Record<string, unknown>): RawBooking {
+function toRawBooking(data: Record<string, unknown>): RawBooking {
   return {
     ...(data as RawBooking),
     showStartAtMs:      timestampToMs(data.showStartAt),

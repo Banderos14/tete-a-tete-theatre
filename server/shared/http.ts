@@ -20,7 +20,7 @@ const ALLOWED_ORIGINS = new Set(
   ].filter(Boolean) as string[],
 );
 
-export function resolveCorsOrigin(req: IncomingMessage): string {
+function resolveCorsOrigin(req: IncomingMessage): string {
   const origin = String(req.headers['origin'] ?? '');
   return ALLOWED_ORIGINS.has(origin) ? origin : DEFAULT_ORIGIN;
 }

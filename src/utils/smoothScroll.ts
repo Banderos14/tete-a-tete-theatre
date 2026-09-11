@@ -1,6 +1,6 @@
 type EasingFn = (t: number) => number;
 
-export interface ScrollOptions {
+interface ScrollOptions {
   duration?: number;
   offset?: number;
   easing?: EasingFn;
@@ -24,7 +24,7 @@ function calcDuration(distancePx: number, mobile: boolean): number {
 
 let activeCancelFn: (() => void) | null = null;
 
-export function smoothScrollToElement(element: HTMLElement, options: ScrollOptions = {}): void {
+function smoothScrollToElement(element: HTMLElement, options: ScrollOptions = {}): void {
   // Отменяем предыдущую анимацию, если она ещё идёт
   activeCancelFn?.();
   activeCancelFn = null;

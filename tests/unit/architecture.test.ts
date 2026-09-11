@@ -139,6 +139,38 @@ describe('границы внутри src/', () => {
   });
 });
 
+describe('стили лежат рядом со своим компонентом', () => {
+  const styleFiles = (function walkScss(dir: string, out: string[] = []): string[] {
+    for (const e of readdirSync(dir)) {
+      const full = join(dir, e);
+      if (statSync(full).isDirectory()) walkScss(full, out);
+      else if (e.endsWith('.module.scss')) out.push(full);
+    }
+    return out;
+  })(join(ROOT, 'src'));
+
+  it('у каждого *.module.scss есть одноимённый компонент в том же каталоге', () => {
+    const orphans = styleFiles
+      .filter(f => !existsSync(f.replace(/\.module\.scss$/, '.tsx')))
+      .map(rel);
+    expect(orphans).toEqual([]);
+  });
+
+  it('компонент подключает свой модуль стилей, а не чужой', () => {
+    // Импорт стилей из соседнего каталога означает, что компонент опирается на
+    // чужую вёрстку: переименуешь класс там — сломается здесь, и молча.
+    const leaks = srcFiles.flatMap(f =>
+      importsOf(f).filter(sp => sp.endsWith('.module.scss') && sp.includes('/') && !sp.startsWith('./'))
+        .map(sp => `${rel(f)} → ${sp}`));
+    expect(leaks).toEqual([]);
+  });
+
+  it('общие стили лежат в src/styles и подключаются только через @use', () => {
+    expect(readdirSync(join(ROOT, 'src/styles')).sort())
+      .toEqual(['globals.scss', 'mixins.scss', 'variables.scss']);
+  });
+});
+
 describe('секреты остаются на сервере', () => {
   // Vite подставляет в бандл только VITE_*-переменные, но упоминание серверного
   // ключа во frontend-коде означает, что его туда собираются передать.

@@ -101,12 +101,13 @@ describe('вместимость зала Théâtre Tête-à-Tête', () => {
     expect(declarations).toEqual(['shared/catalog/shows.ts']);
   });
 
-  it('src/config/theatre.ts только реэкспортирует, а не объявляет своё значение', async () => {
-    const { readFileSync } = await import('node:fs');
+  it('фронтенд берёт вместимость из shared, а не через промежуточный реэкспорт', async () => {
+    // Реэкспорт в src/config/theatre.ts существовал, пока каталог жил в api/_lib
+    // и был недоступен фронтенду. Теперь shared/ импортируется напрямую, и
+    // лишнее звено только даёт месту, где значение может разъехаться.
+    const { existsSync } = await import('node:fs');
     const { resolve } = await import('node:path');
-    const cfg = readFileSync(resolve(__dirname, '../../src/config/theatre.ts'), 'utf8');
-    expect(cfg).toContain("export { THEATRE_CAPACITY } from '../../shared/catalog/shows'");
-    expect(cfg).not.toMatch(/THEATRE_CAPACITY\s*=/);
+    expect(existsSync(resolve(__dirname, '../../src/config/theatre.ts'))).toBe(false);
   });
 
   it('totalSeats в данных спектаклей не противоречит вместимости', async () => {

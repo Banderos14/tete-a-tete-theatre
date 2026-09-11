@@ -9,7 +9,7 @@ import { parseShowStartUtcMs } from '../../shared/domain/showTime.js';
 import type { RawBooking } from './booking.types.js';
 
 export const LOYALTY_REWARD_INTERVAL = 5;
-export const LOYALTY_DISCOUNT_DIVISOR = 2;
+const LOYALTY_DISCOUNT_DIVISOR = 2;
 
 function attendedAt(b: RawBooking, nowMs: number): boolean {
   // Время начала: у новых броней хранится полем showStartAt, у старых
