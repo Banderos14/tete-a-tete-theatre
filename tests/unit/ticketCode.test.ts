@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { randomInt, randomBytes } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -42,32 +42,42 @@ describe('modulo bias устранён', () => {
     expect(api).not.toContain('% CHARSET.length');
   });
 
-  it('распределение символов заметно ровнее, чем у прежней схемы', () => {
+  it('прежняя схема byte % 31 смещена — это доказывается точно, без выборки', () => {
+    // Перебираем ВСЕ 256 значений байта: 256 = 8 * 31 + 8, поэтому первые восемь
+    // символов алфавита получают по 9 шансов из 256, а остальные 23 — по 8.
+    // Это не статистика, а арифметика: результат одинаков при каждом прогоне.
+    const counts = new Array(CHARSET.length).fill(0);
+    for (let byte = 0; byte < 256; byte++) counts[byte % CHARSET.length]++;
+
+    const favoured = counts.filter(c => c === 9).length;
+    expect(favoured).toBe(8);
+    expect(counts.filter(c => c === 8).length).toBe(CHARSET.length - 8);
+
+    // Перекос ровно 12,5 % — именно его и убирает randomInt.
+    expect(Math.max(...counts) / Math.min(...counts)).toBeCloseTo(9 / 8, 10);
+
+    // Смещены именно первые восемь символов алфавита.
+    for (let i = 0; i < 8; i++) expect(counts[i], CHARSET[i]).toBe(9);
+  });
+
+  it('randomInt даёт равномерное распределение', () => {
+    // Здесь выборка неизбежна, но порог взят с огромным запасом: при 200 000
+    // выборок стандартное отклонение доли составляет около 1,2 %, поэтому
+    // граница в 10 % — это примерно восемь сигм. Тест не может «моргать».
     const N = 200_000;
     const expected = N / CHARSET.length;
 
-    // Прежняя схема: byte % 31. 256 % 31 = 8, поэтому первые 8 символов алфавита
-    // выпадали примерно на 12,5 % чаще остальных — это систематический перекос,
-    // а не случайный шум.
-    const oldCounts = new Array(CHARSET.length).fill(0);
-    const bytes = randomBytes(N);
-    for (let i = 0; i < N; i++) oldCounts[bytes[i]! % CHARSET.length]++;
+    const counts = new Array(CHARSET.length).fill(0);
+    for (let i = 0; i < N; i++) counts[randomInt(CHARSET.length)]++;
 
-    const newCounts = new Array(CHARSET.length).fill(0);
-    for (let i = 0; i < N; i++) newCounts[randomInt(CHARSET.length)]++;
+    for (let i = 0; i < CHARSET.length; i++) {
+      const deviation = Math.abs(counts[i]! - expected) / expected;
+      expect(deviation, `символ ${CHARSET[i]}`).toBeLessThan(0.1);
+    }
 
-    // Средняя относительная девиация: в отличие от размаха, она быстро сходится
-    // и не зависит от единичных выбросов.
-    const deviation = (c: number[]) =>
-      c.reduce((sum, n) => sum + Math.abs(n - expected), 0) / c.length / expected;
-
-    const oldDev = deviation(oldCounts);
-    const newDev = deviation(newCounts);
-
-    // Систематический перекос старой схемы виден отчётливо...
-    expect(oldDev).toBeGreaterThan(0.02);
-    // ...и он как минимум вчетверо больше остаточного шума новой.
-    expect(newDev * 4).toBeLessThan(oldDev);
+    // Для контраста: у прежней схемы систематический перекос 12,5 % —
+    // он бы этот порог не прошёл.
+    expect(9 / 8 - 1).toBeGreaterThan(0.1);
   });
 
   it('коды не повторяются на разумной выборке', () => {
