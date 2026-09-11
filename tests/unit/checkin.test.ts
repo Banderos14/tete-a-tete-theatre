@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { endpointSource, projectSource, transactionBody } from '../helpers/serverSource.js';
+import { endpointSource, projectSource, screenSource, transactionBody } from '../helpers/serverSource.js';
 
 const api  = endpointSource('api/checkin-ticket.ts');
-const page = projectSource('src/pages/TicketCheckPage/TicketCheckPage.tsx');
+// Экран проверки разложен на оболочку, хуки и карточку результата —
+// правило проверяется по всему каталогу, а не по одному файлу.
+const page = screenSource('src/pages/TicketCheckPage');
 
 describe('/api/checkin-ticket: атомарность', () => {
   it('проверка и отметка выполняются одной транзакцией', () => {
@@ -68,7 +70,7 @@ describe('релевантность даты спектакля', () => {
   });
 
   it('билет прошедшего спектакля не считается действительным', () => {
-    expect(page).toContain("b?.showRelevance === 'too_late'");
+    expect(page).toContain("showRelevance === 'too_late'");
     expect(page).toContain('Билет на прошедший спектакль');
   });
 
@@ -114,7 +116,11 @@ describe('TTT-16: код билета не теряется при отсутс�
   });
 
   it('после входа проверка продолжается сама — эффект зависит от isAdmin', () => {
-    expect(page).toMatch(/\}, \[loading, isAdmin, ticketFromUrl\]\)/);
+    // Важен состав зависимостей, а не их точный список: как только роль
+    // дорезолвилась, эффект обязан перезапуститься и разобрать код из адреса.
+    // Точное совпадение строки ломалось бы от любой безобидной правки.
+    const deps = page.match(/\}, \[loading, isAdmin, ticketFromUrl[^\]]*\]\)/);
+    expect(deps, 'эффект разбора кода из адреса не найден').not.toBeNull();
   });
 
   it('авторизованному без прав объясняется причина', () => {

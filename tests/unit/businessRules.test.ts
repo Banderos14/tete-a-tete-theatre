@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { endpointSource, functionBody, projectSource } from '../helpers/serverSource.js';
+import { endpointSource, functionBody, projectSource, screenSource } from '../helpers/serverSource.js';
 
 const ROOT = resolve(__dirname, '../..');
 const r = (p: string) => readFileSync(join(ROOT, p), 'utf8');
@@ -42,7 +42,7 @@ describe('протухание брони происходит надёжно, �
 });
 
 describe('оплата наличными ведёт себя одинаково из админки и из сканера', () => {
-  const page  = r('src/pages/TicketCheckPage/TicketCheckPage.tsx');
+  const page  = screenSource('src/pages/TicketCheckPage');
   // Отправка писем при смене статуса — в хуке данных, а не в оболочке страницы.
   const admin = r('src/pages/AdminPage/useAdminData.ts');
 

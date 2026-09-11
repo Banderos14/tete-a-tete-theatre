@@ -5,7 +5,7 @@
 // endpoint'а должен смотреть на весь его граф локальных импортов, иначе он
 // начинает проверять не правило, а место, где это правило записано сегодня.
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const ROOT = resolve(__dirname, '../..');
@@ -111,4 +111,20 @@ export function functionBody(src: string, name: string): string {
     }
   }
   return src.slice(decl);
+}
+
+/**
+ * Все исходники экрана одним текстом.
+ *
+ * Нужен тестам, которые проверяют правило («экран проверки билетов шлёт письмо
+ * об оплате»), а не адрес файла: после разбиения страницы на оболочку, хуки и
+ * карточки правило остаётся тем же, а конкретный файл может смениться.
+ */
+export function screenSource(dir: string): string {
+  const full = resolve(ROOT, dir);
+  return readdirSync(full)
+    .filter(f => /\.tsx?$/.test(f))
+    .sort()
+    .map(f => readFileSync(resolve(full, f), 'utf8'))
+    .join('\n');
 }
