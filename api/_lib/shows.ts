@@ -25,8 +25,9 @@ export interface ShowInfo {
 }
 
 // Вместимость зала — единый источник правды.
-// src/config/theatre.ts реэкспортирует именно это значение.
-export const THEATRE_CAPACITY = 100;
+// src/config/theatre.ts реэкспортирует именно это значение, а авторитетная
+// проверка вместимости происходит на сервере в транзакции создания брони.
+export const THEATRE_CAPACITY = 50;
 
 // Максимум билетов в одной брони.
 export const MAX_TICKETS_PER_BOOKING = 10;

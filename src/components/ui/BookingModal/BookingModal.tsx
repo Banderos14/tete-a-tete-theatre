@@ -54,7 +54,7 @@ export function BookingModal({ show, onClose }: Props) {
   const [savedAmount,      setSavedAmount]      = useState(0);
   const [copiedCode,       setCopiedCode]       = useState(false);
   // null = остаток мест неизвестен. Раньше здесь всегда было 0, из-за чего
-  // интерфейс показывал постоянное «Свободно мест: 100».
+  // интерфейс показывал постоянное «свободны все места зала».
   const [seatsLeft,        setSeatsLeft]        = useState<number | null>(null);
 
   const [userBookings, setUserBookings] = useState<Booking[]>([]);

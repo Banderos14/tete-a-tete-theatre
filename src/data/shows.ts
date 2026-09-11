@@ -51,7 +51,7 @@ export const SHOWS: Show[] = [
       { src: showPhoto('romantika3.webp'), position: 'center 35%', size: '100%' },
       { src: showPhoto('romantika4.webp'), position: 'center 70%', size: '150%' },
     ],
-    totalSeats: 100,
+    totalSeats: 50,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 15, available: 40 },
     ],
@@ -75,7 +75,7 @@ export const SHOWS: Show[] = [
       { src: showPhoto('shutka4.webp'), position: 'center 25%', mobileScale: 1},
       { src: showPhoto('shutka5.webp'), position: 'center 30%', mobileScale: 1},
     ],
-    totalSeats: 100,
+    totalSeats: 50,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 15, available: 38 },
       { id: 'student',  label: 'Студенческий', price: 10, available: 12 },
@@ -100,7 +100,7 @@ export const SHOWS: Show[] = [
       { src: showPhoto('nulin4.webp'), position: 'center 40%', mobileScale: 1},
       { src: showPhoto('nulin5.webp'), position: 'center 40%', mobileScale: 1},
     ],
-    totalSeats: 100,
+    totalSeats: 50,
     ticketTypes: [
       { id: 'standard', label: 'Стандарт', price: 30, available: 45 },
       { id: 'student',  label: 'Студенческий', price: 20, available: 10 },
