@@ -58,3 +58,12 @@ describe('серверная валидация ввода', () => {
     expect(http).toContain('MAX_BODY_BYTES');
   });
 });
+
+describe('showId не ищется по прототипу', () => {
+  it('validateCreateBooking проверяет собственные ключи каталога', () => {
+    // `showId in SHOWS` пропускал 'constructor' и '__proto__' дальше первой
+    // проверки — отсекались они только ниже, по отсутствию tickets.
+    expect(createBooking).toContain('Object.hasOwn(SHOWS, showId)');
+    expect(createBooking).not.toMatch(/showId in SHOWS/);
+  });
+});

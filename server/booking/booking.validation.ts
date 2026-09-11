@@ -22,7 +22,10 @@ export interface ValidatedBookingRequest {
 export function validateCreateBooking(body: Record<string, unknown>): ValidatedBookingRequest {
   const { showId, ticketType, ticketsCount, paymentMethod, comment, phone, lang } = body;
 
-  if (typeof showId !== 'string' || !(showId in SHOWS)) {
+  // Object.hasOwn, а не `in`: `in` находит и наследованные ключи, поэтому
+  // showId вида 'constructor' или '__proto__' проходил первую проверку и
+  // отсеивался только ниже, по отсутствию tickets.
+  if (typeof showId !== 'string' || !Object.hasOwn(SHOWS, showId)) {
     throw badRequest('Invalid showId');
   }
   if (ticketType !== 'standard' && ticketType !== 'student') {
