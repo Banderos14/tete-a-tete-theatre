@@ -118,6 +118,18 @@ describe('границы внутри src/', () => {
     expect(leaks).toEqual([]);
   });
 
+  it('сервисы, хуки и утилиты не зависят от UI', () => {
+    // Сервис, которому понадобился компонент, — это уже не сервис: его нельзя
+    // ни переиспользовать на другой странице, ни протестировать без React.
+    const LOWER = ['src/services/', 'src/hooks/', 'src/utils/', 'src/config/', 'src/data/', 'src/constants/'];
+    const UI    = ['src/components/', 'src/pages/', 'src/app/'];
+    const leaks = srcFiles.filter(f => LOWER.some(d => rel(f).startsWith(d))).flatMap(f =>
+      importsOf(f).map(sp => targetOf(f, sp))
+        .filter((t): t is string => !!t && UI.some(d => t.startsWith(d)))
+        .map(t => `${rel(f)} → ${t}`));
+    expect(leaks).toEqual([]);
+  });
+
   it('каждая страница лежит в собственном каталоге src/pages/<Page>/', () => {
     const pages = readdirSync(join(ROOT, 'src/pages'));
     for (const p of pages) {

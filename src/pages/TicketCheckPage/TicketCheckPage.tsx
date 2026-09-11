@@ -4,7 +4,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { convertPdfFirstPageToImageFile, isPdfFile, scanQrFromImageFile } from '../../services/pdfScanService';
 import { useAuth } from '../../context/AuthContext';
 import { checkinTicket, type CheckinBooking } from '../../services/checkinService';
-import { sendPaymentPaidEmail } from '../../services/emailService';
+import { sendPaymentPaidEmail } from '../../services/email';
 import { parseTicketCodeFromScan } from '../../utils/parseTicketCode';
 import { mapAuthError, isPopupClosedError } from '../../utils/authErrors';
 import { RU } from '../../i18n';

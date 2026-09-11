@@ -8,7 +8,7 @@ import { describeStateIssue } from '../../../shared/domain/bookingRules';
 import { getAllUsers, getUsersForNewsletter, deleteUserCompletely } from '../../services/userService';
 import { resolveInstagramUsername, instagramProfileUrl } from '../../utils/instagram';
 import { getShowPublicUrl } from '../../utils/showUrl';
-import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail, sendNewShowAnnouncementEmail } from '../../services/emailService';
+import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail, sendNewShowAnnouncementEmail } from '../../services/email';
 import { SHOWS } from '../../data/shows';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/booking';

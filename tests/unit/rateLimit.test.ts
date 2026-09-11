@@ -1,10 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { decideRateLimit } from '../../server/shared/rateLimit.js';
 import { endpointSource } from '../helpers/serverSource.js';
 
-const ROOT = resolve(__dirname, '../..');
 const HOUR = 60 * 60 * 1000;
 
 describe('decideRateLimit', () => {
@@ -76,7 +73,7 @@ describe('/api/send-email: авторизация и привязка к бро�
 
 describe('фронтенд присылает ticketCode', () => {
   it('sendBookingConfirmationEmail передаёт код билета', () => {
-    const src = readFileSync(resolve(ROOT, 'src/services/emailService.ts'), 'utf8');
+    const src = endpointSource('src/services/email/index.ts');
     expect(src).toMatch(/type: 'booking-confirmation'[\s\S]{0,200}ticketCode: data\.ticketCode/);
   });
 });

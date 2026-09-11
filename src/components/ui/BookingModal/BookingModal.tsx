@@ -6,7 +6,7 @@ import { useLang } from '../../../i18n/LangContext';
 import { createBookingViaApi, subscribeToUserBookings, newIdempotencyKey } from '../../../services/bookingService';
 import { fetchShowAvailability } from '../../../services/availabilityService';
 import type { BookingApiError } from '../../../services/bookingService';
-import { sendBookingConfirmationEmail } from '../../../services/emailService';
+import { sendBookingConfirmationEmail } from '../../../services/email';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
 import { formatPhone, normalizePhone, isValidPhone } from '../../../utils/phone';
 import { PAYMENT_CONFIG } from '../../../config/payment';

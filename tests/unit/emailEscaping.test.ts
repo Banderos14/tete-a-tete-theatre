@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { escapeEmailHtml } from '../../src/services/emailService.js';
+import { escapeEmailHtml } from '../../src/services/email/index.js';
+import { endpointSource } from '../helpers/serverSource.js';
 
 const ROOT = resolve(__dirname, '../..');
-const src  = readFileSync(resolve(ROOT, 'src/services/emailService.ts'), 'utf8');
+// Почтовый слой — каталог: шаблоны, вёрстка и транспорт лежат отдельно.
+const src  = endpointSource('src/services/email/index.ts');
 
 describe('escapeEmailHtml', () => {
   it('экранирует разметку', () => {
