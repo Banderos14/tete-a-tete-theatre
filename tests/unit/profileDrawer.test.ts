@@ -57,6 +57,17 @@ describe('инициалы', () => {
     expect(getInitials(null)).toBe('?');
     expect(getInitials(undefined)).toBe('?');
   });
+
+  it('имя из одних пробелов не роняет рендер', () => {
+    // Живой сценарий: пользователь начинает вводить имя с пробела. Раньше
+    // getInitials падал на w[0], и ErrorBoundary уносил весь кабинет.
+    expect(getInitials('   ')).toBe('?');
+    expect(getInitials(' \t ')).toBe('?');
+  });
+
+  it('ведущие пробелы не съедают первую букву', () => {
+    expect(getInitials('  Анна Каренина')).toBe('АК');
+  });
 });
 
 describe('дата рождения', () => {

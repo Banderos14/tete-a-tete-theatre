@@ -33,8 +33,12 @@ export function formatBirthdayDisplay(dateStr: string, lang: 'RU' | 'FR'): strin
 }
 
 export function getInitials(name: string | null | undefined): string {
-  if (!name) return '?';
-  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]!.toUpperCase()).join('');
+  // filter(Boolean) обязателен: у строки из одних пробелов split даёт [''],
+  // и прежняя проверка `if (!name)` её пропускала — аватар падал на w[0],
+  // унося с собой весь кабинет. Достаточно было начать вводить имя с пробела.
+  const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '?';
+  return words.slice(0, 2).map(w => w[0]!.toUpperCase()).join('');
 }
 
 /** Коды ошибок Firebase при привязке Facebook → текст для пользователя. */
