@@ -4,7 +4,7 @@
 // Совпадение id, дат, времени и цен проверяется тестом
 // tests/unit/shows-contract.test.ts — он упадёт, если файлы разъедутся.
 
-import { parseShowStartUtcMs } from './showTime.js';
+import { parseShowStartUtcMs } from '../domain/showTime.js';
 
 export type TicketTypeId = 'standard' | 'student';
 
@@ -25,7 +25,7 @@ export interface ShowInfo {
 }
 
 // Вместимость зала — единый источник правды.
-// src/config/theatre.ts реэкспортирует именно это значение, а авторитетная
+// src/shared/config/theatre.ts реэкспортирует именно это значение, а авторитетная
 // проверка вместимости происходит на сервере в транзакции создания брони.
 export const THEATRE_CAPACITY = 50;
 

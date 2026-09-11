@@ -6,7 +6,7 @@ import {
   hasShowEnded,
   hasShowStarted,
   THEATRE_TIMEZONE,
-} from '../../api/_lib/showTime.js';
+} from '../../shared/domain/showTime.js';
 
 // Проверяем, что настенное парижское время переводится в правильный абсолютный
 // момент независимо от таймзоны процесса и с корректным учётом DST.
@@ -92,7 +92,7 @@ describe('окончание спектакля', () => {
 });
 
 // ── TTT-12: единый расчёт посещаемости у клиента и сервера ──────────────────
-import { isBookingAttended } from '../../api/_lib/bookingRules.js';
+import { isBookingAttended } from '../../shared/domain/bookingRules.js';
 
 describe('isBookingAttended — одна реализация для клиента и сервера', () => {
   // 14 июня 2026, 19:00 по Парижу = 17:00 UTC, конец = 19:00 UTC

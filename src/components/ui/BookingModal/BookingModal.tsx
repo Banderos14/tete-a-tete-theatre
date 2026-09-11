@@ -10,7 +10,7 @@ import { sendBookingConfirmationEmail } from '../../../services/emailService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
 import { formatPhone, normalizePhone, isValidPhone } from '../../../utils/phone';
 import { PAYMENT_CONFIG } from '../../../config/payment';
-import { MAX_TICKETS_PER_BOOKING } from '../../../../api/_lib/shows';
+import { MAX_TICKETS_PER_BOOKING } from '../../../../shared/catalog/shows';
 import {
   hasAvailableLoyaltyReward,
   calculateLoyaltyDiscount,

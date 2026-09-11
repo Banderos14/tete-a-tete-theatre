@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { sumOccupiedTickets, checkCapacity } from '../../api/_lib/bookingRules.js';
-import { THEATRE_CAPACITY } from '../../api/_lib/shows.js';
+import { sumOccupiedTickets, checkCapacity } from '../../shared/domain/bookingRules.js';
+import { THEATRE_CAPACITY } from '../../shared/catalog/shows.js';
 
 describe('sumOccupiedTickets', () => {
   it('суммирует билеты активных броней', () => {
@@ -93,18 +93,19 @@ describe('вместимость зала Théâtre Tête-à-Tête', () => {
       return out;
     }
 
-    const declarations = [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'api'))]
+    const declarations = [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'api')),
+                          ...walk(join(ROOT, 'server')), ...walk(join(ROOT, 'shared'))]
       .filter(f => /THEATRE_CAPACITY\s*=\s*\d+/.test(readFileSync(f, 'utf8')))
       .map(f => f.replace(ROOT + '/', ''));
 
-    expect(declarations).toEqual(['api/_lib/shows.ts']);
+    expect(declarations).toEqual(['shared/catalog/shows.ts']);
   });
 
   it('src/config/theatre.ts только реэкспортирует, а не объявляет своё значение', async () => {
     const { readFileSync } = await import('node:fs');
     const { resolve } = await import('node:path');
     const cfg = readFileSync(resolve(__dirname, '../../src/config/theatre.ts'), 'utf8');
-    expect(cfg).toContain("export { THEATRE_CAPACITY } from '../../api/_lib/shows'");
+    expect(cfg).toContain("export { THEATRE_CAPACITY } from '../../shared/catalog/shows'");
     expect(cfg).not.toMatch(/THEATRE_CAPACITY\s*=/);
   });
 

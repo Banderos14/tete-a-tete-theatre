@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const CHARSET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-const api = readFileSync(resolve(__dirname, '../../api/create-booking.ts'), 'utf8');
+const api = readFileSync(resolve(__dirname, '../../server/booking/ticketCode.ts'), 'utf8');
 
 // Копия серверной реализации: проверяем сам алгоритм, а не обёртку.
 function generateTicketCode(): string {

@@ -5,7 +5,7 @@ import { IconLock, IconCalendarEvent, IconUser, IconTicket, IconMasksTheater, Ic
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { subscribeToUserBookings, expireOverdueBookings, hoursUntilExpiry } from '../../../services/bookingService';
-import { parseShowStartUtcMs } from '../../../../api/_lib/showTime';
+import { parseShowStartUtcMs } from '../../../../shared/domain/showTime';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import type { Booking, BookingStatus } from '../../../types/booking';
 import { formatPhone, normalizePhone, isCompleteFrenchPhone } from '../../../utils/phone';

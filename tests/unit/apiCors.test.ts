@@ -5,9 +5,9 @@ import { join, resolve } from 'node:path';
 const ROOT = resolve(__dirname, '../..');
 const API  = join(ROOT, 'api');
 
-// Все endpoint'ы: файлы верхнего уровня api/, кроме служебной папки _lib.
+// Все endpoint'ы: файлы верхнего уровня api/. Общий слой переехал в server/shared/.
 const endpoints = readdirSync(API).filter(f => f.endsWith('.ts'));
-const http = readFileSync(join(API, '_lib/http.ts'), 'utf8');
+const http = readFileSync(join(ROOT, 'server/shared/http.ts'), 'utf8');
 
 describe('общие CORS-заголовки', () => {
   it('endpoint\'ы найдены', () => {
@@ -17,7 +17,7 @@ describe('общие CORS-заголовки', () => {
   for (const file of endpoints) {
     it(`${file} использует общие хелперы, а не свою копию CORS`, () => {
       const src = readFileSync(join(API, file), 'utf8');
-      expect(src).toContain("from './_lib/http.js'");
+      expect(src).toContain("from '../server/shared/http.js'");
       expect(src, 'локальная копия ALLOWED_ORIGINS').not.toContain('const ALLOWED_ORIGINS');
       expect(src, 'локальная копия getCorsOrigin').not.toContain('function getCorsOrigin');
     });

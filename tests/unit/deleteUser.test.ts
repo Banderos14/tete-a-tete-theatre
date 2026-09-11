@@ -1,15 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { endpointSource, projectSource } from '../helpers/serverSource.js';
 
-const ROOT = resolve(__dirname, '../..');
-const api  = readFileSync(resolve(ROOT, 'api/delete-user.ts'), 'utf8');
-const svc  = readFileSync(resolve(ROOT, 'src/services/userService.ts'), 'utf8');
+const api  = endpointSource('api/delete-user.ts');
+const svc  = projectSource('src/services/userService.ts');
 
 describe('/api/delete-user: устойчивость и приватность ошибок', () => {
   it('внутреннее сообщение об ошибке наружу не уходит', () => {
     expect(api).not.toMatch(/error:\s*message/);
-    expect(api).toContain("error: 'Failed to delete user'");
+    expect(api).toContain("'Failed to delete user'");
   });
 
   it('подробности остаются в серверном логе', () => {
@@ -24,7 +22,8 @@ describe('/api/delete-user: устойчивость и приватность �
   });
 
   it('отметка счётчика удаляется вместе с пользователем', () => {
-    expect(api).toContain("db.collection('audienceCounted').doc(targetUid)");
+    expect(api).toContain("AUDIENCE_COUNTED = 'audienceCounted'");
+    expect(api).toContain('db.collection(AUDIENCE_COUNTED).doc(targetUid)');
   });
 
   it('счётчик уменьшается только если пользователь в нём учтён', () => {
@@ -38,16 +37,17 @@ describe('/api/delete-user: устойчивость и приватность �
 
 describe('бизнес-правила удаления сохранены', () => {
   it('нельзя удалить себя', () => {
-    expect(api).toContain("error: 'Cannot delete your own account'");
+    expect(api).toContain("badRequest('Cannot delete your own account')");
   });
   it('нельзя удалить другого администратора', () => {
-    expect(api).toContain("error: 'Cannot delete an admin account'");
+    expect(api).toContain("forbidden('Cannot delete an admin account')");
   });
   it('требуется роль admin', () => {
-    expect(api).toContain("callerSnap.data()?.role !== 'admin'");
+    expect(api).toContain('requireAdmin(req');
+    expect(api).toContain("snap.data()?.role === 'admin'");
   });
   it('отсутствующий пользователь даёт 404', () => {
-    expect(api).toContain("error: 'User not found'");
+    expect(api).toContain("notFound('User not found')");
   });
 });
 

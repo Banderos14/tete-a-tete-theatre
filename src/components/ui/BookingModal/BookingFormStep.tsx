@@ -2,7 +2,7 @@ import type { FormEvent } from 'react';
 import { IconBuildingBank, IconTransfer } from '@tabler/icons-react';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
-import { MAX_COMMENT_LEN } from '../../../../api/_lib/limits';
+import { MAX_COMMENT_LEN } from '../../../../shared/contracts/limits';
 import styles from './BookingModal.module.scss';
 
 interface Props {

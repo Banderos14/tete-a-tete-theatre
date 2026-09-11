@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { normalizeIdempotencyKey } from '../../api/_lib/idempotency.js';
+import { normalizeIdempotencyKey } from '../../server/shared/idempotency.js';
+import { endpointSource, transactionBody } from '../helpers/serverSource.js';
 
 const ROOT = resolve(__dirname, '../..');
 
@@ -34,7 +35,7 @@ describe('normalizeIdempotencyKey', () => {
 });
 
 describe('/api/create-booking: идемпотентность', () => {
-  const src = readFileSync(resolve(ROOT, 'api/create-booking.ts'), 'utf8');
+  const src = endpointSource('api/create-booking.ts');
 
   it('ключ читается из заголовка Idempotency-Key', () => {
     expect(src).toContain("req.headers['idempotency-key']");
@@ -50,9 +51,7 @@ describe('/api/create-booking: идемпотентность', () => {
   });
 
   it('ключ пишется в ТОЙ ЖЕ транзакции, что и бронь', () => {
-    const txStart = src.indexOf('runTransaction');
-    const txEnd   = src.indexOf('} catch (err) {', txStart);
-    const tx      = src.slice(txStart, txEnd);
+    const tx = transactionBody(src);
     expect(tx).toContain('tx.create(idemRef');
     expect(tx).toContain('tx.create(bookingRef');
   });

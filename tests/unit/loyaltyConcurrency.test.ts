@@ -1,13 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import {
   hasAvailableLoyaltyReward, getUserAttendedCount, getUsedRewardCount, calculateLoyaltyDiscount,
 } from '../../src/services/loyaltyService.js';
 import type { Booking } from '../../src/types/booking.js';
+import { endpointSource, transactionBody } from '../helpers/serverSource.js';
 
-const ROOT = resolve(__dirname, '../..');
-const api  = readFileSync(resolve(ROOT, 'api/create-booking.ts'), 'utf8');
+const api  = endpointSource('api/create-booking.ts');
 
 // Минимальная бронь для расчёта лояльности.
 function booking(over: Partial<Booking> = {}): Booking {
@@ -58,16 +56,15 @@ describe('правила лояльности', () => {
 
 describe('бонус нельзя потратить дважды параллельно', () => {
   it('расчёт и списание бонуса происходят внутри одной транзакции', () => {
-    const txStart = api.indexOf('runTransaction');
-    const txEnd   = api.indexOf('} catch (err) {', txStart);
-    const tx      = api.slice(txStart, txEnd);
+    const tx = transactionBody(api);
     expect(tx).toContain('computeLoyalty(');
     expect(tx).toContain('tx.set(loyaltyRef');
     expect(tx).toContain('tx.create(bookingRef');
   });
 
   it('есть документ-точка конфликта на пользователя', () => {
-    expect(api).toContain("db.collection('loyaltyState').doc(uid)");
+    expect(api).toContain("LOYALTY_STATE = 'loyaltyState'");
+    expect(api).toContain('database.collection(LOYALTY_STATE).doc(uid)');
     expect(api).toContain('await tx.get(loyaltyRef)');
   });
 
@@ -81,14 +78,13 @@ describe('бонус нельзя потратить дважды паралле
   });
 
   it('есть документ-точка конфликта на спектакль', () => {
-    expect(api).toContain("db.collection('showCounters').doc(showId)");
+    expect(api).toContain("SHOW_COUNTERS = 'showCounters'");
+    expect(api).toContain('database.collection(SHOW_COUNTERS).doc(showId)');
     expect(api).toContain('await tx.get(showCounterRef)');
   });
 
   it('все чтения транзакции идут до всех записей', () => {
-    const txStart = api.indexOf('runTransaction');
-    const txEnd   = api.indexOf('} catch (err) {', txStart);
-    const tx      = api.slice(txStart, txEnd);
+    const tx = transactionBody(api);
     const lastGet   = Math.max(tx.lastIndexOf('await tx.get('), tx.lastIndexOf('readSoldTickets('));
     const firstWrite = Math.min(
       ...['tx.set(', 'tx.create(', 'tx.update('].map(w => {

@@ -17,7 +17,8 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-const sources = [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'api'))]
+const sources = [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'api')),
+                 ...walk(join(ROOT, 'server')), ...walk(join(ROOT, 'shared'))]
   .map(f => readFileSync(f, 'utf8'))
   .join('\n');
 
@@ -65,7 +66,7 @@ describe('мёртвый код удалён', () => {
   });
 
   it('генерация кода билета осталась ровно в одном месте — на сервере', () => {
-    const api = readFileSync(join(ROOT, 'api/create-booking.ts'), 'utf8');
+    const api = readFileSync(join(ROOT, 'server/booking/ticketCode.ts'), 'utf8');
     expect(api).toContain('function generateTicketCode');
     expect(sources.match(/function generateTicketCode/g)).toHaveLength(1);
   });

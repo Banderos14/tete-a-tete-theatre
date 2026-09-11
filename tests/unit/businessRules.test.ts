@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
+import { endpointSource, functionBody, projectSource } from '../helpers/serverSource.js';
+
 const ROOT = resolve(__dirname, '../..');
 const r = (p: string) => readFileSync(join(ROOT, p), 'utf8');
 
 describe('протухание брони происходит надёжно, а не «когда кто-нибудь зайдёт»', () => {
-  const cron   = r('api/expire-bookings.ts');
+  const cron   = endpointSource('api/expire-bookings.ts');
   const vercel = JSON.parse(r('vercel.json')) as { crons?: { path: string; schedule: string }[] };
 
   it('есть задание по расписанию', () => {
@@ -34,7 +36,8 @@ describe('протухание брони происходит надёжно, �
   });
 
   it('счётчики затронутых спектаклей обновляются — освобождённые места видны', () => {
-    expect(cron).toContain("collection('showCounters')");
+    expect(cron).toContain("SHOW_COUNTERS = 'showCounters'");
+    expect(cron).toContain('collection(SHOW_COUNTERS)');
   });
 });
 
@@ -48,7 +51,7 @@ describe('оплата наличными ведёт себя одинаково
   });
 
   it('оба ставят paid вместе с confirmed', () => {
-    expect(r('api/checkin-ticket.ts')).toMatch(/paymentStatus: 'paid',\s*\n\s*status:\s*'confirmed'/);
+    expect(endpointSource('api/checkin-ticket.ts')).toMatch(/paymentStatus: 'paid',\s*\n\s*status:\s*'confirmed'/);
     expect(r('src/services/bookingService.ts')).toMatch(/paymentStatus: 'paid',\s*\n\s*status: 'confirmed'/);
   });
 
@@ -58,7 +61,7 @@ describe('оплата наличными ведёт себя одинаково
 });
 
 describe('техническое состояние доставки писем сохраняется', () => {
-  const email = r('api/send-email.ts');
+  const email = endpointSource('api/send-email.ts');
 
   it('успех, отказ и пропуск журналируются', () => {
     expect(email).toContain("status: 'sent'");
@@ -67,7 +70,7 @@ describe('техническое состояние доставки писем 
   });
 
   it('адрес получателя в журнал не дублируется', () => {
-    const fn = email.slice(email.indexOf('async function logEmailDelivery'), email.indexOf('// ── Handler'));
+    const fn = functionBody(projectSource('server/email/email.repository.ts'), 'logEmailDelivery');
     expect(fn).not.toContain('to:');
     expect(fn).toContain('uid');
   });

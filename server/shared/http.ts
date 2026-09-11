@@ -1,6 +1,6 @@
 // Общие HTTP-хелперы для всех serverless-функций: CORS, чтение тела, ответы.
-// Вынесено в _lib, потому что Vercel игнорирует пути, начинающиеся с подчёркивания,
-// и не превращает их в endpoint'ы.
+// Живёт вне api/, потому что Vercel делает endpoint'ом каждый файл внутри api/.
+// В endpoint'ы попадают только тонкие handler'ы, общий слой — здесь.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 

@@ -24,6 +24,26 @@ npm run test:rules  # тесты правил Firestore в эмуляторе (�
 
 Vite + React 19 + TypeScript, SCSS-модули, без UI-библиотек. Firebase (Auth + Firestore) на клиенте, Vercel Serverless Functions (`api/`) для всего, что нельзя доверить браузеру.
 
+### Слои и границы
+
+```
+api/       тонкие handler'ы Vercel — разбор запроса, авторизация, вызов сервиса, ответ
+server/    серверная логика: booking, checkin, availability, audience, expiration, users, email, shared
+shared/    изоморфный слой: domain (правила), catalog (каталог спектаклей), contracts (типы API и лимиты)
+src/       frontend
+```
+
+**Vercel делает endpoint'ом каждый `.ts` верхнего уровня `api/`** — поэтому общий код живёт вне `api/`, а список файлов там зафиксирован тестом: переименование меняет публичный URL.
+
+Границы проверяет `tests/unit/architecture.test.ts`:
+
+- `src/` не импортирует `server/`, `api/`, `firebase-admin` и серверные модули Node;
+- `shared/` изоморфен — не тянет `server/`, `api/`, `src/` и `firebase-admin`;
+- серверные переменные окружения (`RESEND_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `CRON_SECRET`, `EMAIL_FROM`) не читаются из frontend-кода;
+- handler'ы не содержат `runTransaction`/`getFirestore` и укладываются в 80 строк.
+
+Сервисы не знают про HTTP: они бросают `ApiError` (`server/shared/errors.ts`), а handler переводит её в статус и тело через `errorResponse()`. Поэтому бизнес-правило читается и тестируется без `req`/`res`.
+
 ### Роутинг и структура приложения
 
 `main.tsx` оборачивает всё в **HashRouter** — это принципиально: все внешние ссылки, QR-коды и deep-links строятся в формате `/#/...` (см. `src/services/qrService.ts`, `src/utils/showUrl.ts`). Обычный path-роутинг сломает прямые переходы.
@@ -38,9 +58,9 @@ Firebase грузится лениво из `AuthContext` (`loadFirebase()` ме
 
 1. `BookingModal` собирает только `showId, ticketType, ticketsCount, paymentMethod, comment, phone, lang`.
 2. `createBookingViaApi()` (`src/services/bookingService.ts`) шлёт это в `/api/create-booking` с `Authorization: Bearer <Firebase ID token>`.
-3. `api/create-booking.ts` через Admin SDK сам считает цену, скидку лояльности, `ticketCode`, `status`, `paymentStatus` — клиентские значения игнорируются.
+3. `server/booking/booking.service.ts` через Admin SDK сам считает цену, скидку лояльности, `ticketCode`, `status`, `paymentStatus` — клиентские значения игнорируются. Хендлер `api/create-booking.ts` только разбирает запрос и переводит ошибку сервиса в HTTP-ответ.
 
-**Цены и даты спектаклей продублированы в двух местах:** каталог `SHOWS` в `api/_lib/shows.ts` (сервер, source of truth) и `src/data/shows.ts` (фронт). При изменении расписания или цен нужно править **оба** файла. Расхождение ловится тестом `tests/unit/pastShows.test.ts` — он сверяет id, дату, время и цены всех типов билетов.
+**Цены и даты спектаклей продублированы в двух местах:** каталог `SHOWS` в `shared/catalog/shows.ts` (сервер, source of truth) и `src/data/shows.ts` (фронт). При изменении расписания или цен нужно править **оба** файла. Расхождение ловится тестом `tests/unit/pastShows.test.ts` — он сверяет id, дату, время и цены всех типов билетов.
 
 **Клиент вообще не пишет в `bookings`.** Все изменения идут через серверные функции:
 
@@ -57,17 +77,17 @@ Firebase грузится лениво из `AuthContext` (`loadFirebase()` ме
 
 **Правила отмены зрителем:** `paid` — нельзя (оплата окончательна, автовозвратов нет), `attended` — нельзя, `cancelled` — повторно нельзя, иначе можно до начала спектакля.
 
-**Время спектакля** считается одной реализацией (`api/_lib/showTime.ts`): настенное время Europe/Paris переводится в абсолютный момент с учётом перехода на летнее/зимнее время. Новые брони хранят `showStartAt`.
+**Время спектакля** считается одной реализацией (`shared/domain/showTime.ts`): настенное время Europe/Paris переводится в абсолютный момент с учётом перехода на летнее/зимнее время. Новые брони хранят `showStartAt`.
 
 ### Роль admin
 
-`userProfile.role` живёт в `users/{uid}`. Правила Firestore запрещают клиенту менять своё `role` (проверка `request.resource.data.role == resource.data.role` на update и `== 'user'` на create). `AdminPage` — это только UI-гейт; настоящая проверка на сервере: `isAdminToken()` в `api/send-email.ts` и `api/delete-user.ts` резолвит роль из Firestore по ID-токену.
+`userProfile.role` живёт в `users/{uid}`. Правила Firestore запрещают клиенту менять своё `role` (проверка `request.resource.data.role == resource.data.role` на update и `== 'user'` на create). `AdminPage` — это только UI-гейт; настоящая проверка на сервере: `requireAdmin()` в `server/shared/auth.ts` резолвит роль из Firestore по ID-токену — одно место для всех endpoint'ов.
 
-`api/send-email.ts` фильтрует запросы по whitelist `ALLOWED_TYPES`; `newsletter`, `booking-status`, `payment-paid` требуют admin-токен, `booking-confirmation` — токен, чей email совпадает с получателем.
+`server/email/` фильтрует запросы по whitelist `ALLOWED_EMAIL_TYPES`; `newsletter`, `booking-status`, `payment-paid` требуют admin-токен, `booking-confirmation` — токен, чей email совпадает с получателем.
 
 ### Билеты и посещения
 
-- Код билета генерируется **только на сервере** (`generateTicketCode()` в `api/create-booking.ts`): формат `XXXX-XXXX`, алфавит без похожих символов (`0/O`, `1/I/L`), `randomInt` без modulo bias. Клиентского `ticketService` больше нет.
+- Код билета генерируется **только на сервере** (`generateTicketCode()` в `server/booking/ticketCode.ts`): формат `XXXX-XXXX`, алфавит без похожих символов (`0/O`, `1/I/L`), `randomInt` без modulo bias. Клиентского `ticketService` больше нет.
 - QR ведёт на `/#/admin/checkin?ticket=CODE`; `parseTicketCodeFromScan()` разбирает hash-URL, обычный URL, легаси-JSON и голый код.
 - `attendanceService` парсит `showDate` формата `"17 Май 2026"` (русские трёхбуквенные месяцы) — бронь считается посещённой через 2 часа после начала при `confirmed` + `paid`. `computedIsAttended()` даёт статус до записи в Firestore, поэтому UI не ждёт бэкенд.
 - `loyaltyService`: 1 посещение = 1 бронь (не билет); каждые 5 посещений — скидка 50%, округление вниз. Учёт использованных бонусов идёт по флагу `loyaltyDiscountApplied` в брони.

@@ -1,21 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { SHOWS, showStartUtcMs, showDateString } from '../../api/_lib/shows.js';
-import { parseShowStartUtcMs } from '../../api/_lib/showTime.js';
+import { SHOWS, showStartUtcMs, showDateString } from '../../shared/catalog/shows.js';
+import { parseShowStartUtcMs } from '../../shared/domain/showTime.js';
+import { projectSource } from '../helpers/serverSource.js';
 
 const ROOT = resolve(__dirname, '../..');
 
 describe('серверная защита от продажи билетов в прошлое', () => {
   it('create-booking отклоняет спектакль, который уже начался', () => {
-    const src = readFileSync(resolve(ROOT, 'api/create-booking.ts'), 'utf8');
-    expect(src).toContain("reason: 'show_started'");
+    const src = projectSource('server/booking/booking.service.ts');
+    expect(src).toContain("conflict('Show has already started', 'show_started')");
     expect(src).toMatch(/startMs !== null && startMs <= Date\.now\(\)/);
   });
 
   it('проверка стоит ДО записи в Firestore', () => {
-    const src = readFileSync(resolve(ROOT, 'api/create-booking.ts'), 'utf8');
-    expect(src.indexOf("reason: 'show_started'")).toBeLessThan(src.indexOf('runTransaction'));
+    const src = projectSource('server/booking/booking.service.ts');
+    expect(src.indexOf("'show_started'")).toBeLessThan(src.indexOf('runTransaction'));
   });
 });
 

@@ -1,12 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { endpointSource, projectSource, transactionBody } from '../helpers/serverSource.js';
 
-const ROOT   = resolve(__dirname, '../..');
-const api    = readFileSync(resolve(ROOT, 'api/register-audience.ts'), 'utf8');
-const stats  = readFileSync(resolve(ROOT, 'src/services/statsService.ts'), 'utf8');
-const auth   = readFileSync(resolve(ROOT, 'src/context/AuthContext.tsx'), 'utf8');
-const rules  = readFileSync(resolve(ROOT, 'firestore.rules'), 'utf8');
+// endpoint вместе со своим серверным слоем — логика живёт в server/audience/.
+const api    = endpointSource('api/register-audience.ts');
+const stats  = projectSource('src/services/statsService.ts');
+const auth   = projectSource('src/context/AuthContext.tsx');
+const rules  = projectSource('firestore.rules');
 
 describe('счётчик зрителей увеличивается ровно один раз на пользователя', () => {
   it('инкремент выполняет сервер, а не клиент', () => {
@@ -22,14 +21,13 @@ describe('счётчик зрителей увеличивается ровно 
   });
 
   it('повторный вызов ничего не меняет — отметка audienceCounted', () => {
-    expect(api).toContain("db.collection('audienceCounted').doc(uid)");
+    expect(api).toContain("AUDIENCE_COUNTED = 'audienceCounted'");
+    expect(api).toContain('db.collection(AUDIENCE_COUNTED).doc(uid)');
     expect(api).toMatch(/if \(markerSnap\.exists\) return false;/);
   });
 
   it('отметка и счётчик пишутся одной транзакцией', () => {
-    const txStart = api.indexOf('runTransaction');
-    const txEnd   = api.indexOf('} catch (err) {', txStart);
-    const tx      = api.slice(txStart, txEnd);
+    const tx = transactionBody(api);
     expect(tx).toContain('tx.set(statsRef');
     expect(tx).toContain('tx.create(markerRef');
   });
@@ -40,7 +38,7 @@ describe('счётчик зрителей увеличивается ровно 
   });
 
   it('сбой счётчика не ломает регистрацию', () => {
-    expect(api).toMatch(/catch[\s\S]{0,200}respond\(res, 200/);
+    expect(api).toMatch(/catch[\s\S]{0,300}respond\(res, 200/);
     expect(stats).toMatch(/catch \{[\s\S]{0,160}\}/);
   });
 });

@@ -1,12 +1,12 @@
-import { parseShowStartUtcMs } from '../../api/_lib/showTime';
-import { isBookingAttended } from '../../api/_lib/bookingRules';
+import { parseShowStartUtcMs } from '../../shared/domain/showTime';
+import { isBookingAttended } from '../../shared/domain/bookingRules';
 import type { Booking } from '../types/booking';
 
 // Модуль намеренно НЕ импортирует Firebase: это чистые правила, которыми
 // пользуются и интерфейс, и расчёт лояльности, и тесты. Запись статуса
 // attended живёт в bookingService — её выполняет только админка.
 //
-// Время спектакля считается ОДНОЙ реализацией — общей с сервером (api/_lib/showTime).
+// Время спектакля считается ОДНОЙ реализацией — общей с сервером (shared/domain/showTime).
 //
 // Раньше здесь была своя копия разбора «17 Май 2026», которая собирала дату
 // локальным конструктором Date — то есть в таймзоне БРАУЗЕРА. Серверная копия

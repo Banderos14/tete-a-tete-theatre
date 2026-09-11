@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { RU } from '../../i18n';
 import { getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPaid, expireOverdueBookings, hoursUntilExpiry, markEligibleBookingsAsAttended } from '../../services/bookingService';
 import { getPaymentAccount, PAYMENT_CONFIG } from '../../config/payment';
-import { describeStateIssue } from '../../../api/_lib/bookingRules';
+import { describeStateIssue } from '../../../shared/domain/bookingRules';
 import { getAllUsers, getUsersForNewsletter, deleteUserCompletely } from '../../services/userService';
 import { resolveInstagramUsername, instagramProfileUrl } from '../../utils/instagram';
 import { getShowPublicUrl } from '../../utils/showUrl';

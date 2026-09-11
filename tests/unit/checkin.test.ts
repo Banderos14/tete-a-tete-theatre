@@ -1,43 +1,41 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { endpointSource, projectSource, transactionBody } from '../helpers/serverSource.js';
 
-const ROOT = resolve(__dirname, '../..');
-const api  = readFileSync(resolve(ROOT, 'api/checkin-ticket.ts'), 'utf8');
-const page = readFileSync(resolve(ROOT, 'src/pages/TicketCheckPage/TicketCheckPage.tsx'), 'utf8');
+const api  = endpointSource('api/checkin-ticket.ts');
+const page = projectSource('src/pages/TicketCheckPage/TicketCheckPage.tsx');
 
 describe('/api/checkin-ticket: атомарность', () => {
   it('проверка и отметка выполняются одной транзакцией', () => {
     expect(api).toContain('runTransaction');
-    const txStart = api.indexOf('runTransaction');
-    const txEnd   = api.indexOf('} catch (err) {', txStart);
-    const tx      = api.slice(txStart, txEnd);
-    // чтение брони и запись статуса — внутри одной транзакции
-    expect(tx).toContain("tx.get(");
-    expect(tx).toContain("status:       'attended'");
+    const tx = transactionBody(api);
+    // Чтение брони и запись статуса — внутри ОДНОЙ транзакции: репозиторий
+    // получает саму ручку tx, а не делает отдельный запрос вне транзакции.
+    expect(tx).toContain('findByTicketCode(tx,');
+    expect(tx).toMatch(/status:\s*'attended'/);
+    expect(projectSource('server/booking/booking.repository.ts')).toContain('tx.get(');
   });
 
   it('повторная отметка отклоняется по already_attended', () => {
-    expect(api).toContain("reason: 'already_attended'");
+    expect(api).toContain("refusal: 'already_attended'");
     expect(api).toMatch(/if \(status === 'attended'\)/);
   });
 
   it('отменённую бронь отметить нельзя', () => {
-    expect(api).toContain("reason: 'cancelled'");
+    expect(api).toContain("refusal: 'cancelled'");
   });
 
   it('неоплаченный билет нельзя отметить посещённым', () => {
-    expect(api).toContain("reason: 'not_paid'");
+    expect(api).toContain("refusal: 'not_paid'");
     expect(api).toMatch(/paymentStatus !== 'paid'/);
   });
 
   it('повторная отметка оплаты отклоняется', () => {
-    expect(api).toContain("reason: 'already_paid'");
+    expect(api).toContain("refusal: 'already_paid'");
   });
 
   it('требуется роль admin', () => {
     expect(api).toContain("role === 'admin'");
-    expect(api).toContain("error: 'Admin only'");
+    expect(api).toContain("'Admin only'");
   });
 
   it('формат кода билета валидируется', () => {
@@ -48,6 +46,13 @@ describe('/api/checkin-ticket: атомарность', () => {
   it('записывается, КТО и КОГДА отметил проход', () => {
     expect(api).toContain('attendedAt');
     expect(api).toContain('attendedBy');
+  });
+
+  it('отказ уходит клиенту как reason — контракт ответа не изменился', () => {
+    // Сервис бросает conflict(message, refusal), а общий errorResponse
+    // раскладывает это в { error, reason } — поле на проводе прежнее.
+    expect(api).toMatch(/conflict\(outcome\.message, outcome\.refusal/);
+    expect(api).toMatch(/reason: err\.reason/);
   });
 
   it('оплата наличными на входе ставит и paid, и confirmed одной записью', () => {

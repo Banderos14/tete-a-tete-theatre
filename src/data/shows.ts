@@ -1,5 +1,5 @@
 import type { Show, RepertoireItem } from '../types';
-import { parseShowStartUtcMs } from '../../api/_lib/showTime';
+import { parseShowStartUtcMs } from '../../shared/domain/showTime';
 
 // Спектакль уже начался? Время считается как настенное Europe/Paris —
 // той же функцией, которой пользуется сервер, чтобы клиент и сервер не расходились.

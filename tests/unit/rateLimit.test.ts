@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { decideRateLimit } from '../../api/_lib/rateLimit.js';
+import { decideRateLimit } from '../../server/shared/rateLimit.js';
+import { endpointSource } from '../helpers/serverSource.js';
 
 const ROOT = resolve(__dirname, '../..');
 const HOUR = 60 * 60 * 1000;
@@ -39,11 +40,11 @@ describe('decideRateLimit', () => {
 });
 
 describe('/api/send-email: авторизация и привязка к брони', () => {
-  const src = readFileSync(resolve(ROOT, 'api/send-email.ts'), 'utf8');
+  const src = endpointSource('api/send-email.ts');
 
   it('анонимная отправка невозможна для любого типа письма', () => {
     expect(src).toContain('requires Authorization: Bearer <token>');
-    expect(src).toMatch(/if \(!idToken\) \{[\s\S]{0,200}respond\(res, 401/);
+    expect(src).toMatch(/if \(!idToken\) throw unauthorized\(/);
   });
 
   it('booking-confirmation требует ticketCode и проверяет владение бронью', () => {
@@ -54,7 +55,8 @@ describe('/api/send-email: авторизация и привязка к бро�
   });
 
   it('newsletter / booking-status / payment-paid остаются admin-only', () => {
-    expect(src).toMatch(/type === 'newsletter' \|\| type === 'booking-status' \|\| type === 'payment-paid'/);
+    expect(src).toContain("ADMIN_ONLY_TYPES: readonly EmailType[] = ['newsletter', 'booking-status', 'payment-paid']");
+    expect(src).toContain('ADMIN_ONLY_TYPES.includes(type) && !isAdmin');
     expect(src).toContain('is admin-only');
   });
 

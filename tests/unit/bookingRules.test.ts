@@ -4,7 +4,7 @@ import {
   occupiesCapacity,
   isTransferOverdue,
   isValidCancelReason,
-} from '../../api/_lib/bookingRules.js';
+} from '../../shared/domain/bookingRules.js';
 
 const FUTURE = Date.UTC(2030, 0, 1);
 const NOW    = Date.UTC(2026, 0, 1);
@@ -110,7 +110,7 @@ describe('isValidCancelReason', () => {
 });
 
 // ── Раздел 5: защита от бессмысленных состояний у администратора ────────────
-import { describeStateIssue } from '../../api/_lib/bookingRules.js';
+import { describeStateIssue } from '../../shared/domain/bookingRules.js';
 
 describe('describeStateIssue', () => {
   it('ловит attended без оплаты — пример из задания', () => {
