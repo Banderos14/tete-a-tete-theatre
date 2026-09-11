@@ -34,35 +34,41 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [deleteUserError, setDeleteUserError] = useState<string | null>(null);
 
-  const fetchAll = useCallback(async () => {
-    setFetching(true);
-    try {
-      const [bData, uData] = await Promise.all([getAllBookings(), getAllUsers()]);
-      setBookings(bData);
-      setUsers(uData);
-      // Автоматически отмечаем прошедшие оплаченные спектакли, не блокируя загрузку.
-      markEligibleBookingsAsAttended(bData, (id) => {
-        setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
-      }).catch(() => {});
-
-      // Просроченные банковские переводы отменяются фоном.
-      expireOverdueBookings(bData, (id) => {
-        setBookings(prev => prev.map(b =>
-          b.id === id ? { ...b, paymentStatus: 'expired', status: 'cancelled' } : b,
-        ));
-      }).catch(() => {});
-    } finally {
-      setFetching(false);
-    }
-  }, []);
-
-  // Первичная загрузка: setState здесь неизбежен — данные приходят из Firestore,
-  // а не из пропсов.
+  // Первичная загрузка. Флаг stale — чтобы ответ отменённой загрузки не затирал
+  // состояние: без него быстрый уход со страницы или повторный вход админом
+  // применял бы результат уже неактуального запроса.
   useEffect(() => {
     if (!enabled) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchAll();
-  }, [enabled, fetchAll]);
+    let stale = false;
+
+    void (async () => {
+      setFetching(true);
+      try {
+        const [bData, uData] = await Promise.all([getAllBookings(), getAllUsers()]);
+        if (stale) return;
+        setBookings(bData);
+        setUsers(uData);
+
+        // Автоматически отмечаем прошедшие оплаченные спектакли, не блокируя загрузку.
+        markEligibleBookingsAsAttended(bData, (id) => {
+          if (stale) return;
+          setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'attended' } : b));
+        }).catch(() => {});
+
+        // Просроченные банковские переводы отменяются фоном.
+        expireOverdueBookings(bData, (id) => {
+          if (stale) return;
+          setBookings(prev => prev.map(b =>
+            b.id === id ? { ...b, paymentStatus: 'expired', status: 'cancelled' } : b,
+          ));
+        }).catch(() => {});
+      } finally {
+        if (!stale) setFetching(false);
+      }
+    })();
+
+    return () => { stale = true; };
+  }, [enabled]);
 
   /** Токен админа для серверной проверки роли при отправке письма. */
   const adminToken = useCallback(
