@@ -143,7 +143,8 @@ describe('describeStateIssue', () => {
   it('это предупреждение, а не запрет — админка спрашивает подтверждение', async () => {
     const { readFileSync } = await import('node:fs');
     const { resolve } = await import('node:path');
-    const admin = readFileSync(resolve(__dirname, '../../src/pages/AdminPage/AdminPage.tsx'), 'utf8');
+    // Мутации статусов живут в хуке данных админки, а не в её оболочке.
+    const admin = readFileSync(resolve(__dirname, '../../src/pages/AdminPage/useAdminData.ts'), 'utf8');
     expect(admin).toContain('describeStateIssue');
     expect(admin).toContain('Всё равно сохранить?');
   });

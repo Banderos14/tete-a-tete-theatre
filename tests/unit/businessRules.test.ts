@@ -43,7 +43,8 @@ describe('протухание брони происходит надёжно, �
 
 describe('оплата наличными ведёт себя одинаково из админки и из сканера', () => {
   const page  = r('src/pages/TicketCheckPage/TicketCheckPage.tsx');
-  const admin = r('src/pages/AdminPage/AdminPage.tsx');
+  // Отправка писем при смене статуса — в хуке данных, а не в оболочке страницы.
+  const admin = r('src/pages/AdminPage/useAdminData.ts');
 
   it('оба места отправляют письмо об оплате', () => {
     expect(admin).toContain('sendPaymentPaidEmail');
