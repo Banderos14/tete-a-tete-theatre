@@ -38,6 +38,12 @@ describe('sumOccupiedTickets', () => {
     ])).toBe(2);
   });
 
+  it('seatsCount семейного тарифа имеет приоритет над числом пакетов', () => {
+    expect(sumOccupiedTickets([
+      { status: 'pending', paymentStatus: 'not_paid', ticketsCount: 1, seatsCount: 3 },
+    ])).toBe(3);
+  });
+
   it('пустой список — ноль', () => {
     expect(sumOccupiedTickets([])).toBe(0);
   });

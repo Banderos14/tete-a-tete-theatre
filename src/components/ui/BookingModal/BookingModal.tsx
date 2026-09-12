@@ -68,6 +68,7 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
 
   const activeTicket   = selectedTicket ?? defaultTicket;
   const baseAmount     = (activeTicket?.price ?? 0) * tickets;
+  const seatsPerTicket = activeTicket?.seats ?? 1;
   // Когда остаток неизвестен, ограничиваем только лимитом типа билета:
   // авторитетную проверку вместимости всё равно делает сервер.
   //
@@ -75,12 +76,13 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   // с большим числом билетов, и без этого ограничения счётчик доходил бы,
   // например, до 45 (столько стоит в available у «Графа Нулина»), а бронь
   // падала бы общей ошибкой уже после отправки формы.
-  const maxTickets     = Math.min(
+  const maxTickets     = Math.max(0, Math.min(
     MAX_TICKETS_PER_BOOKING,
+    activeTicket?.available ?? MAX_TICKETS_PER_BOOKING,
     seatsLeft === null
-      ? (activeTicket?.available ?? MAX_TICKETS_PER_BOOKING)
-      : Math.min(activeTicket?.available ?? MAX_TICKETS_PER_BOOKING, Math.max(1, seatsLeft)),
-  );
+      ? MAX_TICKETS_PER_BOOKING
+      : Math.floor(seatsLeft / seatsPerTicket),
+  ));
 
   const loyaltyAvailable = useMemo(
     () => hasAvailableLoyaltyReward(userBookings),
@@ -108,11 +110,11 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
 
   // Ограничиваем количество билетов, когда остаток известен и меньше выбранного.
   useEffect(() => {
-    if (seatsLeft !== null && seatsLeft >= 1 && tickets > seatsLeft) {
+    if (maxTickets >= 1 && tickets > maxTickets) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTickets(seatsLeft);
+      setTickets(maxTickets);
     }
-  }, [seatsLeft]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [maxTickets, tickets]);
 
   useEffect(() => {
     // Переходим на форму сразу после авторизации, не дожидаясь следующего рендера
@@ -204,7 +206,7 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
     if (submitLoading) return;
     // Клиентская проверка — только для быстрой обратной связи; отказать по-настоящему
     // может лишь сервер, который считает вместимость в транзакции.
-    if (seatsLeft !== null && seatsLeft < tickets) {
+    if (seatsLeft !== null && seatsLeft < tickets * seatsPerTicket) {
       setSubmitError(seatsLeft <= 0 ? t.booking.soldOut : t.booking.notEnoughSeats(seatsLeft));
       return;
     }

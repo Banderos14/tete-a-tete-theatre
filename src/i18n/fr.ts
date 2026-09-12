@@ -32,7 +32,7 @@ export const FR: T = {
     num:     '01 / Affiche',
     title:   'Prochaines',
     titleIt: 'premières',
-    meta:    'Septembre — Octobre\n2026',
+    meta:    'Septembre — Novembre 2026\nOuverture de la 8e saison',
     book:    'Réserver',
   },
   socials: {
@@ -86,6 +86,7 @@ export const FR: T = {
       'Актриса':                                           'Actrice',
       'Актёр · музыкант':                                  'Acteur · musicien',
       'Актёр':                                             'Acteur',
+      'Художник по костюмам · декоратор':                  'Créateur de costumes · décorateur',
     },
   },
   contacts: {

@@ -62,6 +62,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const { userName, userEmail } = await readUserIdentity(uid);
 
   const ticketInfo     = show.tickets[ticketType]!;
+  const seatsPerTicket = ticketInfo.seats;
   const nowMs          = Date.now();
   const isBankTransfer = paymentMethod === 'bank_transfer';
   const ticketLabel    = lang === 'FR' ? ticketInfo.labelFR : ticketInfo.label;
@@ -115,7 +116,8 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 
     const userBookings = await readUserBookings(tx, uid);
 
-    const capacity = checkCapacity(sold, ticketsCount, THEATRE_CAPACITY);
+    const seatsCount = ticketsCount * seatsPerTicket;
+    const capacity = checkCapacity(sold, seatsCount, THEATRE_CAPACITY);
     if (!capacity.allowed) {
       return { kind: 'capacity', remaining: capacity.remaining, soldOut: capacity.soldOut };
     }
@@ -144,7 +146,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     // (в том числе в /api/show-availability), потому что отмена бронь не
     // уменьшает этот счётчик. Значение хранится как диагностическое.
     tx.set(showCounterRef, {
-      lastKnownSoldTickets: sold + ticketsCount,
+      lastKnownSoldTickets: sold + seatsCount,
       updatedAt:            FieldValue.serverTimestamp(),
     }, { merge: true });
 
@@ -174,6 +176,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       userEmail,
       userPhone:    phone,
       ticketsCount,
+      seatsCount,
       ticketType,
       priceInfo,
       totalAmount,

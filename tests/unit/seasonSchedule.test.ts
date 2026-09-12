@@ -75,7 +75,7 @@ describe('бронирование «Романтики» проходит се�
     expect(validated.show.time).toBe('20:00');
     expect(validated.ticketsCount).toBe(2);
     // Цену считает сервер по каталогу — из запроса она не читается.
-    expect(validated.show.tickets.standard!.price).toBe(15);
+    expect(validated.show.tickets.standard!.price).toBe(20);
   });
 
   it('на 12 сентября 2026 правило show_started не срабатывает', () => {
@@ -191,7 +191,7 @@ describe('сезон целиком: осенняя афиша 2026', () => {
     ['enot',      '18', 'Окт', '10:00'],
     ['lubov',     '14', 'Ноя', '19:00'],
     ['shapochka', '15', 'Ноя', '10:00'],
-    ['letuchiy',  '22', 'Ноя', '19:00'],
+    ['letuchiy',  '21', 'Ноя', '19:00'],
     ['kovcheg',   '28', 'Ноя', '19:00'],
   ];
 
@@ -214,7 +214,31 @@ describe('сезон целиком: осенняя афиша 2026', () => {
     }
   });
 
-  it('опубликованы только те два, у которых есть материалы', () => {
-    expect(Object.keys(SHOWS).sort()).toEqual(['romantika', 'shutka']);
+  it('все девять спектаклей опубликованы в афише', () => {
+    expect(Object.keys(SHOWS).sort()).toEqual(EXPECTED.map(([id]) => id).sort());
+    expect(Object.keys(DRAFT_SHOWS)).toEqual([]);
+  });
+
+  it('цены совпадают с программой открытия восьмого сезона', () => {
+    expect(SHOWS.romantika!.tickets.standard!.price).toBe(20);
+    expect(SHOWS.romantika!.tickets.student!.price).toBe(15);
+    expect(SHOWS.shutka!.tickets.standard!.price).toBe(30);
+    expect(SHOWS.shutka!.tickets.student!.price).toBe(20);
+    expect(SHOWS.razgovor!.tickets.standard!.price).toBe(25);
+    expect(SHOWS.razgovor!.tickets.student!.price).toBe(20);
+    expect(SHOWS.lubov!.tickets.standard!.price).toBe(20);
+    expect(SHOWS.lubov!.tickets.student!.price).toBe(15);
+    expect(SHOWS.letuchiy!.tickets.standard!.price).toBe(30);
+    expect(SHOWS.kovcheg!.tickets.student!.price).toBe(20);
+  });
+
+  it('детские спектакли предлагают детский, взрослый и семейный тарифы', () => {
+    for (const id of ['korablik', 'enot', 'shapochka']) {
+      const tickets = SHOWS[id]!.tickets;
+      expect(tickets.child!.price, id).toBe(20);
+      expect(tickets.adult!.price, id).toBe(15);
+      expect(tickets.family!.price, id).toBe(45);
+      expect(tickets.family!.seats, id).toBe(3);
+    }
   });
 });

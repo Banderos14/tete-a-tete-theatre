@@ -21,7 +21,7 @@ export async function readShowAvailability(): Promise<Record<string, ShowAvailab
   // Один запрос на все спектакли афиши (их единицы, лимит 'in' — 30 значений).
   const snap = await bookingsRef().where('showId', 'in', showIds).get();
 
-  const byShow: Record<string, Array<{ status: string; paymentStatus: string; ticketsCount?: number }>> = {};
+  const byShow: Record<string, Array<{ status: string; paymentStatus: string; ticketsCount?: number; seatsCount?: number }>> = {};
   snap.docs.forEach((d) => {
     const data   = d.data() as Record<string, unknown>;
     const showId = String(data.showId ?? '');
@@ -30,6 +30,7 @@ export async function readShowAvailability(): Promise<Record<string, ShowAvailab
       status:        String(data.status ?? ''),
       paymentStatus: String(data.paymentStatus ?? ''),
       ticketsCount:  typeof data.ticketsCount === 'number' ? data.ticketsCount : undefined,
+      seatsCount:    typeof data.seatsCount === 'number' ? data.seatsCount : undefined,
     });
   });
 

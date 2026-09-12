@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLang } from '../../../../i18n/LangContext';
-import { SHOWS } from '../../../../data/shows';
+import { PUBLISHED_SHOWS } from '../../../../data/shows';
 import type { Show } from '../../../../types';
 import styles from './AfishaSlider.module.scss';
 
@@ -10,7 +10,7 @@ const _schedulePreload = typeof requestIdleCallback === 'function'
   : (fn: () => void) => setTimeout(fn, 200);
 
 _schedulePreload(() => {
-  SHOWS.forEach(s => {
+  PUBLISHED_SHOWS.forEach(s => {
     if (s.image) {
       const img = new Image();
       img.onerror = () => console.warn('[show image failed]', s.id, s.image);
@@ -42,13 +42,13 @@ interface Props {
 
 export function AfishaSlider({ onCardClick }: Props) {
   const { lang, t } = useLang();
-  const total = SHOWS.length;
+  const total = PUBLISHED_SHOWS.length;
 
   // Число копий растёт при первом измерении если viewport шире одного набора
   const [numCopies, setNumCopies] = useState(MIN_COPIES);
   const copiesRef   = useRef(MIN_COPIES);
   const cards = useMemo(
-    () => Array.from({ length: numCopies }, () => SHOWS).flat(),
+    () => Array.from({ length: numCopies }, () => PUBLISHED_SHOWS).flat(),
     [numCopies],
   );
 
@@ -179,8 +179,8 @@ export function AfishaSlider({ onCardClick }: Props) {
       lastX:       e.clientX,
       lastTime:    performance.now(),
       velocity:    0,
-      // idx — глобальный по всем копиям; модуль даёт индекс в SHOWS
-      show: idx >= 0 ? SHOWS[((idx % total) + total) % total] : null,
+      // idx — глобальный по всем копиям; модуль даёт индекс в PUBLISHED_SHOWS
+      show: idx >= 0 ? PUBLISHED_SHOWS[((idx % total) + total) % total] : null,
     };
   }, [total]);
 

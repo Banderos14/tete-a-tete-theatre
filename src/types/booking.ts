@@ -1,9 +1,11 @@
 import type { Timestamp } from 'firebase/firestore';
+import type { TicketTypeId } from '../../shared/catalog/shows';
+
+export type { TicketTypeId } from '../../shared/catalog/shows';
 
 export type BookingStatus  = 'pending' | 'confirmed' | 'cancelled' | 'attended';
 export type PaymentMethod  = 'on_site' | 'bank_transfer';
 export type PaymentStatus  = 'not_paid' | 'paid' | 'awaiting_transfer' | 'expired';
-export type TicketTypeId   = 'standard' | 'student';
 
 export interface Booking {
   id: string;
@@ -20,6 +22,8 @@ export interface Booking {
   userEmail:           string;
   userPhone:           string;
   ticketsCount:        number;
+  /** Фактически занятые места; отличается от ticketsCount у семейного пакета. */
+  seatsCount?:         number;
   ticketType:          TicketTypeId;
   priceInfo:           string;
   totalAmount:         number;

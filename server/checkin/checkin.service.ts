@@ -69,6 +69,9 @@ function snapshotOf(id: string, ticketCode: string, data: Record<string, unknown
     userEmail:     String(data.userEmail ?? ''),
     lang:          data.lang === 'FR' ? 'FR' : 'RU',
     ticketsCount:  typeof data.ticketsCount === 'number' ? data.ticketsCount : 1,
+    seatsCount:    typeof data.seatsCount === 'number'
+      ? data.seatsCount
+      : typeof data.ticketsCount === 'number' ? data.ticketsCount : 1,
     totalAmount:   typeof data.totalAmount === 'number' ? data.totalAmount : 0,
     status:        String(data.status ?? ''),
     paymentStatus: String(data.paymentStatus ?? ''),

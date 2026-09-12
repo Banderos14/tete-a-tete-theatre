@@ -40,6 +40,7 @@ export async function readSoldTickets(tx: Transaction, showId: string): Promise<
         status:        String(data.status ?? ''),
         paymentStatus: String(data.paymentStatus ?? ''),
         ticketsCount:  data.ticketsCount,
+        seatsCount:    data.seatsCount,
       };
     }),
   );

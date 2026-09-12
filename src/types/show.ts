@@ -1,4 +1,5 @@
 import type { MonthKey, ShowTagKey } from '../i18n/types';
+import type { TicketTypeId } from '../../shared/catalog/shows';
 
 export type ShowPhoto = {
   src: string;
@@ -8,10 +9,13 @@ export type ShowPhoto = {
 };
 
 export interface TicketType {
-  id: 'standard' | 'student';
+  id: TicketTypeId;
   label: string;
+  labelFR: string;
   price: number;
   available: number;
+  /** Число зрительских мест на одну единицу тарифа. */
+  seats: number;
 }
 
 export interface Show {
@@ -40,6 +44,12 @@ export interface Show {
   photos?: Array<string | ShowPhoto>;
   ticketTypes: TicketType[];
   totalSeats: number;
+  // false — спектакль есть в коде целиком (дата, цены, тексты, тарифы), но
+  // публичные секции его не рендерят: официального постера ещё нет, а карточка
+  // с цветной подложкой вместо фото читается как незаконченная. Всё остальное —
+  // серверный каталог, бронирование, QR, старые брони — флага не замечает.
+  // По умолчанию (поле не задано) спектакль опубликован.
+  published?: boolean;
 }
 
 // Заготовка сезона: дата с афиши уже зафиксирована, а материалов (постера,
@@ -78,4 +88,7 @@ export interface RepertoireItem {
   descriptionFR?: string;
   duration?: string;
   durationFR?: string;
+  // Тот же смысл, что и у Show.published: карточка без постера временно
+  // не выводится в репертуаре.
+  published?: boolean;
 }

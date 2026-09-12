@@ -4,11 +4,12 @@ import { useLang } from '../../../../i18n/LangContext';
 import type { TeamMember, TeamGroup } from '../../../../types';
 import styles from './Team.module.scss';
 
-const GROUP_ORDER: TeamGroup[] = ['directors', 'actors', 'youth'];
+const GROUP_ORDER: TeamGroup[] = ['directors', 'actors', 'other', 'youth'];
 
 const GROUP_LABELS: Record<TeamGroup, { RU: string; FR: string }> = {
   directors: { RU: 'Режиссёры',                    FR: 'Metteurs en scène'          },
   actors:    { RU: 'Актёры',             FR: 'Acteurs'       },
+  other:     { RU: 'Творческая команда',            FR: 'Équipe artistique'          },
   youth:     { RU: 'Актёры молодёжного театра',     FR: 'Acteurs du théâtre jeunesse'},
 };
 

@@ -16,6 +16,7 @@ export interface RawBooking {
   paymentStatus?:          string;
   paymentMethod?:          string;
   ticketsCount?:           number;
+  seatsCount?:             number;
   totalAmount?:            number;
   ticketCode?:             string;
   lang?:                   string;

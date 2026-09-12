@@ -105,14 +105,14 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
 
   const resetBtn = <button className={styles.secondaryBtn} onClick={onReset}>{resetLabel}</button>;
 
-  // По одному QR проходит вся бронь целиком, поэтому количество — это
-  // количество ЛЮДЕЙ у двери. При двух и более билетах строка набирается
+  // По одному QR проходит вся бронь целиком, поэтому здесь показываем
+  // фактическое число МЕСТ (семейный пакет занимает три). При двух и более строка набирается
   // крупно: сотрудник должен видеть её, не вчитываясь.
   const countRow = (
     <CardRow
       label="Количество"
-      value={`${b.ticketsCount} ${ticketsWord(b.ticketsCount)}`}
-      valueClass={b.ticketsCount > 1
+      value={`${b.seatsCount} ${ticketsWord(b.seatsCount)}`}
+      valueClass={b.seatsCount > 1
         ? `${styles.cardValueCount} ${styles.cardValueCountMany}`
         : styles.cardValueCount}
     />

@@ -107,6 +107,8 @@ export function ShowModal({ show, onClose, onBook }: Props) {
   const duration     = lang === 'FR' ? (show.durationFR ?? show.duration) : show.duration;
   const price        = lang === 'FR' ? (show.priceFR    ?? show.price)    : show.price;
   const monthLabel   = t.months[show.month] ?? show.month;
+  const showYear     = Number(show.year);
+  const seasonYears  = Number.isFinite(showYear) ? `${showYear} / ${showYear + 1}` : show.year;
 
   return createPortal(
     <div
@@ -203,7 +205,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
 
         {/* Корешок (скрыт на мобиле) */}
         <div className={styles.spine} aria-hidden="true">
-          <span>{lang === 'FR' ? 'Saison 2025 / 2026 · Théâtre Tête-à-Tête · Nice' : 'Сезон 2025 / 2026 · Théâtre Tête-à-Tête · Nice'}</span>
+          <span>{lang === 'FR' ? `Saison ${seasonYears} · Théâtre Tête-à-Tête · Nice` : `Сезон ${seasonYears} · Théâtre Tête-à-Tête · Nice`}</span>
         </div>
 
         {/* Информация о спектакле */}

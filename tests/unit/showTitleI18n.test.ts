@@ -58,11 +58,9 @@ describe('localizedShowTitle', () => {
     )).toBe('«Старое название»');
   });
 
-  it('неопубликованная заготовка сезона тоже переводится', () => {
-    const draftId = Object.entries(SEASON_CATALOG).find(([, s]) => !s.published)?.[0];
-    expect(draftId).toBeDefined();
-    expect(localizedShowTitle({ showId: draftId!, showTitle: 'РУ' }, 'FR'))
-      .toBe(SEASON_CATALOG[draftId!]!.titleFR);
+  it('спектакль без постера тоже переводится по каталогу', () => {
+    expect(localizedShowTitle({ showId: 'korablik', showTitle: 'РУ' }, 'FR'))
+      .toBe(SEASON_CATALOG.korablik!.titleFR);
   });
 });
 

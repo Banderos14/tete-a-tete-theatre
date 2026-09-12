@@ -47,12 +47,6 @@ export function BookingSuccessStep({
   const showTitle  = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
   const monthLabel = t.months[show.month] ?? show.month;
 
-  function ticketLabel(id: string | undefined) {
-    return id === 'standard' ? t.admin.ticketStandard
-         : id === 'student'  ? t.admin.ticketStudent
-         : (id ?? '');
-  }
-
   return (
     <div className={styles.successWrap}>
 
@@ -92,7 +86,7 @@ export function BookingSuccessStep({
           <div className={styles.successSummary}>
             <div className={styles.summaryRow}>
               <span>{t.booking.labelTickets}</span>
-              <span>{tickets} × {ticketLabel(activeTicket?.id)}</span>
+              <span>{tickets} × {activeTicket ? (lang === 'FR' ? activeTicket.labelFR : activeTicket.label) : ''}</span>
             </div>
             <div className={styles.summaryRow}>
               <span>{t.booking.labelAmount}</span>

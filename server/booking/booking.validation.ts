@@ -28,8 +28,8 @@ export function validateCreateBooking(body: Record<string, unknown>): ValidatedB
   if (typeof showId !== 'string' || !Object.hasOwn(SHOWS, showId)) {
     throw badRequest('Invalid showId');
   }
-  if (ticketType !== 'standard' && ticketType !== 'student') {
-    throw badRequest('ticketType must be standard or student');
+  if (typeof ticketType !== 'string') {
+    throw badRequest('ticketType must be a string');
   }
   if (
     typeof ticketsCount !== 'number' ||
@@ -51,16 +51,20 @@ export function validateCreateBooking(body: Record<string, unknown>): ValidatedB
     throw badRequest(`comment must be at most ${MAX_COMMENT_LEN} characters`);
   }
 
-  const show       = SHOWS[showId]!;
-  const ticketInfo = show.tickets[ticketType];
-  if (!ticketInfo) {
+  const show = SHOWS[showId]!;
+  if (!Object.hasOwn(show.tickets, ticketType)) {
     throw badRequest(`ticketType '${ticketType}' not available for '${showId}'`);
+  }
+  const typedTicketType = ticketType as TicketTypeId;
+  const ticketInfo = show.tickets[typedTicketType];
+  if (!ticketInfo) {
+    throw badRequest(`ticketType '${typedTicketType}' not available for '${showId}'`);
   }
 
   return {
     showId,
     show,
-    ticketType,
+    ticketType: typedTicketType,
     ticketsCount,
     paymentMethod,
     phone:   phoneValue,

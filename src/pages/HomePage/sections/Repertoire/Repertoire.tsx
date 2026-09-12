@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useScrollLock } from '../../../../hooks/useScrollLock';
 import { createPortal } from 'react-dom';
-import { REPERTOIRE, SHOWS, isShowPast } from '../../../../data/shows';
+import { PUBLISHED_REPERTOIRE, PUBLISHED_SHOWS, isShowPast } from '../../../../data/shows';
 import { useLang } from '../../../../i18n/LangContext';
 import { PosterPlaceholder } from '../../components/PosterPlaceholder';
 import { ShowModal } from '../../components/ShowModal';
@@ -48,7 +48,7 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
   const duration = lang === 'FR' ? (item.durationFR ?? item.duration) : item.duration;
 
   const linkedShow = item.status === 'active'
-    ? SHOWS.find(s => s.id === item.id) ?? null
+    ? PUBLISHED_SHOWS.find(s => s.id === item.id) ?? null
     : null;
 
   useEffect(() => {
@@ -128,8 +128,8 @@ export function Repertoire({ onBook }: Props) {
   // Скролл к спектаклю, подсветка и открытие модалки по ?show= в URL/HashRouter.
   useEffect(() => {
     const slug = getShowIdFromLocation();
-    const linkedItem = slug ? REPERTOIRE.find(item => item.id === slug) : null;
-    const linkedShow = slug ? SHOWS.find(show => show.id === slug) : null;
+    const linkedItem = slug ? PUBLISHED_REPERTOIRE.find(item => item.id === slug) : null;
+    const linkedShow = slug ? PUBLISHED_SHOWS.find(show => show.id === slug) : null;
     if (!slug || !linkedItem) return;
 
     let handled = false;
@@ -165,16 +165,16 @@ export function Repertoire({ onBook }: Props) {
       <div className="section-head reveal">
         <div className="num">{t.repertoire.num}</div>
         <h2>{t.repertoire.title} <span className="it">{t.repertoire.titleIt}</span></h2>
-        <div className="meta">{t.repertoire.metaShows(REPERTOIRE.length)}<br />{t.repertoire.metaSeason}</div>
+        <div className="meta">{t.repertoire.metaShows(PUBLISHED_REPERTOIRE.length)}<br />{t.repertoire.metaSeason}</div>
       </div>
 
       <div className={styles.grid}>
-        {REPERTOIRE.map((item) => {
+        {PUBLISHED_REPERTOIRE.map((item) => {
           const cardTitle  = lang === 'FR' ? (item.titleFR  ?? item.title)  : item.title;
           const cardAuthor = lang === 'FR' ? (item.authorFR ?? item.author) : item.author;
           const cardTag    = t.showTags[item.tag] ?? item.tag;
           const linkedShow = item.status === 'active'
-            ? SHOWS.find(s => s.id === item.id) ?? null
+            ? PUBLISHED_SHOWS.find(s => s.id === item.id) ?? null
             : null;
           const linkedPrice = linkedShow
             ? (lang === 'FR' ? (linkedShow.priceFR ?? linkedShow.price) : linkedShow.price)

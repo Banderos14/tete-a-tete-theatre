@@ -4,6 +4,7 @@ import { generateTicketPdf, canShareFiles } from '../../../services/ticketPdfSer
 import { useLang } from '../../../i18n/LangContext';
 import type { Booking } from '../../../types/booking';
 import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant } from '../../../utils/ticketStub';
+import { ticketTypeLabel } from '../../../utils/ticketType';
 import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import styles from './TicketCard.module.scss';
 
@@ -48,10 +49,7 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
   const { day, monthAbbrev } = parseShowDateParts(b.showDate, isFR);
   const timeLabel = `${monthAbbrev} · ${b.showTime}`;
 
-  const ticketTypeLabel =
-    b.ticketType === 'student'
-      ? (isFR ? 'Étudiant' : 'Студент')
-      : (isFR ? 'Standard' : 'Стандарт');
+  const ticketLabel = ticketTypeLabel(b.ticketType, isFR ? 'FR' : 'RU');
 
   // Текст кнопки меняется в зависимости от collapsed/expanded
   let ctaCollapsed = '';
@@ -118,7 +116,7 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
 
           {/* Row 2: composition */}
           <p className={styles.compositionLine}>
-            <span className={styles.compositionCount}>{b.ticketsCount} × {ticketTypeLabel}</span>
+            <span className={styles.compositionCount}>{b.ticketsCount} × {ticketLabel}</span>
             {b.totalAmount > 0 && <>
               <span className={styles.compositionSep}> · </span>
               <span className={styles.compositionAmount}>{b.totalAmount} €</span>

@@ -52,8 +52,6 @@ export const TEAM: TeamMember[] = [
     tone: 'var(--ph-5)',
     group: 'actors',
   },
-
-  // ── Актёры молодёжного театра ──
   {
     name: 'Валерий Мухамедов',
     nameFR: 'Valery Mukhamedov',
@@ -62,6 +60,17 @@ export const TEAM: TeamMember[] = [
     tone: 'var(--ph-4)',
     group: 'actors',
   },
+  {
+    name: 'Светлана Шриги',
+    nameFR: 'Svetlana Shrigi',
+    role: 'Художник по костюмам · декоратор',
+    photo: 'Svetlana.webp',
+    tone: 'var(--ph-4)',
+    group: 'other',
+  },
+
+
+  // ── Актёры молодёжного театра ──
   {
     name: 'Артем Дурбала',
     nameFR: 'Artem Durbala',

@@ -20,6 +20,7 @@ export interface CheckinBooking {
   userEmail:     string;
   lang:          'RU' | 'FR';
   ticketsCount:  number;
+  seatsCount:    number;
   totalAmount:   number;
   status:        string;
   paymentStatus: string;

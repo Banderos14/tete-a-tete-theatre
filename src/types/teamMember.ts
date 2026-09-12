@@ -1,4 +1,4 @@
-export type TeamGroup = 'directors' | 'actors' | 'youth';
+export type TeamGroup = 'directors' | 'actors' | 'youth' | 'other';
 
 export interface TeamMember {
   name: string;

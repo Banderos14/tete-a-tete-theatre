@@ -70,15 +70,20 @@ export function isValidCancelReason(value: unknown): value is CancelReason {
   return typeof value === 'string' && (CANCEL_REASONS as readonly string[]).includes(value);
 }
 
-// Сколько билетов реально занято по списку броней спектакля.
-// Отменённые и протухшие не считаются; бронь без ticketsCount считается за один билет.
+// Сколько мест реально занято по списку броней спектакля.
+// У семейного пакета seatsCount больше ticketsCount; старые брони без
+// seatsCount продолжают считаться по ticketsCount.
 export function sumOccupiedTickets(
-  bookings: Array<BookingStateSnapshot & { ticketsCount?: number }>,
+  bookings: Array<BookingStateSnapshot & { ticketsCount?: number; seatsCount?: number }>,
 ): number {
   let total = 0;
   for (const b of bookings) {
     if (!occupiesCapacity(b)) continue;
-    total += typeof b.ticketsCount === 'number' && b.ticketsCount > 0 ? b.ticketsCount : 1;
+    total += typeof b.seatsCount === 'number' && b.seatsCount > 0
+      ? b.seatsCount
+      : typeof b.ticketsCount === 'number' && b.ticketsCount > 0
+        ? b.ticketsCount
+        : 1;
   }
   return total;
 }

@@ -80,21 +80,15 @@ export function BookingFormStep({
   const seatsLeftLabel = lang === 'FR'
     ? `Places restantes : ${seatsLeft}`
     : `Свободно мест: ${seatsLeft}`;
-  const soldOut = seatsLeft !== null && seatsLeft <= 0;
+  const soldOut = maxTickets <= 0;
   const showYearNumber = Number(show.year);
   const seasonLabel = Number.isFinite(showYearNumber)
     ? (lang === 'FR'
-        ? `SAISON ${showYearNumber - 1} / ${showYearNumber} · THÉÂTRE TÊTE-À-TÊTE · NICE`
-        : `СЕЗОН ${showYearNumber - 1} / ${showYearNumber} · THÉÂTRE TÊTE-À-TÊTE · NICE`)
+        ? `SAISON ${showYearNumber} / ${showYearNumber + 1} · THÉÂTRE TÊTE-À-TÊTE · NICE`
+        : `СЕЗОН ${showYearNumber} / ${showYearNumber + 1} · THÉÂTRE TÊTE-À-TÊTE · NICE`)
     : (lang === 'FR'
         ? 'SAISON · THÉÂTRE TÊTE-À-TÊTE · NICE'
         : 'СЕЗОН · THÉÂTRE TÊTE-À-TÊTE · NICE');
-
-  function ticketLabel(id: string | undefined) {
-    return id === 'standard' ? t.admin.ticketStandard
-         : id === 'student'  ? t.admin.ticketStudent
-         : (id ?? '');
-  }
 
   return (
     <form onSubmit={onSubmit} className={styles.formLayout} data-scroll-lock-allow="true">
@@ -127,7 +121,7 @@ export function BookingFormStep({
                 className={`${styles.ticketTypeBtn} ${activeTicket?.id === tt.id ? styles.ticketTypeActive : ''}`}
                 onClick={() => { onSelectedTicketChange(tt); onTicketsChange(1); }}>
                 <span className={`${styles.ttRadio} ${activeTicket?.id === tt.id ? styles.ttRadioActive : ''}`} />
-                <span className={styles.ttName}>{ticketLabel(tt.id)}</span>
+                <span className={styles.ttName}>{lang === 'FR' ? tt.labelFR : tt.label}</span>
                 <span className={styles.ttPrice}>{tt.price}&nbsp;€</span>
               </button>
             ))}

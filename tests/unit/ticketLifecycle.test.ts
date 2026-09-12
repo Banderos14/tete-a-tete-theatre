@@ -103,13 +103,13 @@ describe('повторный скан не пускает второй раз', 
 
 describe('групповая бронь: один QR — несколько человек', () => {
   it('сканеру видно, сколько людей проходит по коду', () => {
-    expect(scanScreen).toContain('ticketsCount');
+    expect(scanScreen).toContain('seatsCount');
     expect(scanScreen).toContain('Количество');
   });
 
   it('при двух и более билетах количество набирается крупно', () => {
     expect(scanScreen).toContain('cardValueCountMany');
-    expect(scanScreen).toMatch(/b\.ticketsCount > 1/);
+    expect(scanScreen).toMatch(/b\.seatsCount > 1/);
     expect(projectSource('src/pages/TicketCheckPage/TicketCheckPage.module.scss'))
       .toContain('.cardValueCountMany');
   });
@@ -117,6 +117,10 @@ describe('групповая бронь: один QR — несколько че
   it('групповая бронь занимает столько мест, сколько в ней билетов', () => {
     expect(sumOccupiedTickets([multiTicket(3)])).toBe(3);
     expect(sumOccupiedTickets([multiTicket(3), paidConfirmed()])).toBe(4);
+  });
+
+  it('семейный пакет занимает три места при одной единице тарифа', () => {
+    expect(sumOccupiedTickets([paidConfirmed({ ticketsCount: 1, seatsCount: 3 })])).toBe(3);
   });
 
   it('проход отмечается целиком на бронь — отдельных кодов на билет нет', () => {
@@ -250,7 +254,8 @@ describe('вместимость зала — 50 мест', () => {
     // Иначе зритель набирает больше билетов, чем примет /api/create-booking,
     // и узнаёт об этом общей ошибкой уже после отправки.
     const modal = projectSource('src/components/ui/BookingModal/BookingModal.tsx');
-    expect(modal).toMatch(/const maxTickets\s*=\s*Math\.min\(\s*\n?\s*MAX_TICKETS_PER_BOOKING/);
+    expect(modal).toContain('MAX_TICKETS_PER_BOOKING');
+    expect(modal).toContain('Math.floor(seatsLeft / seatsPerTicket)');
     expect(projectSource('server/booking/booking.validation.ts'))
       .toContain('ticketsCount > MAX_TICKETS_PER_BOOKING');
   });

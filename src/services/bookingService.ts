@@ -11,12 +11,13 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import type { Booking, BookingStatus, PaymentStatus } from '../types/booking';
+import type { TicketTypeId } from '../../shared/contracts/booking';
 
 // ── Server-side booking API ───────────────────────────────────────────────────
 
 export interface CreateBookingRequest {
   showId:        string;
-  ticketType:    'standard' | 'student';
+  ticketType:    TicketTypeId;
   ticketsCount:  number;
   paymentMethod: 'on_site' | 'bank_transfer';
   comment:       string;
@@ -249,4 +250,3 @@ export async function cancelBookingByUser(
     throw new Error(typeof data['error'] === 'string' ? data['error'] : `HTTP ${resp.status}`);
   }
 }
-

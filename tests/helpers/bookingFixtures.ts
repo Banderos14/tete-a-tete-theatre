@@ -10,6 +10,7 @@ export interface BookingFixture {
   paymentStatus:       string;
   paymentMethod:       string;
   ticketsCount:        number;
+  seatsCount?:         number;
   paymentExpiresAtMs?: number | null;
 }
 

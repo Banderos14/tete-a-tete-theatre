@@ -8,6 +8,7 @@ import { SHOWS } from '../../data/shows';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/booking';
 import { formatTimestamp, PAY_STATUS_LABELS } from './adminFormatting';
 import type { ConfirmAction, FilterShowId, FilterStatus } from './adminTypes';
+import { ticketTypeLabel } from '../../utils/ticketType';
 import styles from './AdminPage.module.scss';
 
 const PAY_STATUS_STYLE: Record<PaymentStatus, string> = {
@@ -54,7 +55,7 @@ function showGlyph(title: string): string {
 
 /** Итоги считаются и по каждому спектаклю, и по всем броням сразу. */
 function countTickets(list: Booking[]): number {
-  return list.reduce((sum, b) => sum + b.ticketsCount, 0);
+  return list.reduce((sum, b) => sum + (b.seatsCount ?? b.ticketsCount), 0);
 }
 
 /** Касса — только по оплаченным броням: остальные денег ещё не принесли. */
@@ -229,9 +230,10 @@ function BookingRow({ booking: b, isBusy, onConfirmAction }: {
       <td><a href={`mailto:${b.userEmail}`} className={styles.emailLink}>{b.userEmail}</a></td>
       <td className={styles.cellCenter}>
         {b.ticketsCount}
+        {b.seatsCount && b.seatsCount !== b.ticketsCount && <> / {b.seatsCount} мест</>}
         <br />
         <span className={styles.badge}>
-          {b.ticketType === 'student' ? t.admin.ticketStudent : t.admin.ticketStandard}
+          {ticketTypeLabel(b.ticketType, 'RU')}
         </span>
       </td>
       <td className={styles.cellCenter}>
