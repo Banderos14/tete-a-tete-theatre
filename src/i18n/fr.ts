@@ -24,15 +24,15 @@ export const FR: T = {
     scroll:      'Entrer dans la salle',
   },
   marquee: [
-    'Première 22.05', 'Tchekhov · Sérieusement ou pas',
-    '29.05 · Le Comte Nouline', 'Saison 2026/2027',
+    'Première 17.09', 'Tsvetaïeva · La Romanesque de la Fatalité',
+    '02.10 · Tchekhov · Sérieusement ou pas', 'Saison 2026/2027',
     'Réservations ouvertes', 'Nice · Rue Rossini',
   ],
   afisha: {
     num:     '01 / Affiche',
     title:   'Prochaines',
     titleIt: 'premières',
-    meta:    'Juin — Juillet\n2026',
+    meta:    'Septembre — Octobre\n2026',
     book:    'Réserver',
   },
   socials: {

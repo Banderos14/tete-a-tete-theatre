@@ -42,6 +42,25 @@ export interface Show {
   totalSeats: number;
 }
 
+// Заготовка сезона: дата с афиши уже зафиксирована, а материалов (постера,
+// фотографий, описания, цен) ещё нет. Такой спектакль нигде не рендерится —
+// он существует только чтобы дата жила в коде ровно в одном месте и совпадала
+// с серверным каталогом. Когда материалы придут, заготовка превращается в Show.
+export interface DraftShow {
+  id: string;
+  title: string;
+  titleFR: string;
+  // Подзаголовок с афиши: автор или жанр («Кукольный спектакль»).
+  subtitle: string;
+  subtitleFR: string;
+  day: string;
+  month: MonthKey;
+  time: string;
+  year: string;
+  // Всегда false: опубликованный спектакль описывается типом Show.
+  published: false;
+}
+
 export interface RepertoireItem {
   id: string;
   status: 'active' | 'past';

@@ -1,4 +1,4 @@
-import type { Show, RepertoireItem } from '../types';
+import type { Show, DraftShow, RepertoireItem } from '../types';
 import { parseShowStartUtcMs } from '../../shared/domain/showTime';
 
 // Спектакль уже начался? Время считается как настенное Europe/Paris —
@@ -39,7 +39,7 @@ export const SHOWS: Show[] = [
     titleFR: '«La Romanesque de la Fatalité»',
     author: 'Цветаева · Жизнь и творчество',
     authorFR: 'Tsvetaïeva · Vie et œuvre',
-    date: '14.06', day: '14', month: 'Июн', time: '19:00', year: '2026',
+    date: '17.09', day: '17', month: 'Сен', time: '20:00', year: '2026',
     age: '12+', price: 'от 15 €', priceFR: 'à partir de 15 €', duration: '60 мин', durationFR: '60 min',
     desc:   'Литературно-музыкальный спектакль по мотивам биографии Марины Цветаевой — история о жизни, судьбе и творчестве одной из самых сильных и трагических фигур русской поэзии.',
     descFR: "Spectacle littéraire et musical inspiré de la biographie de Marina Tsvetaïeva — l'histoire de la vie, du destin et de l'œuvre de l'une des figures les plus marquantes et les plus tragiques de la poésie russe.",
@@ -62,7 +62,7 @@ export const SHOWS: Show[] = [
     titleFR: '«Sérieusement ou pas»',
     author: 'А. П. Чехов · Две комедии',
     authorFR: 'A. P. Tchekhov · Deux comédies',
-    date: '28.06', day: '28', month: 'Июн', time: '20:00', year: '2026',
+    date: '02.10', day: '02', month: 'Окт', time: '20:00', year: '2026',
     age: '12+', price: 'от 15 €', priceFR: 'à partir de 15 €', duration: '1 ч 10 мин', durationFR: '1 h 10 min',
     desc:   'Две одноактные комедии Чехова — «Юбилей» и «Предложение». О спорах, нервах, любви и о том, как смешно мы выглядим, когда серьёзны.',
     descFR: 'Deux comédies en un acte de Tchekhov — «L\'Anniversaire» et «La Demande en mariage». Sur les disputes, les nerfs, l\'amour et à quel point nous sommes comiques quand nous nous prenons au sérieux.',
@@ -81,35 +81,11 @@ export const SHOWS: Show[] = [
       { id: 'student',  label: 'Студенческий', price: 10, available: 12 },
     ],
   },
-  {
-    id: 'nulin',
-    title: '«Граф Нулин»',
-    titleFR: '«Le Comte Nouline»',
-    author: 'А. С. Пушкин · Поэма-комедия',
-    authorFR: 'A. S. Pouchkine · Poème-comédie',
-    date: '12.07', day: '12', month: 'Июл', time: '20:00', year: '2026',
-    age: '12+', price: 'от 30 €', priceFR: 'à partir de 30 €', duration: '1 ч 10 мин (с антрактом)', durationFR: '1 h 10 min (avec entracte)',
-    desc:   'Остроумная и изящная поэма, где смешное и лирическое переплетаются так же легко, как строки А. С. Пушкина. История о случайной встрече, нарушившей привычный порядок провинциальной усадьбы. Молодой граф Нулин оказывается в доме Натальи Павловны в отсутствие её супруга — и обычный вечер превращается в тонкую игру характеров, взглядов и намерений. На сцене оживает атмосфера русской усадьбы XIX века: светские манеры, игра характеров и лёгкость поэтического слова.',
-    descFR: "Un poème plein d'esprit et d'élégance, où le comique et le lyrique s'entremêlent avec autant de légèreté que les vers d'A. S. Pouchkine. L'histoire d'une rencontre fortuite qui a bouleversé l'ordre habituel d'un domaine provincial. Le jeune comte Nouline se retrouve chez Natalia Pavlovna en l'absence de son époux — et une soirée ordinaire se transforme en un jeu subtil de caractères, de regards et d'intentions. L'atmosphère d'un manoir russe du XIXe siècle prend vie sur scène : manières mondaines, jeu des caractères et légèreté de la parole poétique.",
-    palette: 'var(--ph-1)',
-    image: showImage('nulin.webp'),
-    photos: [
-      { src: showPhoto('nulin1.webp'), position: 'center 30%', mobileScale: 1},
-      { src: showPhoto('nulin2.webp'), position: 'center 40%', mobileScale: 1},
-      { src: showPhoto('nulin3.webp'), position: 'center 35%', mobileScale: 1},
-      { src: showPhoto('nulin4.webp'), position: 'center 40%', mobileScale: 1},
-      { src: showPhoto('nulin5.webp'), position: 'center 40%', mobileScale: 1},
-    ],
-    totalSeats: 50,
-    ticketTypes: [
-      { id: 'standard', label: 'Стандарт', price: 30, available: 45 },
-      { id: 'student',  label: 'Студенческий', price: 20, available: 10 },
-    ],
-  },
 ];
 
 export const REPERTOIRE: RepertoireItem[] = [
-  // ── Активные — есть в SHOWS, отображаются с датой и кнопкой «Купить билет» ──
+  // ── Активные — постановка идёт в этом сезоне. Дата и кнопка «Купить билет»
+  //    появляются, только если спектакль есть в SHOWS; иначе карточка пишет «скоро».
   {
     id: 'romantika', status: 'active',
     title: '«Романтика обреченности»',
@@ -138,7 +114,22 @@ export const REPERTOIRE: RepertoireItem[] = [
     duration: '1 ч 10 мин', durationFR: '1 h 10 min',
   },
   {
-    id: 'nulin', status: 'active',
+    id: 'lubov', status: 'active',
+    title: '«Счастливая любовь»',
+    titleFR: '«Un amour heureux»',
+    author: 'А. Аверченко и Н. Тэффи',
+    authorFR: 'A. Averchenko et N. Teffi',
+    tag: 'Комедия', age: '0+',
+    palette: 'var(--ph-1)',
+    image: showImage('lubov.webp'),
+    description: 'По рассказам А.Аверченко и Н. Тэффи. Пять новелл о любви',
+    descriptionFR: "D'après les récits d'A. Averchenko et de N. Teffi. Cinq nouvelles sur l'amour",
+    duration: '90 мин', durationFR: '90 min',
+  },
+
+  // ── Прошедшие — нет в SHOWS, кнопки «Купить билет» не будет ── status: 'past'
+  {
+    id: 'nulin', status: 'past',
     title: '«Граф Нулин»',
     titleFR: '«Le Comte Nouline»',
     author: 'А. С. Пушкин',
@@ -151,19 +142,81 @@ export const REPERTOIRE: RepertoireItem[] = [
     descriptionFR: "Un poème léger et plein d'esprit. Le comique et le lyrique s'entrelacent comme les vers de Pouchkine. Une soirée pour ceux qui aiment les mots.",
     duration: '1 ч 10 мин (с антрактом)', durationFR: '1 h 10 min (avec entracte)',
   },
+];
 
-  // ── Прошедшие — нет в SHOWS, кнопки «Купить билет» не будет ── status: 'past'
+// Заготовки осенней афиши 2026 — спектакли, у которых уже есть дата, но ещё
+// нет постера, фотографий, описания и цен. Они намеренно НЕ рендерятся: ни в
+// Афише, ни в Репертуаре, ни в админке. Массив существует ради одного —
+// дата хранится в коде рядом с остальным расписанием и совпадает с
+// DRAFT_SHOWS серверного каталога (сверяется tests/unit/pastShows.test.ts).
+//
+// Чтобы опубликовать спектакль: добавить материалы в public/images/shows,
+// перенести запись в SHOWS с ticketTypes и описанием, завести карточку в
+// REPERTOIRE и поднять published в true в shared/catalog/shows.ts.
+export const DRAFT_SHOWS: DraftShow[] = [
   {
-    id: 'lubov', status: 'past',
+    id: 'korablik',
+    title: '«Приключения кораблика»',
+    titleFR: '«Les Aventures du petit bateau»',
+    subtitle: 'Кукольный спектакль',
+    subtitleFR: 'Spectacle de marionnettes',
+    day: '04', month: 'Окт', time: '10:00', year: '2026',
+    published: false,
+  },
+  {
+    id: 'razgovor',
+    title: '«Разговор, которого не было»',
+    titleFR: '«La conversation qui n\'a pas eu lieu»',
+    subtitle: 'Трагикомедия',
+    subtitleFR: 'Tragicomédie',
+    day: '16', month: 'Окт', time: '20:00', year: '2026',
+    published: false,
+  },
+  {
+    id: 'enot',
+    title: '«Крошка Енот»',
+    titleFR: '«Le Petit Raton laveur»',
+    subtitle: 'Кукольный спектакль',
+    subtitleFR: 'Spectacle de marionnettes',
+    day: '18', month: 'Окт', time: '10:00', year: '2026',
+    published: false,
+  },
+  {
+    // Постановка уже есть в REPERTOIRE (фото и описание на месте) —
+    // не хватает только цен, поэтому в Афишу она пока не выходит.
+    id: 'lubov',
     title: '«Счастливая любовь»',
     titleFR: '«Un amour heureux»',
-    author: 'А. Аверченко и Н. Тэффи',
-    authorFR: 'A. Averchenko et N. Teffi',
-    tag: 'Комедия', age: '0+',
-    palette: 'var(--ph-1)',
-    image: showImage('lubov.webp'),
-    description: 'По рассказам А.Аверченко и Н. Тэффи. Пять новелл о любви',
-    descriptionFR: "D'après les récits d'A. Averchenko et de N. Teffi. Cinq nouvelles sur l'amour",
-    duration: '90 мин', durationFR: '90 min',
+    subtitle: 'А. Аверченко и Н. Тэффи · Пять новелл о любви',
+    subtitleFR: 'A. Averchenko et N. Teffi · Cinq nouvelles sur l\'amour',
+    day: '14', month: 'Ноя', time: '19:00', year: '2026',
+    published: false,
+  },
+  {
+    id: 'shapochka',
+    title: '«Красная Шапочка»',
+    titleFR: '«Le Petit Chaperon rouge»',
+    subtitle: 'Кукольный спектакль',
+    subtitleFR: 'Spectacle de marionnettes',
+    day: '15', month: 'Ноя', time: '10:00', year: '2026',
+    published: false,
+  },
+  {
+    id: 'letuchiy',
+    title: '«Летучий корабль»',
+    titleFR: '«Le Vaisseau volant»',
+    subtitle: 'Музыкальный спектакль',
+    subtitleFR: 'Spectacle musical',
+    day: '22', month: 'Ноя', time: '19:00', year: '2026',
+    published: false,
+  },
+  {
+    id: 'kovcheg',
+    title: '«У ковчега в восемь»',
+    titleFR: '«À l\'arche à huit heures»',
+    subtitle: 'У. Хуб · Музыкальный спектакль',
+    subtitleFR: 'U. Hub · Spectacle musical',
+    day: '28', month: 'Ноя', time: '19:00', year: '2026',
+    published: false,
   },
 ];

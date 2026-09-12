@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { SHOWS, showStartUtcMs, showDateString } from '../../shared/catalog/shows.js';
+import { SHOWS, DRAFT_SHOWS, SEASON_CATALOG, showStartUtcMs, showDateString } from '../../shared/catalog/shows.js';
 import { parseShowStartUtcMs } from '../../shared/domain/showTime.js';
 import { projectSource } from '../helpers/serverSource.js';
 
@@ -63,6 +63,61 @@ describe('расписание клиента и сервера совпадае
     const bookable = ids.filter(id => frontend.includes(`ticketTypes:`) && Object.keys(SHOWS).includes(id));
     expect(bookable.length).toBeGreaterThan(0);
     for (const id of Object.keys(SHOWS)) expect(ids).toContain(id);
+  });
+});
+
+// Заготовки сезона продублированы так же, как и опубликованные спектакли,
+// поэтому расходиться им нельзя: дата в двух файлах — два разных расписания.
+describe('заготовки сезона: даты клиента и сервера совпадают', () => {
+  const frontend = readFileSync(resolve(ROOT, 'src/data/shows.ts'), 'utf8');
+  // Ищем только внутри DRAFT_SHOWS: id вроде 'lubov' встречается ещё и в
+  // REPERTOIRE, и поиск по всему файлу нашёл бы не тот блок.
+  const drafts = frontend.slice(frontend.indexOf('export const DRAFT_SHOWS'));
+
+  it('у каждой серверной заготовки тот же день, месяц, год и время во фронтенде', () => {
+    for (const [id, show] of Object.entries(DRAFT_SHOWS)) {
+      const block = drafts.slice(drafts.indexOf(`id: '${id}'`));
+      const end   = block.indexOf('\n  },\n');
+      const chunk = block.slice(0, end > 0 ? end : 1000);
+
+      expect(chunk, `${id}: дата`).toContain(
+        `day: '${show.day}', month: '${show.month}', time: '${show.time}', year: '${show.year}'`,
+      );
+      expect(chunk, `${id}: признак черновика`).toContain('published: false');
+    }
+  });
+
+  it('состав заготовок совпадает с фронтендом', () => {
+    const ids = [...drafts.matchAll(/^\s{4}id: '([a-z]+)',$/gm)].map(m => m[1]!);
+    expect(ids.sort()).toEqual(Object.keys(DRAFT_SHOWS).sort());
+  });
+
+  it('заготовку нельзя забронировать: её нет ни в SHOWS, ни в остатке мест', () => {
+    for (const id of Object.keys(DRAFT_SHOWS)) {
+      expect(Object.hasOwn(SHOWS, id), `${id} не должен быть бронируемым`).toBe(false);
+    }
+    // validateCreateBooking пускает дальше только то, что лежит в SHOWS.
+    expect(projectSource('server/booking/booking.validation.ts'))
+      .toContain('!Object.hasOwn(SHOWS, showId)');
+  });
+
+  it('у заготовки нет цен — продавать по ней нечего', () => {
+    for (const [id, show] of Object.entries(DRAFT_SHOWS)) {
+      expect(Object.keys(show.tickets), `${id}: типы билетов`).toHaveLength(0);
+    }
+  });
+
+  it('SHOWS и DRAFT_SHOWS вместе дают весь сезон и не пересекаются', () => {
+    expect([...Object.keys(SHOWS), ...Object.keys(DRAFT_SHOWS)].sort())
+      .toEqual(Object.keys(SEASON_CATALOG).sort());
+    for (const id of Object.keys(SHOWS)) expect(DRAFT_SHOWS).not.toHaveProperty(id);
+  });
+
+  it('заготовка не показывается зрителю — ни в Афише, ни в Репертуаре', () => {
+    expect(projectSource('src/pages/HomePage/sections/Afisha/AfishaSlider.tsx'))
+      .not.toContain('DRAFT_SHOWS');
+    expect(projectSource('src/pages/HomePage/sections/Repertoire/Repertoire.tsx'))
+      .not.toContain('DRAFT_SHOWS');
   });
 });
 
