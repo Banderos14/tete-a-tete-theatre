@@ -8,6 +8,7 @@ import type { Booking, BookingStatus } from '../../../types/booking';
 import { cancelBookingByUser, hoursUntilExpiry } from '../../../services/bookingService';
 import { computedIsAttended } from '../../../services/attendanceService';
 import { parseShowStartUtcMs } from '../../../../shared/domain/showTime';
+import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant, type StubVariant } from '../../../utils/ticketStub';
 import { StampBadge } from '../TicketCard';
@@ -138,7 +139,7 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
         <div className={styles.bookingCardContent}>
           {/* Row 1: title + stamp */}
           <div className={styles.bookingCardTop}>
-            <span className={styles.bookingShowTitle}>{b.showTitle}</span>
+            <span className={styles.bookingShowTitle}>{localizedShowTitle(b, lang)}</span>
             <StampBadge booking={b} isFR={isFR} />
           </div>
 

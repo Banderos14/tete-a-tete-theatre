@@ -3,16 +3,19 @@
 import { getPaymentAccount, normalizeIban } from '../../../config/payment';
 import { escapeEmailHtml, localeDate, wrapHtml, infoTable, codeBlock, noteBlock,
          THEATRE_NAME, THEATRE_ADDRESS, THEATRE_EMAIL, THEATRE_PHONE, PAY_REF_PREFIX } from '../layout';
+import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import type { BookingEmailData } from '../types';
 
 export function buildConfirmationEmail(data: BookingEmailData): { subject: string; html: string; text: string } {
   const isRU           = data.lang === 'RU';
   const isBankTransfer = data.paymentMethod === 'bank_transfer';
   const dateStr        = localeDate(data.showDate, data.lang);
+  // Во французском письме должно стоять французское название спектакля.
+  const showTitle      = localizedShowTitle(data, data.lang);
 
   const subject = isRU
-    ? `${THEATRE_NAME} — бронирование принято: ${data.showTitle}`
-    : `${THEATRE_NAME} — réservation reçue : ${data.showTitle}`;
+    ? `${THEATRE_NAME} — бронирование принято: ${showTitle}`
+    : `${THEATRE_NAME} — réservation reçue : ${showTitle}`;
 
   const headerTitle = isRU ? 'Бронирование принято' : 'Réservation reçue';
   const greeting    = isRU
@@ -47,13 +50,13 @@ export function buildConfirmationEmail(data: BookingEmailData): { subject: strin
 
   const rows: [string, string][] = isRU ? [
     ['Зритель',   escapeEmailHtml(data.userName)],
-    ['Спектакль', data.showTitle],
+    ['Спектакль', showTitle],
     ['Дата',      `${dateStr} · ${data.showTime}`],
     ['Билеты',    `${data.ticketsCount} шт.`],
     ...amountRows,
   ] : [
     ['Spectateur', escapeEmailHtml(data.userName)],
-    ['Spectacle',  data.showTitle],
+    ['Spectacle',  showTitle],
     ['Date',       `${dateStr} · ${data.showTime}`],
     ['Billets',    `${data.ticketsCount} billet${data.ticketsCount > 1 ? 's' : ''}`],
     ...amountRows,
@@ -147,7 +150,7 @@ export function buildConfirmationEmail(data: BookingEmailData): { subject: strin
         `Здравствуйте, ${data.userName}!`,
         'Ваше бронирование принято.',
         '',
-        `Спектакль: ${data.showTitle}`,
+        `Спектакль: ${showTitle}`,
         `Дата: ${dateStr} · ${data.showTime}`,
         `Билеты: ${data.ticketsCount} шт.`,
         `Сумма: ${data.totalAmount} €`,
@@ -165,7 +168,7 @@ export function buildConfirmationEmail(data: BookingEmailData): { subject: strin
         `Bonjour, ${data.userName} !`,
         'Merci pour votre réservation. Votre réservation est reçue.',
         '',
-        `Spectacle : ${data.showTitle}`,
+        `Spectacle : ${showTitle}`,
         `Date : ${dateStr} · ${data.showTime}`,
         `Billets : ${data.ticketsCount}`,
         `Montant : ${data.totalAmount} €`,

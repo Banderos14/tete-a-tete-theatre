@@ -4,6 +4,7 @@ import { generateTicketPdf } from '../../../services/ticketPdfService';
 import { useLang } from '../../../i18n/LangContext';
 import type { Booking } from '../../../types/booking';
 import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant } from '../../../utils/ticketStub';
+import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import styles from './TicketCard.module.scss';
 
 interface Props {
@@ -105,7 +106,7 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
         <div className={styles.headerContent}>
           {/* Row 1: title + stamp */}
           <div className={styles.headerRow1}>
-            <p className={styles.showTitle}>{b.showTitle}</p>
+            <p className={styles.showTitle}>{localizedShowTitle(b, lang)}</p>
             <StampBadge booking={b} isFR={isFR} />
           </div>
 

@@ -1,5 +1,6 @@
 import type { Booking } from '../types/booking';
 import { isSfntFontBinary, isPlausibleFontContentType } from '../utils/fontBinary';
+import { localizedShowTitle } from '../../shared/catalog/showTitle';
 
 // Транслитерация кириллицы → латиница — запасной вариант, если кирилличные шрифты не загрузились.
 const CYR: Record<string, string> = {
@@ -180,7 +181,7 @@ export async function generateTicketPdf(
 
   // Название спектакля: Ekaterina Two для театрального вида,
   // фоллбек — Helvetica bold + транслит.
-  const rawTitle = booking.showTitle || 'Spectacle';
+  const rawTitle = localizedShowTitle(booking, lang) || 'Spectacle';
   doc.setTextColor(28, 24, 22);
   if (hasDecorFont) {
     doc.setFont(DECOR_ID, 'normal');

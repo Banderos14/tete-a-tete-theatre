@@ -93,6 +93,7 @@ export function useTicketCheck(user: User | null, initialState: ScanState): Tick
           void sendPaymentPaidEmail({
             userEmail:     b.userEmail,
             userName:      b.userName,
+            showId:        b.showId,
             showTitle:     b.showTitle,
             showDate:      b.showDate,
             showTime:      b.showTime,

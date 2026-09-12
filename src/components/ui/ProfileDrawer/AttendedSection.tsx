@@ -3,6 +3,7 @@
 // различается только заголовок, поэтому раздел один и принимает title.
 
 import { useLang } from '../../../i18n/LangContext';
+import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import type { T } from '../../../i18n/translations';
 import type { Booking } from '../../../types/booking';
 import { VisitCounter } from './VisitCounter';
@@ -51,8 +52,8 @@ export function AttendedSection({ title, bookings, attendedBookings, loading, t 
 function AttendedRow({ group, stampAngle }: { group: GroupedShow; stampAngle: number }) {
   const { lang } = useLang();
   const isFR = lang === 'FR';
-  const { show, showTitle, count, lastDate, lastTime } = group;
-  const title = show ? (isFR && show.titleFR ? show.titleFR : show.title) : showTitle;
+  const { show, showId, showTitle, count, lastDate, lastTime } = group;
+  const title = localizedShowTitle({ showId, showTitle }, lang);
   const thumbBg = show?.palette ?? '#2a1f1a';
   const thumbGlyph = showInitials(title);
   const repeatText = count > 1

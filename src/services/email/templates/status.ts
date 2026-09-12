@@ -2,35 +2,37 @@
 
 import { escapeEmailHtml, localeDate, wrapHtml, infoTable, codeBlock, noteBlock,
          THEATRE_NAME, THEATRE_ADDRESS, THEATRE_EMAIL, THEATRE_PHONE, THEATRE_MAPS } from '../layout';
+import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import type { BookingStatusEmailData } from '../types';
 
 export function buildStatusEmail(data: BookingStatusEmailData): { subject: string; html: string; text: string } {
   const isRU    = data.lang === 'RU';
   const dateStr = localeDate(data.showDate, data.lang);
+  const showTitle = localizedShowTitle(data, data.lang);
 
   const STATUS_COPY: Record<
     BookingStatusEmailData['newStatus'],
     { subjectRU: string; subjectFR: string; headerRU: string; headerFR: string; noteRU: string; noteFR: string }
   > = {
     confirmed: {
-      subjectRU: `Бронирование подтверждено: ${data.showTitle}`,
-      subjectFR: `Réservation confirmée : ${data.showTitle}`,
+      subjectRU: `Бронирование подтверждено: ${showTitle}`,
+      subjectFR: `Réservation confirmée : ${showTitle}`,
       headerRU:  'Бронирование подтверждено',
       headerFR:  'Réservation confirmée',
       noteRU:    'Ваше место зарезервировано. Приходите за 15 минут до начала.',
       noteFR:    'Votre place est réservée. Venez 15 minutes avant le début du spectacle.',
     },
     cancelled: {
-      subjectRU: `Бронирование отменено: ${data.showTitle}`,
-      subjectFR: `Réservation annulée : ${data.showTitle}`,
+      subjectRU: `Бронирование отменено: ${showTitle}`,
+      subjectFR: `Réservation annulée : ${showTitle}`,
       headerRU:  'Бронирование отменено',
       headerFR:  'Réservation annulée',
       noteRU:    'Если у вас есть вопросы, напишите нам.',
       noteFR:    'Nous espérons vous revoir bientôt. Pour toute question, n\'hésitez pas à nous contacter.',
     },
     attended: {
-      subjectRU: `Спасибо за визит: ${data.showTitle}`,
-      subjectFR: `Merci de votre visite : ${data.showTitle}`,
+      subjectRU: `Спасибо за визит: ${showTitle}`,
+      subjectFR: `Merci de votre visite : ${showTitle}`,
       headerRU:  'Спасибо, что были с нами!',
       headerFR:  'Merci d\'avoir été avec nous !',
       noteRU:    'Будем рады видеть вас снова. Следите за нашей афишей.',
@@ -46,11 +48,11 @@ export function buildStatusEmail(data: BookingStatusEmailData): { subject: strin
   const ticketLabel = isRU ? 'Код брони' : 'Code de réservation';
 
   const rows: [string, string][] = isRU ? [
-    ['Спектакль', data.showTitle],
+    ['Спектакль', showTitle],
     ['Дата',      `${dateStr} · ${data.showTime}`],
     ['Билеты',    `${data.ticketsCount} шт.`],
   ] : [
-    ['Spectacle', data.showTitle],
+    ['Spectacle', showTitle],
     ['Date',      `${dateStr} · ${data.showTime}`],
     ['Billets',   `${data.ticketsCount} billet${data.ticketsCount > 1 ? 's' : ''}`],
   ];
@@ -70,7 +72,7 @@ export function buildStatusEmail(data: BookingStatusEmailData): { subject: strin
     THEATRE_NAME, '',
     isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName} !`,
     isRU ? header : header, '',
-    isRU ? `Спектакль: ${data.showTitle}` : `Spectacle : ${data.showTitle}`,
+    isRU ? `Спектакль: ${showTitle}` : `Spectacle : ${showTitle}`,
     isRU ? `Дата: ${dateStr} · ${data.showTime}` : `Date : ${dateStr} · ${data.showTime}`,
     isRU ? `Код брони: ${data.ticketCode}` : `Code : ${data.ticketCode}`,
     '', note, '',

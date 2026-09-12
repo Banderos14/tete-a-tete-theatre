@@ -5,6 +5,8 @@ import type { BookingStatus } from '../../types/booking';
 export interface BookingEmailData {
   userEmail:        string;
   userName:         string;
+  /** Локализация названия идёт по showId — FR-перевод живёт в каталоге, а не в брони. */
+  showId?:          string;
   showTitle:        string;
   showTitleFR?:     string;
   showDate:         string;
@@ -24,6 +26,7 @@ export interface BookingEmailData {
 export interface BookingStatusEmailData {
   userEmail:    string;
   userName:     string;
+  showId?:      string;
   showTitle:    string;
   showDate:     string;
   showTime:     string;
@@ -37,6 +40,7 @@ export interface BookingStatusEmailData {
 export interface PaymentPaidEmailData {
   userEmail:     string;
   userName:      string;
+  showId?:       string;
   showTitle:     string;
   showDate:      string;
   showTime:      string;

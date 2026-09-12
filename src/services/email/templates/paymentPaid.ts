@@ -2,16 +2,18 @@
 
 import { escapeEmailHtml, localeDate, wrapHtml, infoTable, codeBlock, noteBlock,
          THEATRE_NAME, THEATRE_ADDRESS, THEATRE_EMAIL, THEATRE_PHONE, THEATRE_MAPS } from '../layout';
+import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import type { PaymentPaidEmailData } from '../types';
 
 export function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: string; html: string; text: string } {
   const isRU               = data.lang === 'RU';
   const isAlreadyConfirmed = data.bookingStatus === 'confirmed';
   const dateStr            = localeDate(data.showDate, data.lang);
+  const showTitle          = localizedShowTitle(data, data.lang);
 
   const subject = isRU
-    ? `${THEATRE_NAME} — оплата получена: ${data.showTitle}`
-    : `${THEATRE_NAME} — paiement reçu · votre place est confirmée : ${data.showTitle}`;
+    ? `${THEATRE_NAME} — оплата получена: ${showTitle}`
+    : `${THEATRE_NAME} — paiement reçu · votre place est confirmée : ${showTitle}`;
 
   const headerTitle = isRU ? 'Оплата получена' : 'Paiement reçu';
   const greeting    = isRU ? `Здравствуйте, ${escapeEmailHtml(data.userName)}!` : `Bonjour, ${escapeEmailHtml(data.userName)}&nbsp;!`;
@@ -26,12 +28,12 @@ export function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: st
         : 'Votre réservation est en attente de confirmation. Nous vous contacterons prochainement.');
 
   const rows: [string, string][] = isRU ? [
-    ['Спектакль', data.showTitle],
+    ['Спектакль', showTitle],
     ['Дата',      `${dateStr} · ${data.showTime}`],
     ['Билеты',    `${data.ticketsCount} шт.`],
     ['Сумма',     `${data.totalAmount}&nbsp;€`],
   ] : [
-    ['Spectacle', data.showTitle],
+    ['Spectacle', showTitle],
     ['Date',      `${dateStr} · ${data.showTime}`],
     ['Billets',   `${data.ticketsCount} billet${data.ticketsCount > 1 ? 's' : ''}`],
     ['Montant',   `${data.totalAmount}&nbsp;€`],
@@ -53,7 +55,7 @@ export function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: st
     isRU ? `Здравствуйте, ${data.userName}!` : `Bonjour, ${data.userName} !`,
     isRU ? 'Мы получили вашу оплату.' : 'Nous avons reçu votre paiement.',
     '',
-    isRU ? `Спектакль: ${data.showTitle}` : `Spectacle : ${data.showTitle}`,
+    isRU ? `Спектакль: ${showTitle}` : `Spectacle : ${showTitle}`,
     isRU ? `Дата: ${dateStr} · ${data.showTime}` : `Date : ${dateStr} · ${data.showTime}`,
     isRU ? `Сумма: ${data.totalAmount} €` : `Montant : ${data.totalAmount} €`,
     isRU ? `Код брони: ${data.ticketCode}` : `Code : ${data.ticketCode}`,

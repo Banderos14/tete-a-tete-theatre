@@ -105,6 +105,7 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
         sendBookingStatusUpdateEmail({
           userEmail:    booking.userEmail,
           userName:     booking.userName,
+          showId:       booking.showId,
           showTitle:    booking.showTitle,
           showDate:     booking.showDate,
           showTime:     booking.showTime,
@@ -135,6 +136,7 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
         sendPaymentPaidEmail({
           userEmail:     booking.userEmail,
           userName:      booking.userName,
+          showId:        booking.showId,
           showTitle:     booking.showTitle,
           showDate:      booking.showDate,
           showTime:      booking.showTime,

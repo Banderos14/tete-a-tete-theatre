@@ -237,6 +237,7 @@ export function BookingModal({ show, onClose }: Props) {
       sendBookingConfirmationEmail({
         userEmail:        userEmail,
         userName,
+        showId:           show.id,
         showTitle:        show.title,
         showTitleFR:      show.titleFR,
         showDate:         result.showDate,
