@@ -11,6 +11,12 @@
     <link rel="preload" href="/fonts/bad-russian.woff2"          as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/ekaterinavelikayatwo.woff2" as="font" type="font/woff2" crossorigin />
 
+    <!-- Great Vibes — display-шрифт французской версии (html[lang='fr'] ниже).
+         Единственный шрифт проекта не из /public/fonts: остальные самохостятся. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet" />
+
     <!-- Critical inline CSS: registers @font-face and :root variables immediately,
          so the page has correct colours/fonts from first paint even while the
          main CSS bundle (index-*.css) is still downloading on a cold cache. -->
@@ -41,8 +47,8 @@
         --line:rgba(26,23,21,.10);--line-strong:rgba(26,23,21,.22);
         --grain-opacity:.03;
       }
-      /* FR: Bad Russian не содержит французских акцентов — весь display-шрифт Forum */
-      html[lang='fr']{--font-display:"Forum",serif;--font-display-spacing:.02em}
+      /* FR: Bad Russian не содержит французских акцентов — весь display-шрифт Great Vibes */
+      html[lang='fr']{--font-display:"Great Vibes",cursive;--font-display-spacing:.02em}
       *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
       html,body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
     </style>

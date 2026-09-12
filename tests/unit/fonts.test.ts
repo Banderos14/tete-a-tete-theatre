@@ -45,9 +45,22 @@ describe('CSS-переменные шрифтов', () => {
     expect(indexHtml).toContain('--font-display:"Bad Russian","Forum",serif');
   });
 
-  it('во французской версии display-шрифт полностью заменён на Forum', () => {
-    expect(variables).toMatch(/html\[lang='fr'\][\s\S]*--font-display:\s*"Forum",\s*serif/);
-    expect(indexHtml).toContain("html[lang='fr']{--font-display:\"Forum\",serif");
+  it('во французской версии display-шрифт полностью заменён на Great Vibes', () => {
+    expect(variables).toMatch(/html\[lang='fr'\][\s\S]*--font-display:\s*"Great Vibes",\s*cursive/);
+    expect(indexHtml).toContain("html[lang='fr']{--font-display:\"Great Vibes\",cursive");
+  });
+
+  it('Great Vibes подключён ровно один раз и только в index.html', () => {
+    expect(indexHtml).toContain('fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+    expect(indexHtml.match(/family=Great\+Vibes/g)).toHaveLength(1);
+    expect(indexHtml).toContain('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />');
+  });
+
+  it('--font-title остаётся Forum в обоих языках — это не декоративный шрифт', () => {
+    // Forum здесь самостоятельный шрифт заголовков, а не подмена Bad Russian
+    // для FR. Локального переопределения у него нет ни в одном языке.
+    expect(variables).toMatch(/--font-title:\s*"Forum",\s*sans-serif/);
+    expect(variables.slice(variables.indexOf("html[lang='fr']"))).not.toContain('--font-title');
   });
 
   it('FR-правило есть и в критическом инлайновом CSS — первый кадр уже верный', () => {
