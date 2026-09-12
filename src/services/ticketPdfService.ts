@@ -91,6 +91,74 @@ async function loadFontBase64(path: string): Promise<string | null> {
   }
 }
 
+// ── Доставка готового PDF пользователю ───────────────────────────────────────
+//
+// Диагноз проблемы на телефоне: jsPDF.save() делает ровно одно — клик по
+// скрытой <a download>. Safari на iOS атрибут download игнорирует, поэтому
+// вместо сохранения открывался системный просмотр PDF, и зритель не понимал,
+// куда делся файл.
+//
+// Лечение — по ВОЗМОЖНОСТЯМ браузера, а не по User-Agent: если доступен
+// Web Share с файлами, отдаём файл в системный лист «Поделиться», где есть
+// «Сохранить в Файлы», AirDrop и почта. Где его нет (весь desktop) —
+// прежняя загрузка через Blob URL.
+
+// Navigator.share / canShare объявлены в lib.dom как обязательные, но в реальных
+// браузерах их может не быть вовсе — поэтому обращаемся через необязательный вид.
+type ShareCapableNavigator = {
+  canShare?: (data?: ShareData) => boolean;
+  share?:    (data?: ShareData) => Promise<void>;
+};
+
+const shareApi = (): ShareCapableNavigator =>
+  (typeof navigator === 'undefined' ? {} : navigator) as ShareCapableNavigator;
+
+/** Умеет ли браузер отдать файл в системный лист «Поделиться». */
+export function canShareFiles(): boolean {
+  if (typeof File === 'undefined') return false;
+  const nav = shareApi();
+  if (typeof nav.share !== 'function' || typeof nav.canShare !== 'function') return false;
+
+  // canShare обязан проверяться именно с файлом: Android-браузеры объявляют
+  // navigator.share, но файлы принимают не все.
+  try {
+    return nav.canShare({ files: [new File([new Blob()], 'probe.pdf', { type: 'application/pdf' })] });
+  } catch {
+    return false;
+  }
+}
+
+function downloadBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Отзываем не сразу: часть браузеров читает Blob уже после клика.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+async function deliverPdf(blob: Blob, fileName: string): Promise<void> {
+  if (canShareFiles()) {
+    try {
+      await shareApi().share!({
+        files: [new File([blob], fileName, { type: 'application/pdf' })],
+        title: fileName,
+      });
+      return;
+    } catch (err) {
+      // Пользователь закрыл системный лист — это не ошибка, и подсовывать
+      // ему вместо этого молчаливую загрузку не надо.
+      if ((err as { name?: string })?.name === 'AbortError') return;
+      // Любой другой сбой — падаем на обычную загрузку.
+    }
+  }
+  downloadBlob(blob, fileName);
+}
+
 export async function generateTicketPdf(
   booking: Booking,
   qrDataUrl: string,
@@ -269,5 +337,5 @@ export async function generateTicketPdf(
   else H('italic');
   doc.text(L.footer, W / 2, y, { align: 'center' });
 
-  doc.save(`ticket-${booking.ticketCode}.pdf`);
+  await deliverPdf(doc.output('blob'), `ticket-${booking.ticketCode}.pdf`);
 }

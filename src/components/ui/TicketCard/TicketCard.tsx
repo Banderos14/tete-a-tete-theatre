@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { generateTicketQR } from '../../../services/qrService';
-import { generateTicketPdf } from '../../../services/ticketPdfService';
+import { generateTicketPdf, canShareFiles } from '../../../services/ticketPdfService';
 import { useLang } from '../../../i18n/LangContext';
 import type { Booking } from '../../../types/booking';
 import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant } from '../../../utils/ticketStub';
@@ -36,6 +36,12 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
   }
 
   const isFR       = lang === 'FR';
+  // Где PDF уходит в системный лист «Поделиться» (iOS/Android), «Скачать» —
+  // неточное слово: файл можно и сохранить, и отправить. Определяем по
+  // возможностям браузера, без разбора User-Agent.
+  const pdfLabel   = canShareFiles()
+    ? (isFR ? 'Télécharger / enregistrer le PDF' : 'Скачать / сохранить PDF')
+    : (isFR ? 'Télécharger PDF' : 'Скачать PDF');
   const stubVariant = getStubVariant(b);
   const payStatus  = b.paymentStatus ?? 'not_paid';
 
@@ -154,7 +160,9 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
                 }
               </div>
               <p className={styles.qrHint}>
-                {isFR ? "À présenter à l'entrée" : 'Предъявите при входе'}
+                {isFR
+                  ? "Présentez ce QR code au personnel à l'entrée"
+                  : 'Покажите этот QR-код сотруднику театра при входе'}
               </p>
             </div>
 
@@ -198,7 +206,7 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
                     disabled={!qrSrc || pdfLoading}
                   >
                     <DownloadIcon />
-                    {pdfLoading ? '…' : (isFR ? 'Télécharger PDF' : 'Скачать PDF')}
+                    {pdfLoading ? '…' : pdfLabel}
                   </button>
                 </div>
               </div>

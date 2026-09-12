@@ -1,0 +1,97 @@
+// QR переживает скриншот, а PDF — телефон.
+//
+// Зритель вправе просто сфотографировать экран кабинета: QR не должен зависеть
+// ни от времени, ни от сессии, ни от какого-либо одноразового состояния —
+// только от ticketCode, который лежит в брони. Если бы в код попадал nonce,
+// скриншот переставал бы сканироваться, а зритель узнавал бы об этом у двери.
+
+import { describe, it, expect } from 'vitest';
+import { generateTicketQR } from '../../src/services/qrService.js';
+import { parseTicketCodeFromScan } from '../../src/utils/parseTicketCode.js';
+import { projectSource } from '../helpers/serverSource.js';
+
+const CODE  = 'ABCD-2345';
+const OTHER = 'WXYZ-6789';
+
+describe('QR строится только из сохранённого ticketCode', () => {
+  it('два вызова подряд дают идентичный QR — одноразового состояния в нём нет', async () => {
+    const first  = await generateTicketQR(CODE);
+    const second = await generateTicketQR(CODE);
+    expect(second).toBe(first);
+  });
+
+  it('QR остаётся тем же и «через сутки» — времени в коде нет', async () => {
+    const before = await generateTicketQR(CODE);
+    const after  = await new Promise<string>(resolve => {
+      setTimeout(() => void generateTicketQR(CODE).then(resolve), 5);
+    });
+    expect(after).toBe(before);
+  });
+
+  it('разные брони дают разные QR', async () => {
+    expect(await generateTicketQR(OTHER)).not.toBe(await generateTicketQR(CODE));
+  });
+
+  it('скриншот сканируется так же, как QR в кабинете: ссылка разбирается обратно в код', () => {
+    // Картинка — это всего лишь та же ссылка; сканер приводит её к коду.
+    const url = `https://www.theatre-teteatete.fr/#/admin/checkin?ticket=${CODE}`;
+    expect(parseTicketCodeFromScan(url)).toBe(CODE);
+    expect(parseTicketCodeFromScan(CODE)).toBe(CODE);
+  });
+
+  it('в ссылку не подмешивается ничего, кроме кода', () => {
+    const src = projectSource('src/services/qrService.ts');
+    expect(src).toContain('ticket=${encodeURIComponent(ticketCode)}');
+    for (const volatile of ['Date.now', 'Math.random', 'crypto', 'token', 'uid']) {
+      expect(src, volatile).not.toContain(volatile);
+    }
+  });
+
+  it('QR в кабинете рисуется по коду брони, а не по состоянию экрана', () => {
+    expect(projectSource('src/components/ui/TicketCard/TicketCard.tsx'))
+      .toContain('generateTicketQR(b.ticketCode)');
+  });
+});
+
+describe('PDF сохраняется и на телефоне', () => {
+  const pdf = projectSource('src/services/ticketPdfService.ts');
+
+  it('файл отдаётся как Blob, а не через jsPDF.save()', () => {
+    // doc.save() — это клик по <a download>, а его iOS Safari игнорирует.
+    expect(pdf).toContain("doc.output('blob')");
+    expect(pdf).not.toContain('doc.save(');
+  });
+
+  it('мобильный путь выбирается по возможностям браузера, а не по User-Agent', () => {
+    expect(pdf).toContain('canShare');
+    expect(pdf).toContain('navigator.share');
+    expect(pdf).not.toMatch(/navigator\.userAgent/);
+  });
+
+  it('canShare проверяется именно с файлом', () => {
+    expect(pdf).toMatch(/canShare\(\{ files:/);
+  });
+
+  it('desktop сохраняет прежнюю загрузку через Blob URL', () => {
+    expect(pdf).toContain('createObjectURL');
+    expect(pdf).toContain('a.download = fileName');
+    expect(pdf).toContain('revokeObjectURL');
+  });
+
+  it('закрытый системный лист не превращается в молчаливую загрузку', () => {
+    expect(pdf).toContain("'AbortError'");
+  });
+
+  it('надпись на кнопке отражает то, что реально произойдёт — в обоих языках', () => {
+    const card = projectSource('src/components/ui/TicketCard/TicketCard.tsx');
+    expect(card).toContain('canShareFiles()');
+    expect(card).toContain('Скачать / сохранить PDF');
+    expect(card).toContain('Télécharger / enregistrer le PDF');
+  });
+
+  it('в PDF попадает тот же QR, что показан в кабинете', () => {
+    // PDF — удобство, а не условие прохода: он печатает уже готовый qrSrc.
+    expect(projectSource('src/components/ui/TicketCard/TicketCard.tsx'))
+      .toContain('generateTicketPdf(b, qrSrc, lang)');
+  });
+});
