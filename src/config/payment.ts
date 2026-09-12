@@ -12,10 +12,23 @@ interface PaymentAccountBase {
   currency:     string;
 }
 
+/**
+ * Французский RIB — то же самое, что IBAN, но разложенный на части.
+ * Нужен тем банкам и формам, которые просят реквизиты по полям, а не строкой.
+ * Цифры обязаны совпадать с IBAN — это проверяет tests/unit/payment.test.ts.
+ */
+export interface FrenchRib {
+  bankCode:      string;  // код банка
+  branchCode:    string;  // код отделения (guichet)
+  accountNumber: string;  // номер счёта
+  key:           string;  // ключ RIB
+}
+
 export interface IbanPaymentAccount extends PaymentAccountBase {
   type: 'iban';
   iban: string;
   bic:  string;
+  rib?: FrenchRib;
 }
 
 export interface CardPaymentAccount extends PaymentAccountBase {
@@ -42,10 +55,19 @@ export const PAYMENT_CONFIG = {
       type:         'iban' as const,
       label:        'France / Union européenne',
       description:  'Virement bancaire SEPA',
-      receiverName: 'Théâtre Tête-à-Tête',
-      iban:         'FR76 3000 4007 0900 0024 0656 507',
-      bic:          'BNPAFRPPXXX',
-      bankName:     'BNP Paribas',
+      // Владелец счёта — юридическое лицо театра. Оно НЕ совпадает с
+      // PAYMENT_CONFIG.receiverName выше: там вывеска театра для писем и
+      // подвала, здесь — титульное имя, которое банк ждёт в переводе.
+      receiverName: 'ASSOC. CONSTELLATION',
+      iban:         'FR76 1910 6006 0043 6695 8779 294',
+      bic:          'AGRIFRPP891',
+      bankName:     'Crédit Agricole Provence Côte d’Azur',
+      rib: {
+        bankCode:      '19106',
+        branchCode:    '00600',
+        accountNumber: '43669587792',
+        key:           '94',
+      },
       currency:     'EUR',
     },
   ] as PaymentAccount[],
