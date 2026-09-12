@@ -2,6 +2,7 @@
 // блок контактов и собственные кнопки сохранения — на десктопе их заменяет
 // липкая строка saveRow внизу кабинета.
 
+import { useRef } from 'react';
 import { IconCalendarEvent, IconLoader2, IconPhone, IconBrandWhatsapp, IconBrandTelegram } from '@tabler/icons-react';
 import { useLang } from '../../../i18n/LangContext';
 import type { T } from '../../../i18n/translations';
@@ -27,6 +28,20 @@ export function PersonalSection({
   const { lang } = useLang();
   const isFR = lang === 'FR';
   const { errors } = form;
+  const birthdayInputRef = useRef<HTMLInputElement>(null);
+
+  function openBirthdayPicker() {
+    const input = birthdayInputRef.current;
+    if (!input) return;
+
+    input.focus({ preventScroll: true });
+    try {
+      input.showPicker();
+    } catch {
+      // При обычном клике прозрачный input сам открывает нативный календарь.
+      // focus() остаётся безопасным фолбэком для браузеров без showPicker().
+    }
+  }
 
   return (
     <div className={styles.section}>
@@ -58,6 +73,15 @@ export function PersonalSection({
       <PersonalField label={t.profile.birthday} error={errors.birthday}>
         <div
           className={`${styles.birthdayField} ${errors.birthday ? styles.birthdayFieldError : ''} ${pulseBirthday && !errors.birthday ? styles.fieldPulse : ''}`}
+          onClick={openBirthdayPicker}
+          onKeyDown={e => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            openBirthdayPicker();
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label={isFR ? 'Choisir une date de naissance' : 'Выбрать дату рождения'}
         >
           <span className={`${styles.birthdayText} ${!form.birthday ? styles.birthdayPlaceholder : ''}`}>
             {form.birthday
@@ -66,11 +90,13 @@ export function PersonalSection({
           </span>
           <IconCalendarEvent size={16} stroke={1.5} className={styles.birthdayIcon} />
           <input
+            ref={birthdayInputRef}
             type="date"
             value={form.birthday}
             onChange={e => form.setBirthday(e.target.value)}
             className={styles.hiddenDateInput}
-            aria-label={isFR ? 'Date de naissance' : 'Дата рождения'}
+            tabIndex={-1}
+            aria-hidden="true"
           />
         </div>
       </PersonalField>

@@ -71,6 +71,8 @@ describe('инициалы', () => {
 });
 
 describe('дата рождения', () => {
+  const personalSection = readFileSync(join(DRAWER_DIR, 'PersonalSection.tsx'), 'utf8');
+
   it('мусор отдаётся как есть, а не как Invalid Date', () => {
     expect(formatBirthdayDisplay('не дата', 'RU')).toBe('не дата');
   });
@@ -78,6 +80,11 @@ describe('дата рождения', () => {
   it('валидная дата локализуется по языку', () => {
     expect(formatBirthdayDisplay('1990-05-17', 'FR')).toContain('1990');
     expect(formatBirthdayDisplay('1990-05-17', 'RU')).toContain('1990');
+  });
+
+  it('клик по видимому полю явно открывает нативный календарь', () => {
+    expect(personalSection).toContain('input.showPicker()');
+    expect(personalSection).toContain('onClick={openBirthdayPicker}');
   });
 });
 
