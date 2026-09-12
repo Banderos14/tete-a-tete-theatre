@@ -394,10 +394,16 @@
   flex-shrink: 0;
 }
 
+// Строка меты рассчитана на значение любой длины: короткое («30 €», «19:00»)
+// остаётся в одну строку справа от лейбла, длинное («20 € (ребёнок) / 15 €
+// (взрослый) / 45 € (ребёнок + 2 родителя)», «Продолжительность уточняется»)
+// переносится по словам и забирает высоту строки целиком. Цена не разбирается
+// на части: данные хранят её одной строкой, и парсить их регуляркой ненадёжно.
 .metaRow {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 16px;
   padding: 8px 0;
   border-bottom: 0.5px solid rgba(255,255,255,0.10);
 
@@ -416,13 +422,30 @@
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--fg-mute);
+  // Лейбл не сжимается и не переносится: это он задаёт читаемость строки,
+  // а место под перенос забирает значение.
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .metaValue {
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--fg-dim);
-  overflow-wrap: anywhere;
+  // min-width: 0 — без него flex-элемент не даёт себя сжать ниже ширины
+  // самого длинного слова и значение выдавливает лейбл за край панели.
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  line-height: 1.5;
+  // break-word, а не anywhere: длинное значение рвётся по пробелам,
+  // а не посреди слова, и только неразрывно длинный токен — по буквам.
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+
+  @include mixins.small {
+    text-align: left;
+  }
 }
 
 .metaValuePrice {
@@ -434,12 +457,30 @@
   color: var(--fg-dim) !important;
 }
 
+// Запас вокруг буквицы. Декоративный italic-шрифт рисует глиф шире и ниже
+// его собственного бокса, и у разных букв по-разному (замерено на 42px):
+//   «Д» уходит на 7.5px ниже бокса и на 1.7px левее,
+//   «У», «U», «М», «И» — на 6.8px правее своей ширины,
+//   «À» упирается в верхний край.
+// Свёрнутое описание обрезается по высоте через overflow: hidden — без запаса
+// он срезает эти вылеты. Паддинг даёт буквице воздух, а равный ему
+// отрицательный margin возвращает сам текст на прежнее место, поэтому
+// вид блока не меняется. $cap-gap так же считается от вылета вправо.
+$cap-bleed-top:    6px;
+$cap-bleed-side:   6px;
+$cap-bleed-bottom: 10px;
+$cap-gap:          14px;
+
 .desc {
   font-size: 13px;
   line-height: 1.78;
   color: var(--fg-dim);
+  padding: $cap-bleed-top $cap-bleed-side $cap-bleed-bottom;
+  margin: (-$cap-bleed-top) (-$cap-bleed-side) (-$cap-bleed-bottom);
   overflow: hidden;
-  max-height: 9em;
+  // box-sizing: border-box — поэтому к девяти строкам добавляем паддинги,
+  // иначе запас съел бы высоту видимого текста.
+  max-height: calc(9em + #{$cap-bleed-top + $cap-bleed-bottom});
   overflow-wrap: anywhere;
   flex-shrink: 0;
 
@@ -449,7 +490,7 @@
     font-size: 42px;
     float: left;
     line-height: 0.82;
-    margin-right: 6px;
+    margin-right: $cap-gap;
     margin-top: 5px;
     color: var(--fg);
   }

@@ -473,6 +473,10 @@
     align-items: center;
     gap: 4px;
     margin-top: auto;
+    // Многотарифная цена («20 € (ребёнок) / 15 € (взрослый) / 45 € …») шире
+    // карточки в 167px, а у карточки overflow: hidden — раньше чип срезало
+    // по правому краю. Теперь дата и цена при нехватке места встают в два ряда.
+    flex-wrap: wrap;
   }
 
   .mobileDate {
@@ -488,6 +492,11 @@
     background: var(--accent);
     border-radius: 5px;
     padding: 3px 7px;
-    white-space: nowrap;
+    // Переносим текст внутри плашки вместо nowrap: длинный тариф должен
+    // умещаться в карточку целиком, а не обрезаться.
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: break-word;
+    line-height: 1.4;
   }
 }

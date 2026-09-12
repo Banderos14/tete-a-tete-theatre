@@ -305,6 +305,12 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  // Колонка шириной с сам QR: иначе однострочная подсказка под ним растягивала
+  // колонку на всю свою длину, и на десктопе детали билета сжимались до
+  // пары пикселей — дата и адрес рвались по одной букве.
+  width: min-content;
+
+  @include mixins.small { width: auto; }
 }
 
 .qrWrap {
@@ -405,7 +411,8 @@
     font-size: 12px;
     color: #241a16;
     text-align: right;
-    overflow-wrap: anywhere;
+    // break-word, а не anywhere: значение переносится по словам, а не по буквам.
+    overflow-wrap: break-word;
 
     @include mixins.small { text-align: left; }
   }
