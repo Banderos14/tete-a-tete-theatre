@@ -1,8 +1,9 @@
 // Подтверждение брони.
 
 import { getPaymentAccount, normalizeIban } from '../../../config/payment';
-import { escapeEmailHtml, localeDate, wrapHtml, infoTable, codeBlock, noteBlock,
+import { escapeEmailHtml, localeDate, wrapHtml, infoTable, codeBlock, noteBlock, linkButton,
          THEATRE_NAME, THEATRE_ADDRESS, THEATRE_EMAIL, THEATRE_PHONE, PAY_REF_PREFIX } from '../layout';
+import { getMyTicketsUrl } from '../../../utils/accountUrl';
 import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import type { BookingEmailData } from '../types';
 
@@ -23,12 +24,26 @@ export function buildConfirmationEmail(data: BookingEmailData): { subject: strin
     : `Bonjour, ${escapeEmailHtml(data.userName)}&nbsp;!<br><span style="font-size:13px;color:#888;">Merci pour votre réservation&nbsp;!</span>`;
   const ticketLabel = isRU ? 'Код брони' : 'Code de réservation';
 
+  // Куда идти за QR — обязательная часть письма: проход в зал идёт по коду
+  // из кабинета. Для неоплаченного перевода формулировка осторожная: код уже
+  // есть, но входным билетом он станет только после подтверждения оплаты.
+  const ticketsUrl   = getMyTicketsUrl();
+  const ticketsLabel = isRU ? 'Открыть мои билеты' : 'Ouvrir mes billets';
+
+  const qrNote = isRU
+    ? (isBankTransfer
+        ? 'QR-код будет доступен в личном кабинете, в разделе «Мои билеты». Для прохода на спектакль билет должен быть оплачен.'
+        : 'Ваш QR-код находится в личном кабинете, в разделе «Мои билеты». Покажите QR-код сотруднику театра при входе на спектакль.')
+    : (isBankTransfer
+        ? 'Votre QR code sera disponible dans votre espace personnel, rubrique «\u00a0Mes billets\u00a0». Pour accéder au spectacle, le billet doit être payé.'
+        : 'Votre QR code se trouve dans votre espace personnel, rubrique «\u00a0Mes billets\u00a0». Présentez-le au personnel du théâtre à l\'entrée du spectacle.');
+
   const payNote = isRU
     ? (isBankTransfer
-        ? 'Для подтверждения бронирования переведите указанную сумму по реквизитам ниже. В назначении платежа обязательно укажите референс платежа. Ваша бронь будет подтверждена только после проверки банковского перевода.'
+        ? 'Бронь ожидает оплаты. Переведите указанную сумму по реквизитам ниже в течение 24 часов, обязательно указав референс платежа в назначении. После подтверждения перевода бронь станет подтверждённой.'
         : 'Оплата — наличными в кассе театра, перед спектаклем.')
     : (isBankTransfer
-        ? 'Pour confirmer votre réservation, veuillez effectuer le virement bancaire avec les coordonnées ci-dessous. Indiquez obligatoirement la référence dans le libellé du virement. Votre réservation sera confirmée uniquement après vérification du virement bancaire.'
+        ? 'Votre réservation est en attente de paiement. Effectuez le virement indiqué ci-dessous sous 24 heures, en précisant impérativement la référence dans le libellé. Votre réservation sera confirmée après vérification du virement.'
         : 'Le paiement s\'effectue en espèces à la caisse du théâtre avant le spectacle.');
 
   const hasDiscount = data.loyaltyDiscountApplied && data.originalAmount;
@@ -120,7 +135,9 @@ export function buildConfirmationEmail(data: BookingEmailData): { subject: strin
     ${infoTable(rows)}
     ${codeBlock(data.ticketCode, ticketLabel)}
     ${noteBlock(payNote)}
-    ${transferHtml}`;
+    ${transferHtml}
+    ${noteBlock(qrNote)}
+    ${linkButton(ticketsUrl, ticketsLabel)}`;
 
   const html = wrapHtml(isRU ? 'ru' : 'fr', subject, headerTitle, bodyHtml);
 
@@ -159,6 +176,9 @@ export function buildConfirmationEmail(data: BookingEmailData): { subject: strin
         payNote,
         ...transferText,
         '',
+        qrNote,
+        `${ticketsLabel}: ${ticketsUrl}`,
+        '',
         THEATRE_ADDRESS,
         `${THEATRE_EMAIL} · ${THEATRE_PHONE}`,
       ].join('\n')
@@ -176,6 +196,9 @@ export function buildConfirmationEmail(data: BookingEmailData): { subject: strin
         '',
         payNote,
         ...transferText,
+        '',
+        qrNote,
+        `${ticketsLabel}: ${ticketsUrl}`,
         '',
         THEATRE_ADDRESS,
         `${THEATRE_EMAIL} · ${THEATRE_PHONE}`,

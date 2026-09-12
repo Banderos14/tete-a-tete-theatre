@@ -1,15 +1,10 @@
 import QRCode from 'qrcode';
-
-function getPublicSiteUrl(): string {
-  return (
-    (import.meta.env.VITE_PUBLIC_SITE_URL as string | undefined) ||
-    window.location.origin ||
-    'https://tete-a-tete-theatre.vercel.app'
-  );
-}
+import { getPublicSiteBase } from '../utils/showUrl';
 
 export async function generateTicketQR(ticketCode: string): Promise<string> {
-  const base = getPublicSiteUrl();
+  // Базовый адрес считается тем же местом, что и для ссылок в письмах:
+  // VITE_PUBLIC_SITE_URL, иначе текущий origin.
+  const base = getPublicSiteBase();
   // Формат /#/ — HashRouter: без него Vercel отдаст 404 при прямом переходе.
   const url = `${base}/#/admin/checkin?ticket=${encodeURIComponent(ticketCode)}`;
   return QRCode.toDataURL(url, {

@@ -7,6 +7,9 @@ interface Props {
   t: {
     booking: {
       successTitle: string;
+      successOnSite: string;
+      successTransfer: string;
+      myTickets: string;
       labelTickets: string;
       labelAmount: string;
       copied: string;
@@ -28,6 +31,8 @@ interface Props {
 
   copiedCode: boolean;
   onCopyCode: () => void;
+  /** Ведёт в кабинет, где лежит QR. Необязателен: без него кнопка не рисуется. */
+  onOpenTickets?: () => void;
   onClose: () => void;
 }
 
@@ -36,6 +41,7 @@ export function BookingSuccessStep({
   tickets, activeTicket, savedAmount, ticketCode, payment, userEmail,
   copiedCode,
   onCopyCode,
+  onOpenTickets,
   onClose,
 }: Props) {
   const showTitle  = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
@@ -98,24 +104,21 @@ export function BookingSuccessStep({
             </div>
           </div>
 
-          {payment === 'on_site' ? (
-            <p className={styles.successText}>
-              {lang === 'FR'
-                ? 'Votre réservation est bien reçue. Les détails de votre réservation ont été envoyés par e-mail. Le paiement se fera sur place avant le spectacle.'
-                : 'Бронирование принято. Детали бронирования отправлены на вашу почту. Оплата будет произведена на месте перед спектаклем.'}
-            </p>
-          ) : (
-            <p className={styles.successText}>
-              {lang === 'FR'
-                ? 'Votre réservation est bien reçue. Les coordonnées bancaires et le code de réservation ont été envoyés par e-mail.'
-                : 'Бронирование принято. Реквизиты для оплаты и код брони отправлены на вашу почту.'}
-            </p>
-          )}
+          {/* Зритель должен уйти отсюда, понимая, ГДЕ его QR и что с ним делать:
+              проход в зал идёт по коду из кабинета, а не по этому экрану. */}
+          <p className={styles.successText}>
+            {payment === 'on_site' ? t.booking.successOnSite : t.booking.successTransfer}
+          </p>
 
         </div>
 
         {/* Кнопки вне зоны скролла — всегда видны внизу */}
         <div className={styles.successActions}>
+          {onOpenTickets && (
+            <button className={styles.ticketsBtn} onClick={onOpenTickets}>
+              {t.booking.myTickets}
+            </button>
+          )}
           <button className={styles.closeSuccessBtn} onClick={onClose}>{t.booking.close}</button>
           <button
             className={`${styles.copyBtn} ${copiedCode ? styles.copyBtnDone : ''}`}

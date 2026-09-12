@@ -1,7 +1,8 @@
 // Подтверждение оплаты.
 
-import { escapeEmailHtml, localeDate, wrapHtml, infoTable, codeBlock, noteBlock,
+import { escapeEmailHtml, localeDate, wrapHtml, infoTable, codeBlock, noteBlock, linkButton,
          THEATRE_NAME, THEATRE_ADDRESS, THEATRE_EMAIL, THEATRE_PHONE, THEATRE_MAPS } from '../layout';
+import { getMyTicketsUrl } from '../../../utils/accountUrl';
 import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import type { PaymentPaidEmailData } from '../types';
 
@@ -19,12 +20,19 @@ export function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: st
   const greeting    = isRU ? `Здравствуйте, ${escapeEmailHtml(data.userName)}!` : `Bonjour, ${escapeEmailHtml(data.userName)}&nbsp;!`;
   const ticketLabel = isRU ? 'Код брони' : 'Code de réservation';
 
+  // Главное, что человек должен унести из письма: бронь подтверждена и QR
+  // лежит в кабинете. Ссылка ведёт прямо в «Мои билеты», а не на главную.
+  const ticketsUrl   = getMyTicketsUrl();
+  const ticketsLabel = isRU ? 'Открыть мои билеты' : 'Ouvrir mes billets';
+
   const nextNote = isRU
     ? (isAlreadyConfirmed
-        ? 'Ваша бронь подтверждена. Ждём вас в театре!'
+        ? 'Оплата подтверждена, ваша бронь подтверждена. Ждём вас в Théâtre Tête-à-Tête.<br><br>'
+          + 'Ваш QR-код находится в личном кабинете, в разделе «Мои билеты». Покажите его сотруднику театра при входе.'
         : 'Бронь ожидает подтверждения. Мы свяжемся с вами в ближайшее время.')
     : (isAlreadyConfirmed
-        ? 'Votre réservation est confirmée. Nous vous attendons au théâtre&nbsp;!'
+        ? 'Votre paiement est confirmé et votre réservation est validée. Nous vous attendons au Théâtre Tête-à-Tête.<br><br>'
+          + 'Votre QR code se trouve dans votre espace personnel, rubrique «&nbsp;Mes billets&nbsp;». Présentez-le au personnel du théâtre à l\'entrée.'
         : 'Votre réservation est en attente de confirmation. Nous vous contacterons prochainement.');
 
   const rows: [string, string][] = isRU ? [
@@ -44,6 +52,7 @@ export function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: st
     ${infoTable(rows)}
     ${codeBlock(data.ticketCode, ticketLabel)}
     ${noteBlock(nextNote)}
+    ${linkButton(ticketsUrl, ticketsLabel)}
     <p style="margin:16px 0 0;font-size:12px;color:#aaa;">
       <a href="${THEATRE_MAPS}" style="color:#c9a96e;text-decoration:none;">${THEATRE_ADDRESS}</a>
     </p>`;
@@ -59,7 +68,16 @@ export function buildPaymentPaidEmail(data: PaymentPaidEmailData): { subject: st
     isRU ? `Дата: ${dateStr} · ${data.showTime}` : `Date : ${dateStr} · ${data.showTime}`,
     isRU ? `Сумма: ${data.totalAmount} €` : `Montant : ${data.totalAmount} €`,
     isRU ? `Код брони: ${data.ticketCode}` : `Code : ${data.ticketCode}`,
-    '', nextNote, '',
+    '',
+    isRU
+      ? 'Оплата подтверждена, ваша бронь подтверждена. Ждём вас в Théâtre Tête-à-Tête.'
+      : 'Votre paiement est confirmé et votre réservation est validée. Nous vous attendons au Théâtre Tête-à-Tête.',
+    isRU
+      ? 'Ваш QR-код находится в личном кабинете, в разделе «Мои билеты». Покажите его сотруднику театра при входе.'
+      : 'Votre QR code se trouve dans votre espace personnel, rubrique « Mes billets ». Présentez-le au personnel du théâtre à l\'entrée.',
+    '',
+    `${ticketsLabel}: ${ticketsUrl}`,
+    '',
     THEATRE_ADDRESS, `${THEATRE_EMAIL} · ${THEATRE_PHONE}`,
   ].join('\n');
 

@@ -1034,6 +1034,31 @@
   }
 }
 
+// Главное действие экрана успеха: QR лежит в кабинете, и путь туда должен
+// читаться раньше, чем «Закрыть». Поэтому кнопка залитая, а не контурная.
+.ticketsBtn {
+  align-self: flex-start;
+  padding: 11px 22px;
+  border: 0.5px solid rgba(243,231,220,0.16);
+  border-radius: var(--radius-s);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: #f3e7dc;
+  background: var(--accent);
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover { opacity: 0.86; }
+
+  @include mixins.small {
+    width: 100%;
+    min-height: 46px;
+  }
+}
+
 .stub {
   background: #4a1414;
   padding: 24px 18px;

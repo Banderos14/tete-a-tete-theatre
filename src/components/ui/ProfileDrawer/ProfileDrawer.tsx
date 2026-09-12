@@ -26,10 +26,12 @@ const UNSAVED_TOAST_MS = 2500;
 
 interface Props {
   open: boolean;
+  /** Раздел, на котором открыть кабинет: ссылка «Мои билеты» ведёт сразу в tickets. */
+  initialSection?: Section;
   onClose: () => void;
 }
 
-export function ProfileDrawer({ open, onClose }: Props) {
+export function ProfileDrawer({ open, initialSection, onClose }: Props) {
   const { lang, t } = useLang();
   const { user, userProfile, loading, logout } = useAuth();
 
@@ -47,6 +49,18 @@ export function ProfileDrawer({ open, onClose }: Props) {
   const [pulsePhone,    setPulsePhone]    = useState(false);
 
   useScrollLock(open);
+
+  // Кабинет умеет открываться сразу на нужном разделе — этим пользуются
+  // ссылка «Мои билеты» из письма и кнопка на экране успешного бронирования.
+  // Раздел применяется в момент открытия: дальше зритель переключает сам.
+  useEffect(() => {
+    if (!open || !initialSection) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveSection(initialSection);
+    const tab = (Object.keys(MOBILE_TAB_SECTION) as MobileTab[])
+      .find(t => MOBILE_TAB_SECTION[t] === initialSection);
+    if (tab) setActiveMobileTab(tab);
+  }, [open, initialSection]);
 
   // Сворачиваем раскрытый билет при смене раздела
   useEffect(() => {

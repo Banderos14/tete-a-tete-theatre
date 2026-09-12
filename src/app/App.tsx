@@ -5,9 +5,14 @@ import { translations } from '../i18n/translations';
 import type { Lang } from '../i18n/translations';
 import { AuthProvider } from '../context/AuthContext';
 import type { IntroState, Show, Theme } from '../types';
+// Тип берётся из модуля разделов, а НЕ из barrel'а ProfileDrawer: barrel
+// реэкспортирует сам компонент и втянул бы Firebase в синхронный чанк
+// лендинга (см. tests/unit/importGraph.test.ts).
+import type { Section } from '../components/ui/ProfileDrawer/sections';
 import { ErrorBoundary, RouteErrorScreen } from '../components/ui/ErrorBoundary';
 import { CookieConsent } from '../components/ui/CookieConsent';
 import { UserLanguageSync } from './UserLanguageSync';
+import { AccountDeepLink } from './AccountDeepLink';
 import { IS_MOBILE, INTRO_SPEED } from './intro';
 
 import { HomePage } from '../pages/HomePage';
@@ -37,6 +42,9 @@ export default function App() {
   const [introState,  setIntroState]  = useState<IntroState>(IS_MOBILE ? 'done' : 'closed');
   const [authOpen,    setAuthOpen]    = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  // Раздел, на котором открывается кабинет. Нужен ссылке «Мои билеты» из письма
+  // и кнопке на экране успешного бронирования.
+  const [profileSection, setProfileSection] = useState<Section>('personal');
   const [bookingShow, setBookingShow] = useState<Show | null>(null);
   // Модалки монтируются только после первого открытия: до этого их чанки
   // (а вместе с ними и Firebase SDK) не нужны для показа лендинга. Флаг «липкий»,
@@ -110,12 +118,20 @@ export default function App() {
   }, []);
   const handleBook        = useCallback((show: Show) => setBookingShow(show), []);
 
+  const openProfileAt = useCallback((section: Section) => {
+    setProfileSection(section);
+    setProfileOpen(true);
+  }, []);
+  const openMyTickets = useCallback(() => openProfileAt('tickets'), [openProfileAt]);
+  const requireAuth   = useCallback(() => setAuthOpen(true), []);
+
   const langCtx = useMemo(() => ({ lang, t: translations[lang] }), [lang]);
 
   return (
     <AuthProvider>
       <LangContext.Provider value={langCtx}>
         <UserLanguageSync lang={lang} onLangFromProfile={handleLangChange} />
+        <AccountDeepLink onOpenTickets={openMyTickets} onRequireAuth={requireAuth} />
 
         <Routes>
           <Route
@@ -126,7 +142,7 @@ export default function App() {
                 onThemeChange={handleThemeChange}
                 onLangChange={handleLangChange}
                 onAuthOpen={() => setAuthOpen(true)}
-                onProfileOpen={() => setProfileOpen(true)}
+                onProfileOpen={() => openProfileAt('personal')}
                 onBook={handleBook}
               />
             }
@@ -161,12 +177,20 @@ export default function App() {
             </ErrorBoundary>
             <ErrorBoundary label="ProfileDrawer">
               <Suspense fallback={null}>
-                <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
+                <ProfileDrawer
+                  open={profileOpen}
+                  initialSection={profileSection}
+                  onClose={() => setProfileOpen(false)}
+                />
               </Suspense>
             </ErrorBoundary>
             <ErrorBoundary label="BookingModal">
               <Suspense fallback={null}>
-                <BookingModal show={bookingShow} onClose={() => setBookingShow(null)} />
+                <BookingModal
+                  show={bookingShow}
+                  onClose={() => setBookingShow(null)}
+                  onOpenTickets={() => { setBookingShow(null); openMyTickets(); }}
+                />
               </Suspense>
             </ErrorBoundary>
           </>

@@ -128,6 +128,10 @@ export interface T {
     submit: string;
     submitError: string;
     successTitle: string;
+    // Что делать дальше: где лежит QR и как им пользоваться.
+    successOnSite: string;
+    successTransfer: string;
+    myTickets: string;
     close: string;
     total: string;
     phone: string;

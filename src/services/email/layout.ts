@@ -125,6 +125,19 @@ export function codeBlock(code: string, label: string): string {
   </div>`;
 }
 
+// Кнопка-ссылка. Почтовые клиенты не умеют в CSS-кнопки, поэтому это <a>
+// с инлайновыми стилями — и она остаётся кликабельной ссылкой везде.
+export function linkButton(href: string, label: string): string {
+  return `
+  <div style="margin:20px 0 0;">
+    <a href="${href}" style="display:inline-block;background:#111111;color:#ffffff;
+              text-decoration:none;padding:13px 26px;border-radius:4px;font-size:13px;
+              letter-spacing:1px;text-transform:uppercase;font-family:Arial,sans-serif;">
+      ${label}
+    </a>
+  </div>`;
+}
+
 export function noteBlock(text: string): string {
   return `
   <div style="background:#f9f6f0;border-left:3px solid #c9a96e;

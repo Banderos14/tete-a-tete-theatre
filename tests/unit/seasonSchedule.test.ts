@@ -14,6 +14,7 @@ import { validateCreateBooking } from '../../server/booking/booking.validation.j
 import { generateTicketCode } from '../../server/booking/ticketCode.js';
 import { parseTicketCodeFromScan } from '../../src/utils/parseTicketCode.js';
 import { endpointSource, projectSource, screenSource } from '../helpers/serverSource.js';
+import { getShowPublicUrl, getShowIdFromLocation } from '../../src/utils/showUrl.js';
 
 // Контрольные моменты сезона в настенном времени Ниццы.
 const SEP_12 = parseShowStartUtcMs('12 Сен 2026', '12:00')!;
@@ -152,10 +153,18 @@ describe('билет «Романтики» доходит до сканера �
 
 describe('deep-link /#/?show=<id> открывает опубликованный спектакль', () => {
   it('ссылка строится в формате HashRouter', () => {
-    const showUrl = projectSource('src/utils/showUrl.ts');
-    expect(showUrl).toContain('`${base}/#/?show=${encodeURIComponent(showId)}`');
-    // Разбор понимает и ?show= до решётки, и хвост после неё.
-    expect(showUrl).toContain("location.hash.indexOf('?')");
+    // Без /#/ Vercel отдаёт 404 при прямом переходе по ссылке.
+    expect(getShowPublicUrl('romantika')).toMatch(/\/#\/\?show=romantika$/);
+    expect(getShowPublicUrl('a b&c')).toContain(encodeURIComponent('a b&c'));
+  });
+
+  it('разбор понимает и ?show= до решётки, и хвост после неё', () => {
+    const at = (search: string, hash: string) =>
+      getShowIdFromLocation({ search, hash } as Location);
+
+    expect(at('', '#/?show=romantika')).toBe('romantika');
+    expect(at('?show=romantika', '#/')).toBe('romantika');
+    expect(at('', '#/')).toBeNull();
   });
 
   it('у каждого опубликованного спектакля есть карточка репертуара — иначе ссылка ни во что не упрётся', () => {

@@ -24,11 +24,13 @@ import styles from './BookingModal.module.scss';
 interface Props {
   show: Show | null;
   onClose: () => void;
+  /** Открыть кабинет на «Моих билетах» — там лежит QR для прохода. */
+  onOpenTickets?: () => void;
 }
 
 type Step = 'auth' | 'form' | 'success';
 
-export function BookingModal({ show, onClose }: Props) {
+export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   const { lang, t } = useLang();
   const { user, userProfile, loading: authContextLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, saveProfile } = useAuth();
 
@@ -441,6 +443,7 @@ export function BookingModal({ show, onClose }: Props) {
             userEmail={userEmail}
             copiedCode={copiedCode}
             onCopyCode={() => copyToClipboard(ticketCode, setCopiedCode)}
+            onOpenTickets={onOpenTickets}
             onClose={onClose}
           />
         )}
