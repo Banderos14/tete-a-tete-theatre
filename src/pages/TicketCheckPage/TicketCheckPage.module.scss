@@ -371,6 +371,26 @@
   color: var(--fg);
 }
 
+// Количество билетов = количество людей, которые пройдут по одному QR.
+// Набирается моноширинным и крупнее остальных значений.
+.cardValueCount {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+}
+
+// Групповая бронь: сотрудник должен увидеть число, не вчитываясь в строку.
+.cardValueCountMany {
+  font-size: 24px;
+  line-height: 1.2;
+  color: var(--fg);
+
+  @include mixins.small {
+    font-size: 26px;
+  }
+}
+
 .cardValueUnpaid {
   font-weight: 600;
   font-family: var(--font-mono);

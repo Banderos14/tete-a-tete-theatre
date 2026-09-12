@@ -7,7 +7,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { badRequest, notFound, conflict } from '../shared/errors.js';
 import { parseShowStartUtcMs, showEndUtcMs } from '../../shared/domain/showTime.js';
-import { SHOWS, showStartUtcMs } from '../../shared/catalog/shows.js';
+import { SHOWS, showStartUtcMs, showDateString } from '../../shared/catalog/shows.js';
 import type {
   CheckinAction, CheckinBooking, CheckinRefusalReason, ShowRelevance,
 } from '../../shared/contracts/checkin.js';
@@ -33,6 +33,24 @@ function relevanceOf(data: Record<string, unknown>, nowMs: number): ShowRelevanc
   return 'ok';
 }
 
+/**
+ * Дата брони разошлась с датой того же спектакля в каталоге.
+ *
+ * Актуальность (relevanceOf) считается по КАТАЛОГУ — иначе перенос спектакля
+ * превратил бы все выданные билеты в «прошедшие». Обратная сторона: если id
+ * спектакля переиспользовать под новую постановку того же названия, старая
+ * оплаченная бронь снова станет «сегодняшней» и пройдёт на вход бесплатно.
+ * Сам по себе флаг ничего не запрещает — он выводит расхождение на карточку,
+ * чтобы сотрудник видел, что билет выписан на другой вечер.
+ */
+function catalogDateDiffers(data: Record<string, unknown>): boolean {
+  const catalogShow = typeof data.showId === 'string' ? SHOWS[data.showId] : undefined;
+  if (!catalogShow) return false;
+
+  const booked = String(data.showDate ?? '').trim();
+  return booked !== '' && booked !== showDateString(catalogShow);
+}
+
 function snapshotOf(id: string, ticketCode: string, data: Record<string, unknown>, nowMs: number): CheckinBooking {
   return {
     bookingId:     id,
@@ -49,7 +67,8 @@ function snapshotOf(id: string, ticketCode: string, data: Record<string, unknown
     status:        String(data.status ?? ''),
     paymentStatus: String(data.paymentStatus ?? ''),
     paymentMethod: String(data.paymentMethod ?? ''),
-    showRelevance: relevanceOf(data, nowMs),
+    showRelevance:    relevanceOf(data, nowMs),
+    showDateDiffers:  catalogDateDiffers(data),
   };
 }
 

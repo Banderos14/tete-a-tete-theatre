@@ -2,7 +2,7 @@
 //
 // ВАЖНО: при изменении расписания правь ЭТОТ файл и src/data/shows.ts.
 // Совпадение id, дат, времени и цен проверяется тестом
-// tests/unit/shows-contract.test.ts — он упадёт, если файлы разъедутся.
+// tests/unit/pastShows.test.ts — он упадёт, если файлы разъедутся.
 
 import { parseShowStartUtcMs } from '../domain/showTime.js';
 

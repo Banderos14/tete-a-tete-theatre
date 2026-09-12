@@ -68,9 +68,17 @@ export function BookingModal({ show, onClose }: Props) {
   const baseAmount     = (activeTicket?.price ?? 0) * tickets;
   // Когда остаток неизвестен, ограничиваем только лимитом типа билета:
   // авторитетную проверку вместимости всё равно делает сервер.
-  const maxTickets     = seatsLeft === null
-    ? (activeTicket?.available ?? MAX_TICKETS_PER_BOOKING)
-    : Math.min(activeTicket?.available ?? MAX_TICKETS_PER_BOOKING, Math.max(1, seatsLeft));
+  //
+  // MAX_TICKETS_PER_BOOKING стоит здесь обязательно: сервер отклоняет запрос
+  // с большим числом билетов, и без этого ограничения счётчик доходил бы,
+  // например, до 45 (столько стоит в available у «Графа Нулина»), а бронь
+  // падала бы общей ошибкой уже после отправки формы.
+  const maxTickets     = Math.min(
+    MAX_TICKETS_PER_BOOKING,
+    seatsLeft === null
+      ? (activeTicket?.available ?? MAX_TICKETS_PER_BOOKING)
+      : Math.min(activeTicket?.available ?? MAX_TICKETS_PER_BOOKING, Math.max(1, seatsLeft)),
+  );
 
   const loyaltyAvailable = useMemo(
     () => hasAvailableLoyaltyReward(userBookings),

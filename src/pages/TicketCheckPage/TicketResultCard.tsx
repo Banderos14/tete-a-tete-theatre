@@ -105,6 +105,31 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
 
   const resetBtn = <button className={styles.secondaryBtn} onClick={onReset}>{resetLabel}</button>;
 
+  // По одному QR проходит вся бронь целиком, поэтому количество — это
+  // количество ЛЮДЕЙ у двери. При двух и более билетах строка набирается
+  // крупно: сотрудник должен видеть её, не вчитываясь.
+  const countRow = (
+    <CardRow
+      label="Количество"
+      value={`${b.ticketsCount} ${ticketsWord(b.ticketsCount)}`}
+      valueClass={b.ticketsCount > 1
+        ? `${styles.cardValueCount} ${styles.cardValueCountMany}`
+        : styles.cardValueCount}
+    />
+  );
+
+  // Билет выписан не на сегодняшний вечер. Проход не запрещаем — решает
+  // сотрудник, — но расхождение обязано быть видно.
+  const dateWarning = (isEarlyShow || b.showDateDiffers) ? (
+    <CardRow
+      label="Внимание"
+      value={b.showDateDiffers
+        ? `Бронь на другую дату спектакля — ${b.showDate}`
+        : `Билет на другую дату — ${b.showDate}`}
+      valueClass={styles.cardValueReason}
+    />
+  ) : null;
+
   // «Недействителен» дату не показывает — она уже звучит в причине отказа.
   const whoAndWhat = (
     <>
@@ -127,7 +152,7 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
         variant="used"
         icon="⚠️"
         status="БИЛЕТ УЖЕ ИСПОЛЬЗОВАН"
-        rows={identityRows}
+        rows={<>{identityRows}{countRow}</>}
         actions={resetBtn}
       />
     );
@@ -142,11 +167,12 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
         rows={
           <>
             {identityRows}
-            <CardRow label="Количество" value={`${b.ticketsCount} ${ticketsWord(b.ticketsCount)}`} />
+            {countRow}
             {b.totalAmount > 0 && (
               <CardRow label="Сумма" value={<>{b.totalAmount}&nbsp;€</>} valueClass={styles.cardValueAmount} />
             )}
             <CardRow label="Оплата" value="НЕ ОПЛАЧЕНО — ОПЛАТА НА МЕСТЕ" valueClass={styles.cardValueUnpaid} />
+            {dateWarning}
           </>
         }
         actions={
@@ -168,11 +194,9 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
         rows={
           <>
             {identityRows}
-            <CardRow label="Количество" value={`${b.ticketsCount} ${ticketsWord(b.ticketsCount)}`} />
+            {countRow}
             <CardRow label="Оплата" value="Оплачено" />
-            {isEarlyShow && (
-              <CardRow label="Внимание" value={`Билет на другую дату — ${b.showDate}`} valueClass={styles.cardValueReason} />
-            )}
+            {dateWarning}
           </>
         }
         actions={

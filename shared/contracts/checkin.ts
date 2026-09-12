@@ -25,6 +25,8 @@ export interface CheckinBooking {
   paymentStatus: string;
   paymentMethod: string;
   showRelevance: ShowRelevance;
+  /** Дата брони не совпадает с датой этого спектакля в каталоге. */
+  showDateDiffers: boolean;
 }
 
 export type CheckinRefusalReason =
