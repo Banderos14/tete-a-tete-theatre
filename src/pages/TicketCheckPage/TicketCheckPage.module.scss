@@ -366,6 +366,12 @@
   color: var(--accent-glow, #b80000);
 }
 
+// Справка, а не тревога: билет сканируют раньше дня показа — это нормально,
+// и строка не должна выглядеть как предупреждение о неправильной дате.
+.cardValueNotice {
+  color: var(--muted, #9c938a);
+}
+
 .cardValueAmount {
   font-weight: 600;
   color: var(--fg);

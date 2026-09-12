@@ -118,14 +118,27 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
     />
   );
 
-  // Билет выписан не на сегодняшний вечер. Проход не запрещаем — решает
+  // Проверка задолго до спектакля — это НЕ расхождение даты, а обычная
+  // ситуация: билет сканируют заранее. Раньше обе строки рисовались одним
+  // предупреждением «Билет на другую дату», и корректный билет на свой же
+  // вечер получал ложную тревогу всякий раз, когда сегодня не день показа.
+  // Здесь это просто справка о том, когда состоится сеанс.
+  const earlyNotice = isEarlyShow ? (
+    <CardRow
+      label="Сеанс"
+      value={`Спектакль состоится ${b.showDate} · ${b.showTime}`}
+      valueClass={styles.cardValueNotice}
+    />
+  ) : null;
+
+  // Настоящее расхождение: бронь выписана на один вечер, а спектакль с тем же
+  // id идёт в каталоге в другой — значит, показ перенесли. Дата сканирования
+  // к этому признаку отношения не имеет. Проход не запрещаем — решает
   // сотрудник, — но расхождение обязано быть видно.
-  const dateWarning = (isEarlyShow || b.showDateDiffers) ? (
+  const dateWarning = b.showDateDiffers ? (
     <CardRow
       label="Внимание"
-      value={b.showDateDiffers
-        ? `Бронь на другую дату спектакля — ${b.showDate}`
-        : `Билет на другую дату — ${b.showDate}`}
+      value={`Бронь на другую дату спектакля — ${b.showDate}`}
       valueClass={styles.cardValueReason}
     />
   ) : null;
@@ -172,6 +185,7 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
               <CardRow label="Сумма" value={<>{b.totalAmount}&nbsp;€</>} valueClass={styles.cardValueAmount} />
             )}
             <CardRow label="Оплата" value="НЕ ОПЛАЧЕНО — ОПЛАТА НА МЕСТЕ" valueClass={styles.cardValueUnpaid} />
+            {earlyNotice}
             {dateWarning}
           </>
         }
@@ -196,6 +210,7 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
             {identityRows}
             {countRow}
             <CardRow label="Оплата" value="Оплачено" />
+            {earlyNotice}
             {dateWarning}
           </>
         }
