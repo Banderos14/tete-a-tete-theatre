@@ -140,15 +140,13 @@ describe('билет «Романтики» доходит до сканера �
     expect(parseTicketCodeFromScan(qr)).toBe(code);
   });
 
-  it('актуальность билета считается по каталогу, а не по дате в брони', () => {
-    // Спектакль перенесён с 14 Июн на 17 Сен. Если бы сканер считал
-    // актуальность по showDate из брони, все выписанные раньше билеты стали бы
-    // «прошедшими» — поэтому он берёт дату из каталога по showId.
+  it('актуальность билета считается по сеансу самой брони, а не по каталогу', () => {
+    // Спектакль перенесён с 14 Июн на 17 Сен. Если бы сканер брал дату из
+    // каталога по showId, июньский билет стал бы действительным на сентябрьский
+    // показ. Подробно сценарий разобран в tests/unit/showOccurrence.test.ts.
     expect(showDateString(SHOWS.romantika!)).not.toBe('14 Июн 2026');
     expect(endpointSource('api/checkin-ticket.ts'))
-      .toMatch(/SHOWS\[data\.showId\]/);
-    expect(endpointSource('api/checkin-ticket.ts'))
-      .toMatch(/catalogShow\s*\?\s*\n?\s*showStartUtcMs\(catalogShow\)/);
+      .toContain('bookingOccurrenceStartUtcMs(data as BookingOccurrence)');
   });
 });
 

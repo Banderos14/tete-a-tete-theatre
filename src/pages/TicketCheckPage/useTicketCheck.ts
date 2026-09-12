@@ -105,6 +105,10 @@ export function useTicketCheck(user: User | null, initialState: ScanState): Tick
         }
         return;
       }
+      if (res.reason === 'show_over') {
+        failWith('Билет выписан на другой сеанс — оплату принимать нельзя.');
+        return;
+      }
       failWith(res.reason === 'already_paid'
         ? 'Эта бронь уже отмечена как оплаченная.'
         : 'Ошибка при подтверждении оплаты.');
@@ -126,6 +130,10 @@ export function useTicketCheck(user: User | null, initialState: ScanState): Tick
       if (res.reason === 'already_attended') {
         setBooking(prev => prev ? { ...prev, status: 'attended' } : prev);
         setErrorMsg('');
+        return;
+      }
+      if (res.reason === 'show_over') {
+        failWith('Билет выписан на другой сеанс — проход отмечать нельзя.');
         return;
       }
       failWith(res.reason === 'not_paid'

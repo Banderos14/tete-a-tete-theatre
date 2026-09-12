@@ -26,7 +26,10 @@ export interface CheckinBooking {
   paymentStatus: string;
   paymentMethod: string;
   showRelevance: ShowRelevance;
-  /** Дата брони не совпадает с датой этого спектакля в каталоге. */
+  /**
+   * Спектакль с тем же id идёт в другую дату, чем указана в брони.
+   * Признак информационный — действительность решает showRelevance.
+   */
   showDateDiffers: boolean;
 }
 

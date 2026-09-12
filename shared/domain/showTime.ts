@@ -72,6 +72,40 @@ export function parseShowStartUtcMs(showDate: string, showTime: string): number 
   return parisWallClockToUtcMs(year, monthIndex, day, hour, Number.isFinite(minute) ? minute : 0);
 }
 
+/**
+ * Бронь в том виде, в каком её знает вопрос «на какой сеанс выписан билет».
+ * Структурный тип: подходит и документ Firestore на сервере, и Booking на
+ * клиенте — общее у них только эти три поля.
+ */
+export interface BookingOccurrence {
+  /** Абсолютный момент начала, записанный в момент покупки. */
+  showStartAt?: { toMillis?: () => number; seconds?: number } | null;
+  showDate?: string;
+  showTime?: string;
+}
+
+/**
+ * Момент начала СЕАНСА, на который выписана бронь (мс UTC), либо null.
+ *
+ * Источник — сама бронь, а НЕ каталог спектаклей. Это и есть граница между
+ * «спектаклем» и «конкретным показом»: каталог описывает, что идёт сейчас, и
+ * его дату можно перенести; бронь описывает вечер, на который зритель купил
+ * билет, и он зафиксирован навсегда. Если считать актуальность билета по
+ * каталогу, перенос того же showId на новую дату превращает старые билеты
+ * в действительные на новый показ.
+ *
+ * showStartAt пишется сервером при создании брони. У броней, созданных до
+ * появления этого поля, момент восстанавливается из строковых showDate и
+ * showTime как настенное время Europe/Paris.
+ */
+export function bookingOccurrenceStartUtcMs(booking: BookingOccurrence): number | null {
+  const raw = booking.showStartAt;
+  if (typeof raw?.toMillis === 'function') return raw.toMillis();
+  if (typeof raw?.seconds === 'number')    return raw.seconds * 1000;
+
+  return parseShowStartUtcMs(String(booking.showDate ?? ''), String(booking.showTime ?? ''));
+}
+
 // Момент, после которого спектакль считается сыгранным.
 export function showEndUtcMs(startUtcMs: number): number {
   return startUtcMs + SHOW_END_BUFFER_MS;

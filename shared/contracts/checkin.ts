@@ -25,9 +25,15 @@ export interface CheckinBooking {
   paymentStatus: string;
   paymentMethod: string;
   showRelevance: ShowRelevance;
-  /** Дата брони не совпадает с датой этого спектакля в каталоге. */
+  /**
+   * Дата брони не совпадает с датой этого спектакля в каталоге: спектакль
+   * перенесли, а билет выписан на прежний вечер. Признак информационный —
+   * действительность билета решает showRelevance по сеансу самой брони.
+   */
   showDateDiffers: boolean;
 }
 
 export type CheckinRefusalReason =
-  | 'not_found' | 'bad_code' | 'already_attended' | 'cancelled' | 'not_paid' | 'already_paid';
+  | 'not_found' | 'bad_code' | 'already_attended' | 'cancelled' | 'not_paid' | 'already_paid'
+  // Сеанс, на который выписан билет, уже отыгран.
+  | 'show_over';
