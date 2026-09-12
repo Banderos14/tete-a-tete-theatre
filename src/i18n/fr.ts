@@ -50,7 +50,7 @@ export const FR: T = {
     title:     'À propos',
     titleIt:   'du théâtre',
     meta:      'Fondé en 2018\nNICE · FRANCE',
-    quote:     'Le théâtre n\'est pas un lieu. C\'est une conversation. Très silencieuse, très intime — face à face.',
+    quote:     'Le théâtre n\'est pas un lieu. C\'est une conversation. Très silencieuse, très intime — tête à tête.',
     quoteAttr: '— Du manifeste du théâtre, 2018',
     p1: 'En 2018, sur la base de l\'association culturelle « Constellation » à Nice (France), le théâtre russophone « Tête-à-Tête » a été créé. Le théâtre a été fondé par l\'actrice, metteuse en scène et pédagogue Natalia Kokushkina. Le bâtiment du théâtre se trouve au 24 rue Rossini, au centre-ville, dans le quartier des musiciens. C\'est un « théâtre-maison » avec une troupe permanente de comédiens et un atelier théâtral pour les jeunes, un foyer chaleureux et une salle de 50 places.',
     p2: 'Le théâtre participe activement à des festivals internationaux de théâtre (Italie, Estonie, Allemagne, Finlande, France). Son répertoire comprend des spectacles pour enfants, pour adultes, ainsi que des spectacles de groupes d\'enfants et d\'adolescents. Le théâtre mène une activité culturelle active dans la ville et devient un lieu de rassemblement pour les habitants russophones de la Côte d\'Azur.',

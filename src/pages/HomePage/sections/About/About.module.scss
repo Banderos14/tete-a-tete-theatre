@@ -28,18 +28,29 @@
   font-weight: 400;
   color: var(--fg);
   position: relative;
-  padding-left: 36px;
+  padding-inline: clamp(28px, 2.25vw, 36px);
   margin-bottom: 40px;
 
-  &::before {
-    content: '«';
+  &::before,
+  &::after {
     position: absolute;
-    left: -8px;
-    top: -16px;
-    font-size: 100px;
+    font-size: clamp(64px, 6.25vw, 100px);
     color: var(--accent);
     line-height: 1;
     font-style: normal;
+    pointer-events: none;
+  }
+
+  &::before {
+    content: '«';
+    inset-inline-start: clamp(-20px, -1.25vw, -12px);
+    top: clamp(-28px, -1.75vw, -18px);
+  }
+
+  &::after {
+    content: '»';
+    inset-inline-end: clamp(-12px, 1vw, 16px);
+    bottom: clamp(-24px, -1.25vw, -14px);
   }
 }
 

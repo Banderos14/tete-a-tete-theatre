@@ -520,7 +520,7 @@
 
 .eyebrow {
   font-family: var(--font-display);
-  letter-spacing: clamp(0.1em, 1.6vw, 0.5em);
+  letter-spacing: clamp(0.3em, 0.02em, 0em);
   display: inline-flex;
   align-items: center;
   gap: 14px;
@@ -647,7 +647,7 @@
   max-width: 100%;
   font-family: var(--font-display);
   letter-spacing: var(--font-display-spacing);
-  font-size: clamp(22px, 2.6vw, 34px);
+  font-size: clamp(26px, 3vw, 42px);
   color: var(--fg-dim);
   font-weight: normal;
   white-space: nowrap;
