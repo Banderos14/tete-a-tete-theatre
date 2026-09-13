@@ -187,10 +187,11 @@ describe('админка: состояние после удаления', () =>
 
   it('счётчики пересчитываются из того же списка броней', () => {
     // Сводка и статистика по спектаклям считаются из bookings на каждом рендере,
-    // поэтому отдельной синхронизации после удаления не нужно.
-    expect(bookingsTab).toContain('countTickets(bookings)');
-    expect(bookingsTab).toContain('paidRevenue(bookings)');
-    expect(bookingsTab).toContain('const totalBookings = bookings.length;');
+    // поэтому отдельной синхронизации после удаления не нужно. Считаются только
+    // активные брони — см. tests/unit/cancellationRelease.test.ts.
+    expect(bookingsTab).toContain('summarizeByShow(SHOWS, bookings)');
+    expect(bookingsTab).toContain('summarizeBookings(bookings)');
+    expect(bookingsTab).not.toContain('bookings.length');
   });
 });
 

@@ -43,8 +43,12 @@ export function canUserCancel(
   return { allowed: true };
 }
 
-// Занимает ли бронь место в зале.
+// Занимает ли бронь место в зале — это же и определение АКТИВНОЙ брони.
 // Отменённые и протухшие брони вместимость не занимают.
+//
+// Одно правило на всех: транзакция создания брони, /api/show-availability и
+// сводка админки считают через него, поэтому «мест свободно» на сайте и
+// «броней/билетов» в админке не могут разойтись.
 export function occupiesCapacity(booking: BookingStateSnapshot): boolean {
   if (booking.status === 'cancelled')       return false;
   if (booking.paymentStatus === 'expired')  return false;
@@ -86,6 +90,11 @@ export function sumOccupiedTickets(
         : 1;
   }
   return total;
+}
+
+// Сколько броней активно — ровно те, что учитывает sumOccupiedTickets.
+export function countActiveBookings(bookings: BookingStateSnapshot[]): number {
+  return bookings.filter(occupiesCapacity).length;
 }
 
 export interface CapacityDecision {

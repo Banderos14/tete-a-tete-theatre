@@ -9,6 +9,7 @@ import type { Booking, BookingStatus, PaymentStatus } from '../../types/booking'
 import { formatTimestamp, PAY_STATUS_LABELS } from './adminFormatting';
 import type { ConfirmAction, FilterShowId, FilterStatus } from './adminTypes';
 import { ticketTypeLabel } from '../../utils/ticketType';
+import { summarizeBookings, summarizeByShow } from './adminStats';
 import styles from './AdminPage.module.scss';
 
 const PAY_STATUS_STYLE: Record<PaymentStatus, string> = {
@@ -53,16 +54,6 @@ function showGlyph(title: string): string {
   return title.replace(/[«»]/g, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 
-/** Итоги считаются и по каждому спектаклю, и по всем броням сразу. */
-function countTickets(list: Booking[]): number {
-  return list.reduce((sum, b) => sum + (b.seatsCount ?? b.ticketsCount), 0);
-}
-
-/** Касса — только по оплаченным броням: остальные денег ещё не принесли. */
-function paidRevenue(list: Booking[]): number {
-  return list.filter(b => b.paymentStatus === 'paid').reduce((sum, b) => sum + (b.totalAmount ?? 0), 0);
-}
-
 export function BookingsTab({
   bookings, fetching, updatingId,
   deleteError, onDismissDeleteError,
@@ -84,39 +75,31 @@ export function BookingsTab({
     .filter(b => filterShow  === 'all' || b.showId === filterShow)
     .filter(b => filterStatus === 'all' || b.status === filterStatus);
 
-  const statsByShow = SHOWS.map(show => {
-    const showBookings = bookings.filter(b => b.showId === show.id);
-    return {
-      show,
-      count:   showBookings.length,
-      tickets: countTickets(showBookings),
-      revenue: paidRevenue(showBookings),
-    };
-  });
-
-  const totalBookings = bookings.length;
-  const totalTickets  = countTickets(bookings);
-  const totalRevenue  = paidRevenue(bookings);
+  // Сводка пересчитывается из текущего списка броней на каждом рендере: когда
+  // админ отменяет бронь, useAdminData меняет её статус в состоянии — и цифры
+  // обновляются сразу, без перезагрузки и без отдельного listener'а.
+  const statsByShow = summarizeByShow(SHOWS, bookings);
+  const total       = summarizeBookings(bookings);
 
   return (
     <>
       <div className={styles.summaryRow}>
         <div className={styles.summaryCard}>
-          <span className={styles.summaryNum}>{totalBookings}</span>
+          <span className={styles.summaryNum}>{total.bookings}</span>
           <span className={styles.summaryLabel}>{t.admin.bookings}</span>
         </div>
         <div className={styles.summaryCard}>
-          <span className={styles.summaryNum}>{totalTickets}</span>
+          <span className={styles.summaryNum}>{total.tickets}</span>
           <span className={styles.summaryLabel}>{t.admin.totalTickets}</span>
         </div>
         <div className={styles.summaryCard}>
-          <span className={styles.summaryNum}>{totalRevenue}&nbsp;€</span>
+          <span className={styles.summaryNum}>{total.revenue}&nbsp;€</span>
           <span className={styles.summaryLabel}>{t.admin.totalRevenue}</span>
         </div>
       </div>
 
       <div className={styles.showStats}>
-        {statsByShow.map(({ show, count, tickets, revenue }) => (
+        {statsByShow.map(({ show, bookings: count, tickets, revenue }) => (
           <button
             key={show.id}
             className={`${styles.showCard} ${filterShow === show.id ? styles.showCardActive : ''}`}
