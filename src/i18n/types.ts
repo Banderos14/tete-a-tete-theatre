@@ -298,6 +298,16 @@ export interface T {
     readMore: string;
     readLess: string;
   };
+  // Действия с PDF в раскрытом билете (TicketCard).
+  ticketPdf: {
+    download: string;
+    share: string;
+    preparing: string;
+    iosHint: string;
+    errorGenerate: string;
+    errorShare: string;
+    errorPreviewBlocked: string;
+  };
   // Ключи перечислены явно: раньше здесь стоял Record<string, string>, и
   // компилятор молча пропускал пропуски — во французской версии выводились
   // русские «Поэзия», «Сен», «Окт».

@@ -463,11 +463,26 @@
   line-height: 1.1;
 }
 
+.pdfActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 16px;
+  margin-top: 3px;
+
+  @include mixins.small {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+}
+
 .pdfLink {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 3px;
+  // Зона нажатия не меньше прежней кнопки; на телефоне — под палец.
+  min-height: 28px;
   padding: 0;
   background: none;
   border: none;
@@ -489,7 +504,42 @@
     opacity: 0.4;
     cursor: not-allowed;
   }
+
+  &[aria-busy='true']:disabled {
+    // Нажатая кнопка показывает прогресс — её не гасим так же, как соседнюю.
+    opacity: 0.75;
+    cursor: progress;
+  }
+
+  @include mixins.small {
+    min-height: 40px;
+    text-align: left;
+  }
 }
+
+.pdfSpinner {
+  flex-shrink: 0;
+  animation: pdfSpin 0.8s linear infinite;
+}
+
+@keyframes pdfSpin {
+  to { transform: rotate(360deg); }
+}
+
+.pdfHint,
+.pdfError {
+  max-width: 34ch;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+
+  @include mixins.small { max-width: none; }
+}
+
+.pdfHint { color: #8a7568; }
+
+.pdfError { color: #a33b2e; }
 
 :global([data-theme='light']) {
   // .paperBody / .qrWrap / .details stay paper-coloured in both themes —

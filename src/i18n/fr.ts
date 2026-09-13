@@ -294,6 +294,15 @@ export const FR: T = {
     readMore:      'Lire la suite',
     readLess:      'Réduire',
   },
+  ticketPdf: {
+    download:            'Télécharger le PDF',
+    share:               'Partager / enregistrer',
+    preparing:           'Préparation du PDF…',
+    iosHint:             "Sur iPhone, le PDF peut s'ouvrir en aperçu. Utilisez « Partager » → « Enregistrer dans Fichiers ».",
+    errorGenerate:       'Impossible de préparer le PDF. Réessayez.',
+    errorShare:          "Impossible d'ouvrir le menu de partage. Réessayez ou téléchargez le PDF.",
+    errorPreviewBlocked: "Le navigateur a bloqué l'ouverture du PDF. Appuyez de nouveau sur « Télécharger le PDF ».",
+  },
   showTags: {
     'Поэзия': 'Poésie',
     'Поэма': 'Poème',

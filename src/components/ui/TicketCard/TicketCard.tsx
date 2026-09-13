@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
+import { IconDownload, IconLoader2, IconShare2 } from '@tabler/icons-react';
 import { generateTicketQR } from '../../../services/qrService';
-import { generateTicketPdf, canShareFiles } from '../../../services/ticketPdfService';
+import { canShareFiles } from '../../../services/ticketPdfService';
 import { useLang } from '../../../i18n/LangContext';
 import type { Booking } from '../../../types/booking';
 import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant } from '../../../utils/ticketStub';
 import { ticketTypeLabel } from '../../../utils/ticketType';
 import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
+import { useTicketPdf } from './useTicketPdf';
 import styles from './TicketCard.module.scss';
 
 interface Props {
@@ -15,11 +17,21 @@ interface Props {
 }
 
 export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
-  const { lang } = useLang();
-  const [qrSrc,      setQrSrc]      = useState('');
-  const [qrLoaded,   setQrLoaded]   = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const { t, lang } = useLang();
+  const [qrSrc,    setQrSrc]    = useState('');
+  const [qrLoaded, setQrLoaded] = useState(false);
   const fetched = useRef(false);
+  // В PDF попадает тот же qrSrc, что показан в кабинете, — второй QR не строится.
+  const pdf = useTicketPdf(b, qrSrc, lang);
+
+  // Возможности браузера не меняются за жизнь карточки — проверяем один раз.
+  // Кнопку «Поделиться» показываем только там, где лист реально принимает файл.
+  const [shareSupported] = useState(canShareFiles);
+  // Подсказка про iPhone нужна на сенсорных устройствах с листом «Поделиться»
+  // или когда PDF уже открылся в просмотре вместо загрузки. Без User-Agent.
+  const [coarsePointer] = useState(
+    () => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,
+  );
 
   useEffect(() => {
     if (!isExpanded || fetched.current) return;
@@ -29,20 +41,13 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
       .catch(() => { setQrLoaded(true); });
   }, [b.ticketCode, isExpanded]);
 
-  async function handleDownloadPdf() {
-    if (!qrSrc || pdfLoading) return;
-    setPdfLoading(true);
-    try { await generateTicketPdf(b, qrSrc, lang); }
-    finally { setPdfLoading(false); }
-  }
-
   const isFR       = lang === 'FR';
-  // Где PDF уходит в системный лист «Поделиться» (iOS/Android), «Скачать» —
-  // неточное слово: файл можно и сохранить, и отправить. Определяем по
-  // возможностям браузера, без разбора User-Agent.
-  const pdfLabel   = canShareFiles()
-    ? (isFR ? 'Télécharger / enregistrer le PDF' : 'Скачать / сохранить PDF')
-    : (isFR ? 'Télécharger PDF' : 'Скачать PDF');
+  const pdfDisabled = !qrSrc || pdf.busy !== null;
+  const showPdfHint = pdf.openedInPreview || (shareSupported && coarsePointer);
+  const pdfErrorText =
+    pdf.error === 'share'           ? t.ticketPdf.errorShare :
+    pdf.error === 'preview-blocked' ? t.ticketPdf.errorPreviewBlocked :
+    pdf.error === 'generate'        ? t.ticketPdf.errorGenerate : '';
   const stubVariant = getStubVariant(b);
   const payStatus  = b.paymentStatus ?? 'not_paid';
 
@@ -197,15 +202,36 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
                     {isFR ? 'Réservation' : 'Код брони'}
                   </span>
                   <code className={styles.codeValue}>{b.ticketCode}</code>
-                  <button
-                    type="button"
-                    className={styles.pdfLink}
-                    onClick={handleDownloadPdf}
-                    disabled={!qrSrc || pdfLoading}
-                  >
-                    <DownloadIcon />
-                    {pdfLoading ? '…' : pdfLabel}
-                  </button>
+                  <div className={styles.pdfActions}>
+                    <button
+                      type="button"
+                      className={styles.pdfLink}
+                      onClick={pdf.download}
+                      disabled={pdfDisabled}
+                      aria-busy={pdf.busy === 'download'}
+                    >
+                      {pdf.busy === 'download'
+                        ? <IconLoader2 size={13} stroke={1.5} className={styles.pdfSpinner} aria-hidden="true" />
+                        : <IconDownload size={13} stroke={1.5} aria-hidden="true" />}
+                      {pdf.busy === 'download' ? t.ticketPdf.preparing : t.ticketPdf.download}
+                    </button>
+                    {shareSupported && (
+                      <button
+                        type="button"
+                        className={styles.pdfLink}
+                        onClick={pdf.share}
+                        disabled={pdfDisabled}
+                        aria-busy={pdf.busy === 'share'}
+                      >
+                        {pdf.busy === 'share'
+                          ? <IconLoader2 size={13} stroke={1.5} className={styles.pdfSpinner} aria-hidden="true" />
+                          : <IconShare2 size={13} stroke={1.5} aria-hidden="true" />}
+                        {pdf.busy === 'share' ? t.ticketPdf.preparing : t.ticketPdf.share}
+                      </button>
+                    )}
+                  </div>
+                  {showPdfHint && <p className={styles.pdfHint}>{t.ticketPdf.iosHint}</p>}
+                  {pdfErrorText && <p className={styles.pdfError} role="alert">{pdfErrorText}</p>}
                 </div>
               </div>
             </div>
@@ -249,13 +275,5 @@ export function StampBadge({ booking: b, isFR }: { booking: Booking; isFR: boole
     <span className={`${styles.stamp} ${stampClass}`} style={{ transform: rotation }}>
       {label}
     </span>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-    </svg>
   );
 }

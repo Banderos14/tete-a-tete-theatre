@@ -62,19 +62,20 @@ describe('PDF сохраняется и на телефоне', () => {
     expect(pdf).not.toContain('doc.save(');
   });
 
-  it('мобильный путь выбирается по возможностям браузера, а не по User-Agent', () => {
+  it('путь выбирается по возможностям браузера, а не по User-Agent', () => {
     expect(pdf).toContain('canShare');
-    expect(pdf).toContain('navigator.share');
+    expect(pdf).toContain('navigator');
     expect(pdf).not.toMatch(/navigator\.userAgent/);
+    expect(projectSource('src/components/ui/TicketCard/TicketCard.tsx')).not.toMatch(/userAgent/);
   });
 
   it('canShare проверяется именно с файлом', () => {
     expect(pdf).toMatch(/canShare\(\{ files:/);
   });
 
-  it('desktop сохраняет прежнюю загрузку через Blob URL', () => {
+  it('загрузка идёт через Blob URL и <a download>', () => {
     expect(pdf).toContain('createObjectURL');
-    expect(pdf).toContain('a.download = fileName');
+    expect(pdf).toContain('a.download = pdf.fileName');
     expect(pdf).toContain('revokeObjectURL');
   });
 
@@ -82,16 +83,23 @@ describe('PDF сохраняется и на телефоне', () => {
     expect(pdf).toContain("'AbortError'");
   });
 
-  it('надпись на кнопке отражает то, что реально произойдёт — в обоих языках', () => {
+  it('«Скачать» и «Поделиться» — две отдельные кнопки, обе локализованы', () => {
     const card = projectSource('src/components/ui/TicketCard/TicketCard.tsx');
-    expect(card).toContain('canShareFiles()');
-    expect(card).toContain('Скачать / сохранить PDF');
-    expect(card).toContain('Télécharger / enregistrer le PDF');
+    expect(card).toContain('onClick={pdf.download}');
+    expect(card).toContain('onClick={pdf.share}');
+    expect(card).toContain('t.ticketPdf.download');
+    expect(card).toContain('t.ticketPdf.share');
+    expect(projectSource('src/i18n/ru.ts')).toContain("'Скачать PDF'");
+    expect(projectSource('src/i18n/ru.ts')).toContain("'Поделиться / сохранить'");
+    expect(projectSource('src/i18n/fr.ts')).toContain("'Télécharger le PDF'");
+    expect(projectSource('src/i18n/fr.ts')).toContain("'Partager / enregistrer'");
   });
 
   it('в PDF попадает тот же QR, что показан в кабинете', () => {
     // PDF — удобство, а не условие прохода: он печатает уже готовый qrSrc.
     expect(projectSource('src/components/ui/TicketCard/TicketCard.tsx'))
-      .toContain('generateTicketPdf(b, qrSrc, lang)');
+      .toContain('useTicketPdf(b, qrSrc, lang)');
+    expect(projectSource('src/components/ui/TicketCard/useTicketPdf.ts'))
+      .toContain('booking: b, qrSrc, lang');
   });
 });

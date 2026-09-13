@@ -183,7 +183,9 @@ describe('PDF-билет доходит до сканера', () => {
     // TicketCard отдаёт в генератор PDF уже построенную картинку QR,
     // а не строит вторую — разойтись им негде.
     const card = projectSource('src/components/ui/TicketCard/TicketCard.tsx');
-    expect(card).toContain('generateTicketPdf(b, qrSrc, lang)');
+    expect(card).toContain('useTicketPdf(b, qrSrc, lang)');
+    expect(projectSource('src/components/ui/TicketCard/useTicketPdf.ts'))
+      .toContain('booking: b, qrSrc, lang');
     expect(card).toContain('generateTicketQR(b.ticketCode)');
   });
 });

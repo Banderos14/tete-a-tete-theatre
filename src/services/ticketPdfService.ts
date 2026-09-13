@@ -93,15 +93,63 @@ async function loadFontBase64(path: string): Promise<string | null> {
 
 // ── Доставка готового PDF пользователю ───────────────────────────────────────
 //
-// Диагноз проблемы на телефоне: jsPDF.save() делает ровно одно — клик по
-// скрытой <a download>. Safari на iOS атрибут download игнорирует, поэтому
-// вместо сохранения открывался системный просмотр PDF, и зритель не понимал,
-// куда делся файл.
+// Документ собирается ОДИН раз (buildTicketPdf), а дальше у зрителя два
+// независимых действия над одним и тем же файлом:
 //
-// Лечение — по ВОЗМОЖНОСТЯМ браузера, а не по User-Agent: если доступен
-// Web Share с файлами, отдаём файл в системный лист «Поделиться», где есть
-// «Сохранить в Файлы», AirDrop и почта. Где его нет (весь desktop) —
-// прежняя загрузка через Blob URL.
+//   «Скачать PDF»            — Blob URL + <a download>; где атрибут download
+//                               не поддерживается — PDF открывается в просмотре;
+//   «Поделиться / сохранить» — системный лист Web Share с файлом: на iOS там
+//                               «Сохранить в Файлы», AirDrop, почта.
+//
+// Раньше это была одна кнопка, которая сама решала, что делать, — на Mac она
+// открывала лист «Поделиться», и скачать файл напрямую было нельзя.
+//
+// Выбор пути — только по ВОЗМОЖНОСТЯМ браузера, User-Agent не разбирается.
+// Честное ограничение: iOS Safari объявляет download, но для Blob может
+// показать просмотр вместо сохранения. Надёжный путь там — «Поделиться».
+
+/** Готовый билет: тот самый файл, который получат и загрузка, и «Поделиться». */
+export interface TicketPdf {
+  /** File, если конструктор File есть в браузере, иначе Blob. */
+  blob: Blob;
+  fileName: string;
+}
+
+/** Причина, по которой действие с PDF не удалось, — для понятного текста в UI. */
+export type TicketPdfErrorKind = 'generate' | 'share' | 'preview-blocked';
+
+export class TicketPdfError extends Error {
+  readonly kind: TicketPdfErrorKind;
+
+  constructor(kind: TicketPdfErrorKind, cause?: unknown) {
+    super(`ticket pdf: ${kind}`, { cause });
+    this.name = 'TicketPdfError';
+    this.kind = kind;
+  }
+}
+
+/** Всё, что не классифицировано явно, — сбой подготовки документа. */
+export function ticketPdfErrorKind(err: unknown): TicketPdfErrorKind {
+  return err instanceof TicketPdfError ? err.kind : 'generate';
+}
+
+/**
+ * Стабильное имя файла: ticket-PKX3-E222.pdf. Код билета и так состоит из
+ * A–Z, 2–9 и дефиса, но имя уходит в файловую систему — лишнее вырезаем.
+ */
+export function ticketPdfFileName(ticketCode: string): string {
+  const safe = ticketCode.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  return `ticket-${safe || 'unknown'}.pdf`;
+}
+
+const PDF_MIME = 'application/pdf';
+
+function toPdfFile(blob: Blob, fileName: string): Blob {
+  if (typeof File === 'undefined') return blob;
+  return blob instanceof File && blob.name === fileName
+    ? blob
+    : new File([blob], fileName, { type: PDF_MIME });
+}
 
 // Navigator.share / canShare объявлены в lib.dom как обязательные, но в реальных
 // браузерах их может не быть вовсе — поэтому обращаемся через необязательный вид.
@@ -122,48 +170,81 @@ export function canShareFiles(): boolean {
   // canShare обязан проверяться именно с файлом: Android-браузеры объявляют
   // navigator.share, но файлы принимают не все.
   try {
-    return nav.canShare({ files: [new File([new Blob()], 'probe.pdf', { type: 'application/pdf' })] });
+    return nav.canShare({ files: [new File([new Blob()], 'probe.pdf', { type: PDF_MIME })] });
   } catch {
     return false;
   }
 }
 
-function downloadBlob(blob: Blob, fileName: string): void {
-  const url = URL.createObjectURL(blob);
-  const a   = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  // Отзываем не сразу: часть браузеров читает Blob уже после клика.
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+/** Поддерживает ли браузер атрибут download у ссылки. */
+export function canDownloadFiles(): boolean {
+  if (typeof document === 'undefined') return false;
+  return 'download' in document.createElement('a');
 }
 
-async function deliverPdf(blob: Blob, fileName: string): Promise<void> {
-  if (canShareFiles()) {
-    try {
-      await shareApi().share!({
-        files: [new File([blob], fileName, { type: 'application/pdf' })],
-        title: fileName,
-      });
-      return;
-    } catch (err) {
-      // Пользователь закрыл системный лист — это не ошибка, и подсовывать
-      // ему вместо этого молчаливую загрузку не надо.
-      if ((err as { name?: string })?.name === 'AbortError') return;
-      // Любой другой сбой — падаем на обычную загрузку.
-    }
+/**
+ * Что произошло после нажатия «Скачать PDF»:
+ * 'downloaded' — отработала ссылка с download (браузер кладёт файл в Загрузки;
+ *                iOS Safari может вместо этого показать просмотр);
+ * 'opened'     — download не поддерживается, PDF открыт в системном просмотре.
+ */
+export type DownloadOutcome = 'downloaded' | 'opened';
+
+export function downloadTicketPdf(pdf: TicketPdf): DownloadOutcome {
+  const url = URL.createObjectURL(pdf.blob);
+
+  if (canDownloadFiles()) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = pdf.fileName;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Отзываем не сразу: часть браузеров читает Blob уже после клика.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    return 'downloaded';
   }
-  downloadBlob(blob, fileName);
+
+  // Без download ссылка просто перешла бы на PDF и увела зрителя из кабинета —
+  // открываем в новой вкладке, там системный просмотр с кнопкой «Поделиться».
+  // 'noopener' не передаём: с ним window.open всегда возвращает null и
+  // заблокированное окно не отличить от открытого.
+  const win = window.open(url, '_blank');
+  if (!win) {
+    URL.revokeObjectURL(url);
+    throw new TicketPdfError('preview-blocked');
+  }
+  // Просмотр читает Blob дольше обычной загрузки — даём ему минуту.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  return 'opened';
 }
 
-export async function generateTicketPdf(
+/** 'cancelled' — зритель закрыл системный лист; это не ошибка. */
+export type ShareOutcome = 'shared' | 'cancelled';
+
+export async function shareTicketPdf(pdf: TicketPdf): Promise<ShareOutcome> {
+  if (!canShareFiles()) throw new TicketPdfError('share');
+  try {
+    await shareApi().share!({ files: [toPdfFile(pdf.blob, pdf.fileName) as File], title: pdf.fileName });
+    return 'shared';
+  } catch (err) {
+    // Закрытый лист не превращаем ни в ошибку, ни в молчаливую загрузку.
+    if ((err as { name?: string })?.name === 'AbortError') return 'cancelled';
+    throw new TicketPdfError('share', err);
+  }
+}
+
+/**
+ * Собирает PDF-билет. Единственная точка генерации: и «Скачать», и
+ * «Поделиться» получают результат этой функции, поэтому QR, код брони и
+ * данные спектакля в них не могут разойтись.
+ */
+export async function buildTicketPdf(
   booking: Booking,
   qrDataUrl: string,
   lang: 'RU' | 'FR' = 'FR',
-): Promise<void> {
+): Promise<TicketPdf> {
   const { jsPDF: JsPDF } = await import('jspdf');
 
   const doc    = new JsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
@@ -337,5 +418,6 @@ export async function generateTicketPdf(
   else H('italic');
   doc.text(L.footer, W / 2, y, { align: 'center' });
 
-  await deliverPdf(doc.output('blob'), `ticket-${booking.ticketCode}.pdf`);
+  const fileName = ticketPdfFileName(booking.ticketCode);
+  return { blob: toPdfFile(doc.output('blob'), fileName), fileName };
 }
