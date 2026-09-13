@@ -1,6 +1,25 @@
 import type { Show, DraftShow, RepertoireItem } from '../types';
 import { parseShowStartUtcMs } from '../../shared/domain/showTime';
 
+// Постеры спектаклей — ЕДИНСТВЕННОЕ место, где файл связывается со спектаклем.
+// SHOWS и REPERTOIRE ниже ссылаются на эти же константы, а Афиша, Репертуар,
+// ShowModal, BookingModal, кабинет и админка читают `image` из них.
+//
+// Файлы импортируются через Vite, а не лежат в public/: в сборке имя получает
+// content-hash (/assets/lubov-XXXX.webp). /images/* и /assets/* отдаются
+// с `immutable` на год, поэтому замена файла в public/ под тем же именем
+// до зрителей не доходила — CDN и браузеры продолжали показывать старую афишу.
+// Новый файл = новый хеш = новый URL, кеш сбрасывать не нужно.
+import romantikaPoster from '../assets/shows/romantika.webp';
+import shutkaPoster    from '../assets/shows/shutka.webp';
+import korablikPoster  from '../assets/shows/korablik.webp';
+import razgovorPoster  from '../assets/shows/razgovor.webp';
+import enotPoster      from '../assets/shows/enot.webp';
+import lubovPoster     from '../assets/shows/lubov.webp';
+import shapochkaPoster from '../assets/shows/shapochka.webp';
+import kovchegPoster   from '../assets/shows/kovcheg8.webp';
+import nulinPoster     from '../assets/shows/nulin.webp';
+
 // Спектакль уже начался? Время считается как настенное Europe/Paris —
 // той же функцией, которой пользуется сервер, чтобы клиент и сервер не расходились.
 export function isShowPast(show: Pick<Show, 'day' | 'month' | 'year' | 'time'>, nowMs: number = Date.now()): boolean {
@@ -8,7 +27,6 @@ export function isShowPast(show: Pick<Show, 'day' | 'month' | 'year' | 'time'>, 
   return start !== null && start <= nowMs;
 }
 
-const showImage = (fileName: string) => `${import.meta.env.BASE_URL}images/shows/${fileName}`;
 const showPhoto = (fileName: string) => `${import.meta.env.BASE_URL}images/showPhotos/${fileName}`;
 
 // imagePosition двигает постер внутри рамки (CSS background-position / object-position):
@@ -45,7 +63,7 @@ export const SHOWS: Show[] = [
     desc:   'Литературно-музыкальный спектакль по биографии Марины Цветаевой.',
     descFR: 'Spectacle littéraire et musical consacré à la biographie de Marina Tsvetaïeva.',
     palette: 'var(--ph-1)',
-    image: showImage('romantika.webp'),
+    image: romantikaPoster,
     photos: [
       { src: showPhoto('romantika1.webp'), position: 'center 50%', size: '110%' },
       { src: showPhoto('romantika2.webp'), position: 'left 60%', size: '130%' },
@@ -70,7 +88,7 @@ export const SHOWS: Show[] = [
     desc:   'Две комедии А. П. Чехова — «Юбилей» и «Предложение».',
     descFR: 'Deux comédies d’Anton Tchekhov — «L’Anniversaire» et «La Demande en mariage».',
     palette: 'var(--ph-2)',
-    image: showImage('shutka.webp'),
+    image: shutkaPoster,
     photos: [
       { src: showPhoto('shutka1.webp'), position: 'center 20%', mobileScale: 1},
       { src: showPhoto('shutka2.webp'), position: 'center 30%', mobileScale: 1},
@@ -98,7 +116,7 @@ export const SHOWS: Show[] = [
     desc: 'Интерактивный детский спектакль о путешествии маленького кораблика.',
     descFR: 'Un spectacle interactif pour enfants sur le voyage d’un petit bateau.',
     palette: 'var(--ph-3)',
-    image: showImage('korablik.webp'),
+    image: korablikPoster,
     totalSeats: 50,
     ticketTypes: [
       { id: 'child',  label: 'Ребёнок', labelFR: 'Enfant', price: 20, available: 50, seats: 1 },
@@ -118,7 +136,7 @@ export const SHOWS: Show[] = [
     desc: 'Трагикомедия по пьесе Р. Белецкого. С юмором говорим о серьёзном, смеёмся вместе с прошлым, делаем выводы на будущее.',
     descFR: 'Tragicomédie d’après la pièce de R. Beletski. Nous parlons avec humour de choses sérieuses, rions avec le passé et en tirons des leçons pour l’avenir.',
     palette: 'var(--ph-4)',
-    image: showImage('razgovor.webp'),
+    image: razgovorPoster,
     totalSeats: 50,
     ticketTypes: [
       { id: 'standard', label: 'Обычный', labelFR: 'Plein tarif', price: 25, available: 50, seats: 1 },
@@ -139,8 +157,7 @@ export const SHOWS: Show[] = [
     desc: 'Кукольный спектакль театра «Маленькая белая рыбка» из Канн. Добрая сказка о смелости и дружбе для детей и для взрослых, которые ещё помнят, как быть детьми!',
     descFR: 'Spectacle de marionnettes du théâtre «Le Petit Poisson blanc» de Cannes. Un conte plein de bonté sur le courage et l’amitié, pour les enfants et les adultes qui se souviennent encore comment être enfants.',
     palette: 'var(--ph-5)',
-    // TODO: publish when official poster/photo is available
-    published: false,
+    image: enotPoster,
     totalSeats: 50,
     ticketTypes: [
       { id: 'child',  label: 'Ребёнок', labelFR: 'Enfant', price: 20, available: 50, seats: 1 },
@@ -160,7 +177,7 @@ export const SHOWS: Show[] = [
     desc: 'Спектакль по рассказам А. Аверченко и Н. Тэффи. Пять новелл о любви.',
     descFR: 'Un spectacle d’après les récits d’A. Averchenko et de N. Teffi. Cinq nouvelles sur l’amour.',
     palette: 'var(--ph-1)',
-    image: showImage('lubov.webp'),
+    image: lubovPoster,
     totalSeats: 50,
     ticketTypes: [
       { id: 'standard', label: 'Обычный', labelFR: 'Plein tarif', price: 20, available: 50, seats: 1 },
@@ -181,8 +198,7 @@ export const SHOWS: Show[] = [
     desc: 'Смешные перчаточные куклы разыгрывают новую историю с хорошим завершением и учат малышей быть отзывчивыми, открытыми и готовыми всегда помочь близким!',
     descFR: 'De drôles de marionnettes à gaine jouent une nouvelle histoire qui finit bien et apprennent aux petits à être attentifs, ouverts et toujours prêts à aider leurs proches.',
     palette: 'var(--ph-2)',
-    // TODO: publish when official poster/photo is available
-    published: false,
+    image: shapochkaPoster,
     totalSeats: 50,
     ticketTypes: [
       { id: 'child',  label: 'Ребёнок', labelFR: 'Enfant', price: 20, available: 50, seats: 1 },
@@ -222,7 +238,7 @@ export const SHOWS: Show[] = [
     desc: 'Музыкальный спектакль для всей семьи по пьесе Урлиха Хуба.',
     descFR: 'Un spectacle musical pour toute la famille d’après la pièce d’Ulrich Hub.',
     palette: 'var(--ph-4)',
-    image: showImage('kovcheg8.webp'),
+    image: kovchegPoster,
     totalSeats: 50,
     ticketTypes: [
       { id: 'standard', label: 'Обычный', labelFR: 'Plein tarif', price: 30, available: 50, seats: 1 },
@@ -242,7 +258,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     authorFR: 'Marina Tsvetaïeva',
     tag: 'Поэзия', age: '10+',
     palette: 'var(--ph-1)',
-    image: showImage('romantika.webp'),
+    image: romantikaPoster,
     imagePosition: 'center 53%',
     description: 'Литературно-музыкальный спектакль по биографии Марины Цветаевой.',
     descriptionFR: 'Spectacle littéraire et musical consacré à la biographie de Marina Tsvetaïeva.',
@@ -256,7 +272,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     authorFR: 'A. P. Tchekhov',
     tag: 'Комедия', age: '10+',
     palette: 'var(--ph-2)',
-    image: showImage('shutka.webp'),
+    image: shutkaPoster,
     description: 'Две комедии А. П. Чехова — «Юбилей» и «Предложение».',
     descriptionFR: 'Deux comédies d’Anton Tchekhov — «L’Anniversaire» et «La Demande en mariage».',
     duration: '1 час 10 минут (с антрактом)', durationFR: '1 h 10 (avec entracte)',
@@ -269,7 +285,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     authorFR: 'A. Averchenko et N. Teffi',
     tag: 'Комедия', age: '12+',
     palette: 'var(--ph-1)',
-    image: showImage('lubov.webp'),
+    image: lubovPoster,
     description: 'Спектакль по рассказам А. Аверченко и Н. Тэффи. Пять новелл о любви.',
     descriptionFR: 'Un spectacle d’après les récits d’A. Averchenko et de N. Teffi. Cinq nouvelles sur l’amour.',
     duration: '1 час 30 минут (с антрактом)', durationFR: '1 h 30 (avec entracte)',
@@ -282,7 +298,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     authorFR: 'Spectacle interactif pour enfants',
     tag: 'Сказка', age: '1+',
     palette: 'var(--ph-3)',
-    image: showImage('korablik.webp'),
+    image: korablikPoster,
     description: 'Интерактивный детский спектакль о путешествии маленького кораблика.',
     descriptionFR: 'Un spectacle interactif pour enfants sur le voyage d’un petit bateau.',
     duration: '45 минут', durationFR: '45 min',
@@ -295,7 +311,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     authorFR: 'R. Beletski',
     tag: 'Драма', age: '12+',
     palette: 'var(--ph-4)',
-    image: showImage('razgovor.webp'),
+    image: razgovorPoster,
     description: 'Трагикомедия по пьесе Р. Белецкого. С юмором говорим о серьёзном, смеёмся вместе с прошлым, делаем выводы на будущее.',
     descriptionFR: 'Tragicomédie d’après la pièce de R. Beletski. Nous parlons avec humour de choses sérieuses, rions avec le passé et en tirons des leçons pour l’avenir.',
     duration: '1 час 10 минут (без антракта)', durationFR: '1 h 10 (sans entracte)',
@@ -308,11 +324,10 @@ export const REPERTOIRE: RepertoireItem[] = [
     authorFR: 'Théâtre «Le Petit Poisson blanc» · Cannes',
     tag: 'Сказка', age: '3+',
     palette: 'var(--ph-5)',
+    image: enotPoster,
     description: 'Добрая кукольная сказка о смелости и дружбе для детей и взрослых, которые ещё помнят, как быть детьми.',
     descriptionFR: 'Un tendre conte de marionnettes sur le courage et l’amitié, pour les enfants et les adultes qui se souviennent encore comment être enfants.',
     duration: '45 минут', durationFR: '45 min',
-    // TODO: publish when official poster/photo is available
-    published: false,
   },
   {
     id: 'shapochka', status: 'active',
@@ -322,11 +337,10 @@ export const REPERTOIRE: RepertoireItem[] = [
     authorFR: 'Théâtre «Le Petit Poisson blanc» · Cannes',
     tag: 'Сказка', age: '3–7 лет',
     palette: 'var(--ph-2)',
+    image: shapochkaPoster,
     description: 'Смешные перчаточные куклы разыгрывают новую историю с хорошим завершением и учат малышей быть отзывчивыми, открытыми и готовыми всегда помочь близким!',
     descriptionFR: 'De drôles de marionnettes à gaine jouent une nouvelle histoire qui finit bien et apprennent aux petits à être attentifs, ouverts et toujours prêts à aider leurs proches.',
     duration: 'Продолжительность уточняется', durationFR: 'Durée à confirmer',
-    // TODO: publish when official poster/photo is available
-    published: false,
   },
   {
     id: 'letuchiy', status: 'active',
@@ -349,7 +363,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     author: 'Урлих Хуб',
     authorFR: 'Ulrich Hub',
     tag: 'Мюзикл', age: '6+',
-    image: showImage('kovcheg8.webp'),
+    image: kovchegPoster,
     palette: 'var(--ph-4)',
     description: 'Музыкальный спектакль для всей семьи по пьесе Урлиха Хуба.',
     descriptionFR: 'Un spectacle musical pour toute la famille d’après la pièce d’Ulrich Hub.',
@@ -365,7 +379,7 @@ export const REPERTOIRE: RepertoireItem[] = [
     authorFR: 'A. S. Pouchkine',
     tag: 'Поэма', age: '12+',
     palette: 'var(--ph-1)',
-    image: showImage('nulin.webp'),
+    image: nulinPoster,
     imagePosition: 'center 30%',
     description: 'Лёгкая и остроумная поэма в театральном прочтении. Смешное и лирическое переплетаются так же легко, как строки Пушкина. Вечер для тех, кто любит слово.',
     descriptionFR: "Un poème léger et plein d'esprit. Le comique et le lyrique s'entrelacent comme les vers de Pouchkine. Une soirée pour ceux qui aiment les mots.",
@@ -387,9 +401,9 @@ export const DRAFT_SHOWS: DraftShow[] = [];
 // читается как забытый контент.
 //
 // ЧТОБЫ ОПУБЛИКОВАТЬ СПЕКТАКЛЬ, когда фотография придёт:
-//   1. положить файл в public/images/shows/;
-//   2. в этом файле дописать спектаклю `image: showImage('файл.webp')` —
-//      и в SHOWS, и в его карточке в REPERTOIRE;
+//   1. положить файл в src/assets/shows/ и импортировать его в начале файла;
+//   2. дописать спектаклю `image: <импортированный постер>` — и в SHOWS,
+//      и в его карточке в REPERTOIRE (одна и та же константа);
 //   3. убрать оттуда же строки `published: false` и TODO над ними.
 // Больше нигде ничего менять не нужно: секции читают списки ниже.
 //

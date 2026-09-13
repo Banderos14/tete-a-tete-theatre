@@ -53,8 +53,8 @@ describe('постер выбранного спектакля на шаге в�
   });
 
   it('новый постер в каталоге подхватывается без правок модалки', () => {
-    const repostered = { ...romantika, image: '/images/shows/new-poster.webp' };
-    expect(posterSrcs(render(repostered))).toEqual(['/images/shows/new-poster.webp']);
+    const repostered = { ...romantika, image: '/assets/new-poster-a1b2c3.webp' };
+    expect(posterSrcs(render(repostered))).toEqual(['/assets/new-poster-a1b2c3.webp']);
   });
 
   it('alt постера содержит название спектакля', () => {

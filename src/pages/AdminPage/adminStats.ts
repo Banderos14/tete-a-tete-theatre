@@ -55,6 +55,11 @@ export interface ShowStats extends BookingSummary {
   show: Show;
 }
 
+/** Инициалы спектакля для карточки без афиши. */
+export function showGlyph(title: string): string {
+  return title.replace(/[«»]/g, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+
 /** Сводка по каждому спектаклю каталога, в порядке каталога. */
 export function summarizeByShow(shows: readonly Show[], bookings: readonly Booking[]): ShowStats[] {
   return shows.map(show => ({

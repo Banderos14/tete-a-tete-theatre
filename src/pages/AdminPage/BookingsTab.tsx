@@ -10,6 +10,7 @@ import { formatTimestamp, PAY_STATUS_LABELS } from './adminFormatting';
 import type { ConfirmAction, FilterShowId, FilterStatus } from './adminTypes';
 import { ticketTypeLabel } from '../../utils/ticketType';
 import { summarizeBookings, summarizeByShow } from './adminStats';
+import { AdminShowCard } from './AdminShowCard';
 import styles from './AdminPage.module.scss';
 
 const PAY_STATUS_STYLE: Record<PaymentStatus, string> = {
@@ -48,11 +49,6 @@ const BOOKING_STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
   { value: 'attended',  label: STATUS_LABELS.attended },
   { value: 'cancelled', label: STATUS_LABELS.cancelled },
 ];
-
-/** Инициалы спектакля для карточки без афиши. */
-function showGlyph(title: string): string {
-  return title.replace(/[«»]/g, '').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-}
 
 export function BookingsTab({
   bookings, fetching, updatingId,
@@ -99,26 +95,13 @@ export function BookingsTab({
       </div>
 
       <div className={styles.showStats}>
-        {statsByShow.map(({ show, bookings: count, tickets, revenue }) => (
-          <button
-            key={show.id}
-            className={`${styles.showCard} ${filterShow === show.id ? styles.showCardActive : ''}`}
-            onClick={() => onFilterShow(prev => prev === show.id ? 'all' : show.id)}
-          >
-            {show.image ? (
-              <img src={show.image} alt={show.title} className={styles.showCardImg} />
-            ) : (
-              <span className={styles.showCardGlyph} style={{ background: show.palette }}>
-                {showGlyph(show.title)}
-              </span>
-            )}
-            <div className={styles.showCardInfo}>
-              <p className={styles.showCardTitle}>{show.title}</p>
-              <p className={styles.showCardMeta}>
-                {count} {t.admin.bookings} · {tickets} {t.admin.totalTickets} · {revenue}&nbsp;€ {t.admin.totalRevenue}
-              </p>
-            </div>
-          </button>
+        {statsByShow.map(stats => (
+          <AdminShowCard
+            key={stats.show.id}
+            stats={stats}
+            active={filterShow === stats.show.id}
+            onToggle={() => onFilterShow(prev => prev === stats.show.id ? 'all' : stats.show.id)}
+          />
         ))}
       </div>
 
