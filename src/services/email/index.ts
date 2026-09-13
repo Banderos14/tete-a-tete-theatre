@@ -6,9 +6,9 @@
 
 export type { BookingEmailData, BookingStatusEmailData, PaymentPaidEmailData, NewShowEmailData } from './types';
 export { escapeEmailHtml } from './layout';
+export { buildNewShowEmail } from './templates/newShow';
 export {
   sendBookingConfirmationEmail,
   sendBookingStatusUpdateEmail,
   sendPaymentPaidEmail,
-  sendNewShowAnnouncementEmail,
 } from './send';

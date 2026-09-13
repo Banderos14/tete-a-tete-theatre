@@ -8,6 +8,8 @@ interface ConfirmDialogProps {
   confirmLabel: string;
   cancelLabel: string;
   loading?: boolean;
+  /** Подтверждение недоступно, даже если диалог открыт (например, не хватает лимита). */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -19,6 +21,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   loading = false,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -33,7 +36,7 @@ export function ConfirmDialog({
         <div className={styles.actions}>
           <button
             className={styles.confirmBtn}
-            disabled={loading}
+            disabled={loading || confirmDisabled}
             onClick={onConfirm}
           >
             {loading ? 'Подождите…' : confirmLabel}

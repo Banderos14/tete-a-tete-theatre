@@ -4,8 +4,7 @@ import { callEndpoint } from './transport';
 import { buildConfirmationEmail } from './templates/confirmation';
 import { buildStatusEmail } from './templates/status';
 import { buildPaymentPaidEmail } from './templates/paymentPaid';
-import { buildNewShowEmail } from './templates/newShow';
-import type { BookingEmailData, BookingStatusEmailData, PaymentPaidEmailData, NewShowEmailData } from './types';
+import type { BookingEmailData, BookingStatusEmailData, PaymentPaidEmailData } from './types';
 
 // Письма брони отправляются best-effort: бронирование не должно блокироваться
 // или считаться неуспешным из-за сбоя почты, поэтому наружу остаётся Promise<void>.
@@ -38,17 +37,4 @@ export async function sendPaymentPaidEmail(data: PaymentPaidEmailData, authToken
   if (!data.userEmail) return;
   const { subject, html, text } = buildPaymentPaidEmail(data);
   await callEndpoint({ type: 'payment-paid', to: data.userEmail, subject, html, text }, authToken);
-}
-
-// Анонс нового спектакля — отправлять по одному получателю;
-// AdminPage перебирает список через getUsersForNewsletter().
-// В отличие от писем брони, рассылка должна честно сообщать админу об успехе/отказе,
-// поэтому возвращаем boolean по реальному ответу API, а не глотаем ошибку.
-//
-// authToken — Firebase ID token текущего admin-пользователя.
-// Сервер проверяет его и отклоняет запрос если роль не 'admin'.
-export async function sendNewShowAnnouncementEmail(data: NewShowEmailData, authToken?: string): Promise<boolean> {
-  if (!data.userEmail) return false;
-  const { subject, html, text } = buildNewShowEmail(data);
-  return callEndpoint({ type: 'newsletter', to: data.userEmail, subject, html, text }, authToken);
 }

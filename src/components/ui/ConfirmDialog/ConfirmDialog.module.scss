@@ -42,6 +42,8 @@
 }
 
 .message {
+  // Переносы строк в тексте сохраняются: так многострочные сводки читаются списком.
+  white-space: pre-line;
   font-size: 14px;
   color: var(--fg-dim);
   line-height: 1.6;

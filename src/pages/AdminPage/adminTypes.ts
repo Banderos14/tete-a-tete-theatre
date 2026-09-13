@@ -7,8 +7,6 @@ export type FilterShowId = 'all' | string;
 export type FilterStatus = 'all' | BookingStatus;
 export type AdminTab     = 'bookings' | 'users' | 'newsletter';
 
-export type NewsletterResult = { sent: number; sentRU: number; sentFR: number; errors: string[] };
-
 /** Действие, ожидающее подтверждения в модалке. */
 export type ConfirmAction =
   | { type: 'paid';          bookingId: string }

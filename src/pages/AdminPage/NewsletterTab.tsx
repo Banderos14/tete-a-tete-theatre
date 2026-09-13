@@ -1,24 +1,60 @@
-// Вкладка «Рассылка»: выбор спектакля, публичная ссылка и отчёт об отправке.
+// Вкладка «Рассылка»: выбор спектакля, публичная ссылка, лимит Resend,
+// подтверждение и отчёт об отправке.
 
-import { SHOWS } from '../../data/shows';
+import { useEffect } from 'react';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { getShowPublicUrl } from '../../utils/showUrl';
+import type { NewsletterPreflight, NewsletterSendResult, QuotaSource } from '../../../shared/contracts/newsletter';
 import type { Newsletter } from './useNewsletter';
 import styles from './AdminPage.module.scss';
 
+const QUOTA_SOURCE_LABEL: Record<QuotaSource, string> = {
+  'resend-header': 'счётчик дневной квоты Resend',
+  'resend-list':   'список писем Resend за сутки (UTC)',
+  'email-log':     'журнал отправок сайта — Resend недоступен',
+};
+
+const STOP_REASON_LABEL: Record<NonNullable<NewsletterSendResult['stoppedReason']>, string> = {
+  daily_quota_exceeded:   'Resend ответил: исчерпан дневной лимит писем.',
+  monthly_quota_exceeded: 'Resend ответил: исчерпан месячный лимит писем.',
+  rate_limit_exceeded:    'Resend ответил: слишком много запросов в секунду.',
+  provider_error:         'Resend отклонил запрос или не ответил.',
+};
+
+/** Почему отправить нельзя — или null, если можно. */
+function blockReason(p: NewsletterPreflight): string | null {
+  if (!p.providerConfigured) return 'Почтовый провайдер не настроен на сервере. Рассылка недоступна.';
+  if (p.quotaSource === null) return 'Не удалось посчитать, сколько писем уже отправлено сегодня. Рассылка недоступна.';
+  if (p.recipients === 0)     return 'Нет подписчиков с включёнными уведомлениями.';
+  if (p.required > p.remaining) {
+    return `Недостаточно дневного лимита Resend.\nПолучателей: ${p.required}.\nДоступно примерно: ${p.remaining}.\n`
+      + 'Рассылка не была запущена.\nДождитесь обновления лимита (полночь UTC) или уменьшите список получателей.';
+  }
+  return null;
+}
+
 export function NewsletterTab({ newsletter }: { newsletter: Newsletter }) {
-  const { showId, selectShow, sending, result, copiedLink, copyShowLink, send } = newsletter;
+  const {
+    shows, showId, selectedShow, selectShow, preflight, preflightLoading, preflightError,
+    refreshPreflight, confirmOpen, requestSend, cancelSend, confirmSend,
+    sending, result, sendError, copiedLink, copyShowLink,
+  } = newsletter;
+
+  // Получатели не зависят от спектакля: проверяем при открытии вкладки,
+  // перед подтверждением и после отправки.
+  useEffect(() => { void refreshPreflight(); }, [refreshPreflight]);
+
+  const blocked  = preflight ? blockReason(preflight) : null;
+  const canStart = !!selectedShow && !!preflight?.canSendAll && !sending && !preflightLoading;
+  const hasFailures = !!result && (result.failed > 0 || result.notAttempted > 0);
 
   return (
     <div className={styles.newsletterWrap}>
       <h2 className={styles.newsletterTitle}>Рассылка нового спектакля</h2>
       <p className={styles.newsletterHint}>
-        Письмо уйдёт только пользователям с включёнными уведомлениями.
+        Письмо уйдёт только пользователям с включёнными уведомлениями — по одному письму на адрес.
         Рассылка запускается вручную — автоматически ничего не отправляется.
       </p>
-
-      <div className={styles.newsletterWarning}>
-        На бесплатном тарифе Resend не запускать рассылку несколько раз подряд, потому что упремся в лимиты!!!
-      </div>
 
       <div className={styles.section}>
         <label className={styles.sectionLabel} htmlFor="nl-show">Выбрать спектакль</label>
@@ -29,7 +65,7 @@ export function NewsletterTab({ newsletter }: { newsletter: Newsletter }) {
           onChange={e => selectShow(e.target.value)}
           disabled={sending}
         >
-          {SHOWS.map(s => (
+          {shows.map(s => (
             <option key={s.id} value={s.id}>{s.title}</option>
           ))}
         </select>
@@ -51,33 +87,76 @@ export function NewsletterTab({ newsletter }: { newsletter: Newsletter }) {
         </div>
       </div>
 
+      <div className={styles.quotaBox} aria-live="polite">
+        {preflight ? (
+          <>
+            <p>Получателей: <strong>{preflight.recipients}</strong></p>
+            <p>Отправлено сегодня: <strong>{preflight.sentToday} / {preflight.dailyLimit}</strong></p>
+            <p>Оценочный остаток: <strong>≈ {preflight.remaining}</strong></p>
+            {preflight.quotaSource && (
+              <p className={styles.quotaNote}>
+                Источник: {QUOTA_SOURCE_LABEL[preflight.quotaSource]}. Лимит {preflight.dailyLimit}/день
+                задан в настройках сервера — это оценка, а не данные биллинга Resend.
+              </p>
+            )}
+          </>
+        ) : (
+          <p>{preflightLoading ? 'Проверяем получателей и лимит Resend…' : preflightError ?? 'Лимит ещё не проверен.'}</p>
+        )}
+        <button
+          type="button"
+          className={styles.copyLinkBtn}
+          onClick={() => void refreshPreflight()}
+          disabled={preflightLoading || sending}
+        >
+          {preflightLoading ? 'Проверяем…' : 'Обновить'}
+        </button>
+      </div>
+
+      {blocked && (
+        <div className={`${styles.newsletterResult} ${styles.newsletterResultError}`} role="alert">
+          <p className={styles.preLine}>{blocked}</p>
+        </div>
+      )}
+
       <button
         className={styles.newsletterSendBtn}
-        onClick={send}
-        disabled={sending}
+        onClick={() => void requestSend()}
+        disabled={!canStart}
       >
         {sending ? 'Отправляется…' : 'Отправить рассылку'}
       </button>
 
-      {result && (
-        <div className={`${styles.newsletterResult} ${result.errors.length > 0 ? styles.newsletterResultError : ''}`}>
-          <p>Отправлено успешно: <strong>{result.sent}</strong></p>
-          <p>Отправлено RU: <strong>{result.sentRU}</strong></p>
-          <p>Отправлено FR: <strong>{result.sentFR}</strong></p>
-          <p>Ошибок: <strong>{result.errors.length}</strong></p>
-          {result.errors.length > 0 && (
-            <>
-              <p>Не удалось отправить ({result.errors.length}):</p>
-              <ul>
-                {result.errors.map(e => <li key={e}>{e}</li>)}
-              </ul>
-            </>
-          )}
-          {result.sent === 0 && result.errors.length === 0 && (
-            <p>Нет подписчиков с включёнными уведомлениями.</p>
-          )}
+      {sendError && (
+        <div className={`${styles.newsletterResult} ${styles.newsletterResultError}`} role="alert">
+          <p>{sendError}</p>
         </div>
       )}
+
+      {result && (
+        <div className={`${styles.newsletterResult} ${hasFailures ? styles.newsletterResultError : ''}`}>
+          <p>Успешно: <strong>{result.sent}</strong></p>
+          <p>Ошибок: <strong>{result.failed}</strong></p>
+          {result.notAttempted > 0 && <p>Не отправлено (рассылка остановлена): <strong>{result.notAttempted}</strong></p>}
+          <p>RU: <strong>{result.sentRU}</strong> · FR: <strong>{result.sentFR}</strong></p>
+          {result.stoppedReason && <p>{STOP_REASON_LABEL[result.stoppedReason]} Повторных попыток не было.</p>}
+        </div>
+      )}
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title="Отправить рассылку?"
+        message={preflight && selectedShow
+          ? `Спектакль: ${selectedShow.title}\nПолучателей: ${preflight.recipients}\n`
+            + `Доступно сегодня: ≈ ${preflight.remaining}\nБудет отправлено: ${preflight.required}`
+          : ''}
+        confirmLabel="Отправить рассылку"
+        cancelLabel="Отмена"
+        loading={sending}
+        confirmDisabled={!preflight?.canSendAll}
+        onCancel={cancelSend}
+        onConfirm={() => void confirmSend()}
+      />
     </div>
   );
 }

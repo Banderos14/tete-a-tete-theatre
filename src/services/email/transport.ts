@@ -7,11 +7,9 @@
 // Возвращает true/false по реальному результату запроса.
 // Бронирование остаётся best-effort: вызывающий код для писем брони
 // игнорирует возвращаемое значение и/или ловит ошибку через .catch(() => {}).
-// Рассылка (newsletter) использует именно это значение, чтобы показывать
-// честный результат отправки в админке.
+// Рассылка сюда не ходит — у неё свой endpoint /api/newsletter с проверкой квоты.
 //
-// authToken — Firebase ID token, требуется только для type='newsletter'.
-// Для остальных типов не передаётся.
+// authToken — Firebase ID token вызывающего; сервер требует его для любого типа.
 export async function callEndpoint(
   payload: { type: string; to: string; subject: string; html: string; text: string; ticketCode?: string },
   authToken?: string,

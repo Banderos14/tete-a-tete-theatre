@@ -93,6 +93,7 @@ Firebase грузится лениво из `AuthContext` (`loadFirebase()` ме
 | отмена зрителем | `POST /api/cancel-booking` | владение бронью и правила отмены (оплаченную и посещённую отменить нельзя) |
 | проверка билета и проход | `POST /api/checkin-ticket` | роль admin, состояние брони и актуальность даты — атомарно |
 | остаток мест | `GET /api/show-availability` | публичный, отдаёт только числа |
+| рассылка анонса | `GET/POST /api/newsletter` | роль admin; получатели, квота Resend и повторная проверка лимита перед первым письмом |
 | учёт нового зрителя | `POST /api/register-audience` | ровно один инкремент на пользователя |
 | протухание переводов | `GET /api/expire-bookings` | вызывается Vercel Cron раз в сутки (чаще Hobby-план не даёт), защищён `CRON_SECRET` |
 
@@ -106,7 +107,17 @@ Firebase грузится лениво из `AuthContext` (`loadFirebase()` ме
 
 `userProfile.role` живёт в `users/{uid}`. Правила Firestore запрещают клиенту менять своё `role` (проверка `request.resource.data.role == resource.data.role` на update и `== 'user'` на create). `AdminPage` — это только UI-гейт; настоящая проверка на сервере: `requireAdmin()` в `server/shared/auth.ts` резолвит роль из Firestore по ID-токену — одно место для всех endpoint'ов.
 
-`server/email/` фильтрует запросы по whitelist `ALLOWED_EMAIL_TYPES`; `newsletter`, `booking-status`, `payment-paid` требуют admin-токен, `booking-confirmation` — токен, чей email совпадает с получателем.
+`server/email/` фильтрует запросы по whitelist `ALLOWED_EMAIL_TYPES`; `booking-status`, `payment-paid` требуют admin-токен, `booking-confirmation` — токен, чей email совпадает с получателем.
+
+### Рассылка и квота Resend
+
+Рассылка идёт **только** через `/api/newsletter` (admin): `GET` — preflight (число получателей, `sentToday`, лимит, оценочный остаток), `POST` — отправка. Через `/api/send-email` анонс отправить нельзя — тип `newsletter` убран из whitelist.
+
+- Спектакли в выпадающем списке — `PUBLISHED_SHOWS`, тот же список, что у Афиши. Третьего списка нет.
+- Получателей собирает сервер (`newsletter.recipients.ts`): уведомления включены, email валиден, не admin, адреса дедуплицированы. Адреса в браузер не уходят; черновик письма клиент собирает с меткой `NEWSLETTER_NAME_TOKEN`, имя подставляет сервер.
+- Дневной лимит — `resolveDailyLimit()` в `server/email/resendQuota.ts` (Free = 100, переопределяется `RESEND_DAILY_LIMIT`). Прямого API остатка у Resend нет: `sentToday` берётся из заголовка `x-resend-daily-quota`, иначе из `GET /emails` за UTC-сутки, иначе из `emailLog`; берётся максимум. Считаются **все** письма аккаунта. Заголовки `ratelimit-*` — лимит запросов в секунду, к квоте не относятся.
+- Перед первым письмом сервер заново проверяет квоту под блокировкой `newsletterLocks/send`. Не хватает — 409 `insufficient_quota`, не отправлено ни одного письма. Ошибка Resend посреди отправки останавливает рассылку без повторов.
+- Отправка — Batch API Resend, до 100 писем за запрос, у каждого письма один адресат.
 
 ### Билеты и посещения
 

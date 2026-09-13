@@ -51,8 +51,8 @@ describe('/api/send-email: авторизация и привязка к бро�
     expect(src).toContain("?.userId === uid");
   });
 
-  it('newsletter / booking-status / payment-paid остаются admin-only', () => {
-    expect(src).toContain("ADMIN_ONLY_TYPES: readonly EmailType[] = ['newsletter', 'booking-status', 'payment-paid']");
+  it('booking-status / payment-paid остаются admin-only', () => {
+    expect(src).toContain("ADMIN_ONLY_TYPES: readonly EmailType[] = ['booking-status', 'payment-paid']");
     expect(src).toContain('ADMIN_ONLY_TYPES.includes(type) && !isAdmin');
     expect(src).toContain('is admin-only');
   });

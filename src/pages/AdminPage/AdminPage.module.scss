@@ -639,19 +639,52 @@
   line-height: 1.5;
 }
 
-.newsletterWarning {
-  background: rgba(var(--accent-rgb, 201, 169, 110), 0.08);
-  border-left: 3px solid var(--accent);
-  padding: 10px 14px;
-  border-radius: var(--radius-s);
-  font-size: 12px;
+.quotaBox {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  column-gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  font-size: 13px;
+  color: var(--fg);
+  line-height: 1.6;
+
+  p { margin: 0 0 4px; grid-column: 1; }
+
+  > button {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 32px;
+  }
+
+  @include mixins.small {
+    grid-template-columns: 1fr;
+
+    > button {
+      grid-column: 1;
+      grid-row: auto;
+      justify-self: start;
+      margin-top: 8px;
+    }
+  }
+}
+
+.quotaNote {
+  font-size: 11px;
   color: var(--fg-mute);
-  margin-bottom: 24px;
   line-height: 1.5;
 }
 
+.preLine {
+  white-space: pre-line;
+}
+
 .newsletterResult {
-  margin-top: 20px;
+  margin: 20px 0;
   padding: 14px 16px;
   background: var(--bg-2);
   border: 1px solid var(--line);

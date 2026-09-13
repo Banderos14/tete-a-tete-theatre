@@ -393,9 +393,12 @@ export const DRAFT_SHOWS: DraftShow[] = [];
 //   3. убрать оттуда же строки `published: false` и TODO над ними.
 // Больше нигде ничего менять не нужно: секции читают списки ниже.
 //
-// SHOWS/REPERTOIRE напрямую берут только админка, deep-link и история
-// посещений — им нужен весь каталог.
-const isPublished = (item: { published?: boolean }) => item.published !== false;
+// SHOWS/REPERTOIRE напрямую берут только таблица броней, deep-link и история
+// посещений — им нужен весь каталог. Рассылка анонсирует только то, что видно
+// на сайте, поэтому читает PUBLISHED_SHOWS, как и Афиша.
+export function publishedOnly<T extends { published?: boolean }>(items: readonly T[]): T[] {
+  return items.filter(item => item.published !== false);
+}
 
-export const PUBLISHED_SHOWS: Show[] = SHOWS.filter(isPublished);
-export const PUBLISHED_REPERTOIRE: RepertoireItem[] = REPERTOIRE.filter(isPublished);
+export const PUBLISHED_SHOWS: Show[] = publishedOnly(SHOWS);
+export const PUBLISHED_REPERTOIRE: RepertoireItem[] = publishedOnly(REPERTOIRE);
