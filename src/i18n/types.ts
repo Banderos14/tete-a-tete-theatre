@@ -115,6 +115,8 @@ export interface T {
   booking: {
     title: string;
     loginRequired: string;
+    /** Альтернативный текст постера спектакля на шаге входа. */
+    posterAlt: (title: string) => string;
     loginBtn: string;
     ticketType: string;
     tickets: string;

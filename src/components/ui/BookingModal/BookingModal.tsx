@@ -19,6 +19,7 @@ import type { Show, TicketType } from '../../../types';
 import type { Booking, PaymentMethod } from '../../../types/booking';
 import { BookingFormStep } from './BookingFormStep';
 import { BookingSuccessStep } from './BookingSuccessStep';
+import { BookingAuthShowPanel } from './BookingAuthShowPanel';
 import styles from './BookingModal.module.scss';
 
 interface Props {
@@ -311,8 +312,6 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   }
 
   const userEmail   = user?.email ?? userProfile?.email ?? '';
-  const showTitle   = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
-  const monthLabel  = t.months[show.month] ?? show.month;
 
   return (
     <div
@@ -331,13 +330,8 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
         {/* Auth */}
         {step === 'auth' && (
           <div className={styles.authWrap} data-scroll-lock-allow="true">
-            <div className={styles.authShowStrip} style={{ background: show.palette }}>
-              <div className={styles.authGlyph} style={{ background: show.palette }} />
-              <div>
-                <p className={styles.authShowTitle}>{showTitle}</p>
-                <p className={styles.authShowMeta}>{show.day} {monthLabel} · {show.time}</p>
-              </div>
-            </div>
+            {/* Спектакль — не состояние входа: панель не зависит от вкладки, загрузки и ошибок. */}
+            <BookingAuthShowPanel show={show} lang={lang} t={t} />
 
             <div className={styles.authBody}>
               <h3 className={styles.authTitle}>

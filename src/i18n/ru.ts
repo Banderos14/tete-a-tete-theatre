@@ -193,6 +193,7 @@ export const RU: T = {
   booking: {
     title:               'Бронирование',
     loginRequired:       'Чтобы забронировать билет, войдите в аккаунт',
+    posterAlt:           (title) => `Афиша спектакля ${title}`,
     loginBtn:            'Войти или зарегистрироваться',
     ticketType:          'Тип билета',
     tickets:             'Количество билетов',

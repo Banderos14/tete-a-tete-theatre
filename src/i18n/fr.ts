@@ -203,6 +203,7 @@ export const FR: T = {
   booking: {
     title:               'Réservation',
     loginRequired:       'Pour réserver, veuillez vous connecter',
+    posterAlt:           (title) => `Affiche du spectacle ${title}`,
     loginBtn:            'Se connecter ou s\'inscrire',
     ticketType:          'Type de billet',
     tickets:             'Nombre de billets',
