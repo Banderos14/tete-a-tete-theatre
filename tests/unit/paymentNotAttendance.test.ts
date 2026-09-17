@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { endpointSource, projectSource, transactionBody } from '../helpers/serverSource.js';
+import { endpointSource, functionBody, projectSource, transactionBody } from '../helpers/serverSource.js';
 import { isBookingAttended } from '../../shared/domain/bookingRules.js';
 
 // ОПЛАТА НЕ ОЗНАЧАЕТ ПОСЕЩЕНИЕ.
@@ -25,8 +25,11 @@ function walk(dir: string, out: string[] = []): string[] {
 
 describe('оплата переводит бронь в confirmed, а не в attended', () => {
   it('mark_paid на входе ставит confirmed', () => {
-    const tx = transactionBody(checkinApi);
-    expect(tx).toMatch(/paymentStatus:\s*'paid',\s*\n\s*status:\s*'confirmed'/);
+    // Поля перехода — общий хелпер одиночного и группового прохода.
+    const service = projectSource('server/checkin/checkin.service.ts');
+    expect(transactionBody(checkinApi)).toContain('paidTransition(input.adminUid)');
+    expect(functionBody(service, 'paidTransition'))
+      .toMatch(/paymentStatus:\s*'paid',\s*\n\s*status:\s*'confirmed'/);
   });
 
   it('ветка mark_paid вообще не пишет attended', () => {
@@ -75,10 +78,12 @@ describe('attended появляется только после check-in', () =>
   });
 
   it('запись сопровождается следом проверяющего — кто и когда пропустил', () => {
-    const tx = transactionBody(checkinApi);
-    expect(tx).toMatch(/status:\s*'attended'/);
-    expect(tx).toContain('attendedAt');
-    expect(tx).toContain('attendedBy');
+    const service = projectSource('server/checkin/checkin.service.ts');
+    expect(transactionBody(checkinApi)).toContain('attendedTransition(input.adminUid)');
+    const fields = functionBody(service, 'attendedTransition');
+    expect(fields).toMatch(/status:\s*'attended'/);
+    expect(fields).toContain('attendedAt');
+    expect(fields).toContain('attendedBy');
   });
 
   it('админка больше не проставляет посещение пачкой при загрузке', () => {

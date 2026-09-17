@@ -59,3 +59,15 @@ export async function findByTicketCode(tx: Transaction, ticketCode: string) {
   const doc = snap.docs[0]!;
   return { ref: doc.ref, id: doc.id, data: doc.data() as Record<string, unknown> };
 }
+
+/**
+ * Документы броней пользователя со ссылками — ВНУТРИ транзакции.
+ *
+ * Нужен групповому проходу: запрос по одному полю userId обслуживается
+ * автоматическим индексом (тем же, что у лояльности), составной не нужен.
+ * Сеанс и статусы фильтрует сервис.
+ */
+export async function readUserBookingDocs(tx: Transaction, uid: string) {
+  const snap = await tx.get(bookingsRef().where('userId', '==', uid) as Query);
+  return snap.docs.map(d => ({ ref: d.ref, id: d.id, data: d.data() as Record<string, unknown> }));
+}
