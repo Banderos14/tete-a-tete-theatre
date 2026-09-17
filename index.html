@@ -61,28 +61,33 @@
     <meta property="og:locale"      content="fr_FR" />
     <meta property="og:locale:alternate" content="ru_RU" />
     <meta property="og:site_name"   content="Théâtre Tête-à-Tête" />
-    <meta property="og:title"       content="Théâtre Tête-à-Tête à Nice" />
+    <meta property="og:title"       content="Théâtre Tête-à-Tête" />
     <meta property="og:description" content="Театр в Ницце: спектакли, афиша, репертуар и онлайн-бронирование билетов." />
     <meta property="og:url"         content="https://www.theatre-teteatete.fr/" />
-    <!-- og:image намеренно нет: главная делится компактной карточкой без большой
-         фотографии (WhatsApp, Telegram). Картинка не должна меняться вместе с
-         афишей — не подставлять сюда постеры, фото зала или труппы. -->
+    <!-- og:image намеренно нет: главная делится текстовой карточкой без фотографии
+         (WhatsApp, Telegram). Не подставлять сюда постеры, фото зала или труппы —
+         и не указывать их как "image" в JSON-LD ниже: Telegram при отсутствии
+         og:image берёт картинку оттуда (так в превью попадало старое групповое фото). -->
 
     <!-- Twitter Card: summary — маленькая карточка, не summary_large_image -->
     <meta name="twitter:card"        content="summary" />
-    <meta name="twitter:title"       content="Théâtre Tête-à-Tête à Nice" />
+    <meta name="twitter:title"       content="Théâtre Tête-à-Tête" />
     <meta name="twitter:description" content="Театр в Ницце: спектакли, афиша, репертуар и онлайн-бронирование билетов." />
 
     <title>Théâtre Tête-à-Tête à Nice — Spectacles en russe et billetterie</title>
-    <!-- Favicons: официальный знак на прозрачном фоне.
-         favicon.svg — основной: чёрный знак в светлой теме браузера, белый в тёмной
-         (prefers-color-scheme внутри SVG; Chrome, Firefox, Edge).
-         favicon.ico (16/32/48) — чёрный знак для браузеров без SVG-favicon и как
-         запасной вариант для Google. У ICO явные sizes, не "any": иначе Chrome
-         выбирает ICO вместо SVG. Адреса стабильные, без ?v=. -->
-    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <!-- Favicons: официальный знак на прозрачном фоне, форма не изменена.
+         favicon-96x96.png — основной растровый favicon для Google Search: чёрный знак
+         с тонким белым контуром, читается и на светлом, и на тёмном фоне (растр не
+         умеет prefers-color-scheme, поэтому контраст зашит в саму картинку).
+         Прежний белый apple-touch-icon Google показывал как пустой белый кружок.
+         favicon.svg — для браузеров: чёрный знак в светлой теме, белый в тёмной.
+         favicon.ico (16/32/48) — тот же знак с контуром, запасной вариант.
+         У ICO явные sizes, не "any": иначе Chrome выбирает ICO вместо SVG. -->
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- iOS заливает прозрачный фон apple-touch-icon чёрным, поэтому знак белый -->
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <!-- iOS заливает прозрачный фон чёрным, поэтому знак белый; тёмный контур
+         оставляет его читаемым на белом фоне -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
@@ -90,26 +95,38 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "PerformingArtsTheater",
-        "name": "Théâtre Tête-à-Tête",
-        "alternateName": "ТЕТ-А-ТЕТ",
-        "url": "https://www.theatre-teteatete.fr/",
-        "description": "Театр ТЕТ-А-ТЕТ в Ницце. Спектакли, афиша и онлайн-бронирование билетов.",
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "24 Rue Rossini",
-          "addressLocality": "Nice",
-          "postalCode": "06000",
-          "addressCountry": "FR"
-        },
-        "areaServed": ["Nice", "Côte d'Azur", "France"],
-        "inLanguage": ["ru", "fr"],
-        "sameAs": [
-          "https://www.instagram.com/theatre_tete_a_tete/",
-          "https://www.facebook.com/TheatreTeteAtete/"
-        ],
-        "logo": "https://www.theatre-teteatete.fr/images/favicon-source.png",
-        "image": "https://www.theatre-teteatete.fr/images/about/zal-v2.webp"
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://www.theatre-teteatete.fr/#website",
+            "name": "Théâtre Tête-à-Tête",
+            "alternateName": ["Tête-à-Tête", "Театр Тет-а-Тет"],
+            "url": "https://www.theatre-teteatete.fr/",
+            "inLanguage": ["fr", "ru"],
+            "publisher": { "@id": "https://www.theatre-teteatete.fr/#theatre" }
+          },
+          {
+            "@type": "PerformingArtsTheater",
+            "@id": "https://www.theatre-teteatete.fr/#theatre",
+            "name": "Théâtre Tête-à-Tête",
+            "alternateName": ["Tête-à-Tête", "Театр Тет-а-Тет"],
+            "url": "https://www.theatre-teteatete.fr/",
+            "description": "Театр ТЕТ-А-ТЕТ в Ницце. Спектакли, афиша и онлайн-бронирование билетов.",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "24 Rue Rossini",
+              "addressLocality": "Nice",
+              "postalCode": "06000",
+              "addressCountry": "FR"
+            },
+            "areaServed": ["Nice", "Côte d'Azur", "France"],
+            "sameAs": [
+              "https://www.instagram.com/theatre_tete_a_tete/",
+              "https://www.facebook.com/TheatreTeteAtete/"
+            ],
+            "logo": "https://www.theatre-teteatete.fr/images/favicon-source.png"
+          }
+        ]
       }
     </script>
 

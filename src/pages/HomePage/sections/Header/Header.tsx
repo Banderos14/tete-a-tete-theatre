@@ -114,7 +114,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
           className={styles.logo}
           onClick={e => { e.preventDefault(); scrollToSection('top'); }}
         >
-          <img src="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" alt="ТЕТ-А-ТЕТ" />
+          <img src="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" alt="Théâtre Tête-à-Tête" />
         </a>
 
         {/* Right controls */}
@@ -198,7 +198,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
         <div className={styles.menuTop}>
           <img
             src="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG"
-            alt="ТЕТ-А-ТЕТ"
+            alt="Théâtre Tête-à-Tête"
             className={styles.menuLogo}
           />
           <button className={styles.menuClose} onClick={closeMenu} aria-label={lang === 'FR' ? 'Fermer' : 'Закрыть'}>
