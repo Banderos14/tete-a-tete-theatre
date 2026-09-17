@@ -560,3 +560,383 @@
   color: #cc4444;
   text-align: center;
 }
+
+/* ── Групповой проход: брони одного зрителя на один сеанс ─────────────────────
+   Экран используется с телефона у входа: главное (статус, зритель, билеты,
+   деньги) читается сразу, разбивка по броням — карточками ниже. */
+
+.groupWho {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 24px 14px;
+  border-bottom: 0.5px solid rgba(243, 231, 220, 0.12);
+
+  @include mixins.small { padding: 14px 16px 12px; }
+}
+
+.groupLabel,
+.groupStatLabel,
+.groupSectionLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted, #9c938a);
+}
+
+.groupLabel:not(:first-child) { margin-top: 10px; }
+
+.groupViewer {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+
+  @include mixins.small { font-size: 22px; }
+}
+
+.groupShow {
+  font-size: 15px;
+  color: var(--fg);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.groupShowWhen {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--fg-dim);
+}
+
+.groupStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5px;
+  background: rgba(243, 231, 220, 0.10);
+  border-bottom: 0.5px solid rgba(243, 231, 220, 0.12);
+}
+
+.groupStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 24px;
+  background: var(--bg);
+
+  @include mixins.small { padding: 10px 16px; }
+}
+
+// Цифры у входа читают на бегу: моноширинный шрифт, а не декоративный display.
+.groupStatValue {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+
+  @include mixins.tiny { font-size: 24px; }
+}
+
+// Деньги к получению — самое заметное число на экране.
+.groupStatCash {
+  background: rgba(176, 138, 62, 0.14);
+
+  .groupStatLabel,
+  .groupStatValue { color: #cdb27a; }
+}
+
+.groupStatDone .groupStatValue { color: #7fb07f; }
+
+.groupNotice {
+  margin: 0;
+  padding: 12px 24px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  border-top: 0.5px solid rgba(243, 231, 220, 0.10);
+
+  &:first-of-type { border-top: none; }
+
+  @include mixins.small { padding: 12px 16px; }
+}
+
+.groupActionBtn {
+  width: 100%;
+  min-height: 60px;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  transition: background 0.18s;
+
+  &:hover:not(:disabled) { background: var(--accent-bright, #c00); }
+  &:active:not(:disabled) { transform: scale(0.99); }
+  &:disabled {
+    background: transparent;
+    color: var(--fg-mute);
+    border: 0.5px solid rgba(243, 231, 220, 0.16);
+    cursor: not-allowed;
+  }
+
+  @include mixins.tiny { font-size: 13px; letter-spacing: 0.04em; }
+}
+
+.groupSectionLabel {
+  display: block;
+  margin: 26px 4px 10px;
+}
+
+.bookingList {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bookingCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #26211c;
+  border: 0.5px solid rgba(243, 231, 220, 0.12);
+}
+
+.bookingCardDone { opacity: 0.72; }
+
+.bookingCardBlocked {
+  border-color: rgba(184, 0, 0, 0.45);
+}
+
+.bookingCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bookingCardName {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.scannedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 0.5px solid rgba(243, 231, 220, 0.16);
+  font-size: 11px;
+  color: var(--muted, #9c938a);
+}
+
+.bookingCardMain {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bookingCardWhat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bookingCardCount {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.bookingCardType {
+  font-size: 14px;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.bookingCardMethod {
+  font-size: 13px;
+  color: var(--muted, #9c938a);
+}
+
+.bookingCardAmount {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.1;
+  color: var(--fg);
+}
+
+.bookingCardStamps {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bookingCardCode {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted-deep, #6e675f);
+}
+
+.stamp {
+  display: inline-block;
+  padding: 3px 9px;
+  border: 1.5px solid;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stampTiltA { transform: rotate(-3deg); }
+.stampTiltB { transform: rotate(4deg); }
+
+.stampGreen { border-color: #5a8a5a; color: #7fb07f; }
+.stampAmber { border-color: #b08a3e; color: #cdb27a; }
+.stampRed   { border-color: rgba(204, 68, 68, 0.8); color: #e07a7a; }
+.stampMuted { border-color: rgba(243, 231, 220, 0.25); color: var(--muted, #9c938a); }
+
+.bookingCardWarn {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e07a7a;
+
+  svg { flex-shrink: 0; margin-top: 2px; }
+}
+
+.bookingCardActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Лист подтверждения: на телефоне прижат к низу, кнопки крупные. */
+.sheetOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-confirm);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  touch-action: none;
+  overscroll-behavior: contain;
+
+  @include mixins.small {
+    place-items: end stretch;
+    padding: 0;
+  }
+}
+
+.sheet {
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border-radius: 24px;
+  background: #1c1916;
+  border: 0.5px solid rgba(243, 231, 220, 0.14);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  @include mixins.small {
+    max-width: none;
+    border-radius: 24px 24px 0 0;
+    padding: 22px 16px max(18px, env(safe-area-inset-bottom));
+  }
+}
+
+.sheetTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: #f3e7dc;
+}
+
+.sheetRows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheetRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 0.5px solid rgba(243, 231, 220, 0.10);
+
+  dt {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #9c938a;
+  }
+
+  dd {
+    margin: 0;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 18px;
+    color: #f3e7dc;
+    overflow-wrap: anywhere;
+  }
+}
+
+.sheetRowCash {
+  dt, dd { color: #cdb27a; }
+  dd { font-size: 24px; }
+}
+
+.sheetText {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #f3e7dc;
+}
+
+.sheetActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .secondaryBtn { min-height: 54px; font-size: 13px; }
+}

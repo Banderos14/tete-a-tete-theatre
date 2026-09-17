@@ -12,7 +12,7 @@ import {
   bookingOccurrenceStartUtcMs, parseShowStartUtcMs, showEndUtcMs, hasShowEnded,
 } from '../../shared/domain/showTime.js';
 import { SHOWS, showDateString, showStartUtcMs } from '../../shared/catalog/shows.js';
-import { endpointSource, screenSource } from '../helpers/serverSource.js';
+import { endpointSource, projectSource, screenSource, transactionBody } from '../helpers/serverSource.js';
 
 const checkinApi = endpointSource('api/checkin-ticket.ts');
 const scanScreen = screenSource('src/pages/TicketCheckPage');
@@ -74,8 +74,9 @@ describe('старая июньская бронь не становится б�
     expect(checkinApi).toContain("refusal: 'show_over'");
     expect(checkinApi).toMatch(/booking\.showRelevance === 'too_late'/);
     // Отказ стоит внутри транзакции — до записи статуса attended.
-    expect(checkinApi.indexOf("refusal: 'show_over'"))
-      .toBeLessThan(checkinApi.indexOf("status:     'attended'"));
+    const tx = transactionBody(projectSource('server/checkin/checkin.service.ts'));
+    expect(tx.indexOf("refusal: 'show_over'")).toBeGreaterThan(-1);
+    expect(tx.indexOf("refusal: 'show_over'")).toBeLessThan(tx.indexOf('attendedTransition('));
   });
 
   it('по июньскому билету нельзя принять и оплату на входе', () => {
@@ -85,8 +86,9 @@ describe('старая июньская бронь не становится б�
     expect(markPaid).toContain("refusal: 'show_over'");
     expect(markPaid).toMatch(/booking\.showRelevance === 'too_late'/);
     // Отказ стоит до записи оплаты.
+    expect(markPaid.indexOf('paidTransition(')).toBeGreaterThan(-1);
     expect(markPaid.indexOf("refusal: 'show_over'"))
-      .toBeLessThan(markPaid.indexOf("paymentStatus: 'paid',"));
+      .toBeLessThan(markPaid.indexOf('paidTransition('));
   });
 
   it('оба изменяющих действия проверяют сеанс, inspect — нет', () => {

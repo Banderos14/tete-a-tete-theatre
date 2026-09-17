@@ -7,7 +7,7 @@
 
 import { useCallback, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { checkinTicket, type CheckinBooking } from '../../services/checkinService';
+import { checkinTicket, type CheckinAction, type CheckinBooking, type CheckinGroup } from '../../services/checkinService';
 import { sendPaymentPaidEmail } from '../../services/email';
 import { parseTicketCodeFromScan } from '../../utils/parseTicketCode';
 
@@ -19,6 +19,8 @@ const LOOKUP_FAILED = 'Ошибка при поиске брони.';
 export interface TicketCheck {
   scanState: ScanState;
   booking: CheckinBooking | null;
+  /** Все активные брони зрителя на этот сеанс; null — одиночный режим. */
+  group: CheckinGroup | null;
   errorMsg: string;
   operating: boolean;
   cameraError: string;
@@ -30,8 +32,11 @@ export interface TicketCheck {
 
   /** Разбирает отсканированный текст и показывает бронь либо ошибку. */
   lookupByCode: (rawScan: string) => Promise<void>;
-  markPaid: () => Promise<void>;
-  markAttended: () => Promise<void>;
+  /** target — бронь из группы; без него действие идёт по отсканированной. */
+  markPaid: (target?: CheckinBooking) => Promise<void>;
+  markAttended: (target?: CheckinBooking) => Promise<void>;
+  /** Оплата на месте и проход всех оставшихся броней группы одним действием. */
+  checkInGroup: () => Promise<void>;
 
   beginScanning: () => void;
   reset: () => void;
@@ -40,6 +45,7 @@ export interface TicketCheck {
 export function useTicketCheck(user: User | null, initialState: ScanState): TicketCheck {
   const [scanState,   setScanState]   = useState<ScanState>(initialState);
   const [booking,     setBooking]     = useState<CheckinBooking | null>(null);
+  const [group,       setGroup]       = useState<CheckinGroup | null>(null);
   const [errorMsg,    setErrorMsg]    = useState('');
   const [operating,   setOperating]   = useState(false);
   const [cameraError, setCameraError] = useState('');
@@ -47,7 +53,7 @@ export function useTicketCheck(user: User | null, initialState: ScanState): Tick
   // Единая точка обращения к серверу: и просмотр, и отметка идут через
   // /api/checkin-ticket, где операция выполняется атомарно.
   const callCheckin = useCallback(
-    async (code: string, action: 'inspect' | 'mark_attended' | 'mark_paid') => {
+    async (code: string, action: CheckinAction) => {
       const idToken = await user?.getIdToken();
       if (!idToken) throw new Error('no-token');
       return checkinTicket(code, action, idToken);
@@ -72,38 +78,54 @@ export function useTicketCheck(user: User | null, initialState: ScanState): Tick
         return;
       }
       setBooking(res.booking);
+      setGroup(res.group);
       setScanState('found');
     } catch {
       failWith(LOOKUP_FAILED);
     }
   }, [callCheckin, failWith]);
 
-  async function markPaid() {
+  // То же письмо, что отправляет админка: поведение наличной оплаты
+  // не должно зависеть от того, откуда её отметили.
+  const notifyPaid = useCallback(async (b: CheckinBooking) => {
+    if (!b.userEmail) return;
+    const adminToken = await user?.getIdToken().catch(() => undefined);
+    void sendPaymentPaidEmail({
+      userEmail:     b.userEmail,
+      userName:      b.userName,
+      showId:        b.showId,
+      showTitle:     b.showTitle,
+      showDate:      b.showDate,
+      showTime:      b.showTime,
+      ticketsCount:  b.ticketsCount,
+      totalAmount:   b.totalAmount,
+      ticketCode:    b.ticketCode,
+      bookingStatus: 'confirmed',
+      lang:          b.lang,
+    }, adminToken).catch(() => {/* письмо не должно ломать проход */});
+  }, [user]);
+
+  // После действия над одной бронью группы сводку перечитываем с сервера:
+  // суммы и «осталось» считает только он.
+  const refreshGroup = useCallback(async () => {
+    if (!booking || !group) return;
+    const res = await callCheckin(booking.ticketCode, 'inspect').catch(() => null);
+    if (res?.ok && res.booking) {
+      setBooking(res.booking);
+      setGroup(res.group);
+    }
+  }, [booking, group, callCheckin]);
+
+  async function markPaid(target?: CheckinBooking) {
     if (!booking || operating) return;
+    const subject = target ?? booking;
     setOperating(true);
     try {
-      const res = await callCheckin(booking.ticketCode, 'mark_paid');
+      const res = await callCheckin(subject.ticketCode, 'mark_paid');
       if (res.ok && res.booking) {
-        setBooking(res.booking);
-        // То же письмо, что отправляет админка: поведение наличной оплаты
-        // не должно зависеть от того, откуда её отметили.
-        const b = res.booking;
-        if (b.userEmail) {
-          const adminToken = await user?.getIdToken().catch(() => undefined);
-          void sendPaymentPaidEmail({
-            userEmail:     b.userEmail,
-            userName:      b.userName,
-            showId:        b.showId,
-            showTitle:     b.showTitle,
-            showDate:      b.showDate,
-            showTime:      b.showTime,
-            ticketsCount:  b.ticketsCount,
-            totalAmount:   b.totalAmount,
-            ticketCode:    b.ticketCode,
-            bookingStatus: 'confirmed',
-            lang:          b.lang,
-          }, adminToken).catch(() => {/* письмо не должно ломать проход */});
-        }
+        if (group) await refreshGroup();
+        else setBooking(res.booking);
+        void notifyPaid(res.booking);
         return;
       }
       if (res.reason === 'show_over') {
@@ -120,16 +142,22 @@ export function useTicketCheck(user: User | null, initialState: ScanState): Tick
     }
   }
 
-  async function markAttended() {
+  async function markAttended(target?: CheckinBooking) {
     if (!booking || operating) return;
+    const subject = target ?? booking;
     setOperating(true);
     try {
-      const res = await callCheckin(booking.ticketCode, 'mark_attended');
-      if (res.ok && res.booking) { setBooking(res.booking); return; }
+      const res = await callCheckin(subject.ticketCode, 'mark_attended');
+      if (res.ok && res.booking) {
+        if (group) await refreshGroup();
+        else setBooking(res.booking);
+        return;
+      }
       // Второй одновременный скан того же кода приходит именно сюда:
       // сервер выполнил проверку и запись одной транзакцией.
       if (res.reason === 'already_attended') {
-        setBooking(prev => prev ? { ...prev, status: 'attended' } : prev);
+        if (group) await refreshGroup();
+        else setBooking(prev => prev ? { ...prev, status: 'attended' } : prev);
         setErrorMsg('');
         return;
       }
@@ -147,15 +175,56 @@ export function useTicketCheck(user: User | null, initialState: ScanState): Tick
     }
   }
 
+  async function checkInGroup() {
+    if (!booking || !group || operating) return;
+    setOperating(true);
+    try {
+      // На сервер уходит только код отсканированного QR: состав группы,
+      // суммы и статусы оплаты он заново читает внутри транзакции.
+      const res = await callCheckin(booking.ticketCode, 'group_checkin');
+      if (res.ok && res.booking && res.group) {
+        setBooking(res.booking);
+        setGroup(res.group);
+        // Письмо — только по броням, которые ЭТОТ запрос перевёл в «оплачено».
+        // Повтор получает already_attended без paidBookings, дубля не будет.
+        for (const paid of res.paidBookings) void notifyPaid(paid);
+        return;
+      }
+      // Отказ несёт свежую сводку: второй сотрудник успел провести группу,
+      // или в группе появилась бронь с неподтверждённым переводом.
+      if (res.group && (res.reason === 'already_attended' || res.reason === 'payment_pending')) {
+        if (res.booking) setBooking(res.booking);
+        setGroup(res.group);
+        setErrorMsg('');
+        return;
+      }
+      if (res.reason === 'show_over') {
+        failWith('Билет выписан на другой сеанс — проход отмечать нельзя.');
+        return;
+      }
+      if (res.reason === 'cancelled' || res.reason === 'expired') {
+        failWith('Отсканированная бронь недействительна — групповой проход недоступен.');
+        return;
+      }
+      failWith('Ошибка при групповом проходе. Отсканируйте билет ещё раз.');
+    } catch {
+      failWith('Ошибка при групповом проходе. Отсканируйте билет ещё раз.');
+    } finally {
+      setOperating(false);
+    }
+  }
+
   function beginScanning() {
     setCameraError('');
     setBooking(null);
+    setGroup(null);
     setErrorMsg('');
     setScanState('scanning');
   }
 
   function reset() {
     setBooking(null);
+    setGroup(null);
     setErrorMsg('');
     setOperating(false);
     setCameraError('');
@@ -163,9 +232,9 @@ export function useTicketCheck(user: User | null, initialState: ScanState): Tick
   }
 
   return {
-    scanState, booking, errorMsg, operating, cameraError,
+    scanState, booking, group, errorMsg, operating, cameraError,
     setScanState, setCameraError, failWith,
-    lookupByCode, markPaid, markAttended,
+    lookupByCode, markPaid, markAttended, checkInGroup,
     beginScanning, reset,
   };
 }

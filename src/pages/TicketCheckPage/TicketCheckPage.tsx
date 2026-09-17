@@ -10,13 +10,16 @@ import { useTicketCheck } from './useTicketCheck';
 import { useCameraScanner, scanTicketFile, CAMERA_ELEMENT_ID, FILE_SCANNER_ELEMENT_ID } from './useQrScanner';
 import { CheckinAuthGate } from './CheckinAuthGate';
 import { TicketResultCard, ScanErrorCard } from './TicketResultCard';
+import { GroupResultCard } from './GroupResultCard';
+import { GroupConfirmSheet } from './GroupConfirmSheet';
+import type { CheckinBooking } from '../../services/checkinService';
 import { QrScanIcon, CameraIcon, ImageIcon } from './ScanIcons';
 import styles from './TicketCheckPage.module.scss';
 
 /** Через сколько не-админа без кода в адресе уводит на лендинг, мс. */
 const REDIRECT_DELAY_MS = 1500;
 
-type ConfirmType = 'cash' | 'attended' | null;
+type ConfirmType = 'cash' | 'attended' | 'group' | null;
 
 export function TicketCheckPage() {
   const navigate       = useNavigate();
@@ -30,6 +33,13 @@ export function TicketCheckPage() {
   useCameraScanner(check);
 
   const [confirmType, setConfirmType] = useState<ConfirmType>(null);
+  // Бронь группы, по которой открыт одиночный диалог; null — отсканированная.
+  const [confirmTarget, setConfirmTarget] = useState<CheckinBooking | null>(null);
+
+  function askConfirm(type: ConfirmType, target: CheckinBooking | null = null) {
+    setConfirmTarget(target);
+    setConfirmType(type);
+  }
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Код из адреса разбирается один раз: без флага StrictMode слал бы два запроса.
   const urlLookupDone = useRef(false);
@@ -161,13 +171,26 @@ export function TicketCheckPage() {
         <ScanErrorCard message={check.errorMsg} onReset={handleReset} resetLabel={resetLabel} />
       )}
 
-      {check.scanState === 'found' && check.booking && !check.operating && (
+      {/* Несколько активных броней зрителя на этот сеанс — показываем их вместе.
+          Одна бронь остаётся в прежней одиночной карточке. */}
+      {check.scanState === 'found' && check.booking && check.group && !check.operating && (
+        <GroupResultCard
+          group={check.group}
+          onGroupCheckIn={() => askConfirm('group')}
+          onCashReceived={b => askConfirm('cash', b)}
+          onMarkAttended={b => askConfirm('attended', b)}
+          onReset={handleReset}
+          resetLabel={resetLabel}
+        />
+      )}
+
+      {check.scanState === 'found' && check.booking && !check.group && !check.operating && (
         <TicketResultCard
           booking={check.booking}
           onReset={handleReset}
           resetLabel={resetLabel}
-          onCashReceived={() => setConfirmType('cash')}
-          onMarkAttended={() => setConfirmType('attended')}
+          onCashReceived={() => askConfirm('cash')}
+          onMarkAttended={() => askConfirm('attended')}
         />
       )}
 
@@ -181,7 +204,7 @@ export function TicketCheckPage() {
         onCancel={() => setConfirmType(null)}
         onConfirm={() => {
           setConfirmType(null);
-          void check.markPaid();
+          void check.markPaid(confirmTarget ?? undefined);
         }}
       />
 
@@ -195,7 +218,17 @@ export function TicketCheckPage() {
         onCancel={() => setConfirmType(null)}
         onConfirm={() => {
           setConfirmType(null);
-          void check.markAttended();
+          void check.markAttended(confirmTarget ?? undefined);
+        }}
+      />
+
+      <GroupConfirmSheet
+        group={check.group}
+        isOpen={confirmType === 'group'}
+        onCancel={() => setConfirmType(null)}
+        onConfirm={() => {
+          setConfirmType(null);
+          void check.checkInGroup();
         }}
       />
     </div>

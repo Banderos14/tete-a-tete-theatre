@@ -14,7 +14,7 @@ import type {
 } from '../../shared/contracts/checkin.js';
 import { db, findByTicketCode } from '../booking/booking.repository.js';
 
-const TICKET_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+export const TICKET_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 
 // Насколько раньше начала спектакля билет уже принимается на входе.
 const DOORS_OPEN_BEFORE_MS = 4 * 60 * 60 * 1000;
@@ -31,7 +31,7 @@ const GRACE_AFTER_END_MS   = 3 * 60 * 60 * 1000;
  * Пока считали по каталогу, перенос romantika с 14 Июн на 17 Сен делал
  * июньские билеты действительными на сентябрьский показ.
  */
-function relevanceOf(data: Record<string, unknown>, nowMs: number): ShowRelevance {
+export function relevanceOf(data: Record<string, unknown>, nowMs: number): ShowRelevance {
   const startMs = bookingOccurrenceStartUtcMs(data as BookingOccurrence);
 
   if (startMs === null) return 'unknown';
@@ -57,7 +57,39 @@ function catalogDateDiffers(data: Record<string, unknown>): boolean {
   return booked !== '' && booked !== showDateString(catalogShow);
 }
 
-function snapshotOf(id: string, ticketCode: string, data: Record<string, unknown>, nowMs: number): CheckinBooking {
+function ticketTypeLabelOf(data: Record<string, unknown>): string {
+  const show = typeof data.showId === 'string' ? SHOWS[data.showId] : undefined;
+  const type = typeof data.ticketType === 'string' ? data.ticketType : '';
+  return (show?.tickets as Record<string, { label: string } | undefined> | undefined)?.[type]?.label ?? '';
+}
+
+/**
+ * Поля перехода «оплата получена на входе».
+ *
+ * Один набор на все пути: одиночный mark_paid и групповой проход пишут одно и
+ * то же, поэтому второй, несовместимой машины состояний не появляется.
+ */
+export function paidTransition(adminUid: string) {
+  return {
+    paymentStatus: 'paid',
+    status:        'confirmed',
+    paidAt:        FieldValue.serverTimestamp(),
+    paidBy:        adminUid,
+    updatedAt:     FieldValue.serverTimestamp(),
+  };
+}
+
+/** Поля перехода «зритель прошёл в зал» — общие для одиночного и группового прохода. */
+export function attendedTransition(adminUid: string) {
+  return {
+    status:     'attended',
+    attendedAt: FieldValue.serverTimestamp(),
+    attendedBy: adminUid,
+    updatedAt:  FieldValue.serverTimestamp(),
+  };
+}
+
+export function snapshotOf(id: string, ticketCode: string, data: Record<string, unknown>, nowMs: number): CheckinBooking {
   return {
     bookingId:     id,
     ticketCode,
@@ -76,6 +108,7 @@ function snapshotOf(id: string, ticketCode: string, data: Record<string, unknown
     status:        String(data.status ?? ''),
     paymentStatus: String(data.paymentStatus ?? ''),
     paymentMethod: String(data.paymentMethod ?? ''),
+    ticketTypeLabel: ticketTypeLabelOf(data),
     showRelevance:    relevanceOf(data, nowMs),
     showDateDiffers:  catalogDateDiffers(data),
   };
@@ -137,12 +170,7 @@ export async function checkinTicket(input: CheckinInput): Promise<CheckinResult>
       }
       if (paymentStatus !== 'paid') return { kind: 'refused', refusal: 'not_paid',         message: 'Ticket is not paid',  booking };
 
-      tx.update(ref, {
-        status:     'attended',
-        attendedAt: FieldValue.serverTimestamp(),
-        attendedBy: input.adminUid,
-        updatedAt:  FieldValue.serverTimestamp(),
-      });
+      tx.update(ref, attendedTransition(input.adminUid));
       return { kind: 'done', booking: { ...booking, status: 'attended' }, changed: true };
     }
 
@@ -156,13 +184,7 @@ export async function checkinTicket(input: CheckinInput): Promise<CheckinResult>
       return { kind: 'refused', refusal: 'show_over', message: 'Show already ended', booking };
     }
 
-    tx.update(ref, {
-      paymentStatus: 'paid',
-      status:        'confirmed',
-      paidAt:        FieldValue.serverTimestamp(),
-      paidBy:        input.adminUid,
-      updatedAt:     FieldValue.serverTimestamp(),
-    });
+    tx.update(ref, paidTransition(input.adminUid));
     return { kind: 'done', booking: { ...booking, status: 'confirmed', paymentStatus: 'paid' }, changed: true };
   });
 
