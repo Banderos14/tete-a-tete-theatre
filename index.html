@@ -74,13 +74,15 @@
     <meta name="twitter:description" content="Театр в Ницце: спектакли, афиша, репертуар и онлайн-бронирование билетов." />
 
     <title>Théâtre Tête-à-Tête à Nice — Spectacles en russe et billetterie</title>
-    <!-- Favicons: белый официальный знак на чёрном квадрате (--bg), чтобы иконка
-         читалась и на белом фоне выдачи Google, и на тёмном. Адреса стабильные,
-         без ?v= — поисковик и браузеры получают новый файл по тому же URL. -->
+    <!-- Favicons: официальный знак на прозрачном фоне.
+         favicon.svg — основной: чёрный знак в светлой теме браузера, белый в тёмной
+         (prefers-color-scheme внутри SVG; Chrome, Firefox, Edge).
+         favicon.ico (16/32/48) — чёрный знак для браузеров без SVG-favicon и как
+         запасной вариант для Google. У ICO явные sizes, не "any": иначе Chrome
+         выбирает ICO вместо SVG. Адреса стабильные, без ?v=. -->
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- iOS заливает прозрачный фон apple-touch-icon чёрным, поэтому знак белый -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
