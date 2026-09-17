@@ -63,21 +63,25 @@
     <meta property="og:site_name"   content="Théâtre Tête-à-Tête" />
     <meta property="og:title"       content="Théâtre Tête-à-Tête à Nice" />
     <meta property="og:description" content="Театр в Ницце: спектакли, афиша, репертуар и онлайн-бронирование билетов." />
-    <meta property="og:url" content="https://www.theatre-teteatete.fr/" />
-    <meta property="og:image"       content="https://www.theatre-teteatete.fr/images/about/zal-v2.webp" />
+    <meta property="og:url"         content="https://www.theatre-teteatete.fr/" />
+    <!-- og:image намеренно нет: главная делится компактной карточкой без большой
+         фотографии (WhatsApp, Telegram). Картинка не должна меняться вместе с
+         афишей — не подставлять сюда постеры, фото зала или труппы. -->
 
-    <!-- Twitter Card -->
-    <meta name="twitter:card"        content="summary_large_image" />
+    <!-- Twitter Card: summary — маленькая карточка, не summary_large_image -->
+    <meta name="twitter:card"        content="summary" />
     <meta name="twitter:title"       content="Théâtre Tête-à-Tête à Nice" />
     <meta name="twitter:description" content="Театр в Ницце: спектакли, афиша, репертуар и онлайн-бронирование билетов." />
-    <meta name="twitter:image"       content="https://www.theatre-teteatete.fr/images/about/zal-v2.webp" />
 
     <title>Théâtre Tête-à-Tête à Nice — Spectacles en russe et billetterie</title>
-    <!-- Favicons -->
-    <link rel="icon" href="/favicon.ico?v=5" sizes="16x16 32x32 48x48" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=5" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=5" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=5" />
+    <!-- Favicons: белый официальный знак на чёрном квадрате (--bg), чтобы иконка
+         читалась и на белом фоне выдачи Google, и на тёмном. Адреса стабильные,
+         без ?v= — поисковик и браузеры получают новый файл по тому же URL. -->
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
     <!-- Schema.org structured data -->
@@ -102,7 +106,7 @@
           "https://www.instagram.com/theatre_tete_a_tete/",
           "https://www.facebook.com/TheatreTeteAtete/"
         ],
-        "logo": "https://www.theatre-teteatete.fr/images/favicon-white.png",
+        "logo": "https://www.theatre-teteatete.fr/images/favicon-source.png",
         "image": "https://www.theatre-teteatete.fr/images/about/zal-v2.webp"
       }
     </script>
