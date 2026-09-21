@@ -5,11 +5,9 @@
 // который понимает правило. Цена считается ТОЛЬКО здесь, в транзакции
 // создания брони: клиент скидку лишь показывает.
 
-import { loyaltySummary, loyaltyDiscountForTicket, LOYALTY_VISITS_PER_REWARD, type LoyaltyBooking } from '../../shared/domain/loyalty.js';
+import { loyaltySummary, loyaltyDiscountForTicket, type LoyaltyBooking } from '../../shared/domain/loyalty.js';
 import { parseShowStartUtcMs } from '../../shared/domain/showTime.js';
 import type { RawBooking } from './booking.types.js';
-
-export const LOYALTY_REWARD_INTERVAL = LOYALTY_VISITS_PER_REWARD;
 
 function toLoyaltyBooking(b: RawBooking): LoyaltyBooking {
   return {

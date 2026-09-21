@@ -180,7 +180,7 @@ export const FR: T = {
     phoneInvalid:          'Veuillez saisir un numéro français complet (+33 et 9 chiffres)',
     incomplete:            (n) => `Complétez votre profil — encore ${n} champ${n > 1 ? 's' : ''}`,
     visitCount:            (n) => n === 0 ? 'Vous n\'avez encore assisté à aucun spectacle' : `Vous avez assisté à ${n} spectacle${n > 1 ? 's' : ''}`,
-    loyaltyRule:           'Assistez à 5 spectacles — le 6e billet à −50 %.',
+    loyaltyRule:           (n) => `Assistez à ${n} spectacles — le ${n + 1}e billet à −50 %.`,
     loyaltyTitle:          'Fidélité',
     loyaltyOf:             (done, total) => `${done} sur ${total}`,
     bonusProgress:         (r) => `Encore ${r} visite${r > 1 ? 's' : ''} avant la remise de 50 %.`,

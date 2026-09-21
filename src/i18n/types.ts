@@ -92,10 +92,10 @@ export interface T {
     phoneInvalid: string;
     incomplete: (n: number) => string;
     visitCount: (n: number) => string;
-    /** Правило программы: «Посетите 5 спектаклей — 6-й билет со скидкой 50%». */
-    loyaltyRule: string;
+    /** Правило программы от порога n: «Посетите 4 спектакля — 5-й билет со скидкой 50%». */
+    loyaltyRule: (visits: number) => string;
     loyaltyTitle: string;
-    /** «3 из 5». */
+    /** «3 из 4». */
     loyaltyOf: (done: number, total: number) => string;
     bonusProgress: (remaining: number) => string;
     /** Заголовок, когда скидка доступна. */

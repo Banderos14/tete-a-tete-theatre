@@ -1,4 +1,4 @@
-// Лояльность в кабинете: «Посетите 5 спектаклей — 6-й билет со скидкой 50%».
+// Лояльность в кабинете: «Посетите 4 спектакля — 5-й билет со скидкой 50%».
 //
 // Прогресс вычисляется из реальных броней (shared/domain/loyalty.ts): засчитан
 // только реальный проход, один спектакль — одно посещение. Цену со скидкой
@@ -34,7 +34,7 @@ export function VisitCounter({ bookings, t }: { bookings: Booking[]; t: T }) {
           />
         ))}
       </div>
-      <p className={styles.visitCaption}>{t.profile.loyaltyRule}</p>
+      <p className={styles.visitCaption}>{t.profile.loyaltyRule(LOYALTY_VISITS_PER_REWARD)}</p>
       <p className={styles.visitCaption}>
         {available ? t.profile.bonusComplete : t.profile.bonusProgress(remaining)}
       </p>
