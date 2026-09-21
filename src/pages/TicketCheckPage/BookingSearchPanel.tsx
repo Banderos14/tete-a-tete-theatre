@@ -8,6 +8,12 @@
 // Брони спектакля читаются одним запросом (правила Firestore разрешают это
 // роли admin), фильтр — локальный: десятки документов, без полнотекстового
 // индекса и без лишних чтений на каждое нажатие клавиши.
+//
+// «Все спектакли» — для броней, которых нет среди выбранного: прошлые показы,
+// спектакль, снятый с афиши (его нет в списке наверху), перенос на другой день.
+// Схема старых броней та же (проверено по истории и данным), поэтому поиск
+// общий. Открытая бронь идёт через ту же проверку на сервере: билет другого
+// спектакля покажет «на другой спектакль» и не будет отмечен. Только чтение.
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { IconSearch } from '@tabler/icons-react';
@@ -35,22 +41,23 @@ export function BookingSearchPanel({ showId, onOpen }: {
   onOpen: (ticketCode: string) => void;
 }) {
   const [query, setQuery]       = useState('');
+  const [allShows, setAllShows] = useState(false);
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [loadError, setLoadError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Брони выбранного сеанса. stale — ответ прежнего сеанса не затирает новый.
   useEffect(() => {
-    if (!showId) return;
+    if (!showId && !allShows) return;
     let stale = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setBookings(null);
     setLoadError('');
-    getAllBookings({ showId })
+    getAllBookings(allShows ? {} : { showId })
       .then(list => { if (!stale) setBookings(list); })
       .catch(() => { if (!stale) setLoadError('Не удалось загрузить брони. Проверьте интернет и попробуйте снова.'); });
     return () => { stale = true; };
-  }, [showId]);
+  }, [showId, allShows]);
 
   const results = useMemo(
     () => (bookings && query.trim() ? filterBookings(bookings, query).slice(0, MAX_RESULTS) : []),
@@ -63,7 +70,7 @@ export function BookingSearchPanel({ showId, onOpen }: {
     e.preventDefault();
     const code = normalizeTicketCodeInput(query);
     if (code) { onOpen(code); return; }
-    if (results.length === 1) onOpen(results[0]!.ticketCode);
+    if (results.length === 1 && results[0]!.ticketCode) onOpen(results[0]!.ticketCode);
     else inputRef.current?.focus();
   }
 
@@ -95,10 +102,19 @@ export function BookingSearchPanel({ showId, onOpen }: {
         </button>
       </form>
 
+      <label className={styles.searchScope}>
+        <input type="checkbox" checked={allShows} onChange={e => setAllShows(e.target.checked)} />
+        Искать во всех спектаклях, включая прошедшие
+      </label>
+
       {loadError && <p className={styles.searchNote} role="alert">{loadError}</p>}
       {!loadError && bookings === null && showId && <p className={styles.searchNote}>Загружаем брони…</p>}
       {bookings && query.trim() && results.length === 0 && !exactCode && (
-        <p className={styles.searchNote}>В этом сеансе ничего не найдено. Проверьте спектакль наверху или введите код брони целиком.</p>
+        <p className={styles.searchNote}>
+          {allShows
+            ? 'Ничего не найдено. Проверьте написание или введите код брони целиком.'
+            : 'В этом спектакле ничего не найдено. Отметьте «Искать во всех спектаклях» или введите код брони целиком.'}
+        </p>
       )}
 
       {results.length > 0 && (
@@ -108,10 +124,18 @@ export function BookingSearchPanel({ showId, onOpen }: {
             const seats = b.seatsCount ?? b.ticketsCount;
             return (
               <li key={b.id}>
-                <button type="button" className={styles.searchResult} onClick={() => onOpen(b.ticketCode)}>
+                <button
+                  type="button"
+                  className={styles.searchResult}
+                  // Бронь без кода (такие были до появления QR) открыть через сервер
+                  // нельзя — её видно в списке, дальше — админка.
+                  disabled={!b.ticketCode}
+                  onClick={() => { if (b.ticketCode) onOpen(b.ticketCode); }}
+                >
                   <span className={styles.searchResultName}>{b.userName || b.userEmail || 'Без имени'}</span>
                   <span className={styles.searchResultMeta}>
-                    <span className={styles.mono}>{b.ticketCode}</span> · {seats} мест · {b.userPhone || b.userEmail}
+                    <span className={styles.mono}>{b.ticketCode || 'без кода'}</span> · {seats} мест · {b.userPhone || b.userEmail}
+                    {allShows && <> · {b.showTitle} · {b.showDate} {b.showTime}</>}
                   </span>
                   <span className={`${styles.stamp} ${pay.className}`}>{pay.text}</span>
                 </button>

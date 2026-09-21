@@ -1039,6 +1039,21 @@
   }
 }
 
+.searchScope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--fg-dim);
+  cursor: pointer;
+
+  input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+  @include mixins.small { font-size: 14px; min-height: 44px; }
+}
+
+.searchResult:disabled { opacity: 0.55; cursor: not-allowed; }
+
 .searchNote {
   font-size: 13px;
   color: var(--fg-mute);
