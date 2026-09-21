@@ -8,7 +8,9 @@
 // ни API не читаются — поэтому здесь нет и не может быть персональных данных,
 // статуса оплаты или действий с бронью. QR и так является предъявляемым
 // билетом: всё, что есть на странице, уже содержится в самой ссылке.
-// Личный кабинет по-прежнему требует входа.
+// Личный кабинет по-прежнему требует входа. Ссылка на него — /?account=tickets,
+// а не #/?account=tickets: переход по хешу внутри уже открытого приложения
+// не перезапускает разбор параметра, и кабинет бы не открылся.
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -49,7 +51,7 @@ export function TicketPage() {
             ? 'Ouvrez à nouveau l’e-mail de réservation ou votre espace « Mes billets ».'
             : 'Откройте письмо о брони ещё раз или раздел «Мои билеты» в личном кабинете.'}
         </p>
-        <a className={styles.secondaryLink} href="#/?account=tickets">
+        <a className={styles.secondaryLink} href="/?account=tickets">
           {isFR ? 'Mes billets' : 'Мои билеты'}
         </a>
       </main>
@@ -83,7 +85,7 @@ export function TicketPage() {
         </p>
       )}
 
-      <a className={styles.secondaryLink} href="#/?account=tickets">
+      <a className={styles.secondaryLink} href="/?account=tickets">
         {isFR ? 'Espace personnel' : 'Личный кабинет'}
       </a>
     </main>

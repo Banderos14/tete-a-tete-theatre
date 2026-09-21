@@ -38,6 +38,11 @@ describe('публичная страница билета', () => {
     spy.mockRestore();
   });
 
+  it('ссылка на кабинет — полная загрузка, чтобы кабинет действительно открылся', () => {
+    expect(page).toContain('href="/?account=tickets"');
+    expect(page).not.toContain('href="#/?account=tickets"');
+  });
+
   it('кривой код в ссылке не превращается в чужой билет', () => {
     expect(page).toContain("normalizeTicketCodeInput(params.get('code')");
   });
