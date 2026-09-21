@@ -9,6 +9,7 @@ interface Props {
       successTitle: string;
       successOnSite: string;
       successTransfer: string;
+      successEmailFailed: string;
       myTickets: string;
       labelTickets: string;
       labelAmount: string;
@@ -25,6 +26,8 @@ interface Props {
   tickets: number;
   activeTicket: TicketType | null;
   savedAmount: number;
+  /** false — сервер не смог отправить письмо-билет; билет всё равно есть в кабинете. */
+  ticketEmailSent: boolean;
   ticketCode: string;
   payment: string;
   userEmail: string;
@@ -38,7 +41,7 @@ interface Props {
 
 export function BookingSuccessStep({
   show, lang, t,
-  tickets, activeTicket, savedAmount, ticketCode, payment, userEmail,
+  tickets, activeTicket, savedAmount, ticketEmailSent, ticketCode, payment, userEmail,
   copiedCode,
   onCopyCode,
   onOpenTickets,
@@ -98,10 +101,12 @@ export function BookingSuccessStep({
             </div>
           </div>
 
-          {/* Зритель должен уйти отсюда, понимая, ГДЕ его QR и что с ним делать:
-              проход в зал идёт по коду из кабинета, а не по этому экрану. */}
+          {/* Зритель должен уйти отсюда, понимая, ГДЕ его билет и что с ним делать:
+              QR в письме (и в кабинете). Если письмо не ушло — честно ведём в кабинет. */}
           <p className={styles.successText}>
-            {payment === 'on_site' ? t.booking.successOnSite : t.booking.successTransfer}
+            {!ticketEmailSent
+              ? t.booking.successEmailFailed
+              : payment === 'on_site' ? t.booking.successOnSite : t.booking.successTransfer}
           </p>
 
         </div>

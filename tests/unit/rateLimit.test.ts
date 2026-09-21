@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { decideRateLimit } from '../../server/shared/rateLimit.js';
-import { endpointSource } from '../helpers/serverSource.js';
+import { projectSource } from '../helpers/serverSource.js';
 
 const HOUR = 60 * 60 * 1000;
 
@@ -36,44 +36,15 @@ describe('decideRateLimit', () => {
   });
 });
 
-describe('/api/send-email: авторизация и привязка к брони', () => {
-  const src = endpointSource('api/send-email.ts');
-
-  it('анонимная отправка невозможна для любого типа письма', () => {
-    expect(src).toContain('requires Authorization: Bearer <token>');
-    expect(src).toMatch(/if \(!idToken\) throw unauthorized\(/);
+describe('письма-билеты: отправляет только сервер', () => {
+  it('эндпоинта «отправить произвольное письмо» больше нет', () => {
+    expect(() => projectSource('api/send-email.ts')).toThrow();
   });
 
-  it('booking-confirmation требует ticketCode и проверяет владение бронью', () => {
-    expect(src).toContain('ticketCode is required for booking-confirmation');
-    expect(src).toContain('ownsBookingWithTicketCode');
-    expect(src).toContain("where('ticketCode', '==', ticketCode)");
-    expect(src).toContain("?.userId === uid");
-  });
-
-  it('booking-status / payment-paid остаются admin-only', () => {
-    expect(src).toContain("ADMIN_ONLY_TYPES: readonly EmailType[] = ['booking-status', 'payment-paid']");
-    expect(src).toContain('ADMIN_ONLY_TYPES.includes(type) && !isAdmin');
-    expect(src).toContain('is admin-only');
-  });
-
-  it('лимит применяется к вызывающему и отвечает 429 с Retry-After', () => {
-    expect(src).toContain('consumeRateLimit');
-    expect(src).toContain('Too many emails, try again later');
-    expect(src).toContain("'Retry-After'");
-  });
-
-  it('у администратора лимит выше — рассылка должна проходить целиком', () => {
-    expect(src).toMatch(/ADMIN_EMAIL_LIMIT_PER_HOUR\s*=\s*(\d+)/);
-    const user  = Number(/USER_EMAIL_LIMIT_PER_HOUR\s*=\s*(\d+)/.exec(src)![1]);
-    const admin = Number(/ADMIN_EMAIL_LIMIT_PER_HOUR\s*=\s*(\d+)/.exec(src)![1]);
-    expect(admin).toBeGreaterThan(user);
-  });
-});
-
-describe('фронтенд присылает ticketCode', () => {
-  it('sendBookingConfirmationEmail передаёт код билета', () => {
-    const src = endpointSource('src/services/email/index.ts');
-    expect(src).toMatch(/type: 'booking-confirmation'[\s\S]{0,200}ticketCode: data\.ticketCode/);
+  it('повторная отправка билета ограничена по администратору', () => {
+    const router = projectSource('server/admin/adminBooking.service.ts');
+    expect(router).toContain('consumeRateLimit');
+    expect(router).toContain('ticket-resend:${adminUid}');
+    expect(router).toContain("tooManyRequests('Too many resends");
   });
 });

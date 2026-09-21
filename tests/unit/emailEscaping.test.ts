@@ -2,11 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { escapeEmailHtml } from '../../src/services/email/index.js';
-import { endpointSource } from '../helpers/serverSource.js';
+import { buildTicketEmail } from '../../shared/email/ticketEmail.js';
 
 const ROOT = resolve(__dirname, '../..');
-// Почтовый слой — каталог: шаблоны, вёрстка и транспорт лежат отдельно.
-const src  = endpointSource('src/services/email/index.ts');
 
 describe('escapeEmailHtml', () => {
   it('экранирует разметку', () => {
@@ -39,27 +37,25 @@ describe('escapeEmailHtml', () => {
 });
 
 describe('шаблоны писем', () => {
-  it('все HTML-подстановки имени экранированы', () => {
-    const htmlUnescaped = [...src.matchAll(/\$\{data\.userName\}/g)];
-    // Оставшиеся неэкранированные подстановки допустимы только в текстовых версиях.
-    for (const m of htmlUnescaped) {
-      const line = src.slice(0, m.index).split('\n').length;
-      const text = src.split('\n')[line - 1]!;
-      expect(text, `строка ${line} выглядит как HTML`).not.toMatch(/<[a-z]/i);
-    }
+  const ticketSrc = readFileSync(resolve(ROOT, 'shared/email/ticketEmail.ts'), 'utf8');
+
+  it('имя зрителя в HTML письма-билета экранируется', () => {
+    const mail = buildTicketEmail({
+      userName: '<b>Иван</b><a href="http://evil">x</a>', showId: 'shutka', showTitle: 'T', showDate: '02 Окт 2026',
+      showTime: '20:00', ticketsCount: 1, ticketType: 'standard', totalAmount: 20, ticketCode: 'ABCD-2345',
+      status: 'pending', paymentMethod: 'on_site', paymentStatus: 'not_paid', lang: 'RU',
+    }, { kind: 'booking', withQr: true });
+    expect(mail.html).toContain('&lt;b&gt;Иван&lt;/b&gt;');
+    expect(mail.html).not.toContain('<b>Иван</b>');
+    expect(mail.html).not.toContain('href="http://evil"');
   });
 
-  it('в HTML-приветствиях используется экранирование', () => {
-    expect(src).toContain('${escapeEmailHtml(data.userName)}');
-    expect(src).toContain('escapeEmailHtml(data.userName)]');
-  });
-
-  it('текстовые версии писем НЕ экранируются — там были бы &amp;', () => {
-    const textBlocks = src.split('\n').filter(l => l.includes('data.userName') && !l.includes('escapeEmailHtml'));
-    expect(textBlocks.length).toBeGreaterThan(0);
-    for (const l of textBlocks) expect(l).not.toMatch(/<[a-z]/i);
+  it('в шаблонах имя подставляется только через escapeEmailHtml', () => {
+    expect(ticketSrc).toContain('escapeEmailHtml(b.userName');
+    expect(ticketSrc).not.toMatch(/\$\{b\.userName\}/);
   });
 });
+
 
 describe('PII не попадает в консоль браузера', () => {
   const modal = readFileSync(resolve(ROOT, 'src/components/ui/BookingModal/BookingModal.tsx'), 'utf8');

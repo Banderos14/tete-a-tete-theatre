@@ -12,7 +12,7 @@ import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant, type StubVariant } from '../../../utils/ticketStub';
 import { ticketTypeLabel } from '../../../utils/ticketType';
-import { StampBadge } from '../TicketCard';
+import { StampBadge, TicketQrPanel } from '../TicketCard';
 import styles from './ProfileDrawer.module.scss';
 
 const STUB_STYLE: Record<StubVariant, string> = {
@@ -43,6 +43,7 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
   const [cancelComment, setCancelComment] = useState('');
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelError,   setCancelError]   = useState('');
+  const [qrOpen,        setQrOpen]        = useState(false);
 
   const isAttended     = computedIsAttended(b);
   const displayStatus: BookingStatus = isAttended ? 'attended' : b.status;
@@ -169,6 +170,28 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
               <span className={`${styles.bookingActionText} ${actionClass}`}>{actionText}</span>
             )}
           </div>
+
+          {/* QR-билет есть и до получения перевода — тот же, что в письме.
+              Статус «ожидает оплаты» показывает штамп карточки. */}
+          {isAwaitingTransfer && !isCancelled && b.ticketCode && (
+            <>
+              <button
+                type="button"
+                className={styles.bookingQrToggle}
+                onClick={() => setQrOpen(v => !v)}
+                aria-expanded={qrOpen}
+              >
+                {qrOpen
+                  ? (isFR ? 'Masquer le billet QR ↑' : 'Скрыть QR-билет ↑')
+                  : (isFR ? 'Afficher le billet QR →' : 'Показать QR-билет →')}
+              </button>
+              {qrOpen && (
+                <div className={styles.bookingQrPanel}>
+                  <TicketQrPanel booking={b} active />
+                </div>
+              )}
+            </>
+          )}
 
           {/* Transfer details block — only for awaiting_transfer */}
           {isAwaitingTransfer && b.ticketCode && (

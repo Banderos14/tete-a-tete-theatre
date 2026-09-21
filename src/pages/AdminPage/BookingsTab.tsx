@@ -1,6 +1,7 @@
 // Вкладка «Брони»: сводка по кассе, карточки спектаклей-фильтров и таблица.
 
-import { IconTrash } from '@tabler/icons-react';
+import { useState } from 'react';
+import { IconMailForward, IconRefresh, IconSearch, IconTrash } from '@tabler/icons-react';
 import { RU } from '../../i18n';
 import { hoursUntilExpiry } from '../../services/bookingService';
 import { getPaymentAccount, PAYMENT_CONFIG } from '../../config/payment';
@@ -10,6 +11,7 @@ import { formatTimestamp, PAY_STATUS_LABELS } from './adminFormatting';
 import type { ConfirmAction, FilterShowId, FilterStatus } from './adminTypes';
 import { ticketTypeLabel } from '../../utils/ticketType';
 import { summarizeBookings, summarizeByShow } from './adminStats';
+import { filterBookings } from '../../utils/bookingSearch';
 import { AdminShowCard } from './AdminShowCard';
 import styles from './AdminPage.module.scss';
 
@@ -52,22 +54,27 @@ const BOOKING_STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
 
 export function BookingsTab({
   bookings, fetching, updatingId,
-  deleteError, onDismissDeleteError,
+  actionError, actionNotice, onDismissActionError, onReload, onResendTicket,
   filterShow, onFilterShow, filterStatus, onFilterStatus,
   onConfirmAction,
 }: {
   bookings: Booking[];
   fetching: boolean;
   updatingId: string | null;
-  deleteError: string | null;
-  onDismissDeleteError: () => void;
+  actionError: string | null;
+  actionNotice: string | null;
+  onDismissActionError: () => void;
+  onReload: () => void;
+  onResendTicket: (bookingId: string) => void;
   filterShow: FilterShowId;
   onFilterShow: (v: FilterShowId | ((prev: FilterShowId) => FilterShowId)) => void;
   filterStatus: FilterStatus;
   onFilterStatus: (v: FilterStatus) => void;
   onConfirmAction: (a: ConfirmAction) => void;
 }) {
-  const filtered = bookings
+  // Строка поиска: имя, e-mail, телефон или код брони — по уже загруженному списку.
+  const [search, setSearch] = useState('');
+  const filtered = filterBookings(bookings, search)
     .filter(b => filterShow  === 'all' || b.showId === filterShow)
     .filter(b => filterStatus === 'all' || b.status === filterStatus);
 
@@ -105,6 +112,30 @@ export function BookingsTab({
         ))}
       </div>
 
+      <div className={styles.searchRow}>
+        <label className={styles.searchField}>
+          <IconSearch size={16} stroke={1.5} aria-hidden="true" />
+          <input
+            type="search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Имя, e-mail, телефон или код брони"
+            aria-label="Поиск брони"
+            enterKeyHint="search"
+          />
+        </label>
+        <button
+          type="button"
+          className={styles.reloadBtn}
+          onClick={onReload}
+          disabled={fetching}
+          title="Обновить список"
+          aria-label="Обновить список"
+        >
+          <IconRefresh size={16} stroke={1.5} aria-hidden="true" />
+        </button>
+      </div>
+
       <div className={styles.filtersRow}>
         <div className={styles.filterGroup}>
           {filterShow !== 'all' && (
@@ -128,10 +159,16 @@ export function BookingsTab({
         </div>
       </div>
 
-      {deleteError && (
-        <div className={styles.adminError}>
-          <strong>Ошибка удаления:</strong> {deleteError}
-          <button className={styles.errorDismiss} onClick={onDismissDeleteError}>×</button>
+      {actionError && (
+        <div className={styles.adminError} role="alert">
+          {actionError}
+          <button className={styles.errorDismiss} onClick={onDismissActionError} aria-label="Скрыть">×</button>
+        </div>
+      )}
+      {!actionError && actionNotice && (
+        <div className={styles.adminNotice} role="status">
+          {actionNotice}
+          <button className={styles.errorDismiss} onClick={onDismissActionError} aria-label="Скрыть">×</button>
         </div>
       )}
 
@@ -164,6 +201,7 @@ export function BookingsTab({
                   booking={b}
                   isBusy={updatingId === b.id}
                   onConfirmAction={onConfirmAction}
+                  onResendTicket={onResendTicket}
                 />
               ))}
             </tbody>
@@ -174,11 +212,24 @@ export function BookingsTab({
   );
 }
 
-function BookingRow({ booking: b, isBusy, onConfirmAction }: {
+/** Последнее письмо-билет по брони — чтобы на «я не получил письмо» было что ответить. */
+function lastTicketEmail(b: Booking): string | null {
+  const entries = Object.entries(b.emails ?? {}).filter(([k]) => k !== 'cancelled');
+  if (entries.length === 0) return null;
+  const [, last] = entries.sort(([, x], [, y]) => (y?.atMs ?? 0) - (x?.atMs ?? 0))[0]!;
+  if (!last) return null;
+  const when = new Date(last.atMs).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const label = { sent: 'отправлен', failed: 'НЕ ушёл', skipped: 'не отправлялся', sending: 'отправляется' }[last.status];
+  return `Билет: ${label}, ${when}`;
+}
+
+function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
   booking: Booking;
   isBusy: boolean;
   onConfirmAction: (a: ConfirmAction) => void;
+  onResendTicket: (bookingId: string) => void;
 }) {
+  const emailLine = lastTicketEmail(b);
   const payStatus: PaymentStatus = b.paymentStatus ?? 'not_paid';
   const bStatus: BookingStatus   = b.status ?? 'pending';
   const account   = b.paymentMethod === 'bank_transfer' ? getPaymentAccount(b.paymentAccountId) : null;
@@ -247,7 +298,7 @@ function BookingRow({ booking: b, isBusy, onConfirmAction }: {
                 onClick={() => onConfirmAction({ type: 'paid', bookingId: b.id })}
               >Оплачено</button>
             )}
-            {payStatus === 'paid' && (
+            {payStatus === 'paid' && bStatus !== 'attended' && (
               <button
                 className={styles.actionUnpaid}
                 disabled={isBusy}
@@ -266,6 +317,8 @@ function BookingRow({ booking: b, isBusy, onConfirmAction }: {
         <span className={`${styles.statusBadge} ${STATUS_BADGE_STYLE[bStatus] ?? styles.statusCancelled}`}>
           {STATUS_LABELS[bStatus] ?? STATUS_LABELS.cancelled}
         </span>
+        {b.attendedAt && <p className={styles.cellShowMeta}>Проход: {formatTimestamp(b.attendedAt)}</p>}
+        {b.paidAt && <p className={styles.cellShowMeta}>Оплата: {formatTimestamp(b.paidAt)}</p>}
       </td>
       <td className={styles.cellComment}>
         {b.comment || '—'}
@@ -281,7 +334,7 @@ function BookingRow({ booking: b, isBusy, onConfirmAction }: {
         <div className={styles.actions}>
           {bStatus === 'cancelled' ? (
             // Удалить можно только отменённую бронь — то же правило проверяет
-            // сервер в /api/delete-booking, кнопка лишь не предлагает лишнего.
+            // сервер (/api/admin-booking, действие delete), кнопка лишь не предлагает лишнего.
             <button
               type="button"
               className={styles.actionDelete}
@@ -293,13 +346,30 @@ function BookingRow({ booking: b, isBusy, onConfirmAction }: {
               <IconTrash size={16} stroke={1.5} aria-hidden />
             </button>
           ) : (
-            <button
-              className={styles.actionCancel}
-              disabled={isBusy}
-              onClick={() => onConfirmAction({ type: 'cancel', bookingId: b.id })}
-            >{t.admin.markCancelled}</button>
+            <>
+              {/* «Я не получил письмо»: тот же билет с тем же QR — ещё раз. */}
+              {bStatus !== 'attended' && (
+                <button
+                  type="button"
+                  className={styles.actionResend}
+                  disabled={isBusy}
+                  onClick={() => onResendTicket(b.id)}
+                >
+                  <IconMailForward size={16} stroke={1.5} aria-hidden="true" />
+                  Отправить билет
+                </button>
+              )}
+              {bStatus !== 'attended' && (
+                <button
+                  className={styles.actionCancel}
+                  disabled={isBusy}
+                  onClick={() => onConfirmAction({ type: 'cancel', bookingId: b.id })}
+                >{t.admin.markCancelled}</button>
+              )}
+            </>
           )}
         </div>
+        {emailLine && <p className={styles.cellShowMeta}>{emailLine}</p>}
       </td>
     </tr>
   );

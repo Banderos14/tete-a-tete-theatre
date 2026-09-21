@@ -225,18 +225,20 @@ describe('bookings — запись', () => {
     }));
   });
 
-  it('администратор может подтвердить оплату', async () => {
-    await assertSucceeds(updateDoc(doc(asAdmin(), 'bookings', 'a-pending'), {
+  // Все изменения броней администратором идут через /api/admin-booking
+  // (Admin SDK): браузер админа бронь только читает.
+  it('администратор НЕ пишет оплату из браузера — только сервер', async () => {
+    await assertFails(updateDoc(doc(asAdmin(), 'bookings', 'a-pending'), {
       paymentStatus: 'paid', status: 'confirmed',
     }));
   });
 
-  it('администратор может отметить проход', async () => {
-    await assertSucceeds(updateDoc(doc(asAdmin(), 'bookings', 'a-paid'), { status: 'attended' }));
+  it('администратор НЕ отмечает проход из браузера — только сервер', async () => {
+    await assertFails(updateDoc(doc(asAdmin(), 'bookings', 'a-paid'), { status: 'attended' }));
   });
 
-  it('администратор может удалить бронь', async () => {
-    await assertSucceeds(deleteDoc(doc(asAdmin(), 'bookings', 'a-pending')));
+  it('администратор НЕ удаляет бронь из браузера — только сервер', async () => {
+    await assertFails(deleteDoc(doc(asAdmin(), 'bookings', 'a-pending')));
   });
 
   it('даже администратор не создаёт бронь напрямую — только сервер', async () => {

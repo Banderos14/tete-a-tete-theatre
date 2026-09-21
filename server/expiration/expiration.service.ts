@@ -13,12 +13,18 @@ import { timestampToMs } from '../booking/booking.types.js';
 // За один запуск обрабатываем ограниченное число броней: если их накопилось
 // больше, остаток разберёт следующий запуск по расписанию.
 const MAX_PER_RUN = 400;
-// В одном batch Firestore допускает не больше 500 операций.
-const BATCH_LIMIT = 450;
 
 export interface ExpirationResult {
   expired: number;
   shows:   string[];
+}
+
+function overdue(data: Record<string, unknown>, nowMs: number): boolean {
+  return isTransferOverdue({
+    status:             String(data.status ?? ''),
+    paymentStatus:      String(data.paymentStatus ?? ''),
+    paymentExpiresAtMs: timestampToMs(data.paymentExpiresAt) ?? null,
+  }, nowMs);
 }
 
 export async function expireOverdueTransfers(nowMs: number = Date.now()): Promise<ExpirationResult> {
@@ -29,38 +35,42 @@ export async function expireOverdueTransfers(nowMs: number = Date.now()): Promis
     .limit(MAX_PER_RUN)
     .get();
 
-  const overdue = snap.docs.filter((d) => {
-    const data = d.data() as Record<string, unknown>;
-    return isTransferOverdue({
-      status:             String(data.status ?? ''),
-      paymentStatus:      String(data.paymentStatus ?? ''),
-      paymentExpiresAtMs: timestampToMs(data.paymentExpiresAt) ?? null,
-    }, nowMs);
-  });
-
+  const candidates = snap.docs.filter(d => overdue(d.data() as Record<string, unknown>, nowMs));
   const touchedShows = new Set<string>();
+  let expired = 0;
 
-  for (let i = 0; i < overdue.length; i += BATCH_LIMIT) {
-    const batch = database.batch();
-    for (const d of overdue.slice(i, i + BATCH_LIMIT)) {
-      batch.update(d.ref, {
+  // Каждая бронь — отдельной транзакцией с повторной проверкой состояния.
+  //
+  // Раньше здесь была пакетная запись по результатам запроса: между запросом и
+  // коммитом администратор мог отметить перевод полученным, и cron молча
+  // перезаписывал оплаченную бронь в expired/cancelled — деньги получены,
+  // а билет аннулирован. Batch не умеет «обнови, только если не изменилось»,
+  // транзакция — умеет. Броней в день единицы, лишние чтения не важны.
+  for (const d of candidates) {
+    const showId = await database.runTransaction(async (tx) => {
+      const fresh = await tx.get(d.ref);
+      const data  = fresh.data() as Record<string, unknown> | undefined;
+      if (!fresh.exists || !data || !overdue(data, nowMs)) return null;
+
+      const id = String(data.showId ?? '');
+      // Счётчик спектакля — точка конфликта с параллельным бронированием.
+      if (id) {
+        tx.set(database.collection(SHOW_COUNTERS).doc(id),
+          { updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      }
+      tx.update(d.ref, {
         paymentStatus: 'expired',
         status:        'cancelled',
         expiredAt:     FieldValue.serverTimestamp(),
         updatedAt:     FieldValue.serverTimestamp(),
       });
-      const showId = String((d.data() as Record<string, unknown>).showId ?? '');
-      if (showId) touchedShows.add(showId);
-    }
-    await batch.commit();
+      return id;
+    });
+
+    if (showId === null) continue;
+    expired += 1;
+    if (showId) touchedShows.add(showId);
   }
 
-  // Трогаем счётчики затронутых спектаклей — они служат точкой конфликта
-  // для параллельных транзакций бронирования.
-  for (const showId of touchedShows) {
-    await database.collection(SHOW_COUNTERS).doc(showId)
-      .set({ updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  }
-
-  return { expired: overdue.length, shows: [...touchedShows] };
+  return { expired, shows: [...touchedShows] };
 }

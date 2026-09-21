@@ -131,6 +131,19 @@ export function isBookingAttended(booking: BookingStateSnapshot): boolean {
   return booking.status === 'attended';
 }
 
+// Есть ли у брони действующий билет с QR.
+//
+// Одно правило на кабинет и на сервер (класть ли QR в письмо): у ЛЮБОЙ
+// действующей брони — оплаченной, «оплата на месте» и с ещё не полученным
+// переводом — есть билет. Неоплаченный билет проходит на входе через «принять
+// оплату и пропустить». Отменённая, протухшая и уже использованная — нет.
+export function isScannableTicket(booking: BookingStateSnapshot): boolean {
+  if (booking.status === 'cancelled' || booking.status === 'attended') return false;
+  return booking.paymentStatus === 'paid'
+    || booking.paymentStatus === 'not_paid'
+    || booking.paymentStatus === 'awaiting_transfer';
+}
+
 // Бессмысленные сочетания статусов.
 //
 // Администратор должен иметь возможность починить реальную ситуацию вручную,

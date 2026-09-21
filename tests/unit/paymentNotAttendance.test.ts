@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { endpointSource, functionBody, projectSource, transactionBody } from '../helpers/serverSource.js';
+import { functionBody, projectSource, transactionBody } from '../helpers/serverSource.js';
 import { isBookingAttended } from '../../shared/domain/bookingRules.js';
 
 // ОПЛАТА НЕ ОЗНАЧАЕТ ПОСЕЩЕНИЕ.
@@ -12,7 +12,6 @@ import { isBookingAttended } from '../../shared/domain/bookingRules.js';
 // который не пришёл, задним числом становилась посещённой.
 
 const ROOT = resolve(__dirname, '../..');
-const checkinApi = endpointSource('api/checkin-ticket.ts');
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -27,7 +26,7 @@ describe('оплата переводит бронь в confirmed, а не в at
   it('mark_paid на входе ставит confirmed', () => {
     // Поля перехода — общий хелпер одиночного и группового прохода.
     const service = projectSource('server/checkin/checkin.service.ts');
-    expect(transactionBody(checkinApi)).toContain('paidTransition(input.adminUid)');
+    expect(transactionBody(projectSource('server/checkin/checkin.service.ts'))).toContain('paidTransition(input.adminUid)');
     expect(functionBody(service, 'paidTransition'))
       .toMatch(/paymentStatus:\s*'paid',\s*\n\s*status:\s*'confirmed'/);
   });
@@ -39,20 +38,17 @@ describe('оплата переводит бронь в confirmed, а не в at
     expect(markPaidBranch).not.toMatch(/status:\s*'attended'/);
   });
 
-  it('админская отметка оплаты ставит confirmed и не трогает посещение', () => {
-    const svc = projectSource('src/services/bookingService.ts');
-    const markPaid = svc.slice(svc.indexOf('export async function markBookingPaid'));
-    const body = markPaid.slice(0, markPaid.indexOf('\n}\n'));
-    expect(body).toContain("status: 'confirmed'");
-    expect(body).not.toContain("'attended'");
+  it('админская отметка оплаты — то же серверное действие mark_paid, без посещения', () => {
+    // Админка больше не пишет в Firestore: «Оплачено» — это mark_paid на сервере.
+    const hook = projectSource('src/pages/AdminPage/useAdminData.ts');
+    expect(hook).toContain("action: 'mark_paid'");
+    expect(hook).not.toContain('updateDoc');
   });
 
-  it('снятие оплаты меняет только paymentStatus', () => {
-    const svc = projectSource('src/services/bookingService.ts');
-    const fn = svc.slice(svc.indexOf('export async function updatePaymentStatus'));
-    const body = fn.slice(0, fn.indexOf('\n}\n'));
-    expect(body).toContain('paymentStatus');
-    expect(body).not.toContain('status:');
+  it('снятие оплаты меняет только оплату и её аудит', () => {
+    const fn = functionBody(projectSource('server/booking/admin.service.ts'), 'markUnpaidByAdmin');
+    expect(fn).toContain("paymentStatus: 'not_paid'");
+    expect(fn).not.toMatch(/\bstatus:\s*'/);
   });
 });
 
@@ -79,7 +75,7 @@ describe('attended появляется только после check-in', () =>
 
   it('запись сопровождается следом проверяющего — кто и когда пропустил', () => {
     const service = projectSource('server/checkin/checkin.service.ts');
-    expect(transactionBody(checkinApi)).toContain('attendedTransition(input.adminUid)');
+    expect(transactionBody(projectSource('server/checkin/checkin.service.ts'))).toContain('attendedTransition(input.adminUid)');
     const fields = functionBody(service, 'attendedTransition');
     expect(fields).toMatch(/status:\s*'attended'/);
     expect(fields).toContain('attendedAt');

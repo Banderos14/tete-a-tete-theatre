@@ -17,7 +17,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryFirestore } from '../helpers/memoryFirestore';
-import { projectSource, functionBody } from '../helpers/serverSource.js';
+import { projectSource } from '../helpers/serverSource.js';
 import type { Booking } from '../../src/types/booking';
 import { SHOWS as FRONT_SHOWS } from '../../src/data/shows';
 
@@ -37,6 +37,7 @@ vi.mock('../../server/booking/booking.repository.js', () => ({
 }));
 
 const { cancelBookingByUser }    = await import('../../server/booking/cancellation.service.js');
+const { cancelBookingByAdmin }   = await import('../../server/booking/admin.service.js');
 const { expireOverdueTransfers } = await import('../../server/expiration/expiration.service.js');
 const { readShowAvailability }   = await import('../../server/availability/availability.service.js');
 const { occupiesCapacity, countActiveBookings, sumOccupiedTickets } =
@@ -68,9 +69,9 @@ async function remaining(showId = SHOW) {
   return (await readShowAvailability())[showId]!;
 }
 
-/** Ровно то, что пишет админка при отмене (updateBookingStatus → updateDoc). */
+/** Отмена администратором — серверное действие cancel из /api/admin-booking. */
 async function adminCancel(id: string) {
-  await store.collection('bookings').doc(id).update({ status: 'cancelled', updatedAt: SERVER_TS });
+  await cancelBookingByAdmin('admin-1', id);
 }
 
 function userCancel(id: string, uid = USER) {
@@ -217,10 +218,21 @@ describe('отмена зрителем — POST /api/cancel-booking', () => {
 });
 
 describe('отмена администратором', () => {
-  it('админка пишет в бронь только статус — остаток пересчитывается сам', () => {
-    const body = functionBody(projectSource('src/services/bookingService.ts'), 'updateBookingStatus');
-    expect(body).toContain('{ status, updatedAt: serverTimestamp() }');
+  it('сервер пишет статус и аудит отмены — остаток пересчитывается сам', async () => {
+    booking('b1');
+    await adminCancel('b1');
+    expect(store.peek('bookings', 'b1')).toMatchObject({
+      status: 'cancelled', cancelledBy: 'admin', cancelledByUid: 'admin-1',
+    });
+    expect(await remaining()).toMatchObject({ remaining: 50 });
   });
+
+  it('прошедшего в зал отменить нельзя — даже с устаревшей строки админки', async () => {
+    booking('b1', { status: 'attended', paymentStatus: 'paid' });
+    await expect(adminCancel('b1')).rejects.toMatchObject({ reason: 'already_attended' });
+    expect(store.peek('bookings', 'b1')!.status).toBe('attended');
+  });
+
 
   it('оплаченная бронь на 3 билета: 47 → 50, сводка 1/3 → 0/0, касса не меняется', async () => {
     booking('b1', { status: 'confirmed', paymentStatus: 'paid' });
@@ -233,11 +245,11 @@ describe('отмена администратором', () => {
     expect(summarizeBookings(adminList())).toEqual({ bookings: 0, tickets: 0, revenue: 90 });
   });
 
-  it('повторная запись «отменено» ничего не освобождает второй раз', async () => {
+  it('повторная отмена отклоняется и ничего не освобождает второй раз', async () => {
     booking('b1');
     booking('b2', { ticketsCount: 2, seatsCount: 2 });
     await adminCancel('b1');
-    await adminCancel('b1');
+    await expect(adminCancel('b1')).rejects.toMatchObject({ reason: 'already_cancelled' });
     expect(await remaining()).toEqual({ capacity: 50, sold: 2, remaining: 48 });
   });
 });
@@ -273,6 +285,23 @@ describe('протухание банковского перевода — cron 
     booking('b1', { ...overdue, paymentExpiresAt: { seconds: (NOW.getTime() + HOUR) / 1000 } });
     expect((await expireOverdueTransfers()).expired).toBe(0);
     expect(await remaining()).toMatchObject({ remaining: 47 });
+  });
+
+  it('оплата, отмеченная между запросом и записью cron, не затирается', async () => {
+    booking('b1', overdue);
+    // Администратор отмечает перевод полученным ровно в тот момент, когда cron
+    // уже выбрал бронь запросом, но ещё не записал expired.
+    const original = store.runTransaction.bind(store);
+    const spy = vi.spyOn(store, 'runTransaction').mockImplementationOnce(async (fn) => {
+      store.writeDoc('bookings', 'b1', { paymentStatus: 'paid', status: 'confirmed' }, 'merge');
+      return original(fn);
+    });
+
+    const res = await expireOverdueTransfers();
+    spy.mockRestore();
+
+    expect(res.expired).toBe(0);
+    expect(store.peek('bookings', 'b1')).toMatchObject({ paymentStatus: 'paid', status: 'confirmed' });
   });
 
   it('после expired зритель не может «отменить» бронь ещё раз', async () => {

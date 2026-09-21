@@ -87,24 +87,24 @@ describe('реквизиты не продублированы', () => {
   const sources = [...walk(join(ROOT, 'src')), ...walk(join(ROOT, 'server')),
                    ...walk(join(ROOT, 'shared')), ...walk(join(ROOT, 'api'))];
 
-  it('IBAN и BIC записаны только в src/config/payment.ts', () => {
+  it('IBAN и BIC записаны только в shared/config/payment.ts', () => {
     const holders = sources.filter(f => {
       const src = readFileSync(f, 'utf8');
       return src.includes('FR76 1910') || src.includes('AGRIFRPP891');
     });
     expect(holders.map(f => f.slice(ROOT.length + 1)))
-      .toEqual(['src/config/payment.ts']);
+      .toEqual(['shared/config/payment.ts']);
   });
 
   it('потребители берут счёт через getPaymentAccount, а не своей константой', () => {
     const card  = readFileSync(join(ROOT, 'src/components/ui/ProfileDrawer/BookingCard.tsx'), 'utf8');
-    const email = readFileSync(join(ROOT, 'src/services/email/templates/confirmation.ts'), 'utf8');
+    const email = readFileSync(join(ROOT, 'shared/email/ticketEmail.ts'), 'utf8');
     expect(card).toContain('getPaymentAccount');
     expect(email).toContain('getPaymentAccount');
   });
 
   it('письмо отдаёт IBAN и в обычном виде, и без пробелов — банки просят по-разному', () => {
-    const email = readFileSync(join(ROOT, 'src/services/email/templates/confirmation.ts'), 'utf8');
+    const email = readFileSync(join(ROOT, 'shared/email/ticketEmail.ts'), 'utf8');
     expect(email).toContain('normalizeIban(account.iban)');
     expect(email).toContain('IBAN без пробелов');
     expect(email).toContain('IBAN sans espaces');

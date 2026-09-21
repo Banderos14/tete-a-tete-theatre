@@ -6,7 +6,7 @@
 // сервера; здесь ничего не пересчитывается.
 
 import { IconAlertTriangle, IconChecks, IconCircleCheck, IconLock, IconQrcode } from '@tabler/icons-react';
-import type { CheckinBooking, CheckinGroup } from '../../services/checkinService';
+import type { CheckinBooking, CheckinGroup } from '../../services/adminBookingService';
 import { groupActionLabel, ticketsLabel } from './groupLabels';
 import styles from './TicketCheckPage.module.scss';
 
@@ -20,8 +20,8 @@ const letterOf = (i: number) => String.fromCharCode(65 + (i % 26));
 
 function paymentStamp(b: CheckinBooking): { text: string; tone: 'green' | 'amber' | 'red' } {
   if (b.paymentStatus === 'paid')              return { text: 'Оплачено', tone: 'green' };
-  if (b.paymentStatus === 'awaiting_transfer') return { text: 'Ждём перевод', tone: 'red' };
-  if (b.paymentMethod === 'on_site')           return { text: 'Не оплачено', tone: 'amber' };
+  if (b.paymentStatus === 'awaiting_transfer') return { text: `Перевод не получен · ${b.totalAmount} €`, tone: 'amber' };
+  if (b.paymentStatus === 'not_paid')          return { text: `Не оплачено · ${b.totalAmount} €`, tone: 'amber' };
   return { text: 'Оплата не подтверждена', tone: 'red' };
 }
 
@@ -87,7 +87,7 @@ function BookingCard({ b, index, scanned, blocked, onCashReceived, onMarkAttende
       {blocked && (
         <p className={styles.bookingCardWarn}>
           <IconAlertTriangle size={16} stroke={1.5} aria-hidden="true" />
-          Перевод не подтверждён — проход по этой брони недоступен
+          Неизвестный статус оплаты — проверьте бронь в админке
         </p>
       )}
 
@@ -116,8 +116,6 @@ export function GroupResultCard({ group: g, onGroupCheckIn, onCashReceived, onMa
   const first     = g.bookings[0]!;
   const allUsed   = g.remainingTickets === 0;
   const isBlocked = !allUsed && g.blockedBookingIds.length > 0;
-  const isEarly   = g.showRelevance === 'too_early';
-  const differs   = g.bookings.some(b => b.showDateDiffers);
 
   const variant = allUsed ? 'used' : isBlocked ? 'blocked' : 'valid';
   const cardClass   = { used: styles.cardUsed, blocked: styles.cardInvalid, valid: styles.cardValid }[variant];
@@ -154,23 +152,13 @@ export function GroupResultCard({ group: g, onGroupCheckIn, onCashReceived, onMa
           <Stat label="Осталось" value={g.remainingTickets} />
         </div>
 
-        {isEarly && (
-          <p className={`${styles.groupNotice} ${styles.cardValueNotice}`}>
-            Спектакль состоится {first.showDate} · {first.showTime}
-          </p>
-        )}
-        {differs && (
-          <p className={`${styles.groupNotice} ${styles.cardValueReason}`}>
-            Бронь на другую дату спектакля — {first.showDate}
-          </p>
-        )}
         {allUsed && (
           <p className={styles.groupNotice}>Все билеты этого зрителя уже отмечены как использованные.</p>
         )}
         {isBlocked && (
           <p className={`${styles.groupNotice} ${styles.cardValueReason}`}>
-            Есть бронь с неподтверждённым банковским переводом. Проведите остальные брони по одной
-            или подтвердите перевод в админке и отсканируйте билет снова.
+            Есть бронь с неизвестным статусом оплаты. Проведите остальные брони по одной
+            или исправьте бронь в админке и отсканируйте билет снова.
           </p>
         )}
       </div>
@@ -192,7 +180,7 @@ export function GroupResultCard({ group: g, onGroupCheckIn, onCashReceived, onMa
         {g.bookings.map((b, i) => {
           const blocked = g.blockedBookingIds.includes(b.bookingId);
           const pending = isBlocked && !blocked && b.status !== 'attended';
-          const cashDue = b.paymentMethod === 'on_site' && b.paymentStatus === 'not_paid';
+          const cashDue = b.paymentStatus === 'not_paid' || b.paymentStatus === 'awaiting_transfer';
           return (
             <BookingCard
               key={b.bookingId}

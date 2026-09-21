@@ -23,7 +23,7 @@ Security-critical файлы:
 - `firebase.json`
 - `vercel.json`
 - `.env.example`
-- `api/send-email.ts`
+- `server/email/ticketEmail.service.ts` (вызывается из `api/create-booking.ts` и `api/admin-booking.ts`)
 - `src/firebase/config.ts`
 - `src/context/AuthContext.tsx`
 - `src/services/bookingService.ts`
@@ -54,7 +54,7 @@ Trust boundaries:
 - изменение `paymentStatus='paid'`, `status='confirmed'`, `status='attended'` обычным пользователем;
 - попадание server secrets во frontend bundle;
 - XSS через пользовательские поля в email HTML или UI;
-- CORS/API abuse в `api/send-email.ts`;
+- CORS/API abuse в `server/email/ticketEmail.service.ts` (вызывается из `api/create-booking.ts` и `api/admin-booking.ts`);
 - CSP слишком широкий в `vercel.json`;
 - небезопасная обработка QR/URL/JSON в `parseTicketCodeFromScan`.
 

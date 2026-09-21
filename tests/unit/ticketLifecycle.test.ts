@@ -9,30 +9,28 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  canUserCancel, checkCapacity, sumOccupiedTickets, isBookingAttended, occupiesCapacity,
+  canUserCancel, checkCapacity, sumOccupiedTickets, isBookingAttended, occupiesCapacity, isScannableTicket,
 } from '../../shared/domain/bookingRules.js';
 import { THEATRE_CAPACITY } from '../../shared/catalog/shows.js';
 import { parseTicketCodeFromScan } from '../../src/utils/parseTicketCode.js';
 import { generateTicketCode } from '../../server/booking/ticketCode.js';
 import { endpointSource, projectSource, screenSource } from '../helpers/serverSource.js';
+import { ticketQrPayload } from '../../shared/domain/ticketCode.js';
 import {
   paidConfirmed, unpaidOnSite, awaitingTransfer, expiredTransfer,
   cancelled, attended, multiTicket,
 } from '../helpers/bookingFixtures.js';
 
-const checkinApi = endpointSource('api/checkin-ticket.ts');
+const checkinApi = endpointSource('api/admin-booking.ts');
 const scanScreen = screenSource('src/pages/TicketCheckPage');
 const qrSource   = projectSource('src/services/qrService.ts');
 
-// Формат ссылки, которую фронтенд кладёт в QR. Берётся из самого qrService,
-// а не переписывается в тест: иначе тест продолжит проверять формат, который
-// проект уже не выпускает.
+// Формат ссылки, которую кладут в QR кабинет, PDF и письмо. Берётся из той же
+// функции, которой пользуется qrService, а не переписывается в тест: иначе
+// тест продолжит проверять формат, который проект уже не выпускает.
 function qrUrlFor(ticketCode: string): string {
-  const template = qrSource.match(/const url = `([^`]+)`/)?.[1];
-  expect(template, 'шаблон ссылки QR не найден в qrService').toBeTruthy();
-  return template!
-    .replace('${base}', 'https://www.theatre-teteatete.fr')
-    .replace('${encodeURIComponent(ticketCode)}', encodeURIComponent(ticketCode));
+  expect(qrSource, 'qrService строит ссылку общей функцией').toContain('ticketQrPayload(');
+  return ticketQrPayload(ticketCode);
 }
 
 describe('код билета → QR → сканер: цепочка замкнута', () => {
@@ -75,8 +73,15 @@ describe('оплата обязательна до прохода', () => {
 
   it('кабинет показывает QR оплаченной броне и брони с оплатой на месте', () => {
     const tickets = projectSource('src/components/ui/ProfileDrawer/TicketsSection.tsx');
-    expect(tickets).toMatch(/paymentStatus === 'paid' && b\.status === 'confirmed'/);
-    expect(tickets).toMatch(/paymentMethod === 'on_site' && b\.paymentStatus === 'not_paid'/);
+    // Правило общее с письмом (QR в e-mail) — проверяем его поведение.
+    expect(tickets).toContain('isScannableTicket(b)');
+    expect(isScannableTicket(paidConfirmed())).toBe(true);
+    expect(isScannableTicket(unpaidOnSite())).toBe(true);
+    // Ожидающий перевод — тоже действующий билет: QR в письме и в кабинете.
+    expect(isScannableTicket(awaitingTransfer())).toBe(true);
+    expect(isScannableTicket(expiredTransfer())).toBe(false);
+    expect(isScannableTicket(cancelled())).toBe(false);
+    expect(isScannableTicket(attended())).toBe(false);
     // QR не показывается без кода: сканировать было бы нечего.
     expect(tickets).toContain('!!b.ticketCode');
   });
@@ -131,22 +136,22 @@ describe('групповая бронь: один QR — несколько че
   });
 });
 
-describe('билет не на тот вечер', () => {
-  it('сервер отдаёт расхождение брони с каталогом отдельным признаком', () => {
-    expect(checkinApi).toContain('showDateDiffers');
-    expect(checkinApi).toContain('catalogDateDiffers');
+describe('билет не на тот спектакль', () => {
+  it('сервер сравнивает спектакль брони с выбранным на входе', () => {
+    expect(checkinApi).toContain('isBookingForShow');
+    expect(checkinApi).toContain("refusal: 'wrong_show'");
   });
 
-  it('сканер предупреждает о другой дате и у оплаченного билета, и у оплаты на месте', () => {
-    expect(scanScreen).toContain('dateWarning');
-    expect(scanScreen).toContain('Бронь на другую дату спектакля');
-    // Предупреждение попадает в обе «действительные» карточки.
-    expect(scanScreen.match(/\{dateWarning\}/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+  it('сканер показывает, на какой спектакль билет, и ничего не отмечает', () => {
+    expect(scanScreen).toContain('БИЛЕТ НА ДРУГОЙ СПЕКТАКЛЬ');
+    expect(scanScreen).toContain('b.wrongShow');
   });
 
-  it('билет прошедшего спектакля недействителен', () => {
-    expect(scanScreen).toContain("showRelevance === 'too_late'");
-    expect(scanScreen).toContain('Билет на прошедший спектакль');
+  it('временного окна прохода больше нет', () => {
+    for (const leftover of ['too_early', 'too_late', 'showRelevance', 'DOORS_OPEN', 'show_over']) {
+      expect(checkinApi, leftover).not.toContain(leftover);
+      expect(scanScreen, leftover).not.toContain(leftover);
+    }
   });
 });
 
@@ -182,7 +187,7 @@ describe('PDF-билет доходит до сканера', () => {
   it('в PDF попадает тот же QR, что показан в кабинете', () => {
     // TicketCard отдаёт в генератор PDF уже построенную картинку QR,
     // а не строит вторую — разойтись им негде.
-    const card = projectSource('src/components/ui/TicketCard/TicketCard.tsx');
+    const card = screenSource('src/components/ui/TicketCard');
     expect(card).toContain('useTicketPdf(b, qrSrc, lang)');
     expect(projectSource('src/components/ui/TicketCard/useTicketPdf.ts'))
       .toContain('booking: b, qrSrc, lang');
@@ -260,5 +265,21 @@ describe('вместимость зала — 50 мест', () => {
     expect(modal).toContain('Math.floor(seatsLeft / seatsPerTicket)');
     expect(projectSource('server/booking/booking.validation.ts'))
       .toContain('ticketsCount > MAX_TICKETS_PER_BOOKING');
+  });
+});
+
+describe('кабинет: у ожидающего перевода тоже есть QR-билет', () => {
+  it('карточка брони с переводом показывает тот же TicketQrPanel', () => {
+    const card = projectSource('src/components/ui/ProfileDrawer/BookingCard.tsx');
+    expect(card).toMatch(/isAwaitingTransfer && !isCancelled && b\.ticketCode[\s\S]{0,900}<TicketQrPanel booking=\{b\} active \/>/);
+    // Реквизиты, срок и отмена остаются в этой же карточке.
+    expect(card).toContain('transferMiniBox');
+    expect(card).toContain('cancelBookingByUser');
+  });
+
+  it('под QR неоплаченного билета — отдельная подпись о статусе оплаты', () => {
+    const panel = projectSource('src/components/ui/TicketCard/TicketQrPanel.tsx');
+    expect(panel).toContain("pay === 'awaiting_transfer'");
+    expect(panel).toContain('qrPayNote');
   });
 });

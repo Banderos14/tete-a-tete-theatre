@@ -5,6 +5,7 @@
 // админка печатает её в таблице; deep-link открывает карточку. Поэтому дата
 // проверяется здесь значениями, а не «глазами по афише».
 
+import { isBookingForShow } from '../../shared/domain/performance.js';
 import { describe, it, expect } from 'vitest';
 import {
   SHOWS, DRAFT_SHOWS, SEASON_CATALOG, THEATRE_CAPACITY, showDateString, showStartUtcMs,
@@ -123,7 +124,7 @@ describe('билет «Романтики» доходит до сканера �
     expect(booking.showTime).toBe('20:00');
     expect(booking.ticketsCount).toBe(3);
 
-    const checkin = endpointSource('api/checkin-ticket.ts');
+    const checkin = endpointSource('api/admin-booking.ts');
     expect(checkin).toMatch(/showTitle:\s*String\(data\.showTitle/);
     expect(checkin).toMatch(/showDate:\s*String\(data\.showDate/);
     expect(checkin).toMatch(/showTime:\s*String\(data\.showTime/);
@@ -144,10 +145,10 @@ describe('билет «Романтики» доходит до сканера �
   it('актуальность билета считается по сеансу самой брони, а не по каталогу', () => {
     // Спектакль перенесён с 14 Июн на 17 Сен. Если бы сканер брал дату из
     // каталога по showId, июньский билет стал бы действительным на сентябрьский
-    // показ. Подробно сценарий разобран в tests/unit/showOccurrence.test.ts.
+    // показ. Подробно сценарий разобран в tests/unit/performance.test.ts.
     expect(showDateString(SHOWS.romantika!)).not.toBe('14 Июн 2026');
-    expect(endpointSource('api/checkin-ticket.ts'))
-      .toContain('bookingOccurrenceStartUtcMs(data as BookingOccurrence)');
+    expect(isBookingForShow({ showId: 'romantika', showDate: '14 Июн 2026', showTime: '19:00' }, 'romantika')).toBe(false);
+    expect(endpointSource('api/admin-booking.ts')).toContain('isBookingForShow(data, showId)');
   });
 });
 

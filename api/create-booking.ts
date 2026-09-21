@@ -18,6 +18,7 @@ import { requireCaller } from '../server/shared/auth.js';
 import { errorResponse } from '../server/shared/errors.js';
 import { validateCreateBooking } from '../server/booking/booking.validation.js';
 import { createBooking } from '../server/booking/booking.service.js';
+import { sendBookingEmail } from '../server/email/ticketEmail.service.js';
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === 'OPTIONS') { respond(res, 204, {}, req); return; }
@@ -43,7 +44,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         (typeof body.idempotencyKey === 'string' ? body.idempotencyKey : null),
     });
 
-    respond(res, 200, booking, req);
+    // Письмо-билет уходит отсюда, а не из браузера: закрытая вкладка больше
+    // не оставляет зрителя без письма. Сбой почты бронь не откатывает, а
+    // повтор запроса (тот же Idempotency-Key) не шлёт второе письмо — защита
+    // внутри sendBookingEmail; если первое письмо не ушло, повтор его дошлёт.
+    const email = await sendBookingEmail(booking.bookingId, 'booking');
+
+    respond(res, 200, { ...booking, ticketEmail: email.status }, req);
   } catch (err) {
     const { status, body: payload } = errorResponse(err, 'Failed to create booking');
     if (status >= 500) console.error('[create-booking]', err);

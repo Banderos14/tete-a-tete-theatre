@@ -6,55 +6,19 @@
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { badRequest, notFound, conflict } from '../shared/errors.js';
-import { bookingOccurrenceStartUtcMs, showEndUtcMs } from '../../shared/domain/showTime.js';
-import { SHOWS, showDateString } from '../../shared/catalog/shows.js';
-import type { BookingOccurrence } from '../../shared/domain/showTime.js';
-import type {
-  CheckinAction, CheckinBooking, CheckinRefusalReason, ShowRelevance,
-} from '../../shared/contracts/checkin.js';
+import { SHOWS } from '../../shared/catalog/shows.js';
+import { isBookingForShow, isKnownShow } from '../../shared/domain/performance.js';
+import type { CheckinAction, CheckinBooking, CheckinRefusalReason } from '../../shared/contracts/checkin.js';
 import { db, findByTicketCode } from '../booking/booking.repository.js';
+import { timestampToMs } from '../booking/booking.types.js';
 
 export const TICKET_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 
-// Насколько раньше начала спектакля билет уже принимается на входе.
-const DOORS_OPEN_BEFORE_MS = 4 * 60 * 60 * 1000;
-// Насколько поздно после окончания билет ещё считается «сегодняшним».
-const GRACE_AFTER_END_MS   = 3 * 60 * 60 * 1000;
-
-/**
- * Билет прошлого месяца не должен считаться действительным только потому, что
- * код существует.
- *
- * Момент берётся из САМОЙ БРОНИ, а не из каталога. Каталог отвечает на вопрос
- * «что играем сейчас», и его дату можно перенести; бронь отвечает на вопрос
- * «на какой вечер продан этот билет», и он зафиксирован в момент покупки.
- * Пока считали по каталогу, перенос romantika с 14 Июн на 17 Сен делал
- * июньские билеты действительными на сентябрьский показ.
- */
-export function relevanceOf(data: Record<string, unknown>, nowMs: number): ShowRelevance {
-  const startMs = bookingOccurrenceStartUtcMs(data as BookingOccurrence);
-
-  if (startMs === null) return 'unknown';
-  if (nowMs < startMs - DOORS_OPEN_BEFORE_MS) return 'too_early';
-  if (nowMs > showEndUtcMs(startMs) + GRACE_AFTER_END_MS) return 'too_late';
-  return 'ok';
-}
-
-/**
- * Дата брони разошлась с датой того же спектакля в каталоге.
- *
- * Признак информационный: действительность билета решает relevanceOf по
- * сеансу самой брони, а этот флаг объясняет сотруднику ПОЧЕМУ — спектакль
- * с тем же id идёт сегодня, но билет выписан на другой вечер. Без него
- * карточка «Билет на прошедший спектакль» выглядела бы ошибкой сканера
- * в тот самый день, когда спектакль с этим названием действительно идёт.
- */
-function catalogDateDiffers(data: Record<string, unknown>): boolean {
-  const catalogShow = typeof data.showId === 'string' ? SHOWS[data.showId] : undefined;
-  if (!catalogShow) return false;
-
-  const booked = String(data.showDate ?? '').trim();
-  return booked !== '' && booked !== showDateString(catalogShow);
+/** Спектакль, на котором стоит сотрудник: null — не указан (просмотр из админки). */
+export function parseShowId(raw: unknown): string | null {
+  if (raw === undefined || raw === null || raw === '') return null;
+  if (!isKnownShow(raw)) throw badRequest('Unknown show', 'bad_show');
+  return raw;
 }
 
 function ticketTypeLabelOf(data: Record<string, unknown>): string {
@@ -89,7 +53,7 @@ export function attendedTransition(adminUid: string) {
   };
 }
 
-export function snapshotOf(id: string, ticketCode: string, data: Record<string, unknown>, nowMs: number): CheckinBooking {
+export function snapshotOf(id: string, ticketCode: string, data: Record<string, unknown>, showId: string | null): CheckinBooking {
   return {
     bookingId:     id,
     ticketCode,
@@ -109,8 +73,8 @@ export function snapshotOf(id: string, ticketCode: string, data: Record<string, 
     paymentStatus: String(data.paymentStatus ?? ''),
     paymentMethod: String(data.paymentMethod ?? ''),
     ticketTypeLabel: ticketTypeLabelOf(data),
-    showRelevance:    relevanceOf(data, nowMs),
-    showDateDiffers:  catalogDateDiffers(data),
+    wrongShow:       showId !== null && !isBookingForShow(data, showId),
+    attendedAtMs:    timestampToMs(data.attendedAt) ?? null,
   };
 }
 
@@ -118,6 +82,8 @@ export interface CheckinInput {
   adminUid:   string;
   ticketCode: unknown;
   action:     unknown;
+  /** Спектакль, на котором стоит сотрудник. Обязателен для mark_attended. */
+  showId?:    unknown;
 }
 
 export interface CheckinResult {
@@ -143,6 +109,10 @@ export async function checkinTicket(input: CheckinInput): Promise<CheckinResult>
   if (action !== 'inspect' && action !== 'mark_attended' && action !== 'mark_paid') {
     throw badRequest('Unknown action');
   }
+  const showId = parseShowId(input.showId);
+  // Проход без указания спектакля невозможен: иначе билет одного спектакля
+  // прошёл бы на другом.
+  if (action === 'mark_attended' && showId === null) throw badRequest('showId is required', 'bad_show');
 
   const database = db();
 
@@ -152,7 +122,7 @@ export async function checkinTicket(input: CheckinInput): Promise<CheckinResult>
 
     const { ref, id, data } = found;
     const nowMs   = Date.now();
-    const booking = snapshotOf(id, ticketCode, data, nowMs);
+    const booking = snapshotOf(id, ticketCode, data, showId);
     const { status, paymentStatus } = booking;
 
     if (action === 'inspect') return { kind: 'done', booking, changed: false };
@@ -160,32 +130,29 @@ export async function checkinTicket(input: CheckinInput): Promise<CheckinResult>
     if (action === 'mark_attended') {
       if (status === 'attended')    return { kind: 'refused', refusal: 'already_attended', message: 'Ticket already used', booking };
       if (status === 'cancelled')   return { kind: 'refused', refusal: 'cancelled',        message: 'Booking cancelled',   booking };
-      // Сеанс, на который выписан билет, уже отыгран. Раньше это не пускала
-      // только карточка сканера, а endpoint отмечал проход — и перенос даты
-      // спектакля открывал старым билетам бесплатный вход. Проверка стоит
-      // ПОСЛЕ already_attended и cancelled: у использованного билета причина
-      // «уже использован» точнее, чем «спектакль прошёл».
-      if (booking.showRelevance === 'too_late') {
-        return { kind: 'refused', refusal: 'show_over', message: 'Show already ended', booking };
-      }
+      if (paymentStatus === 'expired') return { kind: 'refused', refusal: 'expired',          message: 'Booking expired',     booking };
+      // Билет другого спектакля не проходит как билет этого — в любое время.
+      if (booking.wrongShow)        return { kind: 'refused', refusal: 'wrong_show',       message: 'Ticket is for another show', booking };
       if (paymentStatus !== 'paid') return { kind: 'refused', refusal: 'not_paid',         message: 'Ticket is not paid',  booking };
 
       tx.update(ref, attendedTransition(input.adminUid));
-      return { kind: 'done', booking: { ...booking, status: 'attended' }, changed: true };
+      return { kind: 'done', booking: { ...booking, status: 'attended', attendedAtMs: nowMs }, changed: true };
     }
 
-    // mark_paid — оплата наличными на входе
+    // mark_paid — оплата получена: наличными на входе или переводом (админка).
     if (status === 'cancelled')   return { kind: 'refused', refusal: 'cancelled',    message: 'Booking cancelled', booking };
+    // Протухшая бронь уже освободила место в зале: «оплата» вернула бы её
+    // в зал в обход проверки вместимости. Групповой проход отказывает так же.
+    if (paymentStatus === 'expired') return { kind: 'refused', refusal: 'expired',   message: 'Booking expired',   booking };
     if (paymentStatus === 'paid') return { kind: 'refused', refusal: 'already_paid', message: 'Already paid',      booking };
-    // То же правило, что и для прохода: по билету на отыгранный вечер нельзя
-    // ни войти, ни заплатить. Иначе оставалась половинчатая дыра — деньги
-    // приняты и бронь переведена в confirmed, а в зал всё равно не пускают.
-    if (booking.showRelevance === 'too_late') {
-      return { kind: 'refused', refusal: 'show_over', message: 'Show already ended', booking };
-    }
-
-    tx.update(ref, paidTransition(input.adminUid));
-    return { kind: 'done', booking: { ...booking, status: 'confirmed', paymentStatus: 'paid' }, changed: true };
+    // Уже прошедшему зрителю оплата не должна возвращать статус «confirmed».
+    const { status: confirmed, ...paymentOnly } = paidTransition(input.adminUid);
+    tx.update(ref, status === 'attended' ? paymentOnly : { ...paymentOnly, status: confirmed });
+    return {
+      kind: 'done',
+      booking: { ...booking, status: status === 'attended' ? status : confirmed, paymentStatus: 'paid' },
+      changed: true,
+    };
   });
 
   if (outcome.kind === 'missing') throw notFound('Ticket not found', 'not_found');

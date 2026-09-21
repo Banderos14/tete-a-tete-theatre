@@ -309,3 +309,40 @@ describe('оркестрация кнопок', () => {
     expect(d.build).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('штамп оплаты в PDF', () => {
+  it('оплачено → PAYÉ / ОПЛАЧЕНО / PAID', async () => {
+    const { ticketPdfStatus } = await import('../../src/services/ticketPdfService');
+    expect(ticketPdfStatus({ status: 'confirmed', paymentStatus: 'paid', paymentMethod: 'bank_transfer' }))
+      .toMatchObject({ tone: 'paid', fr: 'PAYÉ', ru: 'Оплачено', latin: 'PAID' });
+  });
+
+  it('оплата на месте — отдельный штамп, а не «оплачено»', async () => {
+    const { ticketPdfStatus } = await import('../../src/services/ticketPdfService');
+    expect(ticketPdfStatus({ status: 'pending', paymentStatus: 'not_paid', paymentMethod: 'on_site' }))
+      .toMatchObject({ tone: 'venue', fr: 'PAIEMENT SUR PLACE' });
+  });
+
+  it('отменённая и протухшая бронь штампа не получает', async () => {
+    const { ticketPdfStatus } = await import('../../src/services/ticketPdfService');
+    expect(ticketPdfStatus({ status: 'cancelled', paymentStatus: 'paid', paymentMethod: 'on_site' })).toBeNull();
+    expect(ticketPdfStatus({ status: 'cancelled', paymentStatus: 'expired', paymentMethod: 'bank_transfer' })).toBeNull();
+  });
+
+  it('ожидающий перевод — свой штамп «ожидает оплаты», не «оплачено»', async () => {
+    const { ticketPdfStatus } = await import('../../src/services/ticketPdfService');
+    expect(ticketPdfStatus({ status: 'pending', paymentStatus: 'awaiting_transfer', paymentMethod: 'bank_transfer' }))
+      .toMatchObject({ tone: 'venue', fr: 'EN ATTENTE DE PAIEMENT', latin: 'PAYMENT PENDING' });
+  });
+
+  it('штамп попадает в сам документ и меняется вместе с бронью', async () => {
+    const qr = await generateTicketQR(CODE);
+    const text = async (patch: Partial<Booking>) =>
+      Buffer.from(await (await buildTicketPdf(booking(patch), qr, 'FR')).blob.arrayBuffer()).toString('latin1');
+
+    expect(await text({ paymentStatus: 'paid' })).toContain('PAYÉ');
+    const venue = await text({ paymentStatus: 'not_paid', paymentMethod: 'on_site', status: 'pending' });
+    expect(venue).toContain('PAIEMENT SUR PLACE');
+    expect(venue).not.toContain('PAYÉ');
+  }, 20_000);
+});

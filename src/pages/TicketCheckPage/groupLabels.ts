@@ -1,7 +1,7 @@
 // Тексты группового прохода: склонения и подпись основной кнопки.
 // Без React — чтобы карточка и лист подтверждения говорили одними словами.
 
-import type { CheckinGroup } from '../../services/checkinService';
+import type { CheckinGroup } from '../../services/adminBookingService';
 
 /** 1 билет, 2 билета, 5 билетов, 11 билетов, 21 билет. */
 export function plural(n: number, one: string, few: string, many: string): string {

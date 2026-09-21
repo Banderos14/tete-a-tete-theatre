@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
 import type { Show } from '../../src/types';
 import { PUBLISHED_SHOWS, SHOWS, publishedOnly } from '../../src/data/shows';
@@ -336,11 +338,10 @@ describe('ответы Resend', () => {
   });
 });
 
-describe('поштучная рассылка через /api/send-email закрыта', () => {
-  it('тип newsletter убран из whitelist send-email', () => {
-    const types = projectSource('server/email/email.types.ts');
-    const whitelist = types.slice(types.indexOf('ALLOWED_EMAIL_TYPES = ['), types.indexOf('] as const'));
-    expect(whitelist).not.toContain("'newsletter'");
+describe('поштучная рассылка в обход квоты невозможна', () => {
+  it('эндпоинта «отправить произвольное письмо» нет — только /api/newsletter', () => {
+    expect(existsSync(resolve(__dirname, '../../api/send-email.ts'))).toBe(false);
+    expect(existsSync(resolve(__dirname, '../../api/newsletter.ts'))).toBe(true);
   });
 
   it('клиент больше не читает адреса подписчиков', () => {

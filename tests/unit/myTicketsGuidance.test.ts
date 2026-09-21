@@ -1,52 +1,45 @@
-// Зритель должен понимать, где его QR и что с ним делать.
+// Зритель должен понимать, где его билет и что с ним делать.
 //
-// Путь один: личный кабинет → «Мои билеты» → показать QR сотруднику. Значит
-// и письмо, и экран успешного бронирования обязаны вести именно туда — и на
-// обоих языках, без русских фраз во французском интерфейсе.
+// Главный путь — письмо: в нём QR и инструкция «покажите его на входе»,
+// входить на сайт не нужно. Личный кабинет — дополнительный путь к тому же
+// билету. И письмо, и экран успешной брони говорят это на обоих языках, без
+// русских фраз во французском письме.
 
 import { describe, it, expect } from 'vitest';
-import { getMyTicketsUrl, getAccountSectionFromLocation, ACCOUNT_DEEP_LINKS } from '../../src/utils/accountUrl.js';
+import { getAccountSectionFromLocation, ACCOUNT_DEEP_LINKS } from '../../src/utils/accountUrl.js';
+import { myTicketsUrl } from '../../shared/domain/ticketCode.js';
 import { getShowIdFromLocation } from '../../src/utils/showUrl.js';
-import { buildPaymentPaidEmail } from '../../src/services/email/templates/paymentPaid.js';
-import { buildConfirmationEmail } from '../../src/services/email/templates/confirmation.js';
+import { buildTicketEmail, type TicketEmailBooking } from '../../shared/email/ticketEmail.js';
 import { projectSource, screenSource } from '../helpers/serverSource.js';
-import type { PaymentPaidEmailData, BookingEmailData } from '../../src/services/email/types.js';
 
 const loc = (search: string, hash: string) => ({ search, hash }) as Location;
 
-const paidData: PaymentPaidEmailData = {
-  userEmail:     'spectateur@example.com',
+const venue: TicketEmailBooking = {
   userName:      'Marie',
   showId:        'romantika',
   showTitle:     '«Романтика обреченности»',
-  showDate:      '17 Сен 2026',
-  showTime:      '20:00',
-  ticketsCount:  2,
-  totalAmount:   30,
-  ticketCode:    'ABCD-2345',
-  bookingStatus: 'confirmed',
-  lang:          'RU',
-};
-
-const bookingData: BookingEmailData = {
-  userEmail:     'spectateur@example.com',
-  userName:      'Marie',
-  showId:        'romantika',
-  showTitle:     '«Романтика обреченности»',
-  showTitleFR:   '«La Romanesque de la Fatalité»',
   showDate:      '17 Сен 2026',
   showTime:      '20:00',
   ticketsCount:  1,
+  seatsCount:    1,
   ticketType:    'standard',
   totalAmount:   15,
   ticketCode:    'ABCD-2345',
+  status:        'pending',
   paymentMethod: 'on_site',
+  paymentStatus: 'not_paid',
   lang:          'RU',
 };
+const paid: TicketEmailBooking = { ...venue, ticketsCount: 2, seatsCount: 2, totalAmount: 30,
+  status: 'confirmed', paymentMethod: 'bank_transfer', paymentStatus: 'paid' };
+const transfer: TicketEmailBooking = { ...venue, paymentMethod: 'bank_transfer', paymentStatus: 'awaiting_transfer' };
+
+const mail = (b: TicketEmailBooking, kind: 'booking' | 'paid' = 'booking', withQr = true) =>
+  buildTicketEmail(b, { kind, withQr });
 
 describe('deep-link «Мои билеты»', () => {
   it('ссылка ведёт в кабинет, а не на главную', () => {
-    expect(getMyTicketsUrl()).toMatch(/\/#\/\?account=tickets$/);
+    expect(myTicketsUrl()).toMatch(/\/#\/\?account=tickets$/);
   });
 
   it('адрес разбирается и до решётки, и после неё', () => {
@@ -66,14 +59,10 @@ describe('deep-link «Мои билеты»', () => {
     expect(getAccountSectionFromLocation(both)).toBe('tickets');
   });
 
-  it('адрес письма строится от VITE_PUBLIC_SITE_URL, а не от прод-домена в коде', () => {
-    const src = projectSource('src/utils/showUrl.ts');
-    expect(src).toContain('VITE_PUBLIC_SITE_URL');
-    // Адрес не собирается из литерала домена: база приходит из общей функции,
-    // поэтому Preview-деплой присылает ссылки на себя, а не на прод.
-    const account = projectSource('src/utils/accountUrl.ts');
-    expect(account).toContain('getPublicSiteBase()');
-    expect(account).not.toMatch(/return\s+`https:/);
+  it('ссылку в письме строит сервер от PUBLIC_SITE_URL, иначе — боевой домен', () => {
+    expect(myTicketsUrl('https://preview.example.com/')).toBe('https://preview.example.com/#/?account=tickets');
+    expect(myTicketsUrl('')).toBe('https://www.theatre-teteatete.fr/#/?account=tickets');
+    expect(projectSource('server/email/ticketEmail.service.ts')).toContain("process.env.PUBLIC_SITE_URL");
   });
 
   it('неавторизованного сначала ведут на вход, потом в «Мои билеты»', () => {
@@ -93,73 +82,70 @@ describe('deep-link «Мои билеты»', () => {
   });
 });
 
-describe('письмо об оплате ведёт в «Мои билеты»', () => {
-  it('RU: подтверждение оплаты, QR в кабинете и кликабельная ссылка', () => {
-    const { html, text } = buildPaymentPaidEmail(paidData);
+describe('письмо-билет: QR и что с ним делать', () => {
+  it('RU: «ваш билет», QR и инструкция показать его на входе — без входа на сайт', () => {
+    const { html, text } = mail(venue);
+    expect(html).toContain('Ваш билет');
+    expect(html).toContain('cid:ticket-qr');
+    expect(html).toContain('Покажите этот QR-код сотруднику театра при входе.');
+    expect(html).toContain('Show this QR code to the theatre staff at the entrance.');
+    expect(html).toContain('Входить на сайт не нужно');
+    expect(text).toContain('Покажите этот QR-код сотруднику театра при входе.');
+  });
 
-    expect(html).toContain('Оплата подтверждена');
-    expect(html).toContain('Мои билеты');
+  it('данные спектакля, места, сумма и способ оплаты — в письме', () => {
+    const { html } = mail({ ...venue, ticketsCount: 1, seatsCount: 3, ticketType: 'family', totalAmount: 45 });
+    expect(html).toContain('17 Сен 2026');
+    expect(html).toContain('20:00');
+    expect(html).toMatch(/Мест[\s\S]{0,200}>\s*3\s*</);
+    expect(html).toContain('Оплата на месте при входе: 45&nbsp;€');
+  });
+
+  it('кабинет — дополнительная кнопка «Открыть мои билеты»', () => {
+    const { html, text } = mail(paid, 'paid');
     expect(html).toContain('Открыть мои билеты');
     expect(html).toMatch(/<a href="[^"]*account=tickets"/);
     expect(text).toContain('account=tickets');
   });
 
-  it('FR: тот же смысл по-французски, без русских фраз', () => {
-    const { subject, html, text } = buildPaymentPaidEmail({ ...paidData, lang: 'FR' });
-
-    expect(html).toContain('Mes billets');
-    expect(html).toContain('Ouvrir mes billets');
-    expect(html).toMatch(/<a href="[^"]*account=tickets"/);
-    expect(text).toContain('account=tickets');
-
-    // Никакой кириллицы во французском письме — включая название спектакля.
-    expect(subject).not.toMatch(/[А-Яа-яЁё]/);
-    expect(html).not.toMatch(/[А-Яа-яЁё]/);
-    expect(text).not.toMatch(/[А-Яа-яЁё]/);
+  it('письмо после оплаты — тоже полноценный билет', () => {
+    const { html, subject } = mail(paid, 'paid');
+    expect(subject).toContain('Оплата получена');
+    expect(html).toContain('cid:ticket-qr');
+    expect(html).toContain('Оплачено');
   });
 
-  it('FR-письмо называет спектакль по-французски', () => {
-    const { subject } = buildPaymentPaidEmail({ ...paidData, lang: 'FR' });
-    expect(subject).toContain('La Romanesque de la Fatalité');
-  });
-});
-
-describe('письмо о бронировании объясняет, где QR', () => {
-  it('RU on_site: QR в кабинете, оплата на месте', () => {
-    const { html, text } = buildConfirmationEmail(bookingData);
-    expect(html).toContain('Мои билеты');
-    expect(html).toMatch(/<a href="[^"]*account=tickets"/);
-    expect(text).toContain('Мои билеты');
+  it('оплата на месте не выглядит оплаченным билетом, но QR есть', () => {
+    const { html } = mail(venue);
+    expect(html).toContain('cid:ticket-qr');
+    expect(html).not.toContain('>Оплачено<');
+    expect(html).toContain('Оплата — на входе');
   });
 
-  it('RU bank_transfer: 24 часа, подтверждение после оплаты и оговорка про проход', () => {
-    const { html } = buildConfirmationEmail({ ...bookingData, paymentMethod: 'bank_transfer' });
-
-    expect(html).toContain('24 часов');
+  it('перевод: реквизиты, 24 часа и тот же QR', () => {
+    const { html } = mail(transfer);
     expect(html).toContain('ожидает оплаты');
-    expect(html).toContain('подтверждённой');
-    // Неоплаченный QR НЕ объявляется действительным входным билетом.
-    expect(html).toContain('билет должен быть оплачен');
+    expect(html).toContain('24 часов');
+    expect(html).toContain('IBAN');
+    expect(html).toContain('cid:ticket-qr');
   });
 
-  it('FR bank_transfer: тот же смысл по-французски', () => {
-    const { subject, html, text } = buildConfirmationEmail({
-      ...bookingData, paymentMethod: 'bank_transfer', lang: 'FR',
-    });
+  it('без картинки письмо остаётся полезным: код брони и подсказка', () => {
+    const { html } = mail(venue, 'booking', false);
+    expect(html).not.toContain('cid:ticket-qr');
+    expect(html).toContain('ABCD-2345');
+    expect(html).toContain('назовите на входе код брони');
+    expect(html).toContain('Открыть мои билеты');
+  });
 
-    expect(html).toContain('Mes billets');
-    expect(html).toContain('24 heures');
-    expect(html).toContain('le billet doit être payé');
+  it('FR: тот же смысл по-французски, без кириллицы, название — французское', () => {
+    const { subject, html, text } = mail({ ...paid, lang: 'FR' }, 'paid');
+    expect(html).toContain('Présentez ce QR code au personnel du théâtre à l’entrée.');
+    expect(html).toContain('Ouvrir mes billets');
+    expect(subject).toContain('La Romanesque de la Fatalité');
     expect(subject).not.toMatch(/[А-Яа-яЁё]/);
     expect(html).not.toMatch(/[А-Яа-яЁё]/);
     expect(text).not.toMatch(/[А-Яа-яЁё]/);
-  });
-
-  it('FR on_site: QR показывают на входе, оплата на месте', () => {
-    const { html } = buildConfirmationEmail({ ...bookingData, lang: 'FR' });
-    expect(html).toContain('Mes billets');
-    expect(html).toContain('espèces');
-    expect(html).not.toMatch(/[А-Яа-яЁё]/);
   });
 });
 

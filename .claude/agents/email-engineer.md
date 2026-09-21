@@ -19,7 +19,7 @@
 
 Основные файлы:
 - `src/services/emailService.ts`
-- `api/send-email.ts`
+- `server/email/ticketEmail.service.ts` (вызывается из `api/create-booking.ts` и `api/admin-booking.ts`)
 - `.env.example` только email/server env vars
 - `vercel.json` только если задача касается headers/CORS для API или Vercel behavior
 
@@ -50,7 +50,7 @@ Email-события:
 - admin newsletter отправляется на FR.
 
 Serverless API:
-- `api/send-email.ts` работает как Vercel Serverless Function;
+- `server/email/ticketEmail.service.ts` (вызывается из `api/create-booking.ts` и `api/admin-booking.ts`) работает как Vercel Serverless Function;
 - `RESEND_API_KEY` и `EMAIL_FROM` только server-side, без `VITE_`;
 - `VITE_EMAIL_ENDPOINT` только frontend endpoint path;
 - email failures не блокируют сохранение брони;

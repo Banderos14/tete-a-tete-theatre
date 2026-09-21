@@ -26,7 +26,7 @@
 - `firebase.json`
 - `firestore.rules`
 - `firestore.indexes.json`
-- `api/send-email.ts` только runtime/env/deploy aspects
+- `server/email/ticketEmail.service.ts` (вызывается из `api/create-booking.ts` и `api/admin-booking.ts`) только runtime/env/deploy aspects
 
 Связанные файлы:
 - `src/services/qrService.ts` для `VITE_PUBLIC_SITE_URL`
@@ -42,7 +42,7 @@ Deployment state:
 - `npm run build` = `tsc -b && vite build`;
 - README говорит про GitHub Pages auto deployment, но проект также использует Vercel Serverless Function for email;
 - `vercel.json` задает iframe headers/CSP;
-- `api/send-email.ts` требует Vercel env `RESEND_API_KEY`, `EMAIL_FROM`, optionally `ALLOWED_ORIGIN`;
+- `server/email/ticketEmail.service.ts` (вызывается из `api/create-booking.ts` и `api/admin-booking.ts`) требует Vercel env `RESEND_API_KEY`, `EMAIL_FROM`, optionally `ALLOWED_ORIGIN`;
 - Firebase uses `firebase.json`, `firestore.rules`, `firestore.indexes.json`;
 - `VITE_FIREBASE_*` публичные frontend vars;
 - `VITE_PUBLIC_SITE_URL` нужен для QR codes;
@@ -56,7 +56,7 @@ Env vars:
 - Vite;
 - TypeScript;
 - Firebase CLI for rules/index deployment;
-- Vercel runtime for `api/send-email.ts`;
+- Vercel runtime for `server/email/ticketEmail.service.ts` (вызывается из `api/create-booking.ts` и `api/admin-booking.ts`);
 - Resend DNS/domain setup.
 
 ## Обязательные проверки

@@ -6,10 +6,8 @@ import { useLang } from '../../../i18n/LangContext';
 import { createBookingViaApi, subscribeToUserBookings, newIdempotencyKey } from '../../../services/bookingService';
 import { fetchShowAvailability } from '../../../services/availabilityService';
 import type { BookingApiError } from '../../../services/bookingService';
-import { sendBookingConfirmationEmail } from '../../../services/email';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
 import { formatPhone, normalizePhone, isValidPhone } from '../../../utils/phone';
-import { PAYMENT_CONFIG } from '../../../config/payment';
 import { MAX_TICKETS_PER_BOOKING } from '../../../../shared/catalog/shows';
 import {
   hasAvailableLoyaltyReward,
@@ -55,6 +53,7 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   const [phoneError,       setPhoneError]       = useState('');
   const [ticketCode,       setTicketCode]       = useState('');
   const [savedAmount,      setSavedAmount]      = useState(0);
+  const [ticketEmailSent,  setTicketEmailSent]  = useState(true);
   const [copiedCode,       setCopiedCode]       = useState(false);
   // null = остаток мест неизвестен. Раньше здесь всегда было 0, из-за чего
   // интерфейс показывал постоянное «свободны все места зала».
@@ -236,33 +235,12 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
         lang,
       }, idToken, idempotencyKeyRef.current);
 
-      // Не блокируем — бронь уже сохранена, провал email её не затронет.
-      // Сервер проверит, что получатель совпадает с email текущего пользователя.
-      const userName = user.displayName ?? userProfile?.displayName ?? '';
-      sendBookingConfirmationEmail({
-        userEmail:        userEmail,
-        userName,
-        showId:           show.id,
-        showTitle:        show.title,
-        showTitleFR:      show.titleFR,
-        showDate:         result.showDate,
-        showTime:         result.showTime,
-        ticketsCount:     tickets,
-        ticketType:       activeTicket.id,
-        totalAmount:      result.totalAmount,
-        ticketCode:       result.ticketCode,
-        paymentMethod:    payment,
-        paymentAccountId: payment === 'bank_transfer' ? PAYMENT_CONFIG.paymentAccounts[0].id : undefined,
-        lang,
-        ...(result.loyaltyDiscountApplied ? {
-          originalAmount:         result.originalAmount,
-          loyaltyDiscountApplied: true,
-          loyaltyDiscountAmount:  result.loyaltyDiscountAmount,
-        } : {}),
-      }, idToken).catch(() => {/* email failure must never affect a saved booking */});
-
+      // Письмо-билет с QR отправил сервер в том же запросе — браузер больше
+      // ничего не шлёт: закрытая вкладка не оставит зрителя без билета.
       setTicketCode(result.ticketCode);
       setSavedAmount(result.totalAmount);
+      // Старый ответ без поля считаем отправленным — так было до переноса писем на сервер.
+      setTicketEmailSent(result.ticketEmail !== 'failed');
       setStep('success');
 
       // Синхронизируем телефон в профиль если он там пустой (не блокируем).
@@ -434,6 +412,7 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
             tickets={tickets}
             activeTicket={activeTicket}
             savedAmount={savedAmount}
+            ticketEmailSent={ticketEmailSent}
             ticketCode={ticketCode}
             payment={payment}
             userEmail={userEmail}

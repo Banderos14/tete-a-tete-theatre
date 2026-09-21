@@ -134,6 +134,11 @@ export class MemoryCollection extends MemoryQuery {
   doc(id?: string): MemoryDocRef {
     return new MemoryDocRef(this.store, this.collection, id ?? this.store.nextId());
   }
+  async add(data: Data): Promise<MemoryDocRef> {
+    const ref = this.doc();
+    await ref.set(data);
+    return ref;
+  }
 }
 
 export class MemoryTransaction {

@@ -12,14 +12,34 @@ import { CheckinAuthGate } from './CheckinAuthGate';
 import { TicketResultCard, ScanErrorCard } from './TicketResultCard';
 import { GroupResultCard } from './GroupResultCard';
 import { GroupConfirmSheet } from './GroupConfirmSheet';
-import type { CheckinBooking } from '../../services/checkinService';
+import type { CheckinBooking } from '../../services/adminBookingService';
+import { BookingSearchPanel } from './BookingSearchPanel';
+import { SHOW_OPTIONS, currentShowId } from './checkinShows';
 import { QrScanIcon, CameraIcon, ImageIcon } from './ScanIcons';
+import { IconCameraOff } from '@tabler/icons-react';
 import styles from './TicketCheckPage.module.scss';
 
 /** Через сколько не-админа без кода в адресе уводит на лендинг, мс. */
 const REDIRECT_DELAY_MS = 1500;
 
-type ConfirmType = 'cash' | 'attended' | 'group' | null;
+// Основные действия — одним нажатием: «Отметить проход» по оплаченному билету
+// и «Принять XX € и пропустить» (сумма написана прямо на кнопке). Подтверждение
+// осталось для второстепенного «Только принять оплату» и для группы, где одно
+// нажатие проводит сразу несколько броней.
+type ConfirmType = 'cash' | 'group' | null;
+
+const SHOW_KEY = 'checkin.showId';
+
+/** Спектакль сканера переживает перезагрузку страницы — выбран один раз на вечер. */
+function initialShowId(): string {
+  const fallback = currentShowId(SHOW_OPTIONS) ?? '';
+  try {
+    const saved = sessionStorage.getItem(SHOW_KEY);
+    return saved && SHOW_OPTIONS.some(o => o.id === saved) ? saved : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 export function TicketCheckPage() {
   const navigate       = useNavigate();
@@ -29,7 +49,15 @@ export function TicketCheckPage() {
 
   const ticketFromUrl = searchParams.get('ticket') ?? '';
 
-  const check = useTicketCheck(user, ticketFromUrl ? 'loading' : 'idle');
+  // Спектакль, на котором стоит сотрудник: проход по билету другого
+  // спектакля сервер не отметит.
+  const [showId, setShowIdState] = useState(initialShowId);
+  function setShowId(id: string) {
+    setShowIdState(id);
+    try { sessionStorage.setItem(SHOW_KEY, id); } catch { /* приватный режим */ }
+  }
+
+  const check = useTicketCheck(showId, ticketFromUrl ? 'loading' : 'idle');
   useCameraScanner(check);
 
   const [confirmType, setConfirmType] = useState<ConfirmType>(null);
@@ -66,6 +94,12 @@ export function TicketCheckPage() {
     check.reset();
     urlLookupDone.current = false;
     if (ticketFromUrl) navigate('/admin/checkin', { replace: true });
+  }
+
+  // «Следующий зритель»: сразу камера, без промежуточного экрана.
+  function handleNext() {
+    handleReset();
+    check.beginScanning();
   }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -112,6 +146,13 @@ export function TicketCheckPage() {
         </button>
       </div>
 
+      <label className={styles.showPicker}>
+        <span className={styles.groupLabel}>Спектакль</span>
+        <select value={showId} onChange={e => setShowId(e.target.value)} aria-label="Спектакль">
+          {SHOW_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+        </select>
+      </label>
+
       {check.scanState === 'idle' && !ticketFromUrl && (
         <div className={styles.idleBlock}>
           <div className={styles.qrIconWrap}>
@@ -124,8 +165,8 @@ export function TicketCheckPage() {
           </p>
 
           {check.cameraError && (
-            <div className={styles.cameraErrorBox}>
-              <span className={styles.cameraErrorSign}>🚫</span>
+            <div className={styles.cameraErrorBox} role="alert">
+              <IconCameraOff className={styles.cameraErrorSign} size={18} stroke={1.5} aria-hidden="true" />
               {check.cameraError}
             </div>
           )}
@@ -152,6 +193,8 @@ export function TicketCheckPage() {
             onChange={handleFileSelect}
             aria-label="Изображение или PDF билета"
           />
+
+          <BookingSearchPanel showId={showId} onOpen={code => { void check.lookupByCode(code); }} />
         </div>
       )}
 
@@ -168,29 +211,32 @@ export function TicketCheckPage() {
       )}
 
       {check.scanState === 'error' && (
-        <ScanErrorCard message={check.errorMsg} onReset={handleReset} resetLabel={resetLabel} />
+        <ScanErrorCard message={check.errorMsg} onReset={handleReset} resetLabel={resetLabel} onNext={handleNext} />
       )}
 
       {/* Несколько активных броней зрителя на этот сеанс — показываем их вместе.
           Одна бронь остаётся в прежней одиночной карточке. */}
-      {check.scanState === 'found' && check.booking && check.group && !check.operating && (
+      {check.scanState === 'found' && check.booking && check.group && !check.booking.wrongShow && !check.operating && (
         <GroupResultCard
           group={check.group}
           onGroupCheckIn={() => askConfirm('group')}
           onCashReceived={b => askConfirm('cash', b)}
-          onMarkAttended={b => askConfirm('attended', b)}
+          onMarkAttended={b => { void check.markAttended(b); }}
           onReset={handleReset}
           resetLabel={resetLabel}
         />
       )}
 
-      {check.scanState === 'found' && check.booking && !check.group && !check.operating && (
+      {check.scanState === 'found' && check.booking && (!check.group || check.booking.wrongShow) && !check.operating && (
         <TicketResultCard
           booking={check.booking}
+          justCheckedIn={check.justCheckedIn}
           onReset={handleReset}
           resetLabel={resetLabel}
+          onNext={handleNext}
           onCashReceived={() => askConfirm('cash')}
-          onMarkAttended={() => askConfirm('attended')}
+          onPayAndCheckIn={() => { void check.payAndCheckIn(); }}
+          onMarkAttended={() => { void check.markAttended(); }}
         />
       )}
 
@@ -205,20 +251,6 @@ export function TicketCheckPage() {
         onConfirm={() => {
           setConfirmType(null);
           void check.markPaid(confirmTarget ?? undefined);
-        }}
-      />
-
-      <ConfirmDialog
-        isOpen={confirmType === 'attended'}
-        title="Отметить посещение?"
-        message="Вы уверены, что зритель прошёл в зал? После этого билет будет считаться использованным."
-        confirmLabel="Да, отметить посещение"
-        cancelLabel="Отмена"
-        loading={check.operating}
-        onCancel={() => setConfirmType(null)}
-        onConfirm={() => {
-          setConfirmType(null);
-          void check.markAttended(confirmTarget ?? undefined);
         }}
       />
 

@@ -1,55 +1,5 @@
-// Данные писем. Формируются на клиенте, отправляются через /api/send-email.
-
-import type { BookingStatus } from '../../types/booking';
-
-export interface BookingEmailData {
-  userEmail:        string;
-  userName:         string;
-  /** Локализация названия идёт по showId — FR-перевод живёт в каталоге, а не в брони. */
-  showId?:          string;
-  showTitle:        string;
-  showTitleFR?:     string;
-  showDate:         string;
-  showTime:         string;
-  ticketsCount:     number;
-  ticketType:       string;
-  totalAmount:      number;
-  ticketCode:       string;
-  paymentMethod:    'on_site' | 'bank_transfer';
-  paymentAccountId?: string;
-  lang:             'RU' | 'FR';
-  originalAmount?:        number;
-  loyaltyDiscountApplied?: boolean;
-  loyaltyDiscountAmount?: number;
-}
-
-export interface BookingStatusEmailData {
-  userEmail:    string;
-  userName:     string;
-  showId?:      string;
-  showTitle:    string;
-  showDate:     string;
-  showTime:     string;
-  ticketsCount: number;
-  totalAmount:  number;
-  ticketCode:   string;
-  newStatus:    Extract<BookingStatus, 'confirmed' | 'cancelled' | 'attended'>;
-  lang:         'RU' | 'FR';
-}
-
-export interface PaymentPaidEmailData {
-  userEmail:     string;
-  userName:      string;
-  showId?:       string;
-  showTitle:     string;
-  showDate:      string;
-  showTime:      string;
-  ticketsCount:  number;
-  totalAmount:   number;
-  ticketCode:    string;
-  bookingStatus: BookingStatus;
-  lang:          'RU' | 'FR';
-}
+// Данные анонса спектакля. Письма о бронях и билетах собирает сервер
+// (shared/email, server/email/ticketEmail.service.ts) — во фронтенде их больше нет.
 
 export interface NewShowEmailData {
   userEmail:   string;

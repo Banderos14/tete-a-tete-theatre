@@ -4,17 +4,17 @@ import type { T } from '../../../i18n/translations';
 import type { Booking } from '../../../types/booking';
 import { TicketCard } from '../TicketCard';
 import { BookingCard } from './BookingCard';
+import { isScannableTicket } from '../../../../shared/domain/bookingRules';
 import styles from './ProfileDrawer.module.scss';
 
 /**
- * on_site-билет показывается сразу, даже без оплаты: деньги берут на месте,
- * а QR нужен уже при входе.
+ * Билет-карточка — для оплаченной брони и «оплаты на месте». Бронь с ещё не
+ * полученным переводом рисует BookingCard: там реквизиты, срок и отмена, а QR
+ * — тот же TicketQrPanel. Билет с QR есть у ЛЮБОЙ действующей брони; правило
+ * общее с письмом (shared/domain/bookingRules).
  */
 function hasScannableTicket(b: Booking): boolean {
-  return (
-    (b.paymentStatus === 'paid' && b.status === 'confirmed') ||
-    (b.paymentMethod === 'on_site' && b.paymentStatus === 'not_paid')
-  ) && !!b.ticketCode;
+  return isScannableTicket(b) && !!b.ticketCode && b.paymentStatus !== 'awaiting_transfer';
 }
 
 export function TicketsSection({

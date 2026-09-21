@@ -78,8 +78,12 @@ service cloud.firestore {
              .hasOnly(['paymentStatus', 'status', 'updatedAt']);
 
       // ── Admin ──────────────────────────────────────────────────────────────
-      // Admin can read, update, and delete any booking without restriction.
-      allow read, update, delete: if isAdmin();
+      // Admin can READ any booking (admin table, search at the entrance).
+      // All admin CHANGES — payment, check-in, cancel, delete, resend ticket —
+      // go through /api/admin-booking (Admin SDK): the server reads the
+      // booking itself, validates the transition and writes the audit fields.
+      // The browser no longer writes bookings as admin, so it must not be able to.
+      allow read: if isAdmin();
     }
 
     // ── Stats collection ─────────────────────────────────────────────────────

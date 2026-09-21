@@ -5,25 +5,6 @@ import { getAdminApp } from '../shared/firebaseAdmin.js';
 import type { DeliveryStatus, LoggedEmailType } from './email.types.js';
 
 /**
- * Письмо-подтверждение можно отправить только по СВОЕЙ реальной брони.
- * Без этой проверки endpoint работал генератором произвольных писем от имени
- * театра: любой авторизованный пользователь мог отправить себе что угодно.
- */
-export async function ownsBookingWithTicketCode(uid: string, ticketCode: string): Promise<boolean> {
-  try {
-    const snap = await getFirestore(getAdminApp())
-      .collection('bookings')
-      .where('ticketCode', '==', ticketCode)
-      .limit(1)
-      .get();
-    if (snap.empty) return false;
-    return snap.docs[0]!.data()?.userId === uid;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Техническое состояние доставки.
  *
  * Раньше узнать, ушло ли письмо, из приложения было невозможно — только
@@ -33,7 +14,7 @@ export async function ownsBookingWithTicketCode(uid: string, ticketCode: string)
  */
 export async function logEmailDelivery(entry: {
   type: LoggedEmailType; uid: string; status: DeliveryStatus;
-  providerStatus?: number; ticketCode?: string;
+  providerStatus?: number; bookingId?: string;
 }): Promise<void> {
   try {
     await getFirestore(getAdminApp()).collection('emailLog').add({
@@ -42,7 +23,7 @@ export async function logEmailDelivery(entry: {
     });
   } catch (err) {
     // Журнал доставки — вспомогательный: его сбой не должен влиять на письмо.
-    console.warn('[send-email] delivery log write failed:', err);
+    console.warn('[email] delivery log write failed:', err);
   }
 }
 

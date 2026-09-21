@@ -28,7 +28,7 @@ export function AdminPage() {
 
   const isAdmin = userProfile?.role === 'admin';
 
-  const data       = useAdminData(!loading && isAdmin, user);
+  const data       = useAdminData(!loading && isAdmin);
   const newsletter = useNewsletter(user);
 
   const [tab,          setTab]          = useState<AdminTab>('bookings');
@@ -93,8 +93,11 @@ export function AdminPage() {
           bookings={data.bookings}
           fetching={data.fetching}
           updatingId={data.updatingId}
-          deleteError={data.deleteBookingError}
-          onDismissDeleteError={data.dismissDeleteBookingError}
+          actionError={data.actionError}
+          actionNotice={data.actionNotice}
+          onDismissActionError={data.dismissActionError}
+          onReload={data.reload}
+          onResendTicket={id => { void data.resendTicket(id); }}
           filterShow={filterShow}
           onFilterShow={setFilterShow}
           filterStatus={filterStatus}

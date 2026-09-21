@@ -3,7 +3,7 @@
 // Почтовые клиенты не умеют во внешний CSS и плохо — во flex/grid, поэтому
 // разметка табличная, а стили инлайновые. Это не «легаси», а требование среды.
 
-import { PAYMENT_CONFIG } from '../../config/payment';
+import { PAYMENT_CONFIG } from '../config/payment.js';
 
 export const THEATRE_NAME    = PAYMENT_CONFIG.receiverName;
 export const THEATRE_ADDRESS = PAYMENT_CONFIG.address;

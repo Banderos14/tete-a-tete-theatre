@@ -94,7 +94,7 @@ export async function deleteCancelledBooking(
   }
 
   console.log(
-    `[delete-booking] id=${bookingId} by=${adminUid} idempotencyKeys=${outcome.idempotencyKeysDeleted}`,
+    `[admin-booking:delete] id=${bookingId} by=${adminUid} idempotencyKeys=${outcome.idempotencyKeysDeleted}`,
   );
   return {
     ok: true,

@@ -1,7 +1,8 @@
 // Прямая ссылка в личный кабинет — «Мои билеты».
 //
-// Письмо и success-модалка не должны высаживать зрителя на главную: QR лежит
-// в кабинете, и путь к нему обязан быть в один клик. Отдельной страницы для
+// Письмо и success-модалка не должны высаживать зрителя на главную: билет с QR
+// лежит и в кабинете, путь к нему — в один клик. Саму ссылку для письма строит
+// сервер (myTicketsUrl в shared/domain/ticketCode.ts). Отдельной страницы для
 // этого нет — открывается существующий ProfileDrawer, поэтому адрес остаётся
 // адресом главной с параметром:
 //
@@ -10,7 +11,7 @@
 // Формат тот же, что у ?show=..., и разбирается тем же getQueryParam, так что
 // обе ссылки сосуществуют и не мешают друг другу.
 
-import { getQueryParam, getPublicSiteBase } from './showUrl';
+import { getQueryParam } from './showUrl';
 
 /** Разделы кабинета, которые можно открыть ссылкой. */
 export const ACCOUNT_DEEP_LINKS = ['tickets'] as const;
@@ -25,11 +26,6 @@ export function getAccountSectionFromLocation(
   return (ACCOUNT_DEEP_LINKS as readonly string[]).includes(value ?? '')
     ? (value as AccountDeepLink)
     : null;
-}
-
-/** Адрес раздела «Мои билеты» для письма. */
-export function getMyTicketsUrl(): string {
-  return `${getPublicSiteBase()}/#/?${PARAM}=tickets`;
 }
 
 /**

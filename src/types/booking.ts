@@ -37,6 +37,10 @@ export interface Booking {
   paymentReference?:   string;
   paymentExpiresAt?:   Timestamp;
   paidAt?:             Timestamp;
+  /** uid администратора, отметившего оплату (админка и оплата на входе). */
+  paidBy?:             string;
+  /** Момент прохода в зал — ставит только check-in (server/checkin). */
+  attendedAt?:         Timestamp;
   createdAt:           Timestamp;
   updatedAt?:          Timestamp;
   originalAmount?:                  number;
@@ -44,6 +48,17 @@ export interface Booking {
   loyaltyDiscountAmount?:           number;
   loyaltyRewardUsedFromVisitCount?: number;
   cancelledBy?:   'user' | 'admin';
+  cancelledByUid?: string;
+  /**
+   * Письма по брони (пишет сервер): booking — билет после брони, paid — после
+   * оплаты, resend — повторная отправка, cancelled — отмена администратором.
+   */
+  emails?: Partial<Record<'booking' | 'paid' | 'resend' | 'cancelled', {
+    status: 'sending' | 'sent' | 'failed' | 'skipped';
+    atMs:   number;
+    withQr?: boolean;
+    reason?: string;
+  }>>;
   cancelReason?:  string;
   cancelComment?: string;
   cancelledAt?:   import('firebase/firestore').Timestamp;

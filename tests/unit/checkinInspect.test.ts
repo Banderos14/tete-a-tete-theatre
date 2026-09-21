@@ -63,17 +63,18 @@ function paidBooking(overrides: Record<string, unknown> = {}): Record<string, un
   };
 }
 
-function inspect() {
-  return checkinTicket({ adminUid: 'admin-1', ticketCode: CODE, action: 'inspect' });
+function inspect(showId: string = 'romantika') {
+  return checkinTicket({ adminUid: 'admin-1', ticketCode: CODE, action: 'inspect', showId });
 }
-function markAttended() {
-  return checkinTicket({ adminUid: 'admin-1', ticketCode: CODE, action: 'mark_attended' });
+function markAttended(showId: string = 'romantika') {
+  return checkinTicket({ adminUid: 'admin-1', ticketCode: CODE, action: 'mark_attended', showId });
 }
 
 beforeEach(() => {
   writes = [];
   found  = true;
-  // 12 сентября 2026 — за пять дней до спектакля.
+  // 12 сентября 2026 — за пять дней до спектакля: времени у прохода нет,
+  // поэтому все проверки работают в любой день.
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-09-12T10:00:00Z'));
 });
@@ -146,6 +147,7 @@ describe('mark_attended — единственное действие, дела�
     const after = await inspect();
     expect(after.ok).toBe(true);
     expect(after.booking.status).toBe('attended');
+    expect(marked.booking.attendedAtMs).toBe(Date.now());
 
     await expect(markAttended()).rejects.toMatchObject({ reason: 'already_attended' });
   });
@@ -178,61 +180,67 @@ describe('mark_attended — единственное действие, дела�
     for (let i = 0; i < 7; i++) await inspect();
     const last = await inspect();
 
-    expect(last.booking.showRelevance).toBe(first.booking.showRelevance);
-    expect(last.booking.showDateDiffers).toBe(first.booking.showDateDiffers);
+    expect(last.booking.wrongShow).toBe(first.booking.wrongShow);
     expect(last.booking.showDate).toBe(first.booking.showDate);
     expect(last.booking.status).toBe(first.booking.status);
   });
 });
 
-describe('showDateDiffers — расхождение брони с каталогом, а не с сегодняшним днём', () => {
-  it('бронь 17 Сен, каталог 17 Сен, скан 12 Сен → differs = false', async () => {
+describe('проход — без временного окна, но только на свой спектакль', () => {
+  it('за пять дней до спектакля оплаченный билет проходит — времени у прохода нет', async () => {
     store = paidBooking();
-    const res = await inspect();
-
-    expect(res.booking.showDateDiffers).toBe(false);
-    // Ранняя проверка — это отдельная концепция, не «билет на другую дату».
-    expect(res.booking.showRelevance).toBe('too_early');
+    const res = await markAttended();
+    expect(res.booking.status).toBe('attended');
   });
 
-  it('бронь 14 Июн, каталог 17 Сен → differs = true', async () => {
-    store = paidBooking({ showDate: '14 Июн 2026' });
-    const res = await inspect();
-    expect(res.booking.showDateDiffers).toBe(true);
-  });
-
-  it('скан за день до спектакля — по-прежнему differs = false', async () => {
-    vi.setSystemTime(new Date('2026-09-16T21:00:00Z'));
+  it('билет другого спектакля: скан показывает его, проход — wrong_show', async () => {
     store = paidBooking();
-    const res = await inspect();
-    expect(res.booking.showDateDiffers).toBe(false);
-  });
+    const res = await inspect('shutka');
+    expect(res.booking.wrongShow).toBe(true);
+    expect(res.booking.showTitle).toBe('«Романтика обреченности»');
 
-  it('скан в день спектакля: differs = false, актуальность ok', async () => {
-    vi.setSystemTime(new Date('2026-09-17T17:00:00Z')); // 19:00 по Парижу
-    store = paidBooking();
-    const res = await inspect();
-
-    expect(res.booking.showDateDiffers).toBe(false);
-    expect(res.booking.showRelevance).toBe('ok');
-  });
-
-  it('спектакль вне каталога не считается расхождением', async () => {
-    store = paidBooking({ showId: 'snyatyj', showDate: '01 Мар 2025' });
-    const res = await inspect();
-    expect(res.booking.showDateDiffers).toBe(false);
-  });
-});
-
-describe('действительность билета считается по сеансу брони, а не по каталогу', () => {
-  it('июньский билет на перенесённый спектакль — too_late, проход запрещён', async () => {
-    // Каталог romantika показывает 17 Сен, но билет продан на 14 Июн.
-    store = paidBooking({ showDate: '14 Июн 2026' });
-
-    const res = await inspect();
-    expect(res.booking.showRelevance).toBe('too_late');
-
-    await expect(markAttended()).rejects.toMatchObject({ reason: 'show_over' });
+    await expect(markAttended('shutka')).rejects.toMatchObject({ reason: 'wrong_show' });
     expect(writes).toEqual([]);
+  });
+
+  it('июньский билет перенесённого спектакля — другой вечер, проход запрещён', async () => {
+    store = paidBooking({ showDate: '14 Июн 2026', showTime: '19:00' });
+    expect((await inspect()).booking.wrongShow).toBe(true);
+    await expect(markAttended()).rejects.toMatchObject({ reason: 'wrong_show' });
+    expect(writes).toEqual([]);
+  });
+
+  it('без указания спектакля проход не отмечается вовсе', async () => {
+    store = paidBooking();
+    await expect(checkinTicket({ adminUid: 'admin-1', ticketCode: CODE, action: 'mark_attended' }))
+      .rejects.toMatchObject({ reason: 'bad_show' });
+    expect(writes).toEqual([]);
+  });
+
+  it('отменённая и протухшая брони не проходят', async () => {
+    store = paidBooking({ status: 'cancelled' });
+    await expect(markAttended()).rejects.toMatchObject({ reason: 'cancelled' });
+    store = paidBooking({ status: 'pending', paymentStatus: 'expired' });
+    await expect(markAttended()).rejects.toMatchObject({ reason: 'expired' });
+    expect(writes).toEqual([]);
+  });
+
+  it('оплату можно принять в любой день — спектакль для неё не нужен', async () => {
+    store = paidBooking({ paymentStatus: 'not_paid', paymentMethod: 'on_site', status: 'pending' });
+    const res = await checkinTicket({ adminUid: 'admin-1', ticketCode: CODE, action: 'mark_paid' });
+    expect(res.booking.paymentStatus).toBe('paid');
+  });
+
+  it('оплата уже прошедшему зрителю не возвращает его в «confirmed»', async () => {
+    store = paidBooking({ paymentStatus: 'not_paid', status: 'attended' });
+    await checkinTicket({ adminUid: 'admin-1', ticketCode: CODE, action: 'mark_paid' });
+    expect(store.status).toBe('attended');
+    expect(store.paymentStatus).toBe('paid');
+  });
+
+  it('повторный скан отдаёт время первого прохода', async () => {
+    store = paidBooking({ status: 'attended', attendedAt: { seconds: 1_789_000_000 } });
+    const res = await inspect();
+    expect(res.booking.attendedAtMs).toBe(1_789_000_000_000);
   });
 });

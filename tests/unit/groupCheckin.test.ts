@@ -10,7 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryFirestore } from '../helpers/memoryFirestore';
-import { projectSource, screenSource } from '../helpers/serverSource.js';
+import { screenSource } from '../helpers/serverSource.js';
 
 const SERVER_TS = '<server-timestamp>';
 
@@ -42,7 +42,7 @@ vi.mock('../../server/shared/http.js', () => ({
 
 const { checkinTicket }              = await import('../../server/checkin/checkin.service.js');
 const { groupCheckin, inspectGroup } = await import('../../server/checkin/group.service.js');
-const { default: handler }           = await import('../../api/checkin-ticket.js');
+const { default: handler }           = await import('../../api/admin-booking.js');
 const { groupActionLabel, ticketsLabel } = await import('../../src/pages/TicketCheckPage/groupLabels');
 type CheckinGroup = import('../../shared/contracts/checkin.js').CheckinGroup;
 
@@ -92,7 +92,7 @@ function seedElena() { seedA(); seedB(); }
 
 const ids = (g: { bookings: Array<{ bookingId: string }> } | null) => g?.bookings.map(b => b.bookingId);
 const doc = (id: string) => store.peek('bookings', id)!;
-const run = () => groupCheckin({ adminUid: 'admin-1', ticketCode: CODE_A });
+const run = () => groupCheckin({ adminUid: 'admin-1', ticketCode: CODE_A, showId: 'romantika' });
 
 let writeSpy: ReturnType<typeof vi.spyOn>;
 
@@ -143,15 +143,22 @@ describe('состав группы', () => {
       ticketsCount: 4, seatsCount: 4, totalAmount: 80,
       paymentMethod: 'bank_transfer', paymentStatus: 'paid', status: 'confirmed',
     });
-    // Тот же день, другое время — тоже другой сеанс.
+    const group = await inspectGroup(CODE_A);
+    expect(ids(group)).toEqual(['A', 'B']);
+    expect(group!.totalTickets).toBe(3);
+  });
+
+  it('4b. бронь, купленная до исправления времени в каталоге, — тот же сеанс', async () => {
+    seedElena();
+    // Тот же день, другое время: у спектакля один сеанс в день, значит время
+    // просто поправили (16:00 → 20:00), а билет — на этот же вечер.
     seed('D', {
       ticketCode: 'DDDD-2345', showTime: '16:00',
       ticketsCount: 1, seatsCount: 1, totalAmount: 20,
       paymentMethod: 'bank_transfer', paymentStatus: 'paid', status: 'confirmed',
     });
-    const group = await inspectGroup(CODE_A);
-    expect(ids(group)).toEqual(['A', 'B']);
-    expect(group!.totalTickets).toBe(3);
+    const group = await inspectGroup(CODE_A, 'romantika');
+    expect(ids(group)).toEqual(['A', 'B', 'D']);
   });
 
   it('5. другой пользователь с тем же e-mail и именем — не входит', async () => {
@@ -177,7 +184,7 @@ describe('состав группы', () => {
     expect(writeSpy).not.toHaveBeenCalled();
 
     // Одиночный проход по такому билету работает как прежде.
-    const single = await checkinTicket({ adminUid: 'admin-1', ticketCode: CODE_A, action: 'mark_attended' });
+    const single = await checkinTicket({ adminUid: 'admin-1', ticketCode: CODE_A, action: 'mark_attended', showId: 'romantika' });
     expect(single.booking.status).toBe('attended');
     expect(doc('B').status).toBe('pending');
   });
@@ -217,7 +224,7 @@ describe('оплата', () => {
   it('поля B совпадают с одиночными mark_paid + mark_attended', async () => {
     seedB();
     await checkinTicket({ adminUid: 'admin-1', ticketCode: CODE_B, action: 'mark_paid' });
-    await checkinTicket({ adminUid: 'admin-1', ticketCode: CODE_B, action: 'mark_attended' });
+    await checkinTicket({ adminUid: 'admin-1', ticketCode: CODE_B, action: 'mark_attended', showId: 'romantika' });
     const sequential = doc('B');
 
     store = new MemoryFirestore();
@@ -226,7 +233,7 @@ describe('оплата', () => {
     expect(doc('B')).toEqual(sequential);
   });
 
-  it('9. есть бронь с ожидаемым переводом — групповой проход заблокирован', async () => {
+  it('9. непришедший перевод принимается на входе вместе с остальными — тупика у двери нет', async () => {
     seedElena();
     seed('C', {
       ticketCode: CODE_C, ticketsCount: 1, seatsCount: 1, totalAmount: 15,
@@ -234,14 +241,26 @@ describe('оплата', () => {
     });
 
     const group = (await inspectGroup(CODE_A))!;
-    expect(group.canCheckIn).toBe(false);
-    expect(group.blockedBookingIds).toEqual(['C']);
-    // Перевод не превращается в оплату на месте.
-    expect(group.cashDue).toBe(20);
+    expect(group.canCheckIn).toBe(true);
+    expect(group.blockedBookingIds).toEqual([]);
+    // К оплате — суммы из самих броней: B 20 € + C 15 €.
+    expect(group.cashDue).toBe(35);
 
+    await run();
+    expect(doc('C')).toMatchObject({ paymentStatus: 'paid', status: 'attended' });
+    expect(doc('B')).toMatchObject({ paymentStatus: 'paid', status: 'attended' });
+  });
+
+  it('9b. неизвестный статус оплаты блокирует групповой проход', async () => {
+    seedElena();
+    seed('C', {
+      ticketCode: CODE_C, ticketsCount: 1, seatsCount: 1, totalAmount: 15,
+      paymentMethod: 'bank_transfer', paymentStatus: 'refund_requested', status: 'pending',
+    });
+    const group = (await inspectGroup(CODE_A))!;
+    expect(group.blockedBookingIds).toEqual(['C']);
     await expect(run()).rejects.toMatchObject({ reason: 'payment_pending' });
     expect(writeSpy).not.toHaveBeenCalled();
-    expect(doc('B').paymentStatus).toBe('not_paid');
   });
 
   it('10. отменённая бронь не учитывается', async () => {
@@ -297,7 +316,7 @@ describe('посещение', () => {
     expect(group.remainingTickets).toBe(1);
     expect(group.remainingBookings).toBe(1);
 
-    await groupCheckin({ adminUid: 'admin-1', ticketCode: CODE_B });
+    await groupCheckin({ adminUid: 'admin-1', ticketCode: CODE_B, showId: 'romantika' });
     expect(doc('A')).toEqual(before);
     expect(doc('B').status).toBe('attended');
   });
@@ -317,8 +336,8 @@ describe('посещение', () => {
   it('15. два одновременных групповых действия → ровно один эффективный переход', async () => {
     seedElena();
     const results = await Promise.allSettled([
-      groupCheckin({ adminUid: 'admin-1', ticketCode: CODE_A }),
-      groupCheckin({ adminUid: 'admin-2', ticketCode: CODE_B }),
+      groupCheckin({ adminUid: 'admin-1', ticketCode: CODE_A, showId: 'romantika' }),
+      groupCheckin({ adminUid: 'admin-2', ticketCode: CODE_B, showId: 'romantika' }),
     ]);
 
     const ok       = results.filter(r => r.status === 'fulfilled');
@@ -389,7 +408,7 @@ describe('безопасность', () => {
   it('22. не-админ получает отказ, брони не читаются и не меняются', async () => {
     seedElena();
     adminAllowed = false;
-    requestBody = JSON.stringify({ ticketCode: CODE_A, action: 'group_checkin' });
+    requestBody = JSON.stringify({ ticketCode: CODE_A, action: 'group_checkin', showId: 'romantika' });
 
     await handler({ method: 'POST', headers: {} } as never, {} as never);
 
@@ -406,13 +425,13 @@ describe('безопасность', () => {
     expect(ids(responses[0]!.body.group as never)).toEqual(['A', 'B']);
     expect(writeSpy).not.toHaveBeenCalled();
 
-    requestBody = JSON.stringify({ ticketCode: CODE_A, action: 'group_checkin' });
+    requestBody = JSON.stringify({ ticketCode: CODE_A, action: 'group_checkin', showId: 'romantika' });
     await handler({ method: 'POST', headers: {} } as never, {} as never);
     expect(responses[1]!.status).toBe(200);
     expect(doc('B').status).toBe('attended');
 
     // Клиентские суммы и списки броней сервер не читает вовсе.
-    requestBody = JSON.stringify({ ticketCode: CODE_A, action: 'group_checkin', bookingIds: ['Z'], cashDue: 0 });
+    requestBody = JSON.stringify({ ticketCode: CODE_A, action: 'group_checkin', showId: 'romantika', bookingIds: ['Z'], cashDue: 0 });
     await handler({ method: 'POST', headers: {} } as never, {} as never);
     expect(responses[2]!.status).toBe(409);
     expect(responses[2]!.body.reason).toBe('already_attended');
@@ -441,20 +460,27 @@ describe('безопасность', () => {
     expect(doc('B').status).toBe('pending');
   });
 
-  it('25. прошедший сеанс — групповой проход запрещён', async () => {
+  it('25. билеты другого вечера — групповой проход на этот спектакль запрещён', async () => {
     seedA({ showStartAt: undefined, showDate: '14 Июн 2026' });
     seedB({ showDate: '14 Июн 2026' });
 
-    expect(await inspectGroup(CODE_A)).toBeNull();
-    await expect(run()).rejects.toMatchObject({ reason: 'show_over' });
+    expect(await inspectGroup(CODE_A, 'romantika')).toBeNull();
+    await expect(run()).rejects.toMatchObject({ reason: 'wrong_show' });
     expect(writeSpy).not.toHaveBeenCalled();
   });
 
   it('исторический билет не подтягивает сегодняшние брони', async () => {
     seedA({ showStartAt: undefined, showDate: '14 Июн 2026', paymentStatus: 'paid' });
-    seedB(); // сегодняшняя бронь того же зрителя на тот же спектакль
-    await expect(run()).rejects.toMatchObject({ reason: 'show_over' });
+    seedB(); // бронь того же зрителя на текущий показ
+    await expect(run()).rejects.toMatchObject({ reason: 'wrong_show' });
     expect(doc('B').status).toBe('pending');
+  });
+
+  it('билет другого спектакля не проходит на выбранном', async () => {
+    seedElena();
+    await expect(groupCheckin({ adminUid: 'admin-1', ticketCode: CODE_A, showId: 'shutka' }))
+      .rejects.toMatchObject({ reason: 'wrong_show' });
+    expect(writeSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -479,14 +505,10 @@ describe('письмо об оплате', () => {
     expect(doc('B')).toEqual(afterFirst);
   });
 
-  it('сканер отправляет письма только по paidBookings ответа сервера', () => {
+  it('сканер писем не отправляет — это делает сервер', () => {
     const scanner = screenSource('src/pages/TicketCheckPage');
-    // Групповая ветка шлёт письмо ровно по списку сервера — и больше никак.
-    expect(scanner).toMatch(/for \(const paid of res\.paidBookings\) void notifyPaid\(paid\);/);
-    const groupBranch = scanner.slice(scanner.indexOf('async function checkInGroup'), scanner.indexOf('function beginScanning'));
-    expect(groupBranch.match(/notifyPaid\(/g)).toHaveLength(1);
-    expect(groupBranch).not.toContain('sendPaymentPaidEmail');
-    expect(scanner).toMatch(/sendPaymentPaidEmail\([\s\S]{0,800}\.catch\(/);
+    expect(scanner).not.toContain('sendPaymentPaidEmail');
+    expect(scanner).not.toContain('/api/send-email');
   });
 });
 
@@ -511,14 +533,26 @@ describe('подпись основной кнопки', () => {
 });
 
 describe('границы изменения', () => {
-  it('клиент передаёт в group_checkin только код билета', () => {
-    const service = projectSource('src/services/checkinService.ts');
-    expect(service).toContain("'group_checkin'");
-    expect(service).toMatch(/JSON\.stringify\(\{ ticketCode, action \}\)/);
+  it('клиент передаёт в group_checkin только код билета и спектакль', () => {
+    const scanner = screenSource('src/pages/TicketCheckPage');
+    expect(scanner).toContain("'group_checkin'");
+    expect(scanner).toContain('adminBookingAction({ action, ticketCode, showId })');
   });
 
   it('админка групповой проход не использует', () => {
     const admin = screenSource('src/pages/AdminPage');
     expect(admin).not.toContain('group_checkin');
+  });
+});
+
+describe('времени у прохода нет', () => {
+  it('за день до спектакля группа проходит — важен спектакль, а не час', async () => {
+    seedElena();
+    vi.setSystemTime(new Date('2026-09-16T17:00:00Z'));
+
+    const group = (await inspectGroup(CODE_A, 'romantika'))!;
+    expect(group.canCheckIn).toBe(true);
+    await run();
+    expect(doc('B')).toMatchObject({ paymentStatus: 'paid', status: 'attended' });
   });
 });

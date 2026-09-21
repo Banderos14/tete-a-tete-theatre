@@ -41,8 +41,12 @@ describe('протухание брони происходит надёжно, �
     expect(hour, 'час должен быть фиксированным — не чаще раза в сутки').toMatch(/^\d+$/);
   });
 
-  it('запись идёт порциями — лимит batch не рушит запуск', () => {
-    expect(cron).toContain('BATCH_LIMIT');
+  it('каждая бронь аннулируется своей транзакцией с повторной проверкой срока', () => {
+    // пакетная запись не умела «только если не изменилось» и затирал оплату,
+    // отмеченную между запросом и записью.
+    expect(cron).toContain('runTransaction');
+    expect(cron).toMatch(/tx\.get\(d\.ref\)[\s\S]{0,200}overdue\(data, nowMs\)/);
+    expect(cron).not.toContain('batch.update');
   });
 
   it('счётчики затронутых спектаклей обновляются — освобождённые места видны', () => {
@@ -51,33 +55,36 @@ describe('протухание брони происходит надёжно, �
   });
 });
 
-describe('оплата наличными ведёт себя одинаково из админки и из сканера', () => {
+describe('оплата одинакова из админки и из сканера', () => {
   const page  = screenSource('src/pages/TicketCheckPage');
-  // Отправка писем при смене статуса — в хуке данных, а не в оболочке страницы.
   const admin = r('src/pages/AdminPage/useAdminData.ts');
 
-  it('оба места отправляют письмо об оплате', () => {
-    expect(admin).toContain('sendPaymentPaidEmail');
-    expect(page).toContain('sendPaymentPaidEmail');
+  it('оба места зовут одно серверное действие mark_paid', () => {
+    expect(admin).toContain("action: 'mark_paid'");
+    expect(page).toContain("'mark_paid'");
   });
 
-  it('оба ставят paid вместе с confirmed', () => {
-    expect(endpointSource('api/checkin-ticket.ts')).toMatch(/paymentStatus: 'paid',\s*\n\s*status:\s*'confirmed'/);
-    expect(r('src/services/bookingService.ts')).toMatch(/paymentStatus: 'paid',\s*\n\s*status: 'confirmed'/);
+  it('paid ставится вместе с confirmed в одном серверном хелпере', () => {
+    expect(functionBody(r('server/checkin/checkin.service.ts'), 'paidTransition'))
+      .toMatch(/paymentStatus: 'paid',\s*\n\s*status:\s*'confirmed'/);
   });
 
-  it('сбой письма не ломает отметку прохода', () => {
-    expect(page).toMatch(/sendPaymentPaidEmail\([\s\S]{0,800}\.catch\(/);
+  it('письмо об оплате отправляет сервер, а не браузер', () => {
+    expect(page).not.toContain('sendPaymentPaidEmail');
+    expect(admin).not.toContain('sendPaymentPaidEmail');
+    const router = r('server/admin/adminBooking.service.ts');
+    expect(router).toMatch(/case 'mark_paid'[\s\S]{0,600}sendBookingEmail\(result\.booking\.bookingId, 'paid'\)/);
   });
 });
 
 describe('техническое состояние доставки писем сохраняется', () => {
-  const email = endpointSource('api/send-email.ts');
+  const email = r('server/email/ticketEmail.service.ts');
 
   it('успех, отказ и пропуск журналируются', () => {
     expect(email).toContain("status: 'sent'");
     expect(email).toContain("status: 'failed'");
     expect(email).toContain("status: 'skipped'");
+    expect(email).toContain('logEmailDelivery(');
   });
 
   it('адрес получателя в журнал не дублируется', () => {
@@ -87,7 +94,8 @@ describe('техническое состояние доставки писем 
   });
 
   it('сбой журнала не влияет на отправку письма', () => {
-    expect(email).toMatch(/logEmailDelivery[\s\S]{0,700}catch \(err\)[\s\S]{0,200}console\.warn/);
+    const repo = functionBody(r('server/email/email.repository.ts'), 'logEmailDelivery');
+    expect(repo).toMatch(/catch \(err\)[\s\S]{0,200}console\.warn/);
   });
 
   it('журнал закрыт для клиента правилами', () => {

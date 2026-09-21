@@ -7,7 +7,7 @@
 import { useRef } from 'react';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { useModalA11y } from '../../hooks/useModalA11y';
-import type { CheckinGroup } from '../../services/checkinService';
+import type { CheckinGroup } from '../../services/adminBookingService';
 import { plural } from './groupLabels';
 import styles from './TicketCheckPage.module.scss';
 

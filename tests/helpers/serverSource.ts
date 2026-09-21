@@ -25,7 +25,7 @@ function resolveLocal(fromFile: string, spec: string): string | null {
 /**
  * Исходник endpoint'а вместе со всем его серверным слоем: handler плюс всё,
  * что он импортирует относительными путями, транзитивно. Путь задаётся от
- * корня репозитория, например 'api/checkin-ticket.ts'.
+ * корня репозитория, например 'api/admin-booking.ts'.
  */
 export function endpointSource(entry: string): string {
   const seen  = new Set<string>();

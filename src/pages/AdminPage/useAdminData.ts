@@ -1,14 +1,13 @@
-// Данные админки: загрузка броней и пользователей плюс изменения их статусов.
-// Письма уходят «в фоне» — их сбой не должен откатывать уже сохранённый статус.
+// Данные админки: загрузка броней и пользователей плюс действия с бронями.
+//
+// Все изменения броней идут через сервер (/api/admin-booking): он сам читает
+// бронь, проверяет, допустим ли переход, пишет аудит и отправляет письмо.
+// Браузер больше не пишет в bookings и не отправляет письма.
 
 import { useCallback, useEffect, useState } from 'react';
-import type { User } from 'firebase/auth';
-import {
-  getAllBookings, updateBookingStatus, updatePaymentStatus, markBookingPaid,
-  expireOverdueBookings, deleteCancelledBooking,
-} from '../../services/bookingService';
+import { getAllBookings } from '../../services/bookingService';
+import { adminBookingMutation, type AdminBookingRequest } from '../../services/adminBookingService';
 import { getAllUsers, deleteUserCompletely, type AdminUser } from '../../services/userService';
-import { sendBookingStatusUpdateEmail, sendPaymentPaidEmail } from '../../services/email';
 import { describeStateIssue } from '../../../shared/domain/bookingRules';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/booking';
 
@@ -22,36 +21,54 @@ function confirmDespiteStateIssue(status: BookingStatus, paymentStatus: PaymentS
   return !issue || window.confirm(`${issue}.\n\nВсё равно сохранить?`);
 }
 
+/** Понятный текст отказа сервера. */
+const REFUSALS: Record<string, string> = {
+  already_attended:  'Зритель уже прошёл в зал — это действие недоступно.',
+  already_cancelled: 'Бронь уже отменена.',
+  already_paid:      'Бронь уже отмечена как оплаченная.',
+  cancelled:         'Бронь отменена.',
+  not_paid:          'Бронь не оплачена.',
+  not_cancelled:     'Удалить можно только отменённую бронь.',
+  not_found:         'Бронь не найдена — возможно, её уже удалили.',
+};
+
 export interface AdminData {
   bookings: Booking[];
   users: AdminUser[];
   fetching: boolean;
-  /** id брони, по которой сейчас идёт запись. */
+  /** id брони, по которой сейчас идёт запрос. */
   updatingId: string | null;
   updatingUserId: string | null;
   deleteUserError: string | null;
   dismissDeleteUserError: () => void;
-  /** Ошибка удаления брони — показывается над таблицей и гасится вручную. */
-  deleteBookingError: string | null;
-  dismissDeleteBookingError: () => void;
-  setStatus: (bookingId: string, status: BookingStatus) => Promise<void>;
+  /** Ошибка действия с бронью — показывается над таблицей и гасится вручную. */
+  actionError: string | null;
+  /** Итог действия, о котором стоит сказать (например, «билет отправлен»). */
+  actionNotice: string | null;
+  dismissActionError: () => void;
+  /** Перечитать брони и пользователей — список в админке не live. */
+  reload: () => void;
+  setStatus: (bookingId: string, status: Extract<BookingStatus, 'cancelled'>) => Promise<void>;
   setPaymentStatus: (bookingId: string, paymentStatus: PaymentStatus) => Promise<void>;
+  resendTicket: (bookingId: string) => Promise<void>;
   deleteBooking: (bookingId: string) => Promise<void>;
   deleteUser: (uid: string) => Promise<void>;
 }
 
-export function useAdminData(enabled: boolean, user: User | null): AdminData {
+export function useAdminData(enabled: boolean): AdminData {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users,    setUsers]    = useState<AdminUser[]>([]);
   const [fetching, setFetching] = useState(true);
   const [updatingId,     setUpdatingId]     = useState<string | null>(null);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [deleteUserError, setDeleteUserError] = useState<string | null>(null);
-  const [deleteBookingError, setDeleteBookingError] = useState<string | null>(null);
+  const [actionError,  setActionError]  = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   // Первичная загрузка. Флаг stale — чтобы ответ отменённой загрузки не затирал
-  // состояние: без него быстрый уход со страницы или повторный вход админом
-  // применял бы результат уже неактуального запроса.
+  // состояние. Просроченные переводы аннулирует cron на сервере — админка
+  // больше ничего не пишет при открытии.
   useEffect(() => {
     if (!enabled) return;
     let stale = false;
@@ -63,96 +80,69 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
         if (stale) return;
         setBookings(bData);
         setUsers(uData);
-
-        // Посещение здесь НЕ проставляется: статус attended ставит только
-        // check-in по QR (см. shared/domain/bookingRules.ts).
-
-        // Просроченные банковские переводы отменяются фоном.
-        expireOverdueBookings(bData, (id) => {
-          if (stale) return;
-          setBookings(prev => prev.map(b =>
-            b.id === id ? { ...b, paymentStatus: 'expired', status: 'cancelled' } : b,
-          ));
-        }).catch(() => {});
+      } catch {
+        if (!stale) setActionError('Не удалось загрузить данные. Проверьте интернет и нажмите «Обновить».');
       } finally {
         if (!stale) setFetching(false);
       }
     })();
 
     return () => { stale = true; };
-  }, [enabled]);
+  }, [enabled, reloadTick]);
 
-  /** Токен админа для серверной проверки роли при отправке письма. */
-  const adminToken = useCallback(
-    () => user?.getIdToken().catch(() => undefined) ?? Promise.resolve(undefined),
-    [user],
-  );
+  const reload = useCallback(() => setReloadTick(n => n + 1), []);
 
-  async function setStatus(bookingId: string, status: BookingStatus) {
-    const booking = bookings.find(b => b.id === bookingId);
-    // Если статус не изменился, письмо повторно не отправляем.
-    if (!booking || booking.status === status) return;
-
-    if (!confirmDespiteStateIssue(status, booking.paymentStatus ?? 'not_paid')) return;
-
+  /** Одно действие с бронью: сервер решает, список перечитывается из базы. */
+  async function mutate(bookingId: string, request: AdminBookingRequest, fallback: string, notice?: (r: { ticketEmail?: string }) => string | null) {
+    if (updatingId === bookingId) return;
     setUpdatingId(bookingId);
+    setActionError(null);
+    setActionNotice(null);
     try {
-      await updateBookingStatus(bookingId, status);
-      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
+      const result = await adminBookingMutation(request);
+      setActionNotice(notice?.(result) ?? null);
+      reload();
+    } catch (e) {
+      const reason = (e as { reason?: string }).reason;
+      setActionError(reason && REFUSALS[reason] ? REFUSALS[reason] : `${fallback}: ${(e as Error).message}`);
+      // Отказ из-за изменившейся брони — показываем свежее состояние.
+      if (reason) reload();
+    } finally {
+      setUpdatingId(null);
+    }
+  }
 
-      // Письма отправляются только для ручного подтверждения и отмены.
-      if (status === 'confirmed' || status === 'cancelled') {
-        sendBookingStatusUpdateEmail({
-          userEmail:    booking.userEmail,
-          userName:     booking.userName,
-          showId:       booking.showId,
-          showTitle:    booking.showTitle,
-          showDate:     booking.showDate,
-          showTime:     booking.showTime,
-          ticketsCount: booking.ticketsCount,
-          totalAmount:  booking.totalAmount,
-          ticketCode:   booking.ticketCode,
-          newStatus:    status,
-          lang:         booking.lang ?? 'FR',
-        }, await adminToken()).catch(() => {});
-      }
-    } finally { setUpdatingId(null); }
+  const emailNotice = (sent: string, r: { ticketEmail?: string }) =>
+    r.ticketEmail === 'sent'   ? sent
+    : r.ticketEmail === 'failed' ? 'Изменение сохранено, но письмо не ушло — нажмите «Отправить билет» позже.'
+    : null;
+
+  async function setStatus(bookingId: string, status: Extract<BookingStatus, 'cancelled'>) {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking || booking.status === status) return;
+    if (!confirmDespiteStateIssue(status, booking.paymentStatus ?? 'not_paid')) return;
+    await mutate(bookingId, { action: 'cancel', bookingId }, 'Не удалось отменить бронь',
+      r => emailNotice('Бронь отменена, зрителю отправлено письмо.', r));
   }
 
   async function setPaymentStatus(bookingId: string, paymentStatus: PaymentStatus) {
     const booking = bookings.find(b => b.id === bookingId);
-    // Если статус оплаты не изменился, письмо повторно не отправляем.
     if (!booking || (booking.paymentStatus ?? 'not_paid') === paymentStatus) return;
 
-    setUpdatingId(bookingId);
-    try {
-      if (paymentStatus === 'paid') {
-        // Оплата и подтверждение должны записываться одним обновлением.
-        await markBookingPaid(bookingId);
-        setBookings(prev => prev.map(b =>
-          b.id === bookingId ? { ...b, paymentStatus: 'paid', status: 'confirmed' } : b
-        ));
-        // Одно письмо на получение оплаты.
-        sendPaymentPaidEmail({
-          userEmail:     booking.userEmail,
-          userName:      booking.userName,
-          showId:        booking.showId,
-          showTitle:     booking.showTitle,
-          showDate:      booking.showDate,
-          showTime:      booking.showTime,
-          ticketsCount:  booking.ticketsCount,
-          totalAmount:   booking.totalAmount,
-          ticketCode:    booking.ticketCode,
-          bookingStatus: 'confirmed',
-          lang:          booking.lang ?? 'FR',
-        }, await adminToken()).catch(() => {});
-      } else {
-        // Снятие оплаты меняет только paymentStatus и не отправляет письмо.
-        if (!confirmDespiteStateIssue(booking.status, paymentStatus)) return;
-        await updatePaymentStatus(bookingId, paymentStatus);
-        setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, paymentStatus } : b));
-      }
-    } finally { setUpdatingId(null); }
+    if (paymentStatus === 'paid') {
+      // Оплата — по коду билета, тем же действием, что у кассы на входе.
+      // Письмо «оплата получена» с QR отправляет сервер.
+      await mutate(bookingId, { action: 'mark_paid', ticketCode: booking.ticketCode }, 'Не удалось отметить оплату',
+        r => emailNotice('Оплата отмечена, зрителю отправлен билет.', r));
+      return;
+    }
+    if (!confirmDespiteStateIssue(booking.status, paymentStatus)) return;
+    await mutate(bookingId, { action: 'mark_unpaid', bookingId }, 'Не удалось снять оплату');
+  }
+
+  async function resendTicket(bookingId: string) {
+    await mutate(bookingId, { action: 'resend_ticket', bookingId }, 'Не удалось отправить билет',
+      r => r.ticketEmail === 'sent' ? 'Билет отправлен повторно.' : 'Письмо не отправлено — проверьте адрес зрителя.');
   }
 
   // Удаление отменённой брони. Запись убирается из списка ТОЛЬКО после успеха
@@ -161,12 +151,12 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
   async function deleteBooking(bookingId: string) {
     if (updatingId === bookingId) return;
     setUpdatingId(bookingId);
-    setDeleteBookingError(null);
+    setActionError(null);
     try {
-      await deleteCancelledBooking(bookingId);
+      await adminBookingMutation({ action: 'delete', bookingId });
       setBookings(prev => prev.filter(b => b.id !== bookingId));
     } catch (e) {
-      setDeleteBookingError(e instanceof Error ? e.message : 'Ошибка удаления брони');
+      setActionError(e instanceof Error ? `Ошибка удаления брони: ${e.message}` : 'Ошибка удаления брони');
     } finally {
       setUpdatingId(null);
     }
@@ -193,8 +183,9 @@ export function useAdminData(enabled: boolean, user: User | null): AdminData {
     updatingId, updatingUserId,
     deleteUserError,
     dismissDeleteUserError: () => setDeleteUserError(null),
-    deleteBookingError,
-    dismissDeleteBookingError: () => setDeleteBookingError(null),
-    setStatus, setPaymentStatus, deleteBooking, deleteUser,
+    actionError, actionNotice,
+    dismissActionError: () => { setActionError(null); setActionNotice(null); },
+    reload,
+    setStatus, setPaymentStatus, resendTicket, deleteBooking, deleteUser,
   };
 }

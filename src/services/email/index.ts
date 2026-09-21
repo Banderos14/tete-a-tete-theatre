@@ -1,14 +1,9 @@
-// Публичный вход почтового слоя frontend'а.
+// Почтовый слой frontend'а — только черновик анонса для рассылки.
 //
-// Отправка идёт в Vercel Serverless Function /api/send-email — ключ Resend
-// во frontend не попадает. Письма брони отправляются best-effort: сбой почты
-// не должен блокировать бронирование.
+// Письма о брони, оплате, отмене и повторная отправка билета собираются и
+// отправляются СЕРВЕРОМ: раньше их слал браузер после ответа API, и закрытая
+// вкладка означала «бронь есть, письма нет».
 
-export type { BookingEmailData, BookingStatusEmailData, PaymentPaidEmailData, NewShowEmailData } from './types';
-export { escapeEmailHtml } from './layout';
+export type { NewShowEmailData } from './types';
+export { escapeEmailHtml } from '../../../shared/email/layout';
 export { buildNewShowEmail } from './templates/newShow';
-export {
-  sendBookingConfirmationEmail,
-  sendBookingStatusUpdateEmail,
-  sendPaymentPaidEmail,
-} from './send';

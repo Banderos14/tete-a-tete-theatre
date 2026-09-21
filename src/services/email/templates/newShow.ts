@@ -1,7 +1,7 @@
 // Анонс нового спектакля (рассылка).
 
 import { escapeEmailHtml, localeDate, wrapHtml, infoTable, noteBlock,
-         THEATRE_NAME, THEATRE_ADDRESS, THEATRE_EMAIL, THEATRE_PHONE } from '../layout';
+         THEATRE_NAME, THEATRE_ADDRESS, THEATRE_EMAIL, THEATRE_PHONE } from '../../../../shared/email/layout';
 import type { NewShowEmailData } from '../types';
 
 export function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: string; text: string } {

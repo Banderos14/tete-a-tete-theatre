@@ -2,15 +2,15 @@ import {
   collection,
   getDocs,
   doc,
-  updateDoc,
   query,
   where,
   onSnapshot,
+  runTransaction,
   serverTimestamp,
   type QueryConstraint,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-import type { Booking, BookingStatus, PaymentStatus } from '../types/booking';
+import type { Booking } from '../types/booking';
 import type { TicketTypeId } from '../../shared/contracts/booking';
 
 // ── Server-side booking API ───────────────────────────────────────────────────
@@ -35,6 +35,8 @@ export function newIdempotencyKey(): string {
 
 interface CreateBookingResult {
   bookingId:               string;
+  /** Письмо-билет, отправленное сервером в том же запросе. */
+  ticketEmail?:            'sent' | 'skipped' | 'failed';
   ticketCode:              string;
   totalAmount:             number;
   priceInfo:               string;
@@ -127,38 +129,34 @@ export async function getAllBookings(filters: { showId?: string } = {}): Promise
   return sorted;
 }
 
-export async function updateBookingStatus(bookingId: string, status: BookingStatus): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, bookingId), { status, updatedAt: serverTimestamp() });
-}
-
-export async function updatePaymentStatus(bookingId: string, paymentStatus: PaymentStatus): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, bookingId), { paymentStatus, updatedAt: serverTimestamp() });
-}
-
-// Одна запись в Firestore: сразу ставит paid + confirmed.
-// Важно: не вызывать updatePaymentStatus и updateBookingStatus по отдельности —
-// иначе два события могут отправить два письма.
-export async function markBookingPaid(bookingId: string): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, bookingId), {
-    paymentStatus: 'paid',
-    status: 'confirmed',
-    paidAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-}
-
 // Истекшая бронь: paymentStatus='expired', status='cancelled'.
 // Документ не удаляется — история сохраняется.
-async function expireBooking(bookingId: string): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, bookingId), {
-    paymentStatus: 'expired',
-    status: 'cancelled',
-    updatedAt: serverTimestamp(),
+//
+// Транзакция с повторной проверкой: между загрузкой списка и записью перевод
+// могли подтвердить, и тогда бронь трогать нельзя. Набор полей — ровно тот,
+// что разрешают правила Firestore для самого зрителя.
+async function expireBooking(bookingId: string): Promise<boolean> {
+  const ref = doc(db, COLLECTION, bookingId);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return false;
+    const data = snap.data() as Partial<Booking>;
+    const expiresMs = getTimestampMs(data.paymentExpiresAt);
+    if (data.paymentStatus !== 'awaiting_transfer' || !(expiresMs > 0 && expiresMs < Date.now())) {
+      return false;
+    }
+    tx.update(ref, {
+      paymentStatus: 'expired',
+      status: 'cancelled',
+      updatedAt: serverTimestamp(),
+    });
+    return true;
   });
 }
 
-// Проверяет список броней: если время bank_transfer истекло — аннулирует.
-// onExpired вызывается для каждой аннулированной брони, чтобы обновить локальный стейт.
+// Проверяет список броней зрителя: если время bank_transfer истекло — аннулирует.
+// Фоллбек к ежедневному cron: правила Firestore разрешают зрителю ровно этот
+// переход своей брони. onExpired обновляет локальный стейт кабинета.
 export async function expireOverdueBookings(
   bookings: Booking[],
   onExpired: (id: string) => void,
@@ -170,8 +168,7 @@ export async function expireOverdueBookings(
     return expiresMs > 0 && expiresMs < now;
   });
   for (const b of toExpire) {
-    await expireBooking(b.id);
-    onExpired(b.id);
+    if (await expireBooking(b.id)) onExpired(b.id);
   }
 }
 
@@ -183,42 +180,8 @@ export function hoursUntilExpiry(booking: Booking): number | null {
   return Math.floor((expiresMs - Date.now()) / (1000 * 60 * 60));
 }
 
-export async function getBookingByTicketCode(ticketCode: string): Promise<Booking | null> {
-  const q = query(collection(db, COLLECTION), where('ticketCode', '==', ticketCode));
-  const snap = await getDocs(q);
-  if (snap.empty) return null;
-  const d = snap.docs[0];
-  return { id: d.id, ...(d.data() as object) } as Booking;
-}
-
 function snapshotToBookings(snapshot: Awaited<ReturnType<typeof getDocs>>): Booking[] {
   return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as object) } as Booking));
-}
-
-// Окончательное удаление отменённой брони администратором.
-//
-// Идёт через /api/delete-booking: правила Firestore не дают клиенту писать
-// в bookings, а проверки «вызывающий — админ» и «бронь действительно отменена»
-// обязаны выполняться на сервере. UI лишь не показывает кнопку там, где её
-// быть не должно.
-export async function deleteCancelledBooking(bookingId: string): Promise<void> {
-  const currentUser = auth.currentUser;
-  if (!currentUser) throw new Error('Not authenticated');
-  const idToken = await currentUser.getIdToken();
-
-  const resp = await fetch('/api/delete-booking', {
-    method:  'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${idToken}`,
-    },
-    body: JSON.stringify({ bookingId }),
-  });
-
-  const data = await resp.json().catch(() => ({})) as Record<string, unknown>;
-  if (!resp.ok) {
-    throw new Error(typeof data['error'] === 'string' ? data['error'] : `HTTP ${resp.status}`);
-  }
 }
 
 // Отмена по инициативе пользователя.

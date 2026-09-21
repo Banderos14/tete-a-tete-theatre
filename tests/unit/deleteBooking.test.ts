@@ -5,8 +5,9 @@ import { endpointSource, projectSource, transactionBody } from '../helpers/serve
 // обязано жить на сервере: UI лишь не показывает кнопку там, где её быть
 // не должно, и полагаться на него нельзя.
 
-const api     = endpointSource('api/delete-booking.ts');
-const handler = projectSource('api/delete-booking.ts');
+// Удаление — действие delete единого админского endpoint'а.
+const api     = endpointSource('api/admin-booking.ts');
+const handler = projectSource('api/admin-booking.ts');
 const service = projectSource('server/booking/deletion.service.ts');
 
 const bookingsTab   = projectSource('src/pages/AdminPage/BookingsTab.tsx');
@@ -14,7 +15,7 @@ const dialogs       = projectSource('src/pages/AdminPage/AdminConfirmDialogs.tsx
 const adminData     = projectSource('src/pages/AdminPage/useAdminData.ts');
 const bookingClient = projectSource('src/services/bookingService.ts');
 
-describe('/api/delete-booking: авторизация', () => {
+describe('/api/admin-booking delete: авторизация', () => {
   it('требует аутентификации и роли admin', () => {
     expect(handler).toContain('requireAdmin');
     // requireAdmin сначала проверяет токен, затем роль из Firestore.
@@ -39,15 +40,15 @@ describe('/api/delete-booking: авторизация', () => {
   });
 });
 
-describe('/api/delete-booking: правило удаления', () => {
+describe('/api/admin-booking delete: правило удаления', () => {
   it('удаляет только бронь со статусом cancelled', () => {
-    const tx = transactionBody(api);
+    const tx = transactionBody(service);
     expect(tx).toMatch(/status !== 'cancelled'/);
     expect(service).toContain("'not_cancelled'");
   });
 
   it('статус перечитывается внутри транзакции, а не берётся из запроса', () => {
-    const tx = transactionBody(api);
+    const tx = transactionBody(service);
     // Между открытием админки и нажатием корзины бронь могли вернуть в работу.
     expect(tx).toMatch(/tx\.get\(ref\)/);
     expect(tx).toMatch(/snap\.data\(\)[\s\S]{0,40}status/);
@@ -66,13 +67,13 @@ describe('/api/delete-booking: правило удаления', () => {
   });
 
   it('удаление и очистка ключей идемпотентности атомарны', () => {
-    const tx = transactionBody(api);
+    const tx = transactionBody(service);
     expect(tx).toContain('tx.delete(ref)');
     expect(tx).toMatch(/tx\.delete\(key\.ref\)/);
   });
 });
 
-describe('/api/delete-booking: связанные данные', () => {
+describe('/api/admin-booking delete: связанные данные', () => {
   it('висячий ключ идемпотентности удаляется вместе с бронью', () => {
     // Ключ хранит bookingId: без очистки повторный запрос с тем же
     // Idempotency-Key вернул бы ссылку на несуществующую бронь.
@@ -99,10 +100,11 @@ describe('/api/delete-booking: связанные данные', () => {
     // «ваша бронь удалена» не нужно — это административная уборка.
     // Проверяем вызовы, а не слово: в комментариях сервиса email упоминается
     // именно затем, чтобы объяснить, почему письма здесь нет.
-    expect(api).not.toMatch(/from '[^']*email[^']*'/i);
-    expect(api).not.toMatch(/\bsend[A-Za-z]*Email\s*\(/);
-    expect(api).not.toContain('api.resend.com');
     expect(service).not.toMatch(/from '[^']*email[^']*'/i);
+    expect(service).not.toMatch(/\bsend[A-Za-z]*Email\s*\(/);
+    const router = projectSource('server/admin/adminBooking.service.ts');
+    const branch = router.slice(router.indexOf("case 'delete':"));
+    expect(branch).not.toContain('sendBookingEmail');
   });
 });
 
@@ -174,13 +176,14 @@ describe('админка: состояние после удаления', () =>
     const fn = adminData.slice(adminData.indexOf('async function deleteBooking'));
     const body = fn.slice(0, fn.indexOf('\n  }\n'));
     // setBookings стоит ПОСЛЕ await: при ошибке запись остаётся на месте.
-    expect(body).toMatch(/await deleteCancelledBooking\(bookingId\);\s*\n\s*setBookings\(prev => prev\.filter/);
+    expect(body).toMatch(/await adminBookingMutation\(\{ action: 'delete', bookingId \}\);\s*\n\s*setBookings\(prev => prev\.filter/);
   });
 
   it('ошибка показывается и не оставляет оптимистичных изменений', () => {
     const fn = adminData.slice(adminData.indexOf('async function deleteBooking'));
     const body = fn.slice(0, fn.indexOf('\n  }\n'));
-    expect(body).toContain('setDeleteBookingError');
+    // Ошибка удаления показывается тем же блоком, что и ошибки отмены/оплаты.
+    expect(body).toContain('setActionError');
     const catchBlock = body.slice(body.indexOf('} catch'));
     expect(catchBlock).not.toContain('setBookings');
   });
@@ -197,19 +200,20 @@ describe('админка: состояние после удаления', () =>
 
 describe('клиент не пишет в Firestore напрямую', () => {
   it('удаление идёт через серверный endpoint с токеном', () => {
-    const fn = bookingClient.slice(bookingClient.indexOf('export async function deleteCancelledBooking'));
-    const body = fn.slice(0, fn.indexOf('\n}\n'));
-    expect(body).toContain("'/api/delete-booking'");
-    expect(body).toContain('Authorization');
-    expect(body).toContain('getIdToken');
-    expect(body).not.toContain('deleteDoc');
+    const client = projectSource('src/services/adminBookingService.ts');
+    expect(client).toContain("'/api/admin-booking'");
+    expect(client).toContain('Authorization');
+    expect(client).toContain('getIdToken');
+    expect(adminData).toContain("action: 'delete'");
+    expect(bookingClient).not.toContain('deleteDoc');
   });
 
   it('правила Firestore по-прежнему не дают клиенту удалять брони', () => {
     const rules = projectSource('firestore.rules');
     const bookings = rules.slice(rules.indexOf('match /bookings/{bookingId}'), rules.indexOf('match /stats/'));
-    // Удаление разрешено только админу — и то админка ходит через endpoint.
-    expect(bookings).toMatch(/allow read, update, delete: if isAdmin\(\)/);
+    // Админ бронь только читает: удаление и любые изменения — через сервер.
+    expect(bookings).toMatch(/allow read: if isAdmin\(\);/);
+    expect(bookings).not.toMatch(/allow[^;]*delete[^;]*isAdmin/);
     expect(bookings).toContain('allow create: if false');
   });
 });

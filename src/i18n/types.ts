@@ -133,6 +133,8 @@ export interface T {
     // Что делать дальше: где лежит QR и как им пользоваться.
     successOnSite: string;
     successTransfer: string;
+    /** Бронь есть, но письмо с билетом не ушло — билет в «Мои билеты». */
+    successEmailFailed: string;
     myTickets: string;
     close: string;
     total: string;

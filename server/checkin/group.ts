@@ -3,14 +3,17 @@
 // Чистая логика без Firestore — состав группы и суммы проверяются юнит-тестами,
 // а сервис лишь применяет вердикт внутри транзакции.
 //
-// Ключ группы — userId + showId + точный момент начала сеанса. Не e-mail, не
-// имя и не телефон: совпадение контактов не доказывает, что это один зритель.
-// Момент берётся из самой брони (showStartAt, у старых — showDate + showTime),
-// поэтому билет на другой вечер того же спектакля в группу не попадает.
+// Ключ группы — userId + showId + день сеанса (та же identity сеанса, что у
+// проверки на входе, shared/domain/performance.ts). Не e-mail, не имя и не
+// телефон: совпадение контактов не доказывает, что это один зритель. День
+// берётся из самой брони (showStartAt, у старых — showDate + showTime), поэтому
+// билет на другой вечер того же спектакля в группу не попадает, а брони до и
+// после исправления времени в каталоге остаются одной группой.
 
 import { occupiesCapacity } from '../../shared/domain/bookingRules.js';
-import { bookingOccurrenceStartUtcMs, type BookingOccurrence } from '../../shared/domain/showTime.js';
-import type { CheckinBooking, CheckinGroup, ShowRelevance } from '../../shared/contracts/checkin.js';
+import { bookingPerformanceDay } from '../../shared/domain/performance.js';
+import type { BookingOccurrence } from '../../shared/domain/showTime.js';
+import type { CheckinBooking, CheckinGroup } from '../../shared/contracts/checkin.js';
 
 export interface GroupDoc {
   id:   string;
@@ -20,7 +23,8 @@ export interface GroupDoc {
 export interface GroupKey {
   userId:  string;
   showId:  string;
-  startMs: number;
+  /** День сеанса по Парижу — та же identity сеанса, что у проверки на входе. */
+  day:     string;
 }
 
 /** Ключ группы брони либо null, если бронь нельзя безопасно связать с другими. */
@@ -29,10 +33,10 @@ export function groupKeyOf(data: Record<string, unknown>): GroupKey | null {
   const showId = typeof data.showId === 'string' ? data.showId.trim() : '';
   if (!userId || !showId) return null;
 
-  const startMs = bookingOccurrenceStartUtcMs(data as BookingOccurrence);
-  if (startMs === null) return null;
+  const day = bookingPerformanceDay(data as BookingOccurrence);
+  if (day === null) return null;
 
-  return { userId, showId, startMs };
+  return { userId, showId, day };
 }
 
 /** Активная бронь — та же, что занимает место в зале: не отменена и не протухла. */
@@ -48,7 +52,7 @@ function sameGroup(data: Record<string, unknown>, key: GroupKey): boolean {
   return other !== null
     && other.userId  === key.userId
     && other.showId  === key.showId
-    && other.startMs === key.startMs;
+    && other.day     === key.day;
 }
 
 /**
@@ -72,21 +76,20 @@ export function selectGroupMembers<T extends GroupDoc>(root: T, candidates: T[])
 export const isAttended = (b: CheckinBooking): boolean => b.status === 'attended';
 export const isPaid     = (b: CheckinBooking): boolean => b.paymentStatus === 'paid';
 
-/** Оплата на месте, деньги ещё не получены — их принимает сотрудник на входе. */
-export const isCashDue = (b: CheckinBooking): boolean =>
-  b.paymentMethod === 'on_site' && b.paymentStatus === 'not_paid';
-
 /**
- * Непрошедшая бронь, по которой нельзя пройти прямо сейчас: не оплачена и
- * оплату нельзя принять на входе (ожидается банковский перевод и т. п.).
+ * Деньги ещё не получены — их принимает сотрудник на входе. Это и «оплата на
+ * месте», и перевод, который не дошёл до начала спектакля: зритель пришёл
+ * с QR из письма, и у входа нет тупика «перевод не подтверждён».
  */
+export const isCashDue = (b: CheckinBooking): boolean =>
+  b.paymentStatus === 'not_paid' || b.paymentStatus === 'awaiting_transfer';
+
+/** Непрошедшая бронь в состоянии, которое нельзя принять на входе (неизвестный статус оплаты). */
 export const isBlocked = (b: CheckinBooking): boolean =>
   !isAttended(b) && !isPaid(b) && !isCashDue(b);
 
 /** Сводка группы. Суммы — из сохранённого totalAmount (скидка уже учтена). */
-export function summarizeGroup(
-  scannedBookingId: string, bookings: CheckinBooking[], showRelevance: ShowRelevance,
-): CheckinGroup {
+export function summarizeGroup(scannedBookingId: string, bookings: CheckinBooking[]): CheckinGroup {
   let totalTickets = 0, attendedTickets = 0, paidAmount = 0, cashDue = 0, remainingBookings = 0;
   const blockedBookingIds: string[] = [];
 
@@ -112,10 +115,10 @@ export function summarizeGroup(
     cashDue,
     remainingBookings,
     blockedBookingIds,
-    showRelevance,
+    // Спектакль группы проверяется по отсканированной брони (wrongShow) —
+    // все брони группы выписаны на тот же сеанс по построению.
     canCheckIn: remainingBookings > 0
       && blockedBookingIds.length === 0
-      && showRelevance !== 'too_late'
-      && showRelevance !== 'unknown',
+      && !bookings.some(b => b.wrongShow),
   };
 }

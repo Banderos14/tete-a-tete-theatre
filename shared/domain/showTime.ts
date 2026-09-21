@@ -106,6 +106,19 @@ export function bookingOccurrenceStartUtcMs(booking: BookingOccurrence): number 
   return parseShowStartUtcMs(String(booking.showDate ?? ''), String(booking.showTime ?? ''));
 }
 
+/**
+ * Календарный день спектакля по Парижу: «2026-09-17». Нужен identity сеанса:
+ * время внутри вечера можно поправить (20:00 → 20:30), а день — это уже
+ * другой сеанс.
+ */
+export function parisDateKey(utcMs: number): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: THEATRE_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date(utcMs));
+  const pick = (type: string) => parts.find(p => p.type === type)?.value ?? '';
+  return `${pick('year')}-${pick('month')}-${pick('day')}`;
+}
+
 // Момент, после которого спектакль считается сыгранным.
 export function showEndUtcMs(startUtcMs: number): number {
   return startUtcMs + SHOW_END_BUFFER_MS;

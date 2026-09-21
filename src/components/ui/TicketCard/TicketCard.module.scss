@@ -324,8 +324,8 @@
 
 .qrImg {
   display: block;
-  width: 148px;
-  height: 148px;
+  width: 180px;
+  height: 180px;
   // QR всегда квадратный. Глобальный reset даёт img max-width: 100%, а колонка
   // QR подстраивается под содержимое (width: min-content) — процентный
   // max-width при таком расчёте схлопывается, ширину колонки задавало
@@ -337,11 +337,13 @@
   flex-shrink: 0;
   border-radius: 12px;
 
+  // На телефоне QR показывают сотруднику, который сканирует его другим
+  // телефоном: чем крупнее, тем быстрее он читается.
   @include mixins.small {
-    width: min(220px, calc(100vw - 96px));
-    height: min(220px, calc(100vw - 96px));
-    min-width: 180px;
-    min-height: 180px;
+    width: min(300px, calc(100vw - 72px));
+    height: min(300px, calc(100vw - 72px));
+    min-width: 200px;
+    min-height: 200px;
   }
 }
 
@@ -360,13 +362,21 @@
   50%       { opacity: 0.85; }
 }
 
-.qrHint {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--fg-mute);
+.qrPayNote {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #8a5a12;
   text-align: center;
+  max-width: 220px;
+}
+
+.qrHint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--paper-ink, #241a16);
+  font-weight: 600;
+  text-align: center;
+  max-width: 220px;
 }
 
 .details {

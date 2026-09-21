@@ -1,24 +1,51 @@
-// Результат проверки билета: использован / действителен / оплата на месте /
-// недействителен. Четыре варианта делят один каркас: раньше карточка была
-// скопирована четырежды, и правка шапки или строки требовала четырёх одинаковых
-// правок. Состав строк у каждого варианта сохранён прежний.
+// Результат проверки одиночного билета.
+//
+// Варианты: проход только что отмечен / уже использован / оплачен — можно
+// пропустить / не оплачено, принять деньги / билет на другой спектакль /
+// недействителен (отменён, аннулирован).
+// Все делят один каркас: раньше карточка была скопирована четырежды, и правка
+// шапки или строки требовала четырёх одинаковых правок.
+//
+// Главное правило экрана — цвет и заголовок читаются издалека и не врут:
+// неоплаченный билет «оплата на месте» раньше был зелёным «ДЕЙСТВИТЕЛЕН», и
+// сотрудник в очереди мог пропустить зрителя, не взяв денег.
 
 import type { ReactNode } from 'react';
-import type { CheckinBooking } from '../../services/checkinService';
+import {
+  IconAlertTriangle, IconCash, IconCircleCheck, IconCircleX, IconTheater, IconUserCheck,
+  type Icon,
+} from '@tabler/icons-react';
+import type { CheckinBooking } from '../../services/adminBookingService';
+import { formatAttendedAt } from './checkinShows';
 import styles from './TicketCheckPage.module.scss';
 
-type Variant = 'used' | 'valid' | 'invalid';
+type Variant = 'done' | 'used' | 'valid' | 'cash' | 'wrongShow' | 'invalid';
 
 const VARIANT_CARD: Record<Variant, string> = {
+  done:    styles.cardValid,
   used:    styles.cardUsed,
   valid:   styles.cardValid,
+  cash:    styles.cardUsed,
+  wrongShow: styles.cardInvalid,
   invalid: styles.cardInvalid,
 };
 
 const VARIANT_STATUS: Record<Variant, string> = {
+  done:    styles.cardStatusValid,
   used:    styles.cardStatusUsed,
   valid:   styles.cardStatusValid,
+  cash:    styles.cardStatusUsed,
+  wrongShow: styles.cardStatusInvalid,
   invalid: styles.cardStatusInvalid,
+};
+
+const VARIANT_ICON: Record<Variant, Icon> = {
+  done:    IconUserCheck,
+  used:    IconAlertTriangle,
+  valid:   IconCircleCheck,
+  cash:    IconCash,
+  wrongShow: IconTheater,
+  invalid: IconCircleX,
 };
 
 function CardRow({ label, value, valueClass }: { label: string; value: ReactNode; valueClass?: string }) {
@@ -30,20 +57,20 @@ function CardRow({ label, value, valueClass }: { label: string; value: ReactNode
   );
 }
 
-function ResultCard({ variant, icon, status, rows, reason, actions }: {
+function ResultCard({ variant, status, rows, reason, actions }: {
   variant: Variant;
-  icon: string;
   status: string;
   rows?: ReactNode;
   /** Текст вместо таблицы строк — когда брони нет и показывать нечего. */
   reason?: ReactNode;
   actions: ReactNode;
 }) {
+  const StatusIcon = VARIANT_ICON[variant];
   return (
     <div className={styles.cardWrap}>
-      <div className={`${styles.card} ${VARIANT_CARD[variant]}`}>
+      <div className={`${styles.card} ${VARIANT_CARD[variant]}`} role="status">
         <div className={styles.cardHeader}>
-          <span className={styles.cardIcon}>{icon}</span>
+          <StatusIcon className={`${styles.cardIcon} ${VARIANT_STATUS[variant]}`} size={28} stroke={1.5} aria-hidden="true" />
           <span className={`${styles.cardStatus} ${VARIANT_STATUS[variant]}`}>{status}</span>
         </div>
         {rows   && <div className={styles.cardDetails}>{rows}</div>}
@@ -55,54 +82,65 @@ function ResultCard({ variant, icon, status, rows, reason, actions }: {
 }
 
 function ticketsWord(n: number): string {
-  if (n === 1) return 'билет';
-  if (n >= 2 && n <= 4) return 'билета';
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'билет';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'билета';
   return 'билетов';
 }
 
-function invalidReason(b: CheckinBooking, isStaleShow: boolean, isBankTransferUnpaid: boolean): string {
-  if (isBankTransferUnpaid)                     return 'Перевод ещё не получен';
-  if (isStaleShow)                              return `Билет на прошедший спектакль (${b.showDate})`;
+function invalidReason(b: CheckinBooking): string {
+  if (b.paymentStatus === 'expired')            return 'Срок оплаты перевода истёк — бронь аннулирована';
   if (b.status === 'cancelled')                 return 'Бронь отменена';
-  if (b.paymentStatus === 'expired')            return 'Срок оплаты истёк — бронь аннулирована';
-  if (b.paymentStatus === 'awaiting_transfer')  return 'Перевод ещё не получен';
-  if (b.paymentStatus !== 'paid')               return 'Билет не оплачен';
-  return 'Недействителен';
+  return 'Состояние брони не позволяет пропустить — проверьте её в админке';
 }
 
 /** Ошибка распознавания: брони нет, показываем только причину. */
-export function ScanErrorCard({ message, onReset, resetLabel }: {
+export function ScanErrorCard({ message, onReset, resetLabel, onNext }: {
   message: string;
   onReset: () => void;
   resetLabel: string;
+  onNext: () => void;
 }) {
   return (
     <ResultCard
       variant="invalid"
-      icon="❌"
-      status="БИЛЕТ НЕ ДЕЙСТВИТЕЛЕН"
+      status="БИЛЕТ НЕ ПРИНЯТ"
       reason={message}
-      actions={<button className={styles.secondaryBtn} onClick={onReset}>{resetLabel}</button>}
+      actions={
+        <>
+          <button className={styles.startBtn} onClick={onNext}>Сканировать следующий</button>
+          <button className={styles.secondaryBtn} onClick={onReset}>{resetLabel}</button>
+        </>
+      }
     />
   );
 }
 
-export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceived, onMarkAttended }: {
+export function TicketResultCard({
+  booking: b, justCheckedIn, onReset, resetLabel, onNext, onCashReceived, onPayAndCheckIn, onMarkAttended,
+}: {
   booking: CheckinBooking;
+  /** Проход отмечен только что, с этого экрана. */
+  justCheckedIn: boolean;
   onReset: () => void;
   resetLabel: string;
+  /** Сразу открыть камеру для следующего зрителя. */
+  onNext: () => void;
   onCashReceived: () => void;
+  onPayAndCheckIn: () => void;
   onMarkAttended: () => void;
 }) {
-  // Билет прошедшего спектакля не должен считаться действительным только потому,
-  // что код существует в базе. Актуальность даты определяет сервер.
-  const isStaleShow          = b.showRelevance === 'too_late';
-  const isEarlyShow          = b.showRelevance === 'too_early';
-  const isOnSiteUnpaid       = !isStaleShow && b.paymentMethod === 'on_site' && b.paymentStatus === 'not_paid';
-  const isBankTransferUnpaid = b.paymentMethod === 'bank_transfer' && b.paymentStatus !== 'paid';
-  const isPaidValid          = !isStaleShow && b.paymentStatus === 'paid' && b.status === 'confirmed';
-  const isAttended           = b.status === 'attended';
+  const isDead        = b.status === 'cancelled' || b.paymentStatus === 'expired';
+  const isAttended    = b.status === 'attended';
+  const isPaidValid   = !isDead && !isAttended && b.paymentStatus === 'paid';
+  // Не оплачено: и «оплата на месте», и перевод, который не дошёл, — деньги
+  // принимаются у входа. Сумма — из брони, как её посчитал сервер.
+  const isUnpaid      = !isDead && !isAttended
+    && (b.paymentStatus === 'not_paid' || b.paymentStatus === 'awaiting_transfer');
+  const isTransfer    = b.paymentStatus === 'awaiting_transfer';
+  const attendedAt    = formatAttendedAt(b.attendedAtMs);
 
+  const nextBtn  = <button className={styles.startBtn} onClick={onNext}>Сканировать следующий</button>;
   const resetBtn = <button className={styles.secondaryBtn} onClick={onReset}>{resetLabel}</button>;
 
   // По одному QR проходит вся бронь целиком, поэтому здесь показываем
@@ -118,80 +156,108 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
     />
   );
 
-  // Проверка задолго до спектакля — это НЕ расхождение даты, а обычная
-  // ситуация: билет сканируют заранее. Раньше обе строки рисовались одним
-  // предупреждением «Билет на другую дату», и корректный билет на свой же
-  // вечер получал ложную тревогу всякий раз, когда сегодня не день показа.
-  // Здесь это просто справка о том, когда состоится сеанс.
-  const earlyNotice = isEarlyShow ? (
-    <CardRow
-      label="Сеанс"
-      value={`Спектакль состоится ${b.showDate} · ${b.showTime}`}
-      valueClass={styles.cardValueNotice}
-    />
-  ) : null;
-
-  // Настоящее расхождение: бронь выписана на один вечер, а спектакль с тем же
-  // id идёт в каталоге в другой — значит, показ перенесли. Дата сканирования
-  // к этому признаку отношения не имеет. Проход не запрещаем — решает
-  // сотрудник, — но расхождение обязано быть видно.
-  const dateWarning = b.showDateDiffers ? (
-    <CardRow
-      label="Внимание"
-      value={`Бронь на другую дату спектакля — ${b.showDate}`}
-      valueClass={styles.cardValueReason}
-    />
-  ) : null;
-
-  // «Недействителен» дату не показывает — она уже звучит в причине отказа.
   const whoAndWhat = (
     <>
       <CardRow label="Зритель"   value={b.userName} />
       <CardRow label="Спектакль" value={b.showTitle} />
     </>
   );
-  const ticketCodeRow = <CardRow label="Код билета" value={b.ticketCode} valueClass={styles.mono} />;
+  const ticketCodeRow = <CardRow label="Код брони" value={b.ticketCode} valueClass={styles.mono} />;
   const identityRows = (
     <>
       {whoAndWhat}
-      <CardRow label="Дата" value={b.showDate} />
+      <CardRow label="Сеанс" value={`${b.showDate} · ${b.showTime}`} />
+      {b.ticketTypeLabel && <CardRow label="Тариф" value={b.ticketTypeLabel} />}
       {ticketCodeRow}
     </>
   );
+  const paidRow = <CardRow label="Оплата" value="ОПЛАЧЕНО" valueClass={styles.cardValuePaid} />;
 
   if (isAttended) {
     return (
       <ResultCard
-        variant="used"
-        icon="⚠️"
-        status="БИЛЕТ УЖЕ ИСПОЛЬЗОВАН"
-        rows={<>{identityRows}{countRow}</>}
-        actions={resetBtn}
+        variant={justCheckedIn ? 'done' : 'used'}
+        status={justCheckedIn ? 'ПРОХОД ОТМЕЧЕН' : 'БИЛЕТ УЖЕ ИСПОЛЬЗОВАН'}
+        rows={
+          <>
+            {!justCheckedIn && attendedAt && (
+              <CardRow label="Прошёл" value={attendedAt} valueClass={styles.cardValueReason} />
+            )}
+            {identityRows}
+            {countRow}
+          </>
+        }
+        actions={<>{nextBtn}{resetBtn}</>}
       />
     );
   }
 
-  if (isOnSiteUnpaid) {
+  // Отменённая или аннулированная бронь — никогда не зелёная.
+  if (isDead) {
     return (
       <ResultCard
-        variant="valid"
-        icon="✅"
-        status="БИЛЕТ ДЕЙСТВИТЕЛЕН"
+        variant="invalid"
+        status={b.paymentStatus === 'expired' ? 'БРОНЬ АННУЛИРОВАНА' : 'БРОНЬ ОТМЕНЕНА'}
+        rows={
+          <>
+            {whoAndWhat}
+            {ticketCodeRow}
+            <CardRow label="Причина" value={invalidReason(b)} valueClass={styles.cardValueReason} />
+          </>
+        }
+        actions={<>{nextBtn}{resetBtn}</>}
+      />
+    );
+  }
+
+  // Билет другого спектакля: показываем, на какой он, и ничего не отмечаем.
+  if (b.wrongShow && !isAttended) {
+    return (
+      <ResultCard
+        variant="wrongShow"
+        status="БИЛЕТ НА ДРУГОЙ СПЕКТАКЛЬ"
+        rows={
+          <>
+            <CardRow label="Спектакль" value={b.showTitle} valueClass={styles.cardValueReason} />
+            <CardRow label="Дата" value={b.showDate} valueClass={styles.cardValueReason} />
+            <CardRow label="Время" value={b.showTime} valueClass={styles.cardValueReason} />
+            <CardRow label="Зритель" value={b.userName} />
+            {ticketCodeRow}
+            {countRow}
+          </>
+        }
+        actions={<>{nextBtn}{resetBtn}</>}
+      />
+    );
+  }
+
+  if (isUnpaid) {
+    return (
+      <ResultCard
+        variant="cash"
+        status={b.totalAmount > 0 ? `НЕ ОПЛАЧЕНО · К ОПЛАТЕ ${b.totalAmount} €` : 'НЕ ОПЛАЧЕНО'}
         rows={
           <>
             {identityRows}
             {countRow}
             {b.totalAmount > 0 && (
-              <CardRow label="Сумма" value={<>{b.totalAmount}&nbsp;€</>} valueClass={styles.cardValueAmount} />
+              <CardRow label="К оплате" value={<>{b.totalAmount}&nbsp;€</>} valueClass={styles.cardValueAmount} />
             )}
-            <CardRow label="Оплата" value="НЕ ОПЛАЧЕНО — ОПЛАТА НА МЕСТЕ" valueClass={styles.cardValueUnpaid} />
-            {earlyNotice}
-            {dateWarning}
+            <CardRow
+              label="Оплата"
+              value={isTransfer
+                ? 'ПЕРЕВОД НЕ ПОЛУЧЕН — спросите зрителя, прежде чем брать деньги'
+                : 'НЕ ОПЛАЧЕНО — ОПЛАТА НА МЕСТЕ'}
+              valueClass={styles.cardValueUnpaid}
+            />
           </>
         }
         actions={
           <>
-            <button className={styles.cashBtn} onClick={onCashReceived}>Оплачено</button>
+            <button className={styles.cashBtn} onClick={onPayAndCheckIn}>
+              {b.totalAmount > 0 ? `Принять ${b.totalAmount} € и пропустить` : 'Подтвердить и пропустить'}
+            </button>
+            <button className={styles.secondaryBtn} onClick={onCashReceived}>Только принять оплату</button>
             {resetBtn}
           </>
         }
@@ -203,20 +269,19 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
     return (
       <ResultCard
         variant="valid"
-        icon="✅"
-        status="БИЛЕТ ДЕЙСТВИТЕЛЕН"
+        status="ОПЛАЧЕНО · МОЖНО ПРОПУСТИТЬ"
         rows={
           <>
             {identityRows}
             {countRow}
-            <CardRow label="Оплата" value="Оплачено" />
-            {earlyNotice}
-            {dateWarning}
+            {paidRow}
           </>
         }
         actions={
           <>
-            <button className={styles.markBtn} onClick={onMarkAttended}>Отметить посещение</button>
+            <button className={styles.markBtn} onClick={onMarkAttended}>
+              Отметить проход — {b.seatsCount} {ticketsWord(b.seatsCount)}
+            </button>
             {resetBtn}
           </>
         }
@@ -227,20 +292,15 @@ export function TicketResultCard({ booking: b, onReset, resetLabel, onCashReceiv
   return (
     <ResultCard
       variant="invalid"
-      icon="❌"
-      status="БИЛЕТ НЕ ДЕЙСТВИТЕЛЕН"
+      status="БИЛЕТ НЕ ПРИНЯТ"
       rows={
         <>
           {whoAndWhat}
           {ticketCodeRow}
-          <CardRow
-            label="Причина"
-            value={invalidReason(b, isStaleShow, isBankTransferUnpaid)}
-            valueClass={styles.cardValueReason}
-          />
+          <CardRow label="Причина" value={invalidReason(b)} valueClass={styles.cardValueReason} />
         </>
       }
-      actions={resetBtn}
+      actions={<>{nextBtn}{resetBtn}</>}
     />
   );
 }

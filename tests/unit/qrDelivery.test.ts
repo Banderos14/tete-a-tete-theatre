@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { generateTicketQR } from '../../src/services/qrService.js';
 import { parseTicketCodeFromScan } from '../../src/utils/parseTicketCode.js';
-import { projectSource } from '../helpers/serverSource.js';
+import { projectSource, screenSource } from '../helpers/serverSource.js';
 
 const CODE  = 'ABCD-2345';
 const OTHER = 'WXYZ-6789';
@@ -40,15 +40,19 @@ describe('QR строится только из сохранённого ticketC
   });
 
   it('в ссылку не подмешивается ничего, кроме кода', () => {
+    // Формат ссылки общий для кабинета, PDF и письма — живёт в shared.
+    const shared = projectSource('shared/domain/ticketCode.ts');
+    expect(shared).toContain('ticket=${encodeURIComponent(ticketCode)}');
     const src = projectSource('src/services/qrService.ts');
-    expect(src).toContain('ticket=${encodeURIComponent(ticketCode)}');
+    expect(src).toContain('ticketQrPayload(');
     for (const volatile of ['Date.now', 'Math.random', 'crypto', 'token', 'uid']) {
       expect(src, volatile).not.toContain(volatile);
+      expect(shared, volatile).not.toContain(volatile);
     }
   });
 
   it('QR в кабинете рисуется по коду брони, а не по состоянию экрана', () => {
-    expect(projectSource('src/components/ui/TicketCard/TicketCard.tsx'))
+    expect(screenSource('src/components/ui/TicketCard'))
       .toContain('generateTicketQR(b.ticketCode)');
   });
 });
@@ -66,7 +70,7 @@ describe('PDF сохраняется и на телефоне', () => {
     expect(pdf).toContain('canShare');
     expect(pdf).toContain('navigator');
     expect(pdf).not.toMatch(/navigator\.userAgent/);
-    expect(projectSource('src/components/ui/TicketCard/TicketCard.tsx')).not.toMatch(/userAgent/);
+    expect(screenSource('src/components/ui/TicketCard')).not.toMatch(/userAgent/);
   });
 
   it('canShare проверяется именно с файлом', () => {
@@ -84,7 +88,7 @@ describe('PDF сохраняется и на телефоне', () => {
   });
 
   it('«Скачать» и «Поделиться» — две отдельные кнопки, обе локализованы', () => {
-    const card = projectSource('src/components/ui/TicketCard/TicketCard.tsx');
+    const card = screenSource('src/components/ui/TicketCard');
     expect(card).toContain('onClick={pdf.download}');
     expect(card).toContain('onClick={pdf.share}');
     expect(card).toContain('t.ticketPdf.download');
@@ -97,7 +101,7 @@ describe('PDF сохраняется и на телефоне', () => {
 
   it('в PDF попадает тот же QR, что показан в кабинете', () => {
     // PDF — удобство, а не условие прохода: он печатает уже готовый qrSrc.
-    expect(projectSource('src/components/ui/TicketCard/TicketCard.tsx'))
+    expect(screenSource('src/components/ui/TicketCard'))
       .toContain('useTicketPdf(b, qrSrc, lang)');
     expect(projectSource('src/components/ui/TicketCard/useTicketPdf.ts'))
       .toContain('booking: b, qrSrc, lang');

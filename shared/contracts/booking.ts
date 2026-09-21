@@ -37,6 +37,8 @@ export interface CreateBookingResponse {
   originalAmount?:         number;
   loyaltyDiscountApplied?: boolean;
   loyaltyDiscountAmount?:  number;
+  /** Письмо-билет: отправлено сервером, не нужно (нет адреса/провайдера) или не ушло. */
+  ticketEmail?:            'sent' | 'skipped' | 'failed';
 }
 
 /** Тело POST /api/cancel-booking. */

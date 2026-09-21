@@ -1,14 +1,22 @@
 import QRCode from 'qrcode';
-import { getPublicSiteBase } from '../utils/showUrl';
+import { ticketQrPayload } from '../../shared/domain/ticketCode';
+
+/**
+ * Адрес сайта для QR-билета. Намеренно без запасного window.location.origin:
+ * QR из кабинета на localhost или preview иначе отличался бы от QR в письме.
+ */
+export function ticketQrSiteBase(): string {
+  return (import.meta.env.VITE_PUBLIC_SITE_URL as string | undefined)?.trim() ?? '';
+}
+
+/** Содержимое QR — то же, что кладёт в письмо сервер (shared/domain/ticketCode). */
+export function ticketQrContent(ticketCode: string): string {
+  return ticketQrPayload(ticketCode, ticketQrSiteBase());
+}
 
 export async function generateTicketQR(ticketCode: string): Promise<string> {
-  // Базовый адрес считается тем же местом, что и для ссылок в письмах:
-  // VITE_PUBLIC_SITE_URL, иначе текущий origin.
-  const base = getPublicSiteBase();
-  // Формат /#/ — HashRouter: без него Vercel отдаст 404 при прямом переходе.
-  const url = `${base}/#/admin/checkin?ticket=${encodeURIComponent(ticketCode)}`;
-  return QRCode.toDataURL(url, {
-    width: 280,
+  return QRCode.toDataURL(ticketQrContent(ticketCode), {
+    width: 400,
     margin: 2,
     color: { dark: '#000000', light: '#ffffff' },
     errorCorrectionLevel: 'M',

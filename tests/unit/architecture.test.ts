@@ -197,11 +197,17 @@ describe('секреты остаются на сервере', () => {
 describe('endpoint-файлы Vercel', () => {
   // Vercel делает endpoint'ом КАЖДЫЙ .ts верхнего уровня api/. Список
   // зафиксирован: переименование файла меняет публичный URL и ломает клиентов.
+  // admin-booking заменил checkin-ticket, delete-booking и send-email:
+  // Hobby-план Vercel — не больше 12 функций на деплой.
   const EXPECTED = [
-    'cancel-booking.ts', 'checkin-ticket.ts', 'create-booking.ts', 'delete-booking.ts',
-    'delete-user.ts', 'expire-bookings.ts', 'newsletter.ts', 'register-audience.ts', 'send-email.ts',
+    'admin-booking.ts', 'cancel-booking.ts', 'create-booking.ts',
+    'delete-user.ts', 'expire-bookings.ts', 'newsletter.ts', 'register-audience.ts',
     'show-availability.ts',
   ];
+
+  it('функций не больше лимита Hobby-плана', () => {
+    expect(apiFiles.length).toBeLessThanOrEqual(12);
+  });
 
   it('набор endpoint-файлов не изменился', () => {
     expect(apiFiles).toEqual(EXPECTED);

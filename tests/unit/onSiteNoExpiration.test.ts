@@ -115,19 +115,16 @@ describe('ни один механизм протухания не смотри�
     expect(src).toMatch(/if \(b\.paymentStatus !== 'awaiting_transfer'\) return false;/);
   });
 
-  it('кабинет и админка вызывают ровно этот общий фоллбек', () => {
-    // Своей логики срока у экранов быть не должно — иначе правило разъедется
-    // именно там, где это труднее всего заметить. Разрешено лишь обновление
-    // локального стейта по результату общего фоллбека.
-    for (const src of [
-      screenSource('src/components/ui/ProfileDrawer'),
-      projectSource('src/pages/AdminPage/useAdminData.ts'),
-    ]) {
-      expect(src).toContain('expireOverdueBookings');
-      expect(src).not.toContain('isTransferOverdue');
-      expect(src).not.toMatch(/paymentExpiresAt[^?]*[<>]/);
-    }
+  it('кабинет вызывает ровно этот общий фоллбек, админка не пишет вовсе', () => {
+    // Своей логики срока у экранов быть не должно. Админка при открытии больше
+    // ничего не аннулирует — это делает cron на сервере.
+    const drawer = screenSource('src/components/ui/ProfileDrawer');
+    expect(drawer).toContain('expireOverdueBookings');
+    expect(drawer).not.toContain('isTransferOverdue');
+    expect(drawer).not.toMatch(/paymentExpiresAt[^?]*[<>]/);
+    expect(projectSource('src/pages/AdminPage/useAdminData.ts')).not.toContain('expireOverdueBookings');
   });
+
 
   it('paymentExpiresAt ставится только банковскому переводу', () => {
     const create = endpointSource('api/create-booking.ts');
@@ -148,6 +145,7 @@ describe('ни один механизм протухания не смотри�
 
   it('QR доступен брони на месте до оплаты — сотрудник принимает деньги у двери', () => {
     const card = projectSource('src/components/ui/TicketCard/TicketCard.tsx');
+    // QR/PDF-блок — TicketQrPanel; сама карточка решает, когда предложить его показать.
     expect(card).toMatch(/b\.paymentMethod === 'on_site' && payStatus === 'not_paid'/);
     const branch = card.slice(card.indexOf("b.paymentMethod === 'on_site' && payStatus === 'not_paid'"));
     expect(branch.slice(0, 300)).toContain('Показать QR');

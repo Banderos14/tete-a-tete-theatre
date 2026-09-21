@@ -193,14 +193,17 @@
 ## 13. Что проверять в Vercel
 
 1. Vercel Dashboard → проект → Deployments → последний деплой → статус `Ready`.
-2. Functions → посмотри логи. Функций теперь семь:
-   `create-booking`, `cancel-booking`, `checkin-ticket`, `show-availability`,
-   `register-audience`, `expire-bookings`, `send-email`, `delete-user`.
+2. Functions → посмотри логи. Функций восемь (лимит Hobby — 12):
+   `admin-booking`, `create-booking`, `cancel-booking`, `show-availability`,
+   `register-audience`, `expire-bookings`, `newsletter`, `delete-user`.
+   Письма-билеты отправляют `create-booking` (после брони) и `admin-booking`
+   (оплата, отмена, «Отправить билет»).
 3. Settings → Environment Variables — должны быть заполнены:
    `RESEND_API_KEY`, `EMAIL_FROM`, `FIREBASE_SERVICE_ACCOUNT`, `ALLOWED_ORIGIN`,
    `CRON_SECRET`.
    Без `FIREBASE_SERVICE_ACCOUNT` не работает ни бронирование, ни отмена, ни
-   проверка билетов. Без `CRON_SECRET` endpoint протухания примет запрос от кого угодно.
+   проверка билетов. Без `CRON_SECRET` endpoint протухания отклоняет все запросы, и
+   просроченные переводы не аннулируются.
 4. Settings → Cron Jobs → задание `/api/expire-bookings` должно быть активно
    (расписание задано в `vercel.json`).
 5. **Проверь**: в Environment Variables нет реальных банковских реквизитов или секретных ключей без необходимости.
@@ -230,7 +233,7 @@
 
 **Что делать, если письмо не пришло:**
 - Resend → Emails → проверь статус и ошибку.
-- Vercel → Functions → `api/send-email` → посмотри логи.
+- Vercel → Functions → `api/newsletter` → посмотри логи.
 - Проверь, что `RESEND_API_KEY` и `EMAIL_FROM` заполнены в Vercel Dashboard.
 - С `onboarding@resend.dev` письма уходят только на email владельца Resend-аккаунта.
   Для отправки всем нужен собственный домен в Resend.

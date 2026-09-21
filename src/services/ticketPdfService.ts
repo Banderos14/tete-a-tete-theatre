@@ -44,24 +44,59 @@ function formatDateForPdf(showDate: string): string {
 const LABELS = {
   FR: {
     date: 'DATE', time: 'HEURE', address: 'ADRESSE',
-    guest: 'SPECTATEUR', tickets: 'BILLETS', amount: 'MONTANT',
+    guest: 'SPECTATEUR', tickets: 'BILLETS', seats: 'PLACES', amount: 'MONTANT',
     code: 'CODE DE RÉSERVATION',
-    footer: "Présentez ce billet à l'entrée.",
+    footer: "Présentez ce QR code au personnel du théâtre à l'entrée.",
   },
   RU: {
     date: 'ДАТА', time: 'ВРЕМЯ', address: 'АДРЕС',
-    guest: 'ЗРИТЕЛЬ', tickets: 'БИЛЕТЫ', amount: 'СУММА',
+    guest: 'ЗРИТЕЛЬ', tickets: 'БИЛЕТЫ', seats: 'МЕСТА', amount: 'СУММА',
     code: 'КОД БРОНИ',
-    footer: 'Предъявите этот билет на входе.',
+    footer: 'Покажите этот QR-код сотруднику театра при входе.',
   },
   // Транслит — используется когда Inter не загрузился и кириллица недоступна.
   RU_LATIN: {
     date: 'DATA', time: 'VREMYA', address: 'ADRES',
-    guest: 'ZRITEL', tickets: 'BILETY', amount: 'SUMMA',
+    guest: 'ZRITEL', tickets: 'BILETY', seats: 'MESTA', amount: 'SUMMA',
     code: 'KOD BRONI',
-    footer: 'Predyavite etot bilet na vkhode.',
+    footer: 'Pokazhite etot QR-kod sotrudniku teatra pri vkhode.',
   },
 } as const;
+
+/** Та же инструкция, что в письме, — по-английски для всех. */
+const PDF_EN_INSTRUCTION = 'Show this QR code to the theatre staff at the entrance.';
+
+/**
+ * Штамп оплаты на билете.
+ *
+ * PDF собирается из той же живой брони, что и кабинет (подписка Firestore),
+ * поэтому штамп всегда отражает текущий статус: после подтверждения оплаты
+ * следующая загрузка уже «оплачено» — хранимого устаревшего файла нет.
+ *
+ * null — штампа нет: у отменённой/протухшей брони PDF-билета не бывает.
+ * Неоплаченный билет (касса или перевод) получает отдельный янтарный штамп —
+ * он не должен выглядеть оплаченным.
+ */
+export interface TicketPdfStatus {
+  tone:  'paid' | 'venue';
+  fr:    string;
+  ru:    string;
+  /** Когда кириллический шрифт недоступен. */
+  latin: string;
+}
+
+export function ticketPdfStatus(b: Pick<Booking, 'status' | 'paymentStatus' | 'paymentMethod'>): TicketPdfStatus | null {
+  const pay = b.paymentStatus ?? 'not_paid';
+  if (b.status === 'cancelled' || pay === 'expired') return null;
+  if (pay === 'paid') return { tone: 'paid', fr: 'PAYÉ', ru: 'Оплачено', latin: 'PAID' };
+  if (pay === 'awaiting_transfer') {
+    return { tone: 'venue', fr: 'EN ATTENTE DE PAIEMENT', ru: 'Ожидает оплаты', latin: 'PAYMENT PENDING' };
+  }
+  if (pay === 'not_paid') {
+    return { tone: 'venue', fr: 'PAIEMENT SUR PLACE', ru: 'Оплата на месте', latin: 'PAY AT VENUE' };
+  }
+  return null;
+}
 
 // Возвращает base64 шрифта либо null, если по адресу лежит не шрифт.
 // Проверяем и Content-Type, и сигнатуру sfnt: SPA-rewrite отдаёт index.html
@@ -355,7 +390,7 @@ export async function buildTicketPdf(
   // Таблица деталей бронирования
   const labelX  = MARGIN + 2;
   const valueX  = 74;
-  const rowStep = 7.5;
+  const rowStep = 6.4;
 
   const rows: [string, string][] = [
     [L.date,    formatDateForPdf(booking.showDate)],
@@ -364,6 +399,8 @@ export async function buildTicketPdf(
     [L.guest,   guestName],
     [L.tickets, String(booking.ticketsCount)],
   ];
+  // Сколько человек проходит по билету (семейный тариф: один билет — три места).
+  rows.push([L.seats, String(booking.seatsCount && booking.seatsCount > 0 ? booking.seatsCount : booking.ticketsCount)]);
   if (booking.totalAmount > 0) rows.push([L.amount, `${booking.totalAmount} EUR`]);
   rows.push([L.code, booking.ticketCode]);
 
@@ -394,29 +431,73 @@ export async function buildTicketPdf(
   doc.line(MARGIN, y, W - MARGIN, y);
   y += 7;
 
-  // QR-код
-  const qrSize = 66;
-  doc.addImage(qrDataUrl, 'PNG', (W - qrSize) / 2, y, qrSize, qrSize);
-  y += qrSize + 6;
+  // Нижний блок в две колонки: слева крупный QR, справа — статус оплаты,
+  // код брони и инструкция, что с этим QR делать. Столбиком всё это не
+  // помещалось на A5: QR съезжал за край страницы.
+  const qrSize  = 60;
+  const colX    = MARGIN + qrSize + 8;
+  const colW    = W - MARGIN - colX;
+  const blockY  = y;
+  doc.addImage(qrDataUrl, 'PNG', MARGIN, blockY, qrSize, qrSize);
 
-  // Код билета
+  let ry = blockY + 2;
+
+  // Штамп оплаты. FR — Helvetica (WinAnsi умеет «É»); RU — кириллицей
+  // декоративным шрифтом заголовка, если он загрузился, иначе латиницей.
+  const status = ticketPdfStatus(booking);
+  if (status) {
+    // Рукописный шрифт читается только строчными — и только если влезает.
+    let useDecor = isRU && hasDecorFont;
+    if (useDecor) {
+      doc.setFont(DECOR_ID, 'normal');
+      doc.setFontSize(13);
+      useDecor = doc.getTextWidth(status.ru) + 8 <= colW;
+    }
+    const label = !isRU ? status.fr : useDecor ? status.ru : status.latin;
+    const [r, g, bl] = status.tone === 'paid' ? [58, 125, 68] : [176, 120, 30];
+    if (useDecor) doc.setFont(DECOR_ID, 'normal'); else H('bold');
+    doc.setFontSize(useDecor ? 13 : 9);
+    const w = doc.getTextWidth(label) + 8;
+    doc.setDrawColor(r, g, bl);
+    doc.setLineWidth(0.7);
+    doc.roundedRect(colX, ry, w, 8, 1.5, 1.5, 'S');
+    doc.setTextColor(r, g, bl);
+    doc.text(label, colX + w / 2, ry + 5.4, { align: 'center' });
+    ry += 12;
+    // Английская подпись статуса — для зрителя и сотрудника без RU/FR.
+    if (label !== status.latin) {
+      H('normal');
+      doc.setFontSize(7);
+      doc.text(status.latin, colX, ry);
+      ry += 5;
+    }
+  }
+
+  // Код брони — его можно продиктовать, если QR не читается.
   doc.setFont('courier', 'bold');
-  doc.setFontSize(17);
+  doc.setFontSize(14);
   doc.setTextColor(28, 24, 22);
-  doc.text(booking.ticketCode, W / 2, y, { align: 'center' });
-  y += 6;
+  doc.text(booking.ticketCode, colX, ry + 4);
+  ry += 11;
 
-  doc.setDrawColor(215, 205, 195);
-  doc.setLineWidth(0.3);
-  doc.line(MARGIN, y, W - MARGIN, y);
-  y += 6;
-
-  // Футер
-  doc.setFontSize(8.5);
-  doc.setTextColor(150, 146, 140);
+  // Главное: что делать с этим QR.
+  const useDecorInstruction = isRU && hasDecorFont && !hasCyrillicFont;
   if (isRU && hasCyrillicFont) doc.setFont(CYR_ID, 'normal');
-  else H('italic');
-  doc.text(L.footer, W / 2, y, { align: 'center' });
+  else if (useDecorInstruction) doc.setFont(DECOR_ID, 'normal');
+  else H('bold');
+  const instruction = useDecorInstruction ? LABELS.RU.footer : L.footer;
+  doc.setFontSize(useDecorInstruction ? 11 : 9);
+  doc.setTextColor(28, 24, 22);
+  const lineH = useDecorInstruction ? 6.2 : 4.4;
+  const lines = doc.splitTextToSize(instruction, colW) as string[];
+  doc.text(lines, colX, ry, { lineHeightFactor: useDecorInstruction ? 1.6 : 1.15 });
+  ry += lines.length * lineH + (useDecorInstruction ? 4 : 2);
+
+  H('italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(120, 116, 110);
+  doc.text(doc.splitTextToSize(PDF_EN_INSTRUCTION, colW) as string[], colX, ry);
+
 
   const fileName = ticketPdfFileName(booking.ticketCode);
   return { blob: toPdfFile(doc.output('blob'), fileName), fileName };

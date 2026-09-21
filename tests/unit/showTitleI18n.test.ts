@@ -70,9 +70,7 @@ describe('локализация названия — одна реализац�
     'src/components/ui/ProfileDrawer/BookingCard.tsx',
     'src/components/ui/ProfileDrawer/AttendedSection.tsx',
     'src/services/ticketPdfService.ts',
-    'src/services/email/templates/confirmation.ts',
-    'src/services/email/templates/paymentPaid.ts',
-    'src/services/email/templates/status.ts',
+    'shared/email/ticketEmail.ts',
   ];
 
   for (const file of TICKET_SURFACES) {
@@ -81,12 +79,10 @@ describe('локализация названия — одна реализац�
     });
   }
 
-  it('письма не подставляют сырое data.showTitle', () => {
+  it('письма не подставляют сырое showTitle', () => {
     // Именно так во французское письмо и попадал русский заголовок.
-    for (const tpl of ['confirmation', 'paymentPaid', 'status']) {
-      const src = projectSource(`src/services/email/templates/${tpl}.ts`);
-      expect(src, tpl).not.toContain('data.showTitle');
-    }
+    const src = projectSource('shared/email/ticketEmail.ts');
+    expect(src).not.toMatch(/\$\{b\.showTitle\}/);
   });
 
   it('кабинет не рисует b.showTitle напрямую', () => {
@@ -95,11 +91,8 @@ describe('локализация названия — одна реализац�
     expect(screenSource('src/components/ui/TicketCard')).not.toContain('{b.showTitle}');
   });
 
-  it('письмам передаётся showId — без него FR-перевод не найти', () => {
-    expect(projectSource('src/components/ui/BookingModal/BookingModal.tsx'))
-      .toMatch(/showId:\s+show\.id/);
-    expect(screenSource('src/pages/TicketCheckPage')).toMatch(/showId:\s+b\.showId/);
-    expect(projectSource('src/pages/AdminPage/useAdminData.ts'))
-      .toMatch(/showId:\s+booking\.showId/);
+  it('письмо берёт showId из брони — без него FR-перевод не найти', () => {
+    expect(projectSource('server/email/ticketEmail.service.ts')).toMatch(/showId:\s+str\(d\.showId\)/);
   });
+
 });
