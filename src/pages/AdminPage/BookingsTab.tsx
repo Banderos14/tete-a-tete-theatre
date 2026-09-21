@@ -258,7 +258,7 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
         {b.loyaltyDiscountApplied && (
           <>
             <br />
-            <span className={styles.loyaltyBadge}>−50% скидка</span>
+            <span className={styles.loyaltyBadge}>−50% на 1 билет</span>
             {b.originalAmount && (
               <span className={styles.loyaltyOrig}>{b.originalAmount}&nbsp;€</span>
             )}

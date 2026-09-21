@@ -19,6 +19,8 @@ import { HomePage } from '../pages/HomePage';
 const AdminPage       = lazy(() => import('../pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const TicketCheckPage = lazy(() => import('../pages/TicketCheckPage').then(m => ({ default: m.TicketCheckPage })));
 const NotFoundPage    = lazy(() => import('../pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
+// Публичный билет из письма — открывается без входа (см. TicketPage).
+const TicketPage      = lazy(() => import('../pages/TicketPage').then(m => ({ default: m.TicketPage })));
 const AuthModal       = lazy(() => import('../components/ui/AuthModal').then(m => ({ default: m.AuthModal })));
 const ProfileDrawer   = lazy(() => import('../components/ui/ProfileDrawer').then(m => ({ default: m.ProfileDrawer })));
 const BookingModal    = lazy(() => import('../components/ui/BookingModal').then(m => ({ default: m.BookingModal })));
@@ -155,6 +157,11 @@ export default function App() {
           <Route path="/admin/checkin" element={
             <ErrorBoundary label="TicketCheckPage" fallback={<RouteErrorScreen />}>
               <Suspense fallback={null}><TicketCheckPage /></Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="/ticket" element={
+            <ErrorBoundary label="TicketPage" fallback={<RouteErrorScreen />}>
+              <Suspense fallback={null}><TicketPage /></Suspense>
             </ErrorBoundary>
           } />
           {/* Неизвестный адрес: человеческая страница вместо белого экрана. */}

@@ -1,47 +1,42 @@
-// Программа лояльности на сервере.
+// Программа лояльности на сервере — адаптер к общему правилу.
 //
-// Зеркалит src/services/loyaltyService.ts: 1 посещение = 1 бронь,
-// каждые 5 посещений — одна скидка 50 %. Здесь функции чистые, чтобы правило
-// можно было проверить тестом, не поднимая Firestore.
+// Формула и определения живут в shared/domain/loyalty.ts (одна реализация на
+// сервер и кабинет). Здесь только перевод «сырых» броней Firestore в вид,
+// который понимает правило. Цена считается ТОЛЬКО здесь, в транзакции
+// создания брони: клиент скидку лишь показывает.
 
-import { isBookingAttended } from '../../shared/domain/bookingRules.js';
+import { loyaltySummary, loyaltyDiscountForTicket, LOYALTY_VISITS_PER_REWARD, type LoyaltyBooking } from '../../shared/domain/loyalty.js';
+import { parseShowStartUtcMs } from '../../shared/domain/showTime.js';
 import type { RawBooking } from './booking.types.js';
 
-export const LOYALTY_REWARD_INTERVAL = 5;
-const LOYALTY_DISCOUNT_DIVISOR = 2;
+export const LOYALTY_REWARD_INTERVAL = LOYALTY_VISITS_PER_REWARD;
 
-// Бонус начисляется за ПРИХОД, а не за оплату: засчитываются только брони,
-// отмеченные check-in'ом на входе.
-function isAttendedBooking(b: RawBooking): boolean {
-  return isBookingAttended({ status: b.status ?? '', paymentStatus: b.paymentStatus ?? '' });
+function toLoyaltyBooking(b: RawBooking): LoyaltyBooking {
+  return {
+    status:        String(b.status ?? ''),
+    paymentStatus: String(b.paymentStatus ?? ''),
+    showId:        b.showId,
+    startMs:       typeof b.showStartAtMs === 'number'
+      ? b.showStartAtMs
+      : parseShowStartUtcMs(String(b.showDate ?? ''), String(b.showTime ?? '')),
+    loyaltyDiscountApplied: b.loyaltyDiscountApplied === true,
+  };
 }
 
 export interface LoyaltyState {
   loyaltyAvailable: boolean;
+  /** Посещённые спектакли (уникальные сеансы с проходом). */
   attendedCount:    number;
   usedCount:        number;
 }
 
-/**
- * Доступен ли бонус.
- *
- * usedFromState — счётчик израсходованных бонусов из loyaltyState/{uid}.
- * Берём максимум из него и фактической истории броней: любое расхождение
- * трактуется в пользу театра, а не двойной скидки.
- */
-export function computeLoyalty(bookings: RawBooking[], usedFromState = 0): LoyaltyState {
-  const attendedCount = bookings.filter(isAttendedBooking).length;
-  const usedFromHist  = bookings.filter(b => b.loyaltyDiscountApplied === true).length;
-  const usedCount     = Math.max(usedFromHist, usedFromState);
-
-  return {
-    loyaltyAvailable: attendedCount >= LOYALTY_REWARD_INTERVAL
-      && Math.floor(attendedCount / LOYALTY_REWARD_INTERVAL) > usedCount,
-    attendedCount,
-    usedCount,
-  };
+/** Доступна ли скидка — по реальным броням пользователя, прочитанным в транзакции. */
+export function computeLoyalty(bookings: RawBooking[]): LoyaltyState {
+  const s = loyaltySummary(bookings.map(toLoyaltyBooking));
+  return { loyaltyAvailable: s.available, attendedCount: s.visits, usedCount: s.used };
 }
 
-export function loyaltyDiscount(baseAmount: number): number {
-  return Math.floor(baseAmount / LOYALTY_DISCOUNT_DIVISOR);
+/** Скидка 50 % на ОДИН билет брони — не на всю бронь. */
+export function loyaltyDiscount(unitPrice: number): number {
+  return loyaltyDiscountForTicket(unitPrice);
 }

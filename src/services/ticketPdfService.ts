@@ -40,7 +40,8 @@ function formatDateForPdf(showDate: string): string {
 }
 
 // FR: Latin-1 с акцентами (é, à, è) — Helvetica WinAnsi поддерживает нативно.
-// RU: кирилличные подписи через Inter; при ошибке загрузки — транслит в RU_LATIN.
+// RU: кириллица через Liberation Sans; если шрифт не загрузился — подписи
+// транслитом (RU_LATIN), а инструкция у QR — по-английски.
 const LABELS = {
   FR: {
     date: 'DATE', time: 'HEURE', address: 'ADRESSE',
@@ -59,7 +60,7 @@ const LABELS = {
     date: 'DATA', time: 'VREMYA', address: 'ADRES',
     guest: 'ZRITEL', tickets: 'BILETY', seats: 'MESTA', amount: 'SUMMA',
     code: 'KOD BRONI',
-    footer: 'Pokazhite etot QR-kod sotrudniku teatra pri vkhode.',
+    footer: 'Show this QR code to the theatre staff at the entrance.',
   },
 } as const;
 
@@ -88,12 +89,12 @@ export interface TicketPdfStatus {
 export function ticketPdfStatus(b: Pick<Booking, 'status' | 'paymentStatus' | 'paymentMethod'>): TicketPdfStatus | null {
   const pay = b.paymentStatus ?? 'not_paid';
   if (b.status === 'cancelled' || pay === 'expired') return null;
-  if (pay === 'paid') return { tone: 'paid', fr: 'PAYÉ', ru: 'Оплачено', latin: 'PAID' };
+  if (pay === 'paid') return { tone: 'paid', fr: 'PAYÉ', ru: 'ОПЛАЧЕНО', latin: 'PAID' };
   if (pay === 'awaiting_transfer') {
-    return { tone: 'venue', fr: 'EN ATTENTE DE PAIEMENT', ru: 'Ожидает оплаты', latin: 'PAYMENT PENDING' };
+    return { tone: 'venue', fr: 'EN ATTENTE DE PAIEMENT', ru: 'ОЖИДАЕТ ОПЛАТЫ', latin: 'PAYMENT PENDING' };
   }
   if (pay === 'not_paid') {
-    return { tone: 'venue', fr: 'PAIEMENT SUR PLACE', ru: 'Оплата на месте', latin: 'PAY AT VENUE' };
+    return { tone: 'venue', fr: 'PAIEMENT SUR PLACE', ru: 'ОПЛАТА НА МЕСТЕ', latin: 'PAY AT VENUE' };
   }
   return null;
 }
@@ -306,21 +307,31 @@ export async function buildTicketPdf(
   // транслитерация (LABELS.RU_LATIN) не включалась НИКОГДА. jsPDF молча глотал
   // ошибку разбора шрифта, и кириллица из билета просто пропадала.
   //
-  // Подходящего кириллического шрифта для основного текста в проекте нет
-  // (Ekaterina Velikaya Two — рукописный акцидентный, для подписей билета не годится),
-  // поэтому RU-билет сейчас печатается транслитом. Чтобы включить настоящую
-  // кириллицу, достаточно положить лицензированный TTF в public/fonts/ и указать
-  // его здесь — остальной код уже готов.
-  const CYRILLIC_BODY_FONT_URL: string | null = null;
+  // Читаемый кириллический шрифт — Liberation Sans (Regular + Bold, лицензия
+  // рядом: public/fonts/LICENSE-LiberationSans.txt). Рукописный Ekaterina
+  // Velikaya Two остаётся только для названия спектакля: статус, код и
+  // инструкция набраны обычным шрифтом, чтобы их легко прочитал любой зритель.
+  // Не загрузился — RU-билет печатается латиницей, как раньше.
+  const CYRILLIC_BODY_FONT_URL: string | null = '/fonts/LiberationSans-Regular.ttf';
+  const CYRILLIC_BOLD_FONT_URL: string | null = '/fonts/LiberationSans-Bold.ttf';
 
   const CYR_ID = 'CyrillicBody';
   let hasCyrillicFont = false;
+  let hasCyrillicBold = false;
   if (isRU && CYRILLIC_BODY_FONT_URL) {
-    const b64Cyr = await loadFontBase64(CYRILLIC_BODY_FONT_URL);
+    const [b64Cyr, b64CyrBold] = await Promise.all([
+      loadFontBase64(CYRILLIC_BODY_FONT_URL),
+      CYRILLIC_BOLD_FONT_URL ? loadFontBase64(CYRILLIC_BOLD_FONT_URL) : Promise.resolve(null),
+    ]);
     if (b64Cyr) {
       doc.addFileToVFS(`${CYR_ID}.ttf`, b64Cyr);
       doc.addFont(`${CYR_ID}.ttf`, CYR_ID, 'normal');
       hasCyrillicFont = true;
+      if (b64CyrBold) {
+        doc.addFileToVFS(`${CYR_ID}-Bold.ttf`, b64CyrBold);
+        doc.addFont(`${CYR_ID}-Bold.ttf`, CYR_ID, 'bold');
+        hasCyrillicBold = true;
+      }
     }
   }
 
@@ -440,64 +451,73 @@ export async function buildTicketPdf(
   const blockY  = y;
   doc.addImage(qrDataUrl, 'PNG', MARGIN, blockY, qrSize, qrSize);
 
-  let ry = blockY + 2;
+  let ry = blockY + 1;
 
-  // Штамп оплаты. FR — Helvetica (WinAnsi умеет «É»); RU — кириллицей
-  // декоративным шрифтом заголовка, если он загрузился, иначе латиницей.
+  // Шрифт функционального текста: читаемый, без завитков. RU — Liberation
+  // Sans (кириллица), FR — Helvetica (WinAnsi умеет акценты).
+  const plain = (weight: 'normal' | 'bold') => {
+    if (isRU && hasCyrillicFont) doc.setFont(CYR_ID, weight === 'bold' && hasCyrillicBold ? 'bold' : 'normal');
+    else H(weight);
+  };
+  // Без кириллического шрифта RU-билет говорит по-английски, а не транслитом.
+  const canPrintLocal = !isRU || hasCyrillicFont;
+
+  // 1. Статус оплаты — компактный бейдж: крупно на языке билета, мелко по-английски.
   const status = ticketPdfStatus(booking);
   if (status) {
-    // Рукописный шрифт читается только строчными — и только если влезает.
-    let useDecor = isRU && hasDecorFont;
-    if (useDecor) {
-      doc.setFont(DECOR_ID, 'normal');
-      doc.setFontSize(13);
-      useDecor = doc.getTextWidth(status.ru) + 8 <= colW;
-    }
-    const label = !isRU ? status.fr : useDecor ? status.ru : status.latin;
-    const [r, g, bl] = status.tone === 'paid' ? [58, 125, 68] : [176, 120, 30];
-    if (useDecor) doc.setFont(DECOR_ID, 'normal'); else H('bold');
-    doc.setFontSize(useDecor ? 13 : 9);
-    const w = doc.getTextWidth(label) + 8;
+    const primary   = !isRU ? status.fr : canPrintLocal ? status.ru : status.latin;
+    const secondary = primary === status.latin ? null : status.latin;
+    const [r, g, bl]    = status.tone === 'paid' ? [46, 110, 58]   : [150, 98, 16];
+    const [fr, fg, fb]  = status.tone === 'paid' ? [232, 243, 234] : [251, 242, 224];
+
+    plain('bold');
+    doc.setFontSize(10);
+    const primaryW = doc.getTextWidth(primary);
+    H('normal');
+    doc.setFontSize(7);
+    const secondaryW = secondary ? doc.getTextWidth(secondary) : 0;
+    const w = Math.min(colW, Math.max(primaryW, secondaryW) + 8);
+    const h = secondary ? 12.5 : 8.5;
+
+    doc.setFillColor(fr, fg, fb);
     doc.setDrawColor(r, g, bl);
-    doc.setLineWidth(0.7);
-    doc.roundedRect(colX, ry, w, 8, 1.5, 1.5, 'S');
+    doc.setLineWidth(0.5);
+    doc.roundedRect(colX, ry, w, h, 1.5, 1.5, 'FD');
     doc.setTextColor(r, g, bl);
-    doc.text(label, colX + w / 2, ry + 5.4, { align: 'center' });
-    ry += 12;
-    // Английская подпись статуса — для зрителя и сотрудника без RU/FR.
-    if (label !== status.latin) {
+    plain('bold');
+    doc.setFontSize(10);
+    doc.text(primary, colX + 4, ry + 5.6);
+    if (secondary) {
       H('normal');
       doc.setFontSize(7);
-      doc.text(status.latin, colX, ry);
-      ry += 5;
+      doc.text(secondary, colX + 4, ry + 10);
     }
+    ry += h + 7;
   }
 
-  // Код брони — его можно продиктовать, если QR не читается.
+  // 2. Код брони — его можно продиктовать, если QR не читается.
   doc.setFont('courier', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(16);
   doc.setTextColor(28, 24, 22);
-  doc.text(booking.ticketCode, colX, ry + 4);
-  ry += 11;
+  doc.text(booking.ticketCode, colX, ry + 1);
+  ry += 9;
 
-  // Главное: что делать с этим QR.
-  const useDecorInstruction = isRU && hasDecorFont && !hasCyrillicFont;
-  if (isRU && hasCyrillicFont) doc.setFont(CYR_ID, 'normal');
-  else if (useDecorInstruction) doc.setFont(DECOR_ID, 'normal');
-  else H('bold');
-  const instruction = useDecorInstruction ? LABELS.RU.footer : L.footer;
-  doc.setFontSize(useDecorInstruction ? 11 : 9);
+  // 3. Главное: что делать с этим QR — обычным жирным шрифтом.
+  const instruction = canPrintLocal ? L.footer : PDF_EN_INSTRUCTION;
+  plain('bold');
+  doc.setFontSize(11);
   doc.setTextColor(28, 24, 22);
-  const lineH = useDecorInstruction ? 6.2 : 4.4;
   const lines = doc.splitTextToSize(instruction, colW) as string[];
-  doc.text(lines, colX, ry, { lineHeightFactor: useDecorInstruction ? 1.6 : 1.15 });
-  ry += lines.length * lineH + (useDecorInstruction ? 4 : 2);
+  doc.text(lines, colX, ry, { lineHeightFactor: 1.25 });
+  ry += lines.length * 4.9 + 2.5;
 
-  H('italic');
-  doc.setFontSize(7.5);
-  doc.setTextColor(120, 116, 110);
-  doc.text(doc.splitTextToSize(PDF_EN_INSTRUCTION, colW) as string[], colX, ry);
-
+  // 4. Английский дубль — второстепенный: мельче и светлее.
+  if (instruction !== PDF_EN_INSTRUCTION) {
+    H('normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(120, 116, 110);
+    doc.text(doc.splitTextToSize(PDF_EN_INSTRUCTION, colW) as string[], colX, ry, { lineHeightFactor: 1.2 });
+  }
 
   const fileName = ticketPdfFileName(booking.ticketCode);
   return { blob: toPdfFile(doc.output('blob'), fileName), fileName };

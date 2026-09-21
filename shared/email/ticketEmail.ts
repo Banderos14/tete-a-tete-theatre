@@ -12,7 +12,7 @@
 import { localizedShowTitle } from '../catalog/showTitle.js';
 import { ticketTypeLabel } from '../catalog/ticketTypes.js';
 import { getPaymentAccount, normalizeIban } from '../config/payment.js';
-import { myTicketsUrl } from '../domain/ticketCode.js';
+import { myTicketsUrl, publicTicketUrl } from '../domain/ticketCode.js';
 import {
   escapeEmailHtml, localeDate, wrapHtml, infoTable, linkButton, noteBlock,
   THEATRE_NAME, THEATRE_ADDRESS, THEATRE_EMAIL, THEATRE_PHONE, THEATRE_MAPS, PAY_REF_PREFIX,
@@ -97,12 +97,16 @@ function copy(lang: 'RU' | 'FR', kind: TicketEmailKind, pay: PayState, amount: n
                      : 'Présentez ce QR code au personnel du théâtre à l’entrée.',
     noLogin:      ru ? 'Входить на сайт не нужно — это письмо и есть ваш билет.'
                      : 'Inutile de vous connecter : cet e-mail est votre billet.',
-    noQr:         ru ? 'Если QR-код не отображается, назовите на входе код брони или откройте «Мои билеты».'
-                     : 'Si le QR code ne s’affiche pas, donnez votre code de réservation à l’entrée ou ouvrez « Mes billets ».',
+    noQr:         ru ? 'Если QR-код не отображается, нажмите «Открыть билет» ниже или назовите на входе код брони.'
+                     : 'Si le QR code ne s’affiche pas, cliquez sur « Ouvrir le billet » ci-dessous ou donnez votre code de réservation à l’entrée.',
     codeLabel:    ru ? 'Код брони' : 'Code de réservation',
-    button:       ru ? 'Открыть мои билеты' : 'Ouvrir mes billets',
-    buttonNote:   ru ? 'В личном кабинете тот же билет: QR и PDF для скачивания.'
-                     : 'Votre espace personnel contient le même billet : QR code et PDF à télécharger.',
+    // Главная кнопка — публичная страница билета: открывается в любом браузере
+    // без входа. Кабинет — второстепенная ссылка, он по-прежнему требует входа.
+    button:       ru ? 'Открыть билет' : 'Ouvrir le billet',
+    buttonNote:   ru ? 'Откроется ваш QR-код — входить на сайт не нужно.'
+                     : 'Votre QR code s’ouvre directement, sans connexion.',
+    account:      ru ? 'Личный кабинет' : 'Espace personnel',
+    accountNote:  ru ? 'там же билет в PDF' : 'billet PDF disponible',
     rows: {
       show:    ru ? 'Спектакль' : 'Spectacle',
       date:    ru ? 'Дата' : 'Date',
@@ -112,7 +116,7 @@ function copy(lang: 'RU' | 'FR', kind: TicketEmailKind, pay: PayState, amount: n
       tickets: ru ? 'Билеты' : 'Billets',
       amount:  ru ? 'Сумма' : 'Montant',
       initial: ru ? 'Без скидки' : 'Montant initial',
-      discount:ru ? 'Скидка лояльности −50%' : 'Remise fidélité −50 %',
+      discount:ru ? 'Скидка лояльности −50% (1 билет)' : 'Remise fidélité −50 % (1 billet)',
       payment: ru ? 'Оплата' : 'Paiement',
     },
     transferTitle: ru ? 'Реквизиты для перевода' : 'Coordonnées bancaires',
@@ -160,7 +164,8 @@ export function buildTicketEmail(
   const seats  = b.seatsCount && b.seatsCount > 0 ? b.seatsCount : b.ticketsCount;
   const code   = escapeEmailHtml(b.ticketCode);
   const tariff = ticketTypeLabel(b.ticketType, lang);
-  const ticketsUrl = myTicketsUrl(opts.siteBase);
+  const ticketUrl  = publicTicketUrl(b.ticketCode, opts.siteBase, lang);
+  const accountUrl = myTicketsUrl(opts.siteBase);
 
   const subject = `${THEATRE_NAME} — ${c.header}: ${title}`;
 
@@ -212,8 +217,10 @@ export function buildTicketEmail(
     <div style="height:16px;"></div>
     ${infoTable(rows)}
     ${transferHtml}
-    ${linkButton(ticketsUrl, c.button)}
-    <p style="margin:8px 0 0;font-size:12px;color:#888;font-family:Arial,sans-serif;">${c.buttonNote}</p>`;
+    ${linkButton(ticketUrl, c.button)}
+    <p style="margin:8px 0 0;font-size:12px;color:#888;font-family:Arial,sans-serif;">${c.buttonNote}</p>
+    <p style="margin:10px 0 0;font-size:12px;color:#888;font-family:Arial,sans-serif;">
+      <a href="${accountUrl}" style="color:#555;">${c.account}</a> · ${c.accountNote}</p>`;
 
   const html = wrapHtml(isRU ? 'ru' : 'fr', subject, c.header, bodyHtml);
 
@@ -235,7 +242,8 @@ export function buildTicketEmail(
     `${c.rows.payment}: ${strip(c.payValue)}`,
     ...(account ? ['', `${L.ref}: ${reference}`, ...(account.type === 'iban' ? [`IBAN: ${account.iban}`, `BIC: ${account.bic}`] : [])] : []),
     '',
-    `${c.button}: ${ticketsUrl}`,
+    `${c.button}: ${ticketUrl}`,
+    `${c.account}: ${accountUrl}`,
     '',
     THEATRE_ADDRESS,
     `${THEATRE_EMAIL} · ${THEATRE_PHONE}`,

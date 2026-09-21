@@ -152,9 +152,8 @@ describe('кабинет зрителя: прошедший спектакль �
 
 describe('лояльность считает приходы, а не платежи', () => {
   it('расчёт бонуса опирается на тот же isBookingAttended', () => {
-    const loyalty = projectSource('server/booking/loyalty.ts');
-    expect(loyalty).toContain('isBookingAttended');
-    // Время спектакля из расчёта ушло вместе с выводом посещения из оплаты.
-    expect(loyalty).not.toContain('parseShowStartUtcMs');
+    // Сервер и кабинет считают по одному правилу; посещение — только проход.
+    expect(projectSource('server/booking/loyalty.ts')).toContain('loyaltySummary(');
+    expect(projectSource('shared/domain/loyalty.ts')).toContain('isBookingAttended(b)');
   });
 });

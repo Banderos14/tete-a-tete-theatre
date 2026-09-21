@@ -1,0 +1,105 @@
+@use '../../styles/mixins';
+
+// Публичный билет: только QR и что с ним делать. Крупно и просто — его
+// показывают сотруднику у входа, часто с телефона в руке.
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 24px 56px;
+  gap: 14px;
+
+  @include mixins.small { padding: 28px 16px 40px; }
+}
+
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 6vw, 40px);
+  line-height: 1.1;
+}
+
+.qrCard {
+  margin-top: 8px;
+  padding: 18px 18px 14px;
+  border-radius: 16px;
+  // Белая «бумага» под QR: камера сканера уверенно читает тёмное на светлом
+  // в любой теме сайта.
+  background: #fdfaf6;
+  color: #241a16;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.qr {
+  display: block;
+  width: min(320px, calc(100vw - 80px));
+  height: min(320px, calc(100vw - 80px));
+  max-width: none;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+}
+
+.qrLoading { background: #e8e8e8; }
+.qrFailed  { background: #e8e8e8; opacity: 0.4; }
+
+.code {
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+
+  @include mixins.small { font-size: 22px; }
+}
+
+.codeLabel {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #6e675f;
+}
+
+.instruction {
+  max-width: 420px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.4;
+
+  @include mixins.small { font-size: 17px; }
+}
+
+.instructionEn {
+  font-size: 13px;
+  color: var(--fg-mute);
+}
+
+.text {
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+
+.secondaryLink {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--fg-mute);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:hover { color: var(--fg); }
+}

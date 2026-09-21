@@ -81,12 +81,10 @@ describe('/api/admin-booking delete: связанные данные', () => {
     expect(service).toMatch(/where\('bookingId', '==', bookingId\)/);
   });
 
-  it('счётчик израсходованных бонусов не обнуляется', () => {
-    // loyaltyState/{uid} — отдельный persistent-счётчик, и computeLoyalty берёт
-    // max(история, счётчик). Удаление брони со скидкой не должно возвращать
-    // пользователю уже потраченный бонус.
+  it('удаление не трогает лояльность', () => {
+    // Удаляется только отменённая бронь, а её скидка вернулась ещё при отмене:
+    // лояльность считается по действующим броням (shared/domain/loyalty.ts).
     expect(service).not.toContain('LOYALTY_STATE');
-    expect(projectSource('server/booking/loyalty.ts')).toContain('Math.max(usedFromHist, usedFromState)');
   });
 
   it('чужие данные не удаляются заодно', () => {

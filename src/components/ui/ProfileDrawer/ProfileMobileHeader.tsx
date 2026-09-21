@@ -4,13 +4,8 @@
 import { IconUser, IconTicket, IconMasksTheater, IconSettings } from '@tabler/icons-react';
 import { useLang } from '../../../i18n/LangContext';
 import type { Booking } from '../../../types/booking';
-import {
-  getUserAttendedCount,
-  hasAvailableLoyaltyReward,
-  cycleProgress,
-} from '../../../services/loyaltyService';
+import { loyaltySummary, LOYALTY_VISITS_PER_REWARD as BONUS_EVERY } from '../../../services/loyaltyService';
 import { getInitials } from './profileValidation';
-import { BONUS_EVERY } from './VisitCounter';
 import type { MobileTab } from './sections';
 import styles from './ProfileDrawer.module.scss';
 
@@ -23,10 +18,11 @@ export function ProfileMobileHeader({ headerName, email, photoURL, bookings }: {
   const { lang } = useLang();
   const isFR = lang === 'FR';
 
-  const attended      = getUserAttendedCount(bookings);
-  const filled        = cycleProgress(bookings);
-  const isRewardAvail = hasAvailableLoyaltyReward(bookings);
-  const remaining     = isRewardAvail ? 0 : BONUS_EVERY - filled;
+  const loyalty       = loyaltySummary(bookings);
+  const attended      = loyalty.visits;
+  const filled        = loyalty.progress;
+  const isRewardAvail = loyalty.available;
+  const remaining     = loyalty.remaining;
 
   return (
     <div className={styles.mobileHeader}>
@@ -71,10 +67,10 @@ export function ProfileMobileHeader({ headerName, email, photoURL, bookings }: {
           </div>
           <span className={`${styles.mobileLoyaltyRemaining} ${isRewardAvail ? styles.mobileLoyaltyRewardActive : ''}`}>
             {isRewardAvail
-              ? (isFR ? 'Remise −50% active !' : 'Скидка 50% активна!')
+              ? (isFR ? 'Remise −50 % disponible' : 'Скидка 50% доступна')
               : (isFR
-                  ? `encore ${remaining} visite${remaining !== 1 ? 's' : ''}`
-                  : `ещё ${remaining} визитов`)}
+                  ? `${filled} sur ${BONUS_EVERY} · encore ${remaining}`
+                  : `${filled} из ${BONUS_EVERY} · осталось ${remaining}`)}
           </span>
         </div>
       </div>

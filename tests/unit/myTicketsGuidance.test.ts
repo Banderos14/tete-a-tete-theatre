@@ -101,11 +101,17 @@ describe('письмо-билет: QR и что с ним делать', () => {
     expect(html).toContain('Оплата на месте при входе: 45&nbsp;€');
   });
 
-  it('кабинет — дополнительная кнопка «Открыть мои билеты»', () => {
+  it('главная кнопка — «Открыть билет» на публичную страницу, кабинет — второстепенная ссылка', () => {
     const { html, text } = mail(paid, 'paid');
-    expect(html).toContain('Открыть мои билеты');
+    expect(html).toContain('Открыть билет');
+    expect(html).toMatch(/<a href="[^"]*\/#\/ticket\?code=ABCD-2345&lang=RU"/);
+    expect(html).not.toContain('Открыть мои билеты');
+    // Кабинет остаётся, но маленькой ссылкой.
+    expect(html).toContain('Личный кабинет');
     expect(html).toMatch(/<a href="[^"]*account=tickets"/);
-    expect(text).toContain('account=tickets');
+    expect(text).toContain('/#/ticket?code=ABCD-2345');
+    // Кнопка билета стоит раньше ссылки на кабинет.
+    expect(html.indexOf('/#/ticket?code=')).toBeLessThan(html.indexOf('account=tickets'));
   });
 
   it('письмо после оплаты — тоже полноценный билет', () => {
@@ -135,13 +141,14 @@ describe('письмо-билет: QR и что с ним делать', () => {
     expect(html).not.toContain('cid:ticket-qr');
     expect(html).toContain('ABCD-2345');
     expect(html).toContain('назовите на входе код брони');
-    expect(html).toContain('Открыть мои билеты');
+    expect(html).toContain('Открыть билет');
   });
 
   it('FR: тот же смысл по-французски, без кириллицы, название — французское', () => {
     const { subject, html, text } = mail({ ...paid, lang: 'FR' }, 'paid');
     expect(html).toContain('Présentez ce QR code au personnel du théâtre à l’entrée.');
-    expect(html).toContain('Ouvrir mes billets');
+    expect(html).toContain('Ouvrir le billet');
+    expect(html).toContain('lang=FR');
     expect(subject).toContain('La Romanesque de la Fatalité');
     expect(subject).not.toMatch(/[А-Яа-яЁё]/);
     expect(html).not.toMatch(/[А-Яа-яЁё]/);

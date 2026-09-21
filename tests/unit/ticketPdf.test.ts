@@ -1,4 +1,5 @@
 // «Скачать PDF» и «Поделиться / сохранить» — две операции над ОДНИМ файлом.
+import { projectSource } from '../helpers/serverSource.js';
 //
 // Web Share на Mac/iPhone работает хорошо, и его нельзя потерять; но зрителю
 // нужна и явная загрузка. Тесты фиксируют: документ собирается один раз, оба
@@ -314,7 +315,7 @@ describe('штамп оплаты в PDF', () => {
   it('оплачено → PAYÉ / ОПЛАЧЕНО / PAID', async () => {
     const { ticketPdfStatus } = await import('../../src/services/ticketPdfService');
     expect(ticketPdfStatus({ status: 'confirmed', paymentStatus: 'paid', paymentMethod: 'bank_transfer' }))
-      .toMatchObject({ tone: 'paid', fr: 'PAYÉ', ru: 'Оплачено', latin: 'PAID' });
+      .toMatchObject({ tone: 'paid', fr: 'PAYÉ', ru: 'ОПЛАЧЕНО', latin: 'PAID' });
   });
 
   it('оплата на месте — отдельный штамп, а не «оплачено»', async () => {
@@ -345,4 +346,31 @@ describe('штамп оплаты в PDF', () => {
     expect(venue).toContain('PAIEMENT SUR PLACE');
     expect(venue).not.toContain('PAYÉ');
   }, 20_000);
+});
+
+describe('блок QR в PDF — просто и читаемо', () => {
+  const src = projectSource('src/services/ticketPdfService.ts');
+
+  it('статусы: оплачено / ожидает оплаты / оплата на месте, с английской подписью', async () => {
+    const { ticketPdfStatus } = await import('../../src/services/ticketPdfService');
+    expect(ticketPdfStatus({ status: 'pending', paymentStatus: 'awaiting_transfer', paymentMethod: 'bank_transfer' }))
+      .toMatchObject({ ru: 'ОЖИДАЕТ ОПЛАТЫ', latin: 'PAYMENT PENDING' });
+    expect(ticketPdfStatus({ status: 'pending', paymentStatus: 'not_paid', paymentMethod: 'on_site' }))
+      .toMatchObject({ ru: 'ОПЛАТА НА МЕСТЕ', latin: 'PAY AT VENUE' });
+  });
+
+  it('в документе есть код, инструкция и английский дубль', async () => {
+    const qr = await generateTicketQR(CODE);
+    const text = Buffer.from(await (await buildTicketPdf(booking(), qr, 'FR')).blob.arrayBuffer()).toString('latin1');
+    expect(text).toContain('personnel du th');
+    expect(text).toContain('Show this QR code to the theatre staff');
+    expect(text).toContain(CODE);
+  }, 20_000);
+
+  it('рукописный шрифт — только для названия; статус и инструкция — обычным шрифтом', () => {
+    const block = src.slice(src.indexOf('// Нижний блок в две колонки'));
+    expect(block).not.toContain('DECOR_ID');
+    expect(src).toContain("'/fonts/LiberationSans-Regular.ttf'");
+    expect(src).toContain("'/fonts/LiberationSans-Bold.ttf'");
+  });
 });

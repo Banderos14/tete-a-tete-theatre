@@ -34,6 +34,21 @@ export function ticketQrPayload(ticketCode: string, siteBase: string = CANONICAL
   return ticketCheckUrl(siteBase || CANONICAL_SITE_URL, ticketCode);
 }
 
+/**
+ * Публичная страница билета: QR, код и инструкция — без входа на сайт.
+ *
+ * Кнопка «Открыть билет» в письме ведёт сюда. Письмо часто открывается в
+ * другом браузере, чем тот, где зритель входил (Gmail → Chrome, покупка была в
+ * Safari), и кабинет попросил бы войти заново. Страница ничего не читает из
+ * базы и не показывает персональных данных: всё, что на ней есть, уже
+ * содержится в самой ссылке — код брони, тот же, что зашит в QR письма.
+ */
+export function publicTicketUrl(ticketCode: string, siteBase: string = CANONICAL_SITE_URL, lang?: 'RU' | 'FR'): string {
+  const base = (siteBase || CANONICAL_SITE_URL).replace(/\/+$/, '');
+  const langPart = lang ? `&lang=${lang}` : '';
+  return `${base}/#/ticket?code=${encodeURIComponent(ticketCode)}${langPart}`;
+}
+
 /** Раздел «Мои билеты» личного кабинета — дополнительный путь к тому же билету. */
 export function myTicketsUrl(siteBase: string = CANONICAL_SITE_URL): string {
   return `${(siteBase || CANONICAL_SITE_URL).replace(/\/+$/, '')}/#/?account=tickets`;

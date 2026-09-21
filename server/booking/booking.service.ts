@@ -112,7 +112,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 
     // Чтение обязательно: именно оно ставит блокировку на документ.
     await tx.get(showCounterRef);
-    const loyaltySnap = await tx.get(loyaltyRef);
+    await tx.get(loyaltyRef);
 
     const userBookings = await readUserBookings(tx, uid);
 
@@ -122,18 +122,17 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       return { kind: 'capacity', remaining: capacity.remaining, soldOut: capacity.soldOut };
     }
 
-    const usedFromState = typeof loyaltySnap.data()?.rewardsUsed === 'number'
-      ? Number(loyaltySnap.data()!.rewardsUsed)
-      : 0;
-
-    const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings, usedFromState);
+    // Лояльность — только по реальным броням, прочитанным в этой транзакции
+    // (shared/domain/loyalty.ts). Скидка 50 % — на ОДИН билет брони: все
+    // билеты брони одного тарифа, поэтому «один билет» определён однозначно.
+    const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings);
     const baseAmount     = ticketInfo.price * ticketsCount;
-    const discountAmount = loyaltyAvailable ? loyaltyDiscount(baseAmount) : 0;
+    const discountAmount = loyaltyAvailable ? loyaltyDiscount(ticketInfo.price) : 0;
     const totalAmount    = baseAmount - discountAmount;
 
     const ticketCode = generateTicketCode();
     const priceInfo  = loyaltyAvailable
-      ? `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${baseAmount}€, скидка 50% = ${totalAmount}€`
+      ? `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${baseAmount}€, скидка 50% на 1 билет = ${totalAmount}€`
       : `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${totalAmount}€`;
 
     const paymentExpiresAt = isBankTransfer
@@ -150,17 +149,14 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       updatedAt:            FieldValue.serverTimestamp(),
     }, { merge: true });
 
-    if (loyaltyAvailable) {
-      // Бонус списывается в той же транзакции, что и создаётся бронь.
-      tx.set(loyaltyRef, {
-        rewardsUsed: usedFromState + 1,
-        updatedAt:   FieldValue.serverTimestamp(),
-      }, { merge: true });
-    } else {
-      // Даже без скидки касаемся документа: он должен быть точкой конфликта
-      // для параллельных броней одного пользователя.
-      tx.set(loyaltyRef, { updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    }
+    // Документ лояльности — точка конфликта: две параллельные брони одного
+    // пользователя (две вкладки) сериализуются, и вторая, перечитав брони,
+    // уже видит скидку занятой первой. Использование скидки фиксирует сама
+    // бронь (loyaltyDiscountApplied): отмена/протухание её возвращают.
+    tx.set(loyaltyRef, {
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(loyaltyAvailable ? { lastRewardAtMs: nowMs } : {}),
+    }, { merge: true });
 
     const bookingRef = bookingsRef().doc();
     tx.create(bookingRef, {

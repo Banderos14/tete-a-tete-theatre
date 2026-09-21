@@ -9,10 +9,7 @@ import type { BookingApiError } from '../../../services/bookingService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
 import { formatPhone, normalizePhone, isValidPhone } from '../../../utils/phone';
 import { MAX_TICKETS_PER_BOOKING } from '../../../../shared/catalog/shows';
-import {
-  hasAvailableLoyaltyReward,
-  calculateLoyaltyDiscount,
-} from '../../../services/loyaltyService';
+import { loyaltySummary, loyaltyDiscountForTicket } from '../../../services/loyaltyService';
 import type { Show, TicketType } from '../../../types';
 import type { Booking, PaymentMethod } from '../../../types/booking';
 import { BookingFormStep } from './BookingFormStep';
@@ -85,10 +82,11 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   ));
 
   const loyaltyAvailable = useMemo(
-    () => hasAvailableLoyaltyReward(userBookings),
+    () => loyaltySummary(userBookings).available,
     [userBookings],
   );
-  const discountAmount = loyaltyAvailable ? calculateLoyaltyDiscount(baseAmount) : 0;
+  // Скидка — на ОДИН билет, как у сервера; сервер всё равно пересчитает цену.
+  const discountAmount = loyaltyAvailable && activeTicket ? loyaltyDiscountForTicket(activeTicket.price) : 0;
   const totalAmount    = baseAmount - discountAmount;
 
   // Realtime subscription — обновляет loyalty reward без refresh.
