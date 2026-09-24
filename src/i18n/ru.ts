@@ -244,6 +244,7 @@ export const RU: T = {
     cancelByUserLabel: 'Отменено пользователем',
   },
   payment: {
+    recommended:       'Рекомендуем',
     redirecting:       'Переходим к оплате…',
     checkoutError:     'Не удалось открыть страницу оплаты. Попробуйте ещё раз.',
     onlineUnavailable: 'Онлайн-оплата сейчас недоступна. Выберите другой способ оплаты.',

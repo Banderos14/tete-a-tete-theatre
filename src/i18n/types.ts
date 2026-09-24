@@ -175,6 +175,8 @@ export interface T {
   };
   /** Онлайн-оплата: переход на Stripe, возврат, состояние брони в кабинете. */
   payment: {
+    /** Бейдж на карточке «Оплатить онлайн». */
+    recommended: string;
     redirecting: string;
     checkoutError: string;
     onlineUnavailable: string;

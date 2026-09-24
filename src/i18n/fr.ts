@@ -254,6 +254,7 @@ export const FR: T = {
     cancelByUserLabel: 'Annulé par l\'utilisateur',
   },
   payment: {
+    recommended:       'Recommandé',
     redirecting:       'Redirection vers le paiement…',
     checkoutError:     'Impossible d\'ouvrir la page de paiement. Veuillez réessayer.',
     onlineUnavailable: 'Le paiement en ligne est momentanément indisponible. Choisissez un autre mode de paiement.',

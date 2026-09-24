@@ -44,16 +44,19 @@ export default function App() {
       return 'RU';
     }
   });
-  const [introState,  setIntroState]  = useState<IntroState>(IS_MOBILE ? 'done' : 'closed');
+  // Возврат со Stripe (?checkout=success|cancelled&booking=…). Параметр — не
+  // доказательство оплаты: экран покажет бронь такой, какой её записал сервер.
+  const [checkoutReturn, setCheckoutReturn] = useState<CheckoutReturn | null>(() => getCheckoutReturnFromLocation());
+  // Зритель вернулся с оплаты — декоративный занавес не играем: он на ~3 секунды
+  // задержал бы экран «Оплата получена».
+  const [skipIntro] = useState(() => IS_MOBILE || checkoutReturn !== null);
+  const [introState,  setIntroState]  = useState<IntroState>(skipIntro ? 'done' : 'closed');
   const [authOpen,    setAuthOpen]    = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   // Раздел, на котором открывается кабинет. Нужен ссылке «Мои билеты» из письма
   // и кнопке на экране успешного бронирования.
   const [profileSection, setProfileSection] = useState<Section>('personal');
   const [bookingShow, setBookingShow] = useState<Show | null>(null);
-  // Возврат со Stripe (?checkout=success|cancelled&booking=…). Параметр — не
-  // доказательство оплаты: экран покажет бронь такой, какой её записал сервер.
-  const [checkoutReturn, setCheckoutReturn] = useState<CheckoutReturn | null>(() => getCheckoutReturnFromLocation());
   // Модалки монтируются только после первого открытия: до этого их чанки
   // (а вместе с ними и Firebase SDK) не нужны для показа лендинга. Флаг «липкий»,
   // чтобы не ломать анимацию закрытия — она играет на уже смонтированном узле.
@@ -78,7 +81,7 @@ export default function App() {
   }, [lang]);
 
   useEffect(() => {
-    if (IS_MOBILE) {
+    if (skipIntro) {
       window.dispatchEvent(new CustomEvent('theatre:intro-done'));
       return;
     }
@@ -90,7 +93,7 @@ export default function App() {
       window.dispatchEvent(new CustomEvent('theatre:intro-done'));
     }, 500 + INTRO_SPEED * 1000 + 200);
     return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
+  }, [skipIntro]);
 
   useEffect(() => {
     if (introState !== 'done') return;

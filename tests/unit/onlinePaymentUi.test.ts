@@ -13,6 +13,7 @@ import {
   checkoutErrorKey, needsFreshBookingAttempt, onlineBookingState, canResumeCheckout,
   isOnlineMoneyNotice, getCheckoutReturnFromLocation, clearCheckoutParams, checkoutReturnView,
   startCheckoutWait, holdUntilMs, formatHoldTime, CHECKOUT_SYNC_DELAYS_MS, CHECKOUT_WAIT_TIMEOUT_MS,
+  RECOMMENDED_PAYMENT_METHOD,
 } from '../../src/utils/onlinePayment';
 import { getStubVariant } from '../../src/utils/ticketStub';
 import { ticketPdfStatus } from '../../src/services/ticketPdfService';
@@ -41,9 +42,23 @@ describe('флаг: «Оплатить онлайн» только при VITE_O
     expect(paymentMethodsFor(false)).toEqual(['on_site', 'bank_transfer']);
   });
 
-  it('флаг true — онлайн третьим способом, прежние на месте', () => {
+  it('флаг true — онлайн первым (рекомендуемым), прежние способы на месте', () => {
     expect(isOnlinePaymentUiEnabled('true')).toBe(true);
-    expect(paymentMethodsFor(true)).toEqual(['on_site', 'bank_transfer', 'online']);
+    expect(paymentMethodsFor(true)).toEqual(['online', 'on_site', 'bank_transfer']);
+    expect(RECOMMENDED_PAYMENT_METHOD).toBe('online');
+  });
+
+  it('бейдж «Рекомендуем» — только на онлайн-карточке, текст из словаря', async () => {
+    const step = projectSource('src/components/ui/BookingModal/BookingFormStep.tsx');
+    expect(step).toMatch(/\{pm === RECOMMENDED_PAYMENT_METHOD && \([\s\S]{0,120}t\.payment\.recommended/);
+    const { RU, FR } = await import('../../src/i18n');
+    expect(RU.payment.recommended).toBe('Рекомендуем');
+    expect(FR.payment.recommended).toBe('Recommandé');
+  });
+
+  it('выбор по умолчанию не меняется: форма по-прежнему открывается с «на месте»', () => {
+    const modal = projectSource('src/components/ui/BookingModal/BookingModal.tsx');
+    expect(modal).toContain("useState<PaymentMethod>('on_site')");
   });
 
   it('без переменной окружения (юнит-тесты не читают .env) — выключено', () => {
@@ -290,6 +305,27 @@ describe('возврат со Stripe', () => {
 });
 
 describe('ограниченное ожидание подтверждения', () => {
+  it('первая сверка — сразу после возврата, дальше редкий backoff, не больше 5 запросов', async () => {
+    expect(CHECKOUT_SYNC_DELAYS_MS[0]).toBe(0);
+    expect(CHECKOUT_SYNC_DELAYS_MS.length).toBeLessThanOrEqual(5);
+    for (let i = 1; i < CHECKOUT_SYNC_DELAYS_MS.length; i++) {
+      expect(CHECKOUT_SYNC_DELAYS_MS[i]!).toBeGreaterThan(CHECKOUT_SYNC_DELAYS_MS[i - 1]!);
+    }
+    expect(CHECKOUT_SYNC_DELAYS_MS.at(-1)!).toBeLessThan(CHECKOUT_WAIT_TIMEOUT_MS);
+
+    vi.useFakeTimers();
+    const sync = vi.fn(async () => {});
+    startCheckoutWait({ sync, onTimeout: () => {} });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sync).toHaveBeenCalledTimes(1);
+  });
+
+  it('при возврате со Stripe интро не задерживает экран', () => {
+    const app = projectSource('src/app/App.tsx');
+    expect(app).toContain('const [skipIntro] = useState(() => IS_MOBILE || checkoutReturn !== null);');
+    expect(app).toMatch(/if \(skipIntro\) \{\s*window\.dispatchEvent/);
+  });
+
   it('несколько сверок, затем таймаут — не бесконечный опрос', async () => {
     vi.useFakeTimers();
     const sync = vi.fn(async () => {});

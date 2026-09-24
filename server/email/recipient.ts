@@ -31,10 +31,30 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/**
+ * Адрес из переменной окружения в том виде, в каком его обычно вводят в
+ * Vercel: с кавычками ("x@y.com") или с именем (Имя <x@y.com>). Без этого
+ * такое значение считалось невалидным, и staging-письма молча блокировались.
+ */
+export function normalizeEnvAddress(raw: string): string | null {
+  let value = raw.trim().replace(/^['"]+|['"]+$/g, '').trim();
+  const angle = value.match(/<([^<>]+)>\s*$/);
+  if (angle) value = angle[1]!.trim();
+  return EMAIL_RE.test(value) ? value : null;
+}
+
+let warnedInvalidRecipient = false;
+
 /** Тестовый адрес staging или null, если он не задан или не похож на адрес. */
 export function testRecipient(): string | null {
-  const value = (process.env.TEST_EMAIL_RECIPIENT ?? '').trim();
-  return EMAIL_RE.test(value) ? value : null;
+  const raw   = process.env.TEST_EMAIL_RECIPIENT ?? '';
+  const value = normalizeEnvAddress(raw);
+  if (!value && raw.trim() && !warnedInvalidRecipient) {
+    // Значение в лог не пишем — только факт, что оно не распознано.
+    warnedInvalidRecipient = true;
+    console.warn('[email] TEST_EMAIL_RECIPIENT is set but is not a valid e-mail address — staging e-mails are blocked');
+  }
+  return value;
 }
 
 export function routeEmail(email: OutgoingEmail): RoutedEmail {

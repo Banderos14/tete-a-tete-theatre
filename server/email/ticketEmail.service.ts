@@ -19,6 +19,7 @@ import QRCode from 'qrcode';
 import { db, BOOKINGS } from '../booking/booking.repository.js';
 import { logEmailDelivery } from './email.repository.js';
 import { routeEmail, type OutgoingEmail } from './recipient.js';
+import { isProductionRuntime } from '../shared/runtimeEnv.js';
 import type { TicketEmailType } from './email.types.js';
 import { ticketQrPayload, CANONICAL_SITE_URL } from '../../shared/domain/ticketCode.js';
 import { isScannableTicket } from '../../shared/domain/bookingRules.js';
@@ -167,7 +168,12 @@ export async function sendBookingEmail(
     console.error('[ticket-email] claim failed', bookingId, trigger, err);
     return { status: 'failed', reason: 'claim_failed' };
   }
-  if (claimed.kind === 'skip') return { status: 'skipped', reason: claimed.reason };
+  if (claimed.kind === 'skip') {
+    // Повтор события (webhook retry, двойной клик) — второго письма нет. В лог —
+    // чтобы в Vercel было видно, почему письмо не ушло именно этим вызовом.
+    console.log(`[ticket-email] ${trigger} skipped (${claimed.reason})`, { bookingId });
+    return { status: 'skipped', reason: claimed.reason };
+  }
 
   const data = claimed.data;
   const uid  = String(data.userId ?? '');
@@ -175,6 +181,14 @@ export async function sendBookingEmail(
     const record: EmailRecord = {
       status: outcome.status, atMs: Date.now(), ...extra, ...(outcome.reason ? { reason: outcome.reason } : {}),
     };
+    // Каждый исход — в лог сервера, без адресов: причину «письмо не пришло»
+    // видно в логах Vercel, а не только в bookings/{id}.emails.<trigger>.
+    const log = outcome.status === 'failed' ? console.error : outcome.status === 'skipped' ? console.warn : console.log;
+    log(`[ticket-email] ${trigger} ${outcome.status}${outcome.reason ? ` (${outcome.reason})` : ''}`, {
+      bookingId,
+      providerStatus: extra.providerStatus ?? null,
+      redirectedToTestRecipient: !isProductionRuntime(),
+    });
     await writeRecord(bookingId, trigger, record).catch(err => console.error('[ticket-email] record failed', err));
     await logEmailDelivery({
       type: LOG_TYPE[trigger], uid, status: outcome.status, bookingId,

@@ -2,6 +2,7 @@ import type { FormEvent, ReactElement } from 'react';
 import { IconBuildingBank, IconCreditCard, IconTransfer } from '@tabler/icons-react';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
+import { RECOMMENDED_PAYMENT_METHOD } from '../../../utils/onlinePayment';
 import { MAX_COMMENT_LEN } from '../../../../shared/contracts/limits';
 import styles from './BookingModal.module.scss';
 
@@ -41,6 +42,7 @@ interface Props {
     };
     payment: {
       redirecting: string;
+      recommended: string;
     };
     months: Record<string, string>;
   };
@@ -93,8 +95,9 @@ export function BookingFormStep({
   const soldOut = maxTickets <= 0;
   const busy    = submitLoading || redirecting;
 
-  // Карточки способов оплаты. Онлайн — третьей, если флаг интерфейса включён;
-  // при трёх способах карточки встают столбиком, иначе не помещаются в колонку.
+  // Карточки способов оплаты. Онлайн — первой и с бейджем «рекомендуем», если
+  // флаг интерфейса включён; при трёх способах карточки встают столбиком,
+  // иначе не помещаются в колонку.
   const paymentOptions: Record<PaymentMethod, { name: string; desc: string; icon: ReactElement }> = {
     on_site:       { name: t.booking.payOnSite,   desc: t.booking.payOnSiteDesc,   icon: <IconBuildingBank size={16} stroke={1.5} /> },
     bank_transfer: { name: t.booking.payTransfer, desc: t.booking.payTransferDesc, icon: <IconTransfer size={16} stroke={1.5} /> },
@@ -245,7 +248,12 @@ export function BookingFormStep({
                   <span className={`${styles.paymentDot} ${active ? styles.paymentDotActive : ''}`} aria-hidden="true" />
                   <span className={styles.paymentIcon} aria-hidden="true">{option.icon}</span>
                   <div>
-                    <div className={styles.paymentName}>{option.name}</div>
+                    <div className={styles.paymentNameRow}>
+                      <span className={styles.paymentName}>{option.name}</span>
+                      {pm === RECOMMENDED_PAYMENT_METHOD && (
+                        <span className={styles.paymentBadge}>{t.payment.recommended}</span>
+                      )}
+                    </div>
                     <div className={styles.paymentDesc}>{option.desc}</div>
                   </div>
                 </button>

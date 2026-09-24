@@ -242,6 +242,34 @@ describe('оплата подтверждается только webhook', () =>
     expect(booking().paymentStatus).toBe('paid');
   });
 
+  it('staging: письмо «Оплата получена» уходит одно, на тестовый адрес; повтор webhook — без второго', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('TEST_EMAIL_RECIPIENT', '"qa-inbox@example.com"');
+    seedOnline();
+    const evt = event('checkout.session.completed', session());
+    await deliver(evt);
+    await deliver(evt);
+    expect(paidMails()).toHaveLength(1);
+    expect(paidMails()[0]!.to).toBe('qa-inbox@example.com');
+    expect(String(paidMails()[0]!.subject)).toMatch(/^\[STAGING → anna@example\.com\] /);
+    expect(booking().emails).toMatchObject({ paid: { status: 'sent' } });
+  });
+
+  it('staging без тестового адреса: оплата подтверждена, письмо пропущено — и это видно в логе и в брони', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('TEST_EMAIL_RECIPIENT', '');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    seedOnline();
+    await deliver(event('checkout.session.completed', session()));
+    expect(booking().paymentStatus).toBe('paid');
+    expect(paidMails()).toHaveLength(0);
+    expect(booking().emails).toMatchObject({ paid: { status: 'skipped', reason: 'staging_no_test_recipient' } });
+    const logged = warn.mock.calls.map(c => String(c[0])).join('\n');
+    expect(logged).toContain('[ticket-email] paid skipped (staging_no_test_recipient)');
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('anna@example.com');
+    warn.mockRestore();
+  });
+
   it('async_payment_succeeded подтверждает так же', async () => {
     seedOnline();
     await deliver(event('checkout.session.async_payment_succeeded', session()));

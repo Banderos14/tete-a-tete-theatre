@@ -149,6 +149,20 @@ describe('маршрутизация писем', () => {
     expect(routeEmail(mail).kind).toBe('blocked');
   });
 
+  it('TEST_EMAIL_RECIPIENT в кавычках или с именем распознаётся (регрессия: письма молча блокировались)', async () => {
+    const { normalizeEnvAddress } = await import('../../server/email/recipient.js');
+    expect(normalizeEnvAddress('"qa-inbox@example.com"')).toBe(TEST_INBOX);
+    expect(normalizeEnvAddress("  'qa-inbox@example.com'  ")).toBe(TEST_INBOX);
+    expect(normalizeEnvAddress('QA Inbox <qa-inbox@example.com>')).toBe(TEST_INBOX);
+    expect(normalizeEnvAddress('qa-inbox@example.com\n')).toBe(TEST_INBOX);
+    expect(normalizeEnvAddress('not an address')).toBeNull();
+
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('TEST_EMAIL_RECIPIENT', '"qa-inbox@example.com"');
+    const r = routeEmail(mail);
+    expect(r.kind === 'send' && r.email.to).toBe(TEST_INBOX);
+  });
+
   it('исходный адрес в баннере экранируется', () => {
     vi.stubEnv('VERCEL_ENV', 'preview');
     vi.stubEnv('TEST_EMAIL_RECIPIENT', TEST_INBOX);

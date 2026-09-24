@@ -22,10 +22,16 @@ export function isOnlinePaymentUiEnabled(
   return typeof flag === 'string' && flag.trim() === 'true';
 }
 
-/** Способы оплаты формы брони в порядке показа. */
+/**
+ * Способы оплаты формы брони в порядке показа. Онлайн — первым, как
+ * рекомендуемый; выбор по умолчанию при этом не меняется (его задаёт форма).
+ */
 export function paymentMethodsFor(onlineEnabled: boolean): PaymentMethod[] {
-  return onlineEnabled ? ['on_site', 'bank_transfer', 'online'] : ['on_site', 'bank_transfer'];
+  return onlineEnabled ? ['online', 'on_site', 'bank_transfer'] : ['on_site', 'bank_transfer'];
 }
+
+/** Способ, отмеченный в форме как рекомендуемый. */
+export const RECOMMENDED_PAYMENT_METHOD: PaymentMethod = 'online';
 
 // ── Переход на Stripe Checkout ──────────────────────────────────────────────
 
@@ -206,9 +212,13 @@ export function checkoutReturnView(
 // Бронь обновляется подпиской в реальном времени, как только webhook запишет
 // оплату. Дополнительно — несколько сверок через сервер (resume_checkout сам
 // спрашивает Stripe и подтверждает оплату, если webhook задержался).
+//
+// Первая сверка — сразу после возврата: если Stripe уже принял оплату, а
+// webhook ещё в пути, сервер подтвердит её сам, и «Оплата получена» появится
+// почти мгновенно. Дальше — редкий backoff: не больше 5 запросов за 20 секунд.
 // Ожидание конечное: после таймаута экран честно говорит «обрабатывается».
 
-export const CHECKOUT_SYNC_DELAYS_MS = [3_000, 10_000, 20_000] as const;
+export const CHECKOUT_SYNC_DELAYS_MS = [0, 2_500, 6_000, 12_000, 20_000] as const;
 export const CHECKOUT_WAIT_TIMEOUT_MS = 30_000;
 
 export interface CheckoutWaitOptions {
