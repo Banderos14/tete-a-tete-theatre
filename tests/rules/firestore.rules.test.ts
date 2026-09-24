@@ -73,6 +73,12 @@ beforeEach(async () => {
       paymentMethod: 'bank_transfer', paymentStatus: 'awaiting_transfer', paymentExpiresAt: FUTURE,
     }));
     await setDoc(doc(db, 'bookings', 'b-pending'),  baseBooking(USER_B));
+    // Онлайн-оплата с истёкшим сроком: протухать её может только сервер после
+    // сверки со Stripe — сессия могла быть оплачена.
+    await setDoc(doc(db, 'bookings', 'a-online-overdue'), baseBooking(USER_A, {
+      paymentMethod: 'online', paymentStatus: 'awaiting_online', paymentExpiresAt: PAST,
+      stripeCheckoutSessionId: 'cs_test_1',
+    }));
 
     await setDoc(doc(db, 'stats', 'siteStats'), { audienceCount: 2500 });
     await setDoc(doc(db, 'showCounters', 'nulin'), { lastKnownSoldTickets: 10 });
@@ -216,6 +222,18 @@ describe('bookings — запись', () => {
   it('тот же переход ДО истечения срока отклоняется', async () => {
     await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-waiting'), {
       paymentStatus: 'expired', status: 'cancelled', updatedAt: Timestamp.now(),
+    }));
+  });
+
+  it('онлайн-оплату клиент НЕ может протухнуть сам, даже после срока', async () => {
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-overdue'), {
+      paymentStatus: 'expired', status: 'cancelled', updatedAt: Timestamp.now(),
+    }));
+  });
+
+  it('онлайн-оплату клиент НЕ может отметить оплаченной', async () => {
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-overdue'), {
+      paymentStatus: 'paid', status: 'confirmed', stripePaymentIntentId: 'pi_fake',
     }));
   });
 

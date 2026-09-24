@@ -45,6 +45,8 @@ export interface TicketEmailBooking {
   paymentAccountId?: string;
   paymentReference?: string;
   lang:              'RU' | 'FR';
+  /** Онлайн-оплата возвращается (возврат в Stripe в процессе или завершён). */
+  refunded?:         boolean;
 }
 
 export interface TicketEmailOptions {
@@ -64,7 +66,7 @@ function payStateOf(b: TicketEmailBooking): PayState {
 
 const EN_INSTRUCTION = 'Show this QR code to the theatre staff at the entrance.';
 
-function copy(lang: 'RU' | 'FR', kind: TicketEmailKind, pay: PayState, amount: number) {
+function copy(lang: 'RU' | 'FR', kind: TicketEmailKind, pay: PayState, amount: number, online = false) {
   const ru = lang === 'RU';
   const header = kind === 'paid'
     ? (ru ? 'Оплата получена — ваш билет' : 'Paiement reçu — votre billet')
@@ -73,7 +75,7 @@ function copy(lang: 'RU' | 'FR', kind: TicketEmailKind, pay: PayState, amount: n
       : (ru ? 'Бронь подтверждена' : 'Réservation confirmée');
 
   const payValue = {
-    paid:     ru ? 'Оплачено' : 'Payé',
+    paid:     online ? (ru ? 'Оплачено онлайн' : 'Payé en ligne') : (ru ? 'Оплачено' : 'Payé'),
     venue:    ru ? `Оплата на месте при входе: ${amount}&nbsp;€` : `Paiement sur place à l’entrée : ${amount}&nbsp;€`,
     transfer: ru ? 'Банковский перевод — ожидаем оплату' : 'Virement bancaire — en attente',
   }[pay];
@@ -158,7 +160,7 @@ export function buildTicketEmail(
   const lang   = b.lang;
   const isRU   = lang === 'RU';
   const pay    = payStateOf(b);
-  const c      = copy(lang, opts.kind, pay, b.totalAmount);
+  const c      = copy(lang, opts.kind, pay, b.totalAmount, b.paymentMethod === 'online');
   const title  = localizedShowTitle(b, lang);
   const date   = localeDate(b.showDate, lang);
   const seats  = b.seatsCount && b.seatsCount > 0 ? b.seatsCount : b.ticketsCount;
@@ -259,9 +261,14 @@ export function buildCancellationEmail(b: TicketEmailBooking, siteBase?: string)
   const date  = localeDate(b.showDate, b.lang);
   const header = isRU ? 'Бронирование отменено' : 'Réservation annulée';
   const subject = `${THEATRE_NAME} — ${header}: ${title}`;
-  const note = isRU
+  const refundNote = b.refunded
+    ? (isRU
+      ? 'Оплата будет возвращена на карту, с которой вы платили; обычно это занимает 5–10 рабочих дней. '
+      : 'Le paiement sera remboursé sur la carte utilisée ; cela prend généralement 5 à 10 jours ouvrés. ')
+    : '';
+  const note = refundNote + (isRU
     ? 'Если это ошибка или у вас есть вопросы, напишите нам — мы поможем.'
-    : 'S’il s’agit d’une erreur ou si vous avez des questions, écrivez-nous.';
+    : 'S’il s’agit d’une erreur ou si vous avez des questions, écrivez-nous.');
   const rows: [string, string][] = isRU
     ? [['Спектакль', escapeEmailHtml(title)], ['Дата', `${escapeEmailHtml(date)} · ${escapeEmailHtml(b.showTime)}`], ['Код брони', escapeEmailHtml(b.ticketCode)]]
     : [['Spectacle', escapeEmailHtml(title)], ['Date', `${escapeEmailHtml(date)} · ${escapeEmailHtml(b.showTime)}`], ['Code', escapeEmailHtml(b.ticketCode)]];

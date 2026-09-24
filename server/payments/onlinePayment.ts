@@ -42,6 +42,8 @@ export interface OnlineBookingView {
   stripeCheckoutSessionId: string | null;
   stripePaymentIntentId:   string | null;
   paymentIssue:            string | null;
+  /** Возврат, уже синхронизированный из Stripe (refund.created/updated). */
+  refund:                  { id: string; status: string } | null;
 }
 
 export function bookingViewOf(bookingId: string, d: Record<string, unknown>): OnlineBookingView {
@@ -55,6 +57,9 @@ export function bookingViewOf(bookingId: string, d: Record<string, unknown>): On
     stripeCheckoutSessionId: str(d.stripeCheckoutSessionId),
     stripePaymentIntentId:   str(d.stripePaymentIntentId),
     paymentIssue:            str(d.paymentIssue),
+    refund: d.refund && typeof d.refund === 'object' && typeof (d.refund as { id?: unknown }).id === 'string'
+      ? { id: String((d.refund as { id: string }).id), status: String((d.refund as { status?: unknown }).status ?? '') }
+      : null,
   };
 }
 
@@ -186,4 +191,66 @@ export function sessionState(s: SessionView): SessionState {
   if (s.status === 'complete') return s.paymentStatus === 'paid' ? 'paid' : 'processing';
   if (s.status === 'expired')  return 'expired';
   return 'open';
+}
+
+// ── Возврат (синхронизация из Stripe) ───────────────────────────────────────
+//
+// Первый релиз НЕ инициирует возвраты: администратор делает их в Stripe
+// Dashboard, а webhook refund.created / refund.updated отражает результат
+// в брони. Правила перехода — здесь.
+
+export interface RefundView {
+  id:              string;
+  paymentIntentId: string | null;
+  /** Сумма возврата в центах. */
+  amount:          number;
+  currency:        string;
+  /** Статус Stripe, приведённый к нашим: pending | succeeded | failed. */
+  status:          'pending' | 'succeeded' | 'failed' | null;
+}
+
+export function refundViewOf(r: Stripe.Refund): RefundView {
+  const pi = typeof r.payment_intent === 'string' ? r.payment_intent : r.payment_intent?.id ?? null;
+  const raw = r.status ?? '';
+  const status = raw === 'succeeded' ? 'succeeded'
+    : raw === 'failed' || raw === 'canceled' ? 'failed'
+    : raw === 'pending' || raw === 'requires_action' ? 'pending'
+    : null;
+  return { id: r.id, paymentIntentId: pi, amount: r.amount, currency: r.currency, status };
+}
+
+export type RefundDecision =
+  | { kind: 'ignore'; reason: string }
+  | {
+      kind: 'record';
+      status: 'pending' | 'succeeded' | 'failed';
+      /** Возврат на всю сумму брони. Частичный бронь не отменяет. */
+      full: boolean;
+      /** Перевести бронь в cancelled (места и скидка освобождаются). */
+      cancel: boolean;
+      /** Деньги вернулись полностью: paymentStatus → refunded. */
+      refunded: boolean;
+    };
+
+const RANK: Record<string, number> = { pending: 1, succeeded: 2, failed: 2 };
+
+export function decideRefund(b: OnlineBookingView, r: RefundView): RefundDecision {
+  if (b.paymentMethod !== 'online' || !b.stripePaymentIntentId) return { kind: 'ignore', reason: 'foreign' };
+  if (r.paymentIntentId !== b.stripePaymentIntentId)            return { kind: 'ignore', reason: 'foreign' };
+  if (!r.status)                                                return { kind: 'ignore', reason: 'unknown_status' };
+
+  const prev = b.refund;
+  if (prev && prev.id === r.id) {
+    // События могут прийти не по порядку: назад (succeeded → pending) не идём.
+    if (prev.status === r.status)                           return { kind: 'ignore', reason: 'duplicate' };
+    if ((RANK[r.status] ?? 0) < (RANK[prev.status] ?? 0))   return { kind: 'ignore', reason: 'stale' };
+  } else if (prev && prev.status === 'succeeded') {
+    return { kind: 'ignore', reason: 'already_refunded' };
+  }
+
+  const full = Number.isFinite(b.totalAmount) && r.amount >= amountInCents(b.totalAmount);
+  if (r.status === 'failed') return { kind: 'record', status: 'failed', full, cancel: false, refunded: false };
+
+  const cancel = full && b.status !== 'cancelled' && b.status !== 'attended';
+  return { kind: 'record', status: r.status, full, cancel, refunded: full && r.status === 'succeeded' };
 }

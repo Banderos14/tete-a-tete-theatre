@@ -82,6 +82,8 @@ function toTicketBooking(d: Record<string, unknown>): TicketEmailBooking {
     paymentAccountId:  str(d.paymentAccountId) || undefined,
     paymentReference:  str(d.paymentReference) || undefined,
     lang:              d.lang === 'FR' ? 'FR' : 'RU',
+    refunded:          d.paymentStatus === 'refunded'
+      || ['pending', 'succeeded'].includes(String((d.refund as { status?: unknown } | undefined)?.status ?? '')),
   };
 }
 

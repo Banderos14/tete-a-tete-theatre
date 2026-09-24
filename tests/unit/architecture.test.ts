@@ -235,7 +235,7 @@ describe('endpoint-файлы Vercel', () => {
   const EXPECTED = [
     'admin-booking.ts', 'cancel-booking.ts', 'create-booking.ts',
     'delete-user.ts', 'expire-bookings.ts', 'newsletter.ts', 'register-audience.ts',
-    'show-availability.ts',
+    'show-availability.ts', 'stripe-webhook.ts',
   ];
 
   it('функций не больше лимита Hobby-плана', () => {
