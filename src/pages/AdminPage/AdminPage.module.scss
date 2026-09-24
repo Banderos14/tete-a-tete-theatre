@@ -222,6 +222,8 @@
 }
 
 .rowCancelled td { opacity: 0.5; }
+// Проблема с деньгами не приглушается, даже у отменённой брони.
+.rowIssue td { background: rgba(184, 0, 0, 0.04); }
 .rowAttended  td { background: rgba(76, 175, 80, 0.04); }
 
 .cellName { color: var(--fg); font-weight: 500; }
@@ -458,6 +460,84 @@
   background: rgba(176, 64, 64, 0.1);
   color: #b04040;
   border-color: rgba(176, 64, 64, 0.25);
+}
+
+// Онлайн-оплата: тот же бейдж способа, но с акцентной рамкой — видно сразу.
+.badgeOnline {
+  color: var(--accent-glow);
+  background: transparent;
+  border: 1px solid rgba(184, 0, 0, 0.35);
+}
+
+// «Требуется проверка» / «Возврат не выполнен» — заметнее обычных статусов.
+.payIssue {
+  background: rgba(184, 0, 0, 0.14);
+  color: var(--accent-glow);
+  border-color: rgba(184, 0, 0, 0.45);
+  font-weight: 600;
+}
+
+.payIssueBox {
+  // Таблица — white-space: nowrap; пояснения переносятся, как комментарий.
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  max-width: 260px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fg);
+  background: rgba(184, 0, 0, 0.08);
+  border-left: 2px solid var(--accent-glow);
+  border-radius: var(--radius-xs);
+
+  strong {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-glow);
+  }
+}
+
+// Пояснение вместо недоступного действия (онлайн-оплата, удаление).
+.payNote {
+  // Таблица — white-space: nowrap; пояснения переносятся, как комментарий.
+  white-space: normal;
+  overflow-wrap: anywhere;
+  margin-top: 5px;
+  min-width: 180px;
+  max-width: 240px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--fg-mute);
+}
+
+.stripeDetails {
+  // Таблица — white-space: nowrap; пояснения переносятся, как комментарий.
+  white-space: normal;
+  overflow-wrap: anywhere;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--fg-mute);
+
+  summary {
+    cursor: pointer;
+    font-family: var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  p { margin-top: 3px; }
+
+  code {
+    font-family: var(--font-mono);
+    word-break: break-all;
+    color: var(--fg-dim);
+  }
 }
 
 .payCountdown {

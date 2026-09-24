@@ -8,14 +8,15 @@
 // открывала endpoint кому угодно.
 //
 // Бизнес-логика — в server/expiration/expiration.service.ts (переводы) и
-// server/payments/reconcile.service.ts (страховочная сверка онлайн-оплат со Stripe).
+// server/payments/reconcile.service.ts (страховочная сверка онлайн-оплат и
+// возвратов со Stripe).
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { respond } from '../server/shared/http.js';
 import { requireCronSecret } from '../server/shared/auth.js';
 import { errorResponse } from '../server/shared/errors.js';
 import { expireOverdueTransfers } from '../server/expiration/expiration.service.js';
-import { reconcileOnlineBookings } from '../server/payments/reconcile.service.js';
+import { reconcileOnlineBookings, reconcileRefunds } from '../server/payments/reconcile.service.js';
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === 'OPTIONS') { respond(res, 204, {}, req); return; }
@@ -30,9 +31,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     requireCronSecret(req);
 
     const { expired, shows } = await expireOverdueTransfers();
-    const online = await reconcileOnlineBookings();
-    console.log(`[expire-bookings] expired=${expired} shows=${shows.length}`, 'online:', online);
-    respond(res, 200, { ok: true, expired, shows, online }, req);
+    const online  = await reconcileOnlineBookings();
+    const refunds = await reconcileRefunds();
+    console.log(`[expire-bookings] expired=${expired} shows=${shows.length}`, 'online:', online, 'refunds:', refunds);
+    respond(res, 200, { ok: true, expired, shows, online, refunds }, req);
   } catch (err) {
     // Наружу — нейтральный текст: подробности остаются в серверном логе.
     const { status, body } = errorResponse(err, 'Failed to expire bookings');

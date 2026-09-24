@@ -192,8 +192,8 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
 
           {/* Row 3: code + action */}
           <div className={styles.bookingCardRow3}>
-            {/* До онлайн-оплаты код брони не показываем: билета ещё нет. */}
-            {b.ticketCode && !isAwaitingOnline && (
+            {/* До онлайн-оплаты и после возврата код брони не показываем: билета нет. */}
+            {b.ticketCode && !isAwaitingOnline && !onlineMoneyNote && (
               <code className={styles.bookingCode}>{b.ticketCode}</code>
             )}
             {/* Countdown for awaiting transfers */}

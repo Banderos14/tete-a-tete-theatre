@@ -48,9 +48,25 @@ export async function reconcileRefund(refund: RefundView): Promise<RefundSyncOut
       refund: { id: refund.id, status: d.status, amount: refund.amount / 100, updatedAtMs: Date.now() },
       updatedAt: FieldValue.serverTimestamp(),
     };
+    const currentIssue = typeof data.paymentIssue === 'string' ? data.paymentIssue : null;
     if (!d.full && d.status !== 'failed') {
       update.paymentIssue        = 'partial_refund';
       update.paymentIssueDetails = { refundId: refund.id, amountCents: refund.amount, atMs: Date.now() };
+    }
+    if (d.status === 'failed' && !currentIssue) {
+      // Возврат не прошёл (в том числе после succeeded): деньги у театра, а бронь
+      // могла уже быть отменена. Ни место, ни билет автоматически не
+      // возвращаются — нужна ручная проверка, и админка должна это видеть.
+      update.paymentIssue        = 'refund_failed';
+      update.paymentIssueDetails = {
+        refundId: refund.id, amountCents: refund.amount, afterSucceeded: d.revertRefunded, atMs: Date.now(),
+      };
+    }
+    if (d.refunded && (currentIssue === 'refund_failed' || currentIssue === 'paid_after_cancel')) {
+      // Полный возврат прошёл — деньги у зрителя, проблема закрыта. След — в paymentIssueResolved.
+      update.paymentIssue         = FieldValue.delete();
+      update.paymentIssueDetails  = FieldValue.delete();
+      update.paymentIssueResolved = { issue: currentIssue, via: 'refund', refundId: refund.id, atMs: Date.now() };
     }
     if (d.cancel) {
       update.status       = 'cancelled';

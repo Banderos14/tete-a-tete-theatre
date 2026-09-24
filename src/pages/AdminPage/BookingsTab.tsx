@@ -7,7 +7,11 @@ import { hoursUntilExpiry } from '../../services/bookingService';
 import { getPaymentAccount, PAYMENT_CONFIG } from '../../config/payment';
 import { SHOWS } from '../../data/shows';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/booking';
-import { formatTimestamp, PAY_STATUS_LABELS } from './adminFormatting';
+import {
+  formatTimestamp, adminPaymentState, paymentMethodLabel, paymentIssueText, deletionBlockedReason,
+  type AdminPayTone,
+} from './adminFormatting';
+import { onlineBookingState } from '../../utils/onlinePayment';
 import type { ConfirmAction, FilterShowId, FilterStatus } from './adminTypes';
 import { ticketTypeLabel } from '../../utils/ticketType';
 import { summarizeBookings, summarizeByShow } from './adminStats';
@@ -15,13 +19,12 @@ import { filterBookings } from '../../utils/bookingSearch';
 import { AdminShowCard } from './AdminShowCard';
 import styles from './AdminPage.module.scss';
 
-const PAY_STATUS_STYLE: Record<PaymentStatus, string> = {
-  not_paid:          styles.payNotPaid,
-  awaiting_transfer: styles.payAwaiting,
-  awaiting_online:   styles.payAwaiting,
-  paid:              styles.payPaid,
-  expired:           styles.payExpired,
-  refunded:          styles.payExpired,
+const PAY_TONE_STYLE: Record<AdminPayTone, string> = {
+  notPaid:  styles.payNotPaid,
+  awaiting: styles.payAwaiting,
+  paid:     styles.payPaid,
+  expired:  styles.payExpired,
+  issue:    styles.payIssue,
 };
 
 const t = RU;
@@ -214,6 +217,31 @@ export function BookingsTab({
   );
 }
 
+/** Оплаченную онлайн бронь нельзя просто отменить: место держат деньги в Stripe. */
+const REFUND_IN_STRIPE_HINT =
+  'Оплачено онлайн: отмена — через возврат в Stripe Dashboard (Payments → платёж → Refund). '
+  + 'Бронь отменится автоматически.';
+
+/**
+ * Идентификаторы Stripe — свёрнуто, для поиска платежа в Dashboard.
+ * Только id и статусы: ни сумм карты, ни сырых объектов Stripe.
+ */
+function StripeDetails({ booking: b }: { booking: Booking }) {
+  if (!b.stripeCheckoutSessionId && !b.stripePaymentIntentId && !b.refund) return null;
+  return (
+    <details className={styles.stripeDetails}>
+      <summary>Stripe</summary>
+      {b.stripePaymentIntentId && <p>Платёж: <code>{b.stripePaymentIntentId}</code></p>}
+      {b.stripeCheckoutSessionId && <p>Сессия: <code>{b.stripeCheckoutSessionId}</code></p>}
+      {b.refund && (
+        <p>Возврат: <code>{b.refund.id}</code> · {b.refund.status} · {b.refund.amount}&nbsp;€</p>
+      )}
+      {b.refundedAt && <p>Возвращено: {formatTimestamp(b.refundedAt)}</p>}
+      {b.paymentIssueResolved && <p>Проблема закрыта: {b.paymentIssueResolved.issue} ({b.paymentIssueResolved.via})</p>}
+    </details>
+  );
+}
+
 /** Последнее письмо-билет по брони — чтобы на «я не получил письмо» было что ответить. */
 function lastTicketEmail(b: Booking): string | null {
   const entries = Object.entries(b.emails ?? {}).filter(([k]) => k !== 'cancelled');
@@ -237,8 +265,19 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
   const account   = b.paymentMethod === 'bank_transfer' ? getPaymentAccount(b.paymentAccountId) : null;
   const hoursLeft = payStatus === 'awaiting_transfer' ? hoursUntilExpiry(b) : null;
 
+  // Онлайн-оплату подтверждают только Stripe и сервер (webhook, сверка):
+  // ручные «Оплачено» / «Не оплачено» здесь не предлагаются — сервер их тоже
+  // отклонит (online_payment). Оплаченную онлайн бронь отменяет возврат в Stripe.
+  const isOnline      = b.paymentMethod === 'online';
+  const online        = onlineBookingState(b);
+  const payState      = adminPaymentState(b);
+  const issueText     = paymentIssueText(b.paymentIssue);
+  const refundInStripe = isOnline && payStatus === 'paid' && bStatus !== 'cancelled';
+  const deleteBlocked = bStatus === 'cancelled' ? deletionBlockedReason(b) : null;
+  const rowClass      = issueText || online === 'issue' ? styles.rowIssue : ROW_STYLE[bStatus] ?? '';
+
   return (
-    <tr className={ROW_STYLE[bStatus] ?? ''}>
+    <tr className={rowClass}>
       <td>
         <p className={styles.cellName}>{b.userName}</p>
         <p className={styles.cellShow}>{b.showTitle}</p>
@@ -268,14 +307,20 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
         )}
       </td>
       <td>
-        <span className={styles.badge}>
-          {b.paymentMethod === 'on_site' ? t.admin.payOnSite : t.admin.payTransfer}
+        <span className={`${styles.badge} ${isOnline ? styles.badgeOnline : ''}`}>
+          {paymentMethodLabel(b.paymentMethod)}
         </span>
       </td>
       <td>
-        <span className={`${styles.payBadge} ${PAY_STATUS_STYLE[payStatus]}`}>
-          {PAY_STATUS_LABELS[payStatus]}
+        <span className={`${styles.payBadge} ${PAY_TONE_STYLE[payState.tone]}`}>
+          {payState.label}
         </span>
+        {(issueText || online === 'issue') && (
+          <div className={styles.payIssueBox} role="note">
+            <strong>Требуется проверка оплаты</strong>
+            <span>{issueText ?? paymentIssueText('refund_failed')}</span>
+          </div>
+        )}
         {account && (
           <span className={styles.payAccountLabel} title={account.description}>
             {account.label}
@@ -291,7 +336,11 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
             {hoursLeft <= 0 ? 'Истекла' : `${hoursLeft} ч.`}
           </span>
         )}
-        {bStatus !== 'cancelled' && (
+        {isOnline && bStatus !== 'cancelled' && (
+          <p className={styles.payNote}>Оплату подтверждает Stripe — вручную не меняется.</p>
+        )}
+        {isOnline && <StripeDetails booking={b} />}
+        {bStatus !== 'cancelled' && !isOnline && (
           <div className={styles.payActions}>
             {payStatus !== 'paid' && payStatus !== 'expired' && (
               <button
@@ -334,7 +383,10 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
       </td>
       <td>
         <div className={styles.actions}>
-          {bStatus === 'cancelled' ? (
+          {bStatus === 'cancelled' && deleteBlocked ? (
+            // Финансово не закрытая бронь — след денег. Сервер тоже откажет (financial_hold).
+            <p className={styles.payNote}>Удаление недоступно: {deleteBlocked}.</p>
+          ) : bStatus === 'cancelled' ? (
             // Удалить можно только отменённую бронь — то же правило проверяет
             // сервер (/api/admin-booking, действие delete), кнопка лишь не предлагает лишнего.
             <button
@@ -349,8 +401,9 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
             </button>
           ) : (
             <>
-              {/* «Я не получил письмо»: тот же билет с тем же QR — ещё раз. */}
-              {bStatus !== 'attended' && (
+              {/* «Я не получил письмо»: тот же билет с тем же QR — ещё раз.
+                  У неоплаченной онлайн-брони билета ещё нет. */}
+              {bStatus !== 'attended' && online !== 'awaiting' && (
                 <button
                   type="button"
                   className={styles.actionResend}
@@ -361,12 +414,15 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
                   Отправить билет
                 </button>
               )}
-              {bStatus !== 'attended' && (
+              {bStatus !== 'attended' && !refundInStripe && (
                 <button
                   className={styles.actionCancel}
                   disabled={isBusy}
                   onClick={() => onConfirmAction({ type: 'cancel', bookingId: b.id })}
                 >{t.admin.markCancelled}</button>
+              )}
+              {refundInStripe && (
+                <p className={styles.payNote}>{REFUND_IN_STRIPE_HINT}</p>
               )}
             </>
           )}

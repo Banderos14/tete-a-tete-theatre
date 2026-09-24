@@ -218,7 +218,7 @@ describe('кабинет: карточка онлайн-брони', () => {
     expect(card).toContain('{canResumeCheckout(b) && (');
     expect(card).toContain('resumeCheckoutForCurrentUser(b.id)');
     expect(card).toContain('redirectToCheckout(url)');
-    expect(card).toContain('{b.ticketCode && !isAwaitingOnline && (');
+    expect(card).toContain('{b.ticketCode && !isAwaitingOnline && !onlineMoneyNote && (');
     // QR-блок карточки — по-прежнему только для перевода.
     expect(card).toMatch(/isAwaitingTransfer && !isCancelled && b\.ticketCode[\s\S]{0,900}<TicketQrPanel/);
   });

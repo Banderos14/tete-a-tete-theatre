@@ -19,7 +19,8 @@ import { ApiError } from '../shared/errors.js';
 import { bookingsRef } from '../booking/booking.repository.js';
 import { timestampToMs } from '../booking/booking.types.js';
 import { getStripe } from './stripe.client.js';
-import { sessionState, sessionViewOf, type SessionView } from './onlinePayment.js';
+import { refundViewOf, sessionState, sessionViewOf, type SessionView } from './onlinePayment.js';
+import { reconcileRefund } from './refundSync.service.js';
 import { confirmOnlinePayment, expireBookingWithoutSession, expireOnlineBooking } from './onlinePayment.service.js';
 
 /** Сколько ждать webhook после срока сессии, прежде чем сверяться самим. */
@@ -103,6 +104,77 @@ export async function reconcileOnlineBookings(nowMs: number = Date.now()): Promi
       // Одна сломанная бронь не останавливает сверку остальных.
       result.errors += 1;
       console.error('[reconcile] online booking check failed', d.id, err);
+    }
+  }
+
+  return result;
+}
+
+// ── Возвраты: страховка на случай потерянных refund.* событий ────────────────
+//
+// Возвраты делает администратор в Stripe Dashboard, а бронь узнаёт о них из
+// webhook. Если событие потерялось (в Sandbox — всего 3 попытки доставки),
+// бронь осталась бы «оплаченной» или «возврат обрабатывается» навсегда.
+//
+// Всю историю платежей не опрашиваем. Два узких прохода:
+//   1) ОДИН список возвратов Stripe за последние дни — ловит потерянные
+//      refund.created / refund.updated / refund.failed;
+//   2) брони, где возврат завис в pending дольше этого окна, — точечно по id.
+// Каждый возврат применяется тем же reconcileRefund, что и webhook:
+// идемпотентно, конечные состояния не откатываются, Stripe — источник правды.
+
+/** Окно списка недавних возвратов: cron раз в сутки, запас на пропущенный запуск. */
+export const REFUND_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
+const MAX_REFUNDS_PER_RUN = 300;
+
+export interface RefundReconcileResult {
+  checked:  number;
+  recorded: number;
+  errors:   number;
+  disabled?: true;
+}
+
+export async function reconcileRefunds(nowMs: number = Date.now()): Promise<RefundReconcileResult> {
+  const result: RefundReconcileResult = { checked: 0, recorded: 0, errors: 0 };
+
+  let stripe: Stripeish;
+  try {
+    stripe = getStripe();
+  } catch (err) {
+    if (err instanceof ApiError) return { ...result, disabled: true };
+    throw err;
+  }
+
+  const seen = new Set<string>();
+  const apply = async (refund: Parameters<typeof refundViewOf>[0]) => {
+    seen.add(refund.id);
+    result.checked += 1;
+    try {
+      const r = await reconcileRefund(refundViewOf(refund));
+      if (r.outcome === 'recorded') result.recorded += 1;
+    } catch (err) {
+      result.errors += 1;
+      console.error('[reconcile] refund sync failed', refund.id, err);
+    }
+  };
+
+  // 1) Недавние возвраты — одним списком (автопагинация SDK, с потолком).
+  const since = Math.floor((nowMs - REFUND_LOOKBACK_MS) / 1000);
+  for await (const refund of stripe.refunds.list({ created: { gte: since }, limit: 100 })) {
+    if (result.checked >= MAX_REFUNDS_PER_RUN) break;
+    await apply(refund);
+  }
+
+  // 2) Брони, где возврат завис в pending дольше окна: точечно по id возврата.
+  const pending = await bookingsRef().where('refund.status', '==', 'pending').limit(100).get();
+  for (const d of pending.docs) {
+    const refundId = String(((d.data() as Record<string, unknown>).refund as { id?: unknown } | undefined)?.id ?? '');
+    if (!refundId || seen.has(refundId)) continue;
+    try {
+      await apply(await stripe.refunds.retrieve(refundId));
+    } catch (err) {
+      result.errors += 1;
+      console.error('[reconcile] refund retrieve failed', d.id, err);
     }
   }
 

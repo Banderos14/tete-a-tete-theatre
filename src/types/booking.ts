@@ -17,7 +17,7 @@ export interface BookingRefund {
 }
 
 /** Деньги пришли, но принять их автоматически нельзя — показать администратору. */
-export type PaymentIssue = 'amount_mismatch' | 'paid_after_cancel' | 'partial_refund';
+export type PaymentIssue = 'amount_mismatch' | 'paid_after_cancel' | 'partial_refund' | 'refund_failed';
 
 export interface Booking {
   id: string;
@@ -80,5 +80,7 @@ export interface Booking {
   refundedAt?:              Timestamp;
   paymentIssue?:            PaymentIssue;
   paymentIssueDetails?:     Record<string, unknown>;
+  /** Проблема оплаты закрыта (например, полным возвратом) — след для истории. */
+  paymentIssueResolved?:    { issue: PaymentIssue; via: string; refundId?: string; atMs: number };
   cancelledAt?:   import('firebase/firestore').Timestamp;
 }

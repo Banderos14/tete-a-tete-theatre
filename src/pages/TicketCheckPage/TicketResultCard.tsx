@@ -90,6 +90,8 @@ function ticketsWord(n: number): string {
 
 function invalidReason(b: CheckinBooking): string {
   if (b.paymentStatus === 'expired')            return 'Срок оплаты перевода истёк — бронь аннулирована';
+  // Деньги за онлайн-оплату возвращены — билет недействителен.
+  if (b.paymentStatus === 'refunded')           return 'Оплата возвращена — билет недействителен';
   if (b.status === 'cancelled')                 return 'Бронь отменена';
   // Онлайн-оплата не завершена: билета нет, принять деньги на входе нельзя —
   // оплату подтверждает только Stripe.

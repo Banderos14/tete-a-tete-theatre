@@ -166,6 +166,32 @@ export function isScannableTicket(booking: BookingStateSnapshot): boolean {
     || booking.paymentStatus === 'awaiting_transfer';
 }
 
+// Финансово незавершённая бронь — удалять её нельзя.
+//
+// Удаление отменённой брони — HARD DELETE. Если по брони остались деньги,
+// которые театр ещё должен вернуть или проверить, запись нужна как след:
+//   • refund_pending — возврат в Stripe ещё идёт;
+//   • refund_failed  — возврат не прошёл, деньги у театра;
+//   • payment_issue  — оплата требует проверки (paid_after_cancel, amount_mismatch…);
+//   • paid_online    — онлайн-оплата получена и не возвращена.
+// Правило одно для сервера (отказ) и админки (подсказка вместо корзины).
+export type FinancialHold = 'refund_pending' | 'refund_failed' | 'payment_issue' | 'paid_online';
+
+export interface FinancialSnapshot {
+  paymentMethod?: string;
+  paymentStatus?: string;
+  paymentIssue?:  string | null;
+  refund?:        { status?: string } | null;
+}
+
+export function financialHold(b: FinancialSnapshot): FinancialHold | null {
+  if (b.refund?.status === 'pending') return 'refund_pending';
+  if (b.refund?.status === 'failed')  return 'refund_failed';
+  if (b.paymentIssue)                 return 'payment_issue';
+  if (b.paymentMethod === 'online' && b.paymentStatus === 'paid') return 'paid_online';
+  return null;
+}
+
 // Бессмысленные сочетания статусов.
 //
 // Администратор должен иметь возможность починить реальную ситуацию вручную,

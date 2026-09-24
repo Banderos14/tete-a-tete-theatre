@@ -30,6 +30,12 @@ const REFUSALS: Record<string, string> = {
   not_paid:          'Бронь не оплачена.',
   not_cancelled:     'Удалить можно только отменённую бронь.',
   not_found:         'Бронь не найдена — возможно, её уже удалили.',
+  // Онлайн-оплата: состояние меняют только Stripe и сервер.
+  refund_required:   'Эта бронь оплачена онлайн. Сначала выполните возврат в Stripe Dashboard — после успешного возврата бронь отменится и места освободятся автоматически.',
+  online_payment:    'Онлайн-оплату подтверждает Stripe — отметить или снять её вручную нельзя.',
+  financial_hold:    'Удалить нельзя: по брони не завершён возврат или оплата требует проверки.',
+  payment_processing:'Оплата в Stripe ещё обрабатывается — попробуйте позже.',
+  payment_unavailable:'Stripe сейчас недоступен — попробуйте ещё раз через минуту.',
 };
 
 export interface AdminData {
@@ -156,7 +162,9 @@ export function useAdminData(enabled: boolean): AdminData {
       await adminBookingMutation({ action: 'delete', bookingId });
       setBookings(prev => prev.filter(b => b.id !== bookingId));
     } catch (e) {
-      setActionError(e instanceof Error ? `Ошибка удаления брони: ${e.message}` : 'Ошибка удаления брони');
+      const reason = (e as { reason?: string }).reason;
+      setActionError(reason && REFUSALS[reason] ? REFUSALS[reason]
+        : e instanceof Error ? `Ошибка удаления брони: ${e.message}` : 'Ошибка удаления брони');
     } finally {
       setUpdatingId(null);
     }

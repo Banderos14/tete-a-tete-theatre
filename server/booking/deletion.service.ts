@@ -33,6 +33,7 @@
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { badRequest, notFound, conflict } from '../shared/errors.js';
+import { financialHold, type FinancialSnapshot } from '../../shared/domain/bookingRules.js';
 import { db, BOOKINGS, IDEMPOTENCY_KEYS } from './booking.repository.js';
 
 /** Идентификатор документа Firestore: без слэшей и служебных путей. */
@@ -68,8 +69,15 @@ export async function deleteCancelledBooking(
     const snap = await tx.get(ref);
     if (!snap.exists) return { kind: 'missing' as const };
 
-    const status = String((snap.data() as Record<string, unknown>).status ?? '');
+    const data   = snap.data() as Record<string, unknown>;
+    const status = String(data.status ?? '');
     if (status !== 'cancelled') return { kind: 'not_cancelled' as const, status };
+
+    // Отменённая, но финансово не закрытая бронь (возврат идёт или не прошёл,
+    // оплата требует проверки, онлайн-оплата не возвращена) — след денег,
+    // удалять нельзя. Кнопку прячет и админка, но решает сервер.
+    const hold = financialHold(data as FinancialSnapshot);
+    if (hold) return { kind: 'financial_hold' as const, hold };
 
     // Ключи идемпотентности читаются до записей — иначе транзакция Firestore
     // отвергнет чтение после первой операции записи.
@@ -84,6 +92,9 @@ export async function deleteCancelledBooking(
   });
 
   if (outcome.kind === 'missing') throw notFound('Booking not found', 'not_found');
+  if (outcome.kind === 'financial_hold') {
+    throw conflict('Booking has an unresolved payment and cannot be deleted', 'financial_hold', { hold: outcome.hold });
+  }
   if (outcome.kind === 'not_cancelled') {
     throw conflict(
       'Only cancelled bookings can be deleted',

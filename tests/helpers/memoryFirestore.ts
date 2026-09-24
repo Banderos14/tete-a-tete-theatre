@@ -53,6 +53,10 @@ export class MemoryFirestore {
     c.set(id, mode === 'set' || mode === 'create' ? clone(data) : { ...prev, ...clone(data) });
   }
 
+  deleteDoc(collection: string, id: string): void {
+    this.coll(collection).delete(id);
+  }
+
   listDocs(collection: string): Array<[string, Data]> {
     return [...this.coll(collection).entries()].map(([id, d]) => [id, clone(d)]);
   }
@@ -120,8 +124,10 @@ export class MemoryQuery {
     await tick();
     const docs = this.store.listDocs(this.collection)
       .filter(([, d]) => this.filters.every(f => {
-        if (f.op === '==') return d[f.field] === f.value;
-        if (f.op === 'in') return (f.value as unknown[]).includes(d[f.field]);
+        // Путь через точку ('refund.status') — как у Firestore для вложенных полей.
+        const value = f.field.split('.').reduce<unknown>((o, k) => (o as Data | undefined)?.[k], d);
+        if (f.op === '==') return value === f.value;
+        if (f.op === 'in') return (f.value as unknown[]).includes(value);
         throw new Error(`operator ${f.op} is not modelled`);
       }))
       .slice(0, this.max)
@@ -156,6 +162,9 @@ export class MemoryTransaction {
   }
   create(ref: MemoryDocRef, data: Data) {
     this.writes.push(() => this.store.writeDoc(ref.collection, ref.id, data, 'create'));
+  }
+  delete(ref: MemoryDocRef) {
+    this.writes.push(() => this.store.deleteDoc(ref.collection, ref.id));
   }
   commit() {
     this.writes.forEach(w => w());
