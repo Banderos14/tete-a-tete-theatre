@@ -12,6 +12,7 @@ import { canShareFiles } from '../../../services/ticketPdfService';
 import { useLang } from '../../../i18n/LangContext';
 import type { Booking } from '../../../types/booking';
 import { useTicketPdf } from './useTicketPdf';
+import { bookingBreakdown, isMixedBooking } from '../../../utils/ticketBreakdown';
 import styles from './TicketCard.module.scss';
 
 /** Подпись под QR, если билет ещё не оплачен. */
@@ -109,6 +110,8 @@ export function TicketQrPanel({ booking: b, active }: { booking: Booking; active
               {b.totalAmount > 0 && (
                 <> · <span>{b.totalAmount} €</span></>
               )}
+              {/* Несколько тарифов — состав отдельной строкой. */}
+              {isMixedBooking(b) && <><br />{bookingBreakdown(b, lang === 'FR' ? 'FR' : 'RU')}</>}
             </dd>
           </div>
         </dl>

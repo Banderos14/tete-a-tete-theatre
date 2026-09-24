@@ -22,7 +22,9 @@ import {
   db, bookingsRef, readSoldTickets, readUserBookings,
   SHOW_COUNTERS, LOYALTY_STATE, IDEMPOTENCY_KEYS,
 } from './booking.repository.js';
-import { computeLoyalty, loyaltyDiscount } from './loyalty.js';
+import { computeLoyalty } from './loyalty.js';
+import { priceBasket, catalogTariffs, type TicketItem } from '../../shared/domain/ticketBasket.js';
+import { ticketTypeLabel } from '../../shared/catalog/ticketTypes.js';
 import { generateTicketCode } from './ticketCode.js';
 import type { ValidatedBookingRequest } from './booking.validation.js';
 import { isOnlinePaymentEnabled } from '../payments/stripe.client.js';
@@ -52,7 +54,7 @@ export interface CreateBookingInput extends ValidatedBookingRequest {
 }
 
 export async function createBooking(input: CreateBookingInput): Promise<CreateBookingResponse> {
-  const { uid, show, showId, ticketType, ticketsCount, paymentMethod, phone, comment, lang } = input;
+  const { uid, show, showId, lines, paymentMethod, phone, comment, lang } = input;
 
   // Спектакль не должен быть в прошлом. Даже если расписание забудут обновить,
   // сервер не продаёт билет в прошлое.
@@ -70,18 +72,17 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKeyRaw);
   const { userName, userEmail } = await readUserIdentity(uid);
 
-  const ticketInfo     = show.tickets[ticketType]!;
-  const seatsPerTicket = ticketInfo.seats;
+  const tariffs        = catalogTariffs(show.tickets);
   const nowMs          = Date.now();
   const isBankTransfer = paymentMethod === 'bank_transfer';
-  const ticketLabel    = lang === 'FR' ? ticketInfo.labelFR : ticketInfo.label;
+  const labelOf        = (type: string) => ticketTypeLabel(type, lang);
   const showDate       = showDateString(show);
   const database       = db();
 
   type TxResult =
     | { kind: 'created'; bookingId: string; ticketCode: string; totalAmount: number;
-        baseAmount: number; discountAmount: number; priceInfo: string;
-        loyaltyApplied: boolean; paymentReference: string | null; paymentExpiresAt: Timestamp | null }
+        baseAmount: number; discountAmount: number; priceInfo: string; ticketItems: TicketItem[];
+        ticketsCount: number; seatsCount: number; loyaltyApplied: boolean; paymentReference: string | null; paymentExpiresAt: Timestamp | null }
     | { kind: 'replayed'; bookingId: string; ticketCode: string; totalAmount: number }
     | { kind: 'capacity'; remaining: number; soldOut: boolean };
 
@@ -125,24 +126,27 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 
     const userBookings = await readUserBookings(tx, uid);
 
-    const seatsCount = ticketsCount * seatsPerTicket;
+    // Лояльность — только по реальным броням, прочитанным в этой транзакции
+    // (shared/domain/loyalty.ts). Цена корзины — только из каталога
+    // (shared/domain/ticketBasket.ts): скидка 50 % на ОДИН билет брони.
+    const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings);
+    const basket = priceBasket(tariffs, lines, loyaltyAvailable);
+    const { seatsCount, ticketsCount, baseAmount, discountAmount, totalAmount } = basket;
+
+    // Вместимость — по сумме мест всех тарифов корзины.
     const capacity = checkCapacity(sold, seatsCount, THEATRE_CAPACITY);
     if (!capacity.allowed) {
       return { kind: 'capacity', remaining: capacity.remaining, soldOut: capacity.soldOut };
     }
 
-    // Лояльность — только по реальным броням, прочитанным в этой транзакции
-    // (shared/domain/loyalty.ts). Скидка 50 % — на ОДИН билет брони: все
-    // билеты брони одного тарифа, поэтому «один билет» определён однозначно.
-    const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings);
-    const baseAmount     = ticketInfo.price * ticketsCount;
-    const discountAmount = loyaltyAvailable ? loyaltyDiscount(ticketInfo.price) : 0;
-    const totalAmount    = baseAmount - discountAmount;
-
     const ticketCode = generateTicketCode();
-    const priceInfo  = loyaltyAvailable
-      ? `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${baseAmount}€, скидка 50% на 1 билет = ${totalAmount}€`
-      : `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${totalAmount}€`;
+    // Одна строка тарифа — прежний формат; несколько — через «; » и общая сумма.
+    const composition = basket.items
+      .map(i => `${labelOf(i.type)} · ${i.unitPrice}€ × ${i.quantity}`)
+      .join('; ');
+    const priceInfo = loyaltyAvailable
+      ? `${composition} = ${baseAmount}€, скидка 50% на 1 билет = ${totalAmount}€`
+      : `${composition} = ${totalAmount}€`;
 
     // Перевод — 24 часа. Онлайн — временный hold до создания сессии Stripe;
     // после создания его заменит фактический session.expires_at.
@@ -185,7 +189,10 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       userPhone:    phone,
       ticketsCount,
       seatsCount,
-      ticketType,
+      // Первый тариф корзины — для старого кода, читающего одно поле.
+      ticketType:   basket.items[0]!.type,
+      // Состав брони: цены — из каталога, записаны на момент брони.
+      ticketItems:  basket.items,
       priceInfo,
       totalAmount,
       ticketCode,
@@ -202,6 +209,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
         originalAmount:                  baseAmount,
         loyaltyDiscountApplied:          true,
         loyaltyDiscountAmount:           discountAmount,
+        loyaltyDiscountTicketType:       basket.discountTicketType,
         loyaltyRewardUsedFromVisitCount: attendedCount,
       } : {}),
     });
@@ -218,7 +226,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     return {
       kind: 'created',
       bookingId: bookingRef.id, ticketCode, totalAmount,
-      baseAmount, discountAmount, priceInfo,
+      baseAmount, discountAmount, priceInfo, ticketItems: basket.items, ticketsCount, seatsCount,
       loyaltyApplied: loyaltyAvailable, paymentReference, paymentExpiresAt,
     };
   });
@@ -265,6 +273,9 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     ticketCode:  result.ticketCode,
     totalAmount: result.totalAmount,
     priceInfo:   result.priceInfo,
+    ticketItems: result.ticketItems,
+    ticketsCount: result.ticketsCount,
+    seatsCount:  result.seatsCount,
     ...common,
     ...(result.paymentReference ? { paymentReference: result.paymentReference }            : {}),
     ...(result.paymentExpiresAt ? { paymentExpiresAt: result.paymentExpiresAt.toMillis() } : {}),

@@ -1,7 +1,7 @@
 import { useLang } from '../../../i18n/LangContext';
 import type { Booking } from '../../../types/booking';
 import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant } from '../../../utils/ticketStub';
-import { ticketTypeLabel } from '../../../utils/ticketType';
+import { bookingBreakdown } from '../../../utils/ticketBreakdown';
 import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import { TicketQrPanel } from './TicketQrPanel';
 import { onlineBookingState } from '../../../utils/onlinePayment';
@@ -22,7 +22,7 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
   const { day, monthAbbrev } = parseShowDateParts(b.showDate, isFR);
   const timeLabel = `${monthAbbrev} · ${b.showTime}`;
 
-  const ticketLabel = ticketTypeLabel(b.ticketType, isFR ? 'FR' : 'RU');
+  const composition = bookingBreakdown(b, isFR ? 'FR' : 'RU');
 
   // Текст кнопки меняется в зависимости от collapsed/expanded
   let ctaCollapsed = '';
@@ -89,7 +89,7 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
 
           {/* Row 2: composition */}
           <p className={styles.compositionLine}>
-            <span className={styles.compositionCount}>{b.ticketsCount} × {ticketLabel}</span>
+            <span className={styles.compositionCount}>{composition}</span>
             {b.totalAmount > 0 && <>
               <span className={styles.compositionSep}> · </span>
               <span className={styles.compositionAmount}>{b.totalAmount} €</span>

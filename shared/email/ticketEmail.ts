@@ -11,6 +11,7 @@
 
 import { localizedShowTitle } from '../catalog/showTitle.js';
 import { ticketTypeLabel } from '../catalog/ticketTypes.js';
+import { bookingTicketLines } from '../domain/ticketBasket.js';
 import { getPaymentAccount, normalizeIban } from '../config/payment.js';
 import { myTicketsUrl, publicTicketUrl } from '../domain/ticketCode.js';
 import {
@@ -34,6 +35,8 @@ export interface TicketEmailBooking {
   ticketsCount:      number;
   seatsCount?:       number;
   ticketType:        string;
+  /** Состав брони по тарифам; у старых броней нет — тогда ticketType × ticketsCount. */
+  ticketItems?:      unknown;
   totalAmount:       number;
   originalAmount?:   number;
   loyaltyDiscountApplied?: boolean;
@@ -165,7 +168,7 @@ export function buildTicketEmail(
   const date   = localeDate(b.showDate, lang);
   const seats  = b.seatsCount && b.seatsCount > 0 ? b.seatsCount : b.ticketsCount;
   const code   = escapeEmailHtml(b.ticketCode);
-  const tariff = ticketTypeLabel(b.ticketType, lang);
+  const lines  = bookingTicketLines(b);
   const ticketUrl  = publicTicketUrl(b.ticketCode, opts.siteBase, lang);
   const accountUrl = myTicketsUrl(opts.siteBase);
 
@@ -185,7 +188,8 @@ export function buildTicketEmail(
     [c.rows.time,    escapeEmailHtml(b.showTime)],
     [c.rows.place,   `<a href="${THEATRE_MAPS}" style="color:#222;">${THEATRE_ADDRESS}</a>`],
     [c.rows.seats,   String(seats)],
-    [c.rows.tickets, `${b.ticketsCount} × ${escapeEmailHtml(tariff)}`],
+    // Несколько тарифов — по строке на тариф; у брони одного тарифа — как раньше.
+    [c.rows.tickets, lines.map(l => `${l.quantity} × ${escapeEmailHtml(ticketTypeLabel(l.type, lang))}`).join('<br>')],
     ...amountRows,
     [c.rows.payment, c.payValue],
   ];
@@ -240,6 +244,7 @@ export function buildTicketEmail(
     `${c.rows.show}: ${title}`,
     `${c.rows.date}: ${date} · ${b.showTime}`,
     `${c.rows.seats}: ${seats}`,
+    `${c.rows.tickets}: ${lines.map(l => `${l.quantity} × ${ticketTypeLabel(l.type, lang)}`).join(', ')}`,
     `${c.rows.amount}: ${b.totalAmount} €`,
     `${c.rows.payment}: ${strip(c.payValue)}`,
     ...(account ? ['', `${L.ref}: ${reference}`, ...(account.type === 'iban' ? [`IBAN: ${account.iban}`, `BIC: ${account.bic}`] : [])] : []),

@@ -115,6 +115,9 @@ export const RU: T = {
     hasAccount:      'Уже есть аккаунт?',
     register:        'Зарегистрироваться',
     resetSent:       'Ссылка для сброса пароля отправлена на почту',
+    emailTypo:       (s) => `Проверьте email. Возможно, вы имели в виду ${s}?`,
+    emailTypoFix:    'Исправить',
+    emailTypoKeep:   'Адрес верный',
     errors: {
       invalidEmail:                     'Неверный формат email',
       wrongPassword:                    'Неверный пароль',
@@ -228,6 +231,14 @@ export const RU: T = {
     loyaltyDiscount:'Скидка лояльности −50% (1 билет)',
     loyaltyTotal:  'К оплате',
     seatsAvailable: (n, total) => `Свободно мест: ${n} из ${total}`,
+    ticketsTotal: (n) => {
+      const m10 = n % 10, m100 = n % 100;
+      const word = m10 === 1 && m100 !== 11 ? 'билет'
+        : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'билета' : 'билетов';
+      return `${n} ${word}`;
+    },
+    addTicket:    (label) => `Добавить билет: ${label}`,
+    removeTicket: (label) => `Убрать билет: ${label}`,
     soldOut: 'На этот спектакль мест больше нет.',
     notEnoughSeats: (n) => `Осталось только ${n} мест. Уменьшите количество билетов.`,
     showAlreadyStarted: 'Спектакль уже начался — бронирование закрыто.',

@@ -22,16 +22,22 @@ export function isOnlinePaymentUiEnabled(
   return typeof flag === 'string' && flag.trim() === 'true';
 }
 
-/**
- * Способы оплаты формы брони в порядке показа. Онлайн — первым, как
- * рекомендуемый; выбор по умолчанию при этом не меняется (его задаёт форма).
- */
+/** Способы оплаты формы брони в порядке показа. Онлайн — первым, как рекомендуемый. */
 export function paymentMethodsFor(onlineEnabled: boolean): PaymentMethod[] {
   return onlineEnabled ? ['online', 'on_site', 'bank_transfer'] : ['on_site', 'bank_transfer'];
 }
 
 /** Способ, отмеченный в форме как рекомендуемый. */
 export const RECOMMENDED_PAYMENT_METHOD: PaymentMethod = 'online';
+
+/**
+ * Способ, выбранный при открытии формы: онлайн, если он показан, иначе —
+ * прежний безопасный «на месте». Выбор зрителя форма потом не трогает:
+ * значение подставляется только при открытии модалки для спектакля.
+ */
+export function defaultPaymentMethod(onlineEnabled: boolean): PaymentMethod {
+  return onlineEnabled ? 'online' : 'on_site';
+}
 
 // ── Переход на Stripe Checkout ──────────────────────────────────────────────
 

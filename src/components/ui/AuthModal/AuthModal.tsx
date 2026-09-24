@@ -4,6 +4,8 @@ import { useModalA11y } from '../../../hooks/useModalA11y';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
 import { mapAuthError, isEmailInUseError, isPopupClosedError } from '../../../utils/authErrors';
+import { useEmailTypoGuard } from '../../../hooks/useEmailTypoGuard';
+import { EmailTypoHint } from '../EmailTypoHint';
 import styles from './AuthModal.module.scss';
 
 type Tab = 'signIn' | 'signUp';
@@ -25,6 +27,8 @@ export function AuthModal({ open, onClose }: Props) {
   const [info,         setInfo]         = useState('');
   const [loading,      setLoading]      = useState(false);
   const [showReset,    setShowReset]    = useState(false);
+  // Опечатка в домене почты (gnail.com) — только при регистрации: там адрес сохраняется.
+  const typo = useEmailTypoGuard(email, setEmail, tab === 'signUp');
 
   useEffect(() => {
     if (!open) {
@@ -58,7 +62,9 @@ export function AuthModal({ open, onClose }: Props) {
   }
 
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault(); setLoading(true); resetForm();
+    e.preventDefault();
+    if (typo.blocksSubmit()) return;
+    setLoading(true); resetForm();
     try {
       if (tab === 'signIn') {
         await signInWithEmail(email, password);
@@ -168,6 +174,7 @@ export function AuthModal({ open, onClose }: Props) {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
+              onBlur={typo.onBlur}
               placeholder=" "
               required
               disabled={loading}
@@ -175,6 +182,9 @@ export function AuthModal({ open, onClose }: Props) {
             />
             <label htmlFor="auth-email">{t.auth.emailLabel}</label>
           </div>
+          {typo.visible && typo.suggestion && (
+            <EmailTypoHint suggestion={typo.suggestion} t={t.auth} onFix={typo.fix} onKeep={typo.keep} />
+          )}
 
           {!showReset && (
             <div className={styles.field}>

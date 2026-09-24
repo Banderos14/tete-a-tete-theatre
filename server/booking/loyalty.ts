@@ -5,7 +5,7 @@
 // который понимает правило. Цена считается ТОЛЬКО здесь, в транзакции
 // создания брони: клиент скидку лишь показывает.
 
-import { loyaltySummary, loyaltyDiscountForTicket, type LoyaltyBooking } from '../../shared/domain/loyalty.js';
+import { loyaltySummary, type LoyaltyBooking } from '../../shared/domain/loyalty.js';
 import { parseShowStartUtcMs } from '../../shared/domain/showTime.js';
 import type { RawBooking } from './booking.types.js';
 
@@ -32,9 +32,4 @@ export interface LoyaltyState {
 export function computeLoyalty(bookings: RawBooking[]): LoyaltyState {
   const s = loyaltySummary(bookings.map(toLoyaltyBooking));
   return { loyaltyAvailable: s.available, attendedCount: s.visits, usedCount: s.used };
-}
-
-/** Скидка 50 % на ОДИН билет брони — не на всю бронь. */
-export function loyaltyDiscount(unitPrice: number): number {
-  return loyaltyDiscountForTicket(unitPrice);
 }

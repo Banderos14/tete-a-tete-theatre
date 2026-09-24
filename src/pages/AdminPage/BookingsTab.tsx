@@ -13,6 +13,7 @@ import {
 } from './adminFormatting';
 import { onlineBookingState } from '../../utils/onlinePayment';
 import type { ConfirmAction, FilterShowId, FilterStatus } from './adminTypes';
+import { bookingTicketLines } from '../../utils/ticketBreakdown';
 import { ticketTypeLabel } from '../../utils/ticketType';
 import { summarizeBookings, summarizeByShow } from './adminStats';
 import { filterBookings } from '../../utils/bookingSearch';
@@ -290,9 +291,12 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
         {b.ticketsCount}
         {b.seatsCount && b.seatsCount !== b.ticketsCount && <> / {b.seatsCount} мест</>}
         <br />
-        <span className={styles.badge}>
-          {ticketTypeLabel(b.ticketType, 'RU')}
-        </span>
+        {/* Тариф; несколько тарифов в брони — по бейджу на тариф с количеством. */}
+        {bookingTicketLines(b).length > 1
+          ? bookingTicketLines(b).map(l => (
+              <span key={l.type} className={`${styles.badge} ${styles.badgeStack}`}>{l.quantity} × {ticketTypeLabel(l.type, 'RU')}</span>
+            ))
+          : <span className={styles.badge}>{ticketTypeLabel(b.ticketType, 'RU')}</span>}
       </td>
       <td className={styles.cellCenter}>
         <strong>{b.totalAmount ?? '—'}&nbsp;€</strong>

@@ -125,7 +125,7 @@ describe('спектакль не зависит от состояния вхо�
 
   it('выбор билета сбрасывается только при смене спектакля, не при входе', () => {
     const reset = modal.slice(modal.indexOf('// Сбрасываем все поля при открытии для нового спектакля'));
-    expect(reset.slice(0, reset.indexOf('}, ['))).toContain('setSelectedTicket(null)');
+    expect(reset.slice(0, reset.indexOf('}, ['))).toContain('setBasket([])');
     expect(reset).toMatch(/^[\s\S]*?\}, \[show\?\.id\]\);/);
     expect(reset.slice(0, reset.indexOf('}, [show?.id]);'))).not.toMatch(/\[user/);
   });

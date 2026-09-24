@@ -1,5 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { TicketTypeId } from '../../shared/catalog/shows';
+import type { BookingTicketItem } from '../../shared/contracts/booking';
 
 export type { TicketTypeId } from '../../shared/catalog/shows';
 
@@ -36,7 +37,10 @@ export interface Booking {
   ticketsCount:        number;
   /** Фактически занятые места; отличается от ticketsCount у семейного пакета. */
   seatsCount?:         number;
+  /** Первый тариф брони. Состав целиком — ticketItems (у старых броней его нет). */
   ticketType:          TicketTypeId;
+  /** Несколько тарифов в одной брони; читать через bookingTicketLines(). */
+  ticketItems?:        BookingTicketItem[];
   priceInfo:           string;
   totalAmount:         number;
   ticketCode:          string;
@@ -58,6 +62,8 @@ export interface Booking {
   originalAmount?:                  number;
   loyaltyDiscountApplied?:          boolean;
   loyaltyDiscountAmount?:           number;
+  /** Тариф билета, на который пришлась скидка (смешанная корзина). */
+  loyaltyDiscountTicketType?:       TicketTypeId;
   loyaltyRewardUsedFromVisitCount?: number;
   cancelledBy?:   'user' | 'admin';
   cancelledByUid?: string;

@@ -14,6 +14,7 @@ import {
   isOnlineMoneyNotice, getCheckoutReturnFromLocation, clearCheckoutParams, checkoutReturnView,
   startCheckoutWait, holdUntilMs, formatHoldTime, CHECKOUT_SYNC_DELAYS_MS, CHECKOUT_WAIT_TIMEOUT_MS,
   RECOMMENDED_PAYMENT_METHOD,
+  defaultPaymentMethod,
 } from '../../src/utils/onlinePayment';
 import { getStubVariant } from '../../src/utils/ticketStub';
 import { ticketPdfStatus } from '../../src/services/ticketPdfService';
@@ -56,9 +57,21 @@ describe('флаг: «Оплатить онлайн» только при VITE_O
     expect(FR.payment.recommended).toBe('Recommandé');
   });
 
-  it('выбор по умолчанию не меняется: форма по-прежнему открывается с «на месте»', () => {
+  it('по умолчанию выбран онлайн, если он показан; иначе — прежний «на месте»', () => {
+    expect(defaultPaymentMethod(true)).toBe('online');
+    expect(defaultPaymentMethod(false)).toBe('on_site');
     const modal = projectSource('src/components/ui/BookingModal/BookingModal.tsx');
-    expect(modal).toContain("useState<PaymentMethod>('on_site')");
+    expect(modal).toContain('useState<PaymentMethod>(() => defaultPaymentMethod(onlineEnabled))');
+  });
+
+  it('выбор зрителя не сбрасывается: способ по умолчанию подставляется только при открытии для спектакля', () => {
+    const modal = projectSource('src/components/ui/BookingModal/BookingModal.tsx');
+    // Все вызовы setPayment: обработчик карточки и сброс при смене спектакля — других нет.
+    const calls = modal.match(/setPayment\(/g) ?? [];
+    expect(calls).toHaveLength(1);
+    expect(modal).toContain('onPaymentChange={setPayment}');
+    const reset = modal.slice(modal.indexOf('// Сбрасываем все поля при открытии для нового спектакля'));
+    expect(reset.slice(0, reset.indexOf('}, [show?.id]);'))).toContain('setPayment(defaultPaymentMethod(onlineEnabled))');
   });
 
   it('без переменной окружения (юнит-тесты не читают .env) — выключено', () => {
@@ -70,7 +83,8 @@ describe('флаг: «Оплатить онлайн» только при VITE_O
     const modal = projectSource('src/components/ui/BookingModal/BookingModal.tsx');
     expect(step).toContain('paymentMethods.map(pm =>');
     expect(step).toContain('aria-pressed={active}');
-    expect(modal).toContain('paymentMethodsFor(isOnlinePaymentUiEnabled())');
+    expect(modal).toContain('paymentMethodsFor(onlineEnabled)');
+    expect(modal).toContain('isOnlinePaymentUiEnabled()');
     expect(modal).toContain('paymentMethods={paymentMethods}');
   });
 });

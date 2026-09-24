@@ -13,3 +13,13 @@ const LABELS: Record<TicketTypeId, { RU: string; FR: string }> = {
 export function ticketTypeLabel(ticketType: TicketTypeId | string, lang: 'RU' | 'FR'): string {
   return LABELS[ticketType as TicketTypeId]?.[lang] ?? String(ticketType ?? '');
 }
+
+/**
+ * Состав брони словами: «2 × Обычный, 2 × Ученик / студент». Строки — из
+ * bookingTicketLines(): у старой брони это одна строка ticketType × ticketsCount.
+ */
+export function ticketBreakdownLabel(
+  lines: ReadonlyArray<{ type: string; quantity: number }>, lang: 'RU' | 'FR', separator = ', ',
+): string {
+  return lines.map(l => `${l.quantity} × ${ticketTypeLabel(l.type, lang)}`).join(separator);
+}

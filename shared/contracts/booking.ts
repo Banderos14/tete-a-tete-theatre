@@ -8,9 +8,29 @@ export type TicketTypeId   = 'standard' | 'student' | 'child' | 'adult' | 'famil
 export type PaymentMethod  = 'on_site' | 'bank_transfer' | 'online';
 export type UiLanguage     = 'RU' | 'FR';
 
+/** Строка корзины в запросе: тариф и количество. Цену берёт сервер из каталога. */
+export interface BookingItemRequest {
+  ticketType: TicketTypeId;
+  quantity:   number;
+}
+
+/** Строка состава брони, записанная сервером (bookings/{id}.ticketItems). */
+export interface BookingTicketItem {
+  type:      TicketTypeId;
+  quantity:  number;
+  unitPrice: number;
+  seats:     number;
+  subtotal:  number;
+}
+
 /** Тело POST /api/create-booking. Цену и статусы сервер считает сам. */
 export interface CreateBookingRequest {
   showId:        string;
+  /**
+   * Несколько тарифов в одной брони. Если задано — ticketType/ticketsCount
+   * сервер не читает; они остаются для совместимости (первый тариф и всего билетов).
+   */
+  items?:        BookingItemRequest[];
   ticketType:    TicketTypeId;
   ticketsCount:  number;
   paymentMethod: PaymentMethod;
@@ -27,6 +47,10 @@ export interface CreateBookingResponse {
   ticketCode:              string;
   totalAmount:             number;
   priceInfo?:              string;
+  /** Состав брони по тарифам (новые брони). */
+  ticketItems?:            BookingTicketItem[];
+  ticketsCount?:           number;
+  seatsCount?:             number;
   showDate:                string;
   showTime:                string;
   showTitle:               string;

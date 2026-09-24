@@ -79,9 +79,9 @@ Firebase грузится лениво из `AuthContext` (`loadFirebase()` ме
 
 Клиент **не может** создать бронь напрямую: в `firestore.rules` для `bookings` стоит `allow create: if false`. Весь поток:
 
-1. `BookingModal` собирает только `showId, ticketType, ticketsCount, paymentMethod, comment, phone, lang`.
+1. `BookingModal` собирает только `showId, items[{ticketType, quantity}], paymentMethod, comment, phone, lang` — в одной брони может быть несколько тарифов (прежний формат `ticketType × ticketsCount` сервер тоже принимает).
 2. `createBookingViaApi()` (`src/services/bookingService.ts`) шлёт это в `/api/create-booking` с `Authorization: Bearer <Firebase ID token>`.
-3. `server/booking/booking.service.ts` через Admin SDK сам считает цену, скидку лояльности, `ticketCode`, `status`, `paymentStatus` — клиентские значения игнорируются. Хендлер `api/create-booking.ts` только разбирает запрос и переводит ошибку сервиса в HTTP-ответ.
+3. `server/booking/booking.service.ts` через Admin SDK сам считает цену, скидку лояльности, `ticketCode`, `status`, `paymentStatus` — клиентские значения игнорируются. Цена корзины — `priceBasket()` в `shared/domain/ticketBasket.ts` (одна формула для сервера и формы); состав пишется в `ticketItems`, у старых броней его нет — читать через `bookingTicketLines()`. Хендлер `api/create-booking.ts` только разбирает запрос и переводит ошибку сервиса в HTTP-ответ.
 
 **Цены и даты спектаклей продублированы в двух местах:** каталог `SHOWS` в `shared/catalog/shows.ts` (сервер, source of truth) и `src/data/shows.ts` (фронт). При изменении расписания или цен нужно править **оба** файла. Расхождение ловится тестом `tests/unit/pastShows.test.ts` — он сверяет id, дату, время и цены всех типов билетов.
 

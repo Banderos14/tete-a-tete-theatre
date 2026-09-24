@@ -8,13 +8,21 @@ import { fetchShowAvailability } from '../../../services/availabilityService';
 import type { BookingApiError } from '../../../services/bookingService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
 import { formatPhone, normalizePhone, isValidPhone } from '../../../utils/phone';
+import { useEmailTypoGuard } from '../../../hooks/useEmailTypoGuard';
+import { EmailTypoHint } from '../EmailTypoHint';
 import { MAX_TICKETS_PER_BOOKING } from '../../../../shared/catalog/shows';
-import { loyaltySummary, loyaltyDiscountForTicket } from '../../../services/loyaltyService';
+import { loyaltySummary } from '../../../services/loyaltyService';
 import {
-  isOnlinePaymentUiEnabled, paymentMethodsFor, checkoutRedirectUrl, redirectToCheckout,
+  isOnlinePaymentUiEnabled, paymentMethodsFor, defaultPaymentMethod, checkoutRedirectUrl, redirectToCheckout,
   checkoutErrorKey, needsFreshBookingAttempt,
 } from '../../../utils/onlinePayment';
-import type { Show, TicketType } from '../../../types';
+import {
+  priceBasket, canAddTicket, canRemoveTicket, setLineQuantity, clampBasket,
+  type BasketLine, type BasketTariff,
+} from '../../../../shared/domain/ticketBasket';
+import { ticketBreakdownLabel } from '../../../../shared/catalog/ticketTypes';
+import type { TicketTypeId } from '../../../../shared/catalog/shows';
+import type { Show } from '../../../types';
 import type { Booking, PaymentMethod } from '../../../types/booking';
 import { BookingFormStep } from './BookingFormStep';
 import { BookingSuccessStep } from './BookingSuccessStep';
@@ -43,10 +51,14 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   const [authPassword, setAuthPassword] = useState('');
   const [authError,    setAuthError]    = useState('');
   const [authLoading,  setAuthLoading]  = useState(false);
+  // Опечатка в домене почты (gnail.com) — только при регистрации: там адрес сохраняется.
+  const emailTypo = useEmailTypoGuard(authEmail, setAuthEmail, authTab === 'signUp');
 
-  const [tickets,          setTickets]          = useState(1);
-  const [selectedTicket,   setSelectedTicket]   = useState<TicketType | null>(null);
-  const [payment,          setPayment]          = useState<PaymentMethod>('on_site');
+  // Корзина: количество по каждому тарифу. Пустая — ещё не трогали, тогда
+  // действует выбор по умолчанию (1 билет первого тарифа, как и раньше).
+  const [basket,           setBasket]           = useState<BasketLine[]>([]);
+  const onlineEnabled = useMemo(() => isOnlinePaymentUiEnabled(), []);
+  const [payment,          setPayment]          = useState<PaymentMethod>(() => defaultPaymentMethod(onlineEnabled));
   const [phone,            setPhone]            = useState('');
   const [comment,          setComment]          = useState('');
   const [submitLoading,    setSubmitLoading]    = useState(false);
@@ -72,38 +84,31 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
 
   // «Оплатить онлайн» — только при включённом флаге интерфейса. Принимает ли
   // оплату сервер, решает его собственный ONLINE_PAYMENT_ENABLED.
-  const paymentMethods = useMemo(() => paymentMethodsFor(isOnlinePaymentUiEnabled()), []);
+  const paymentMethods = useMemo(() => paymentMethodsFor(onlineEnabled), [onlineEnabled]);
 
-  const defaultTicket = useMemo(
-    () => (show?.ticketTypes?.length ? show.ticketTypes[0] : null),
+  // Тарифы спектакля для расчёта корзины — та же формула, что у сервера
+  // (shared/domain/ticketBasket.ts). Сервер всё равно пересчитает цену сам.
+  const tariffs = useMemo<BasketTariff[]>(
+    () => (show?.ticketTypes ?? []).map(tt => ({ id: tt.id, price: tt.price, seats: tt.seats ?? 1, available: tt.available })),
     [show],
   );
-
-  const activeTicket   = selectedTicket ?? defaultTicket;
-  const baseAmount     = (activeTicket?.price ?? 0) * tickets;
-  const seatsPerTicket = activeTicket?.seats ?? 1;
-  // Когда остаток неизвестен, ограничиваем только лимитом типа билета:
-  // авторитетную проверку вместимости всё равно делает сервер.
-  //
-  // MAX_TICKETS_PER_BOOKING стоит здесь обязательно: сервер отклоняет запрос
-  // с большим числом билетов, и без этого ограничения счётчик доходил бы,
-  // например, до 45 (столько стоит в available у «Графа Нулина»), а бронь
-  // падала бы общей ошибкой уже после отправки формы.
-  const maxTickets     = Math.max(0, Math.min(
-    MAX_TICKETS_PER_BOOKING,
-    activeTicket?.available ?? MAX_TICKETS_PER_BOOKING,
-    seatsLeft === null
-      ? MAX_TICKETS_PER_BOOKING
-      : Math.floor(seatsLeft / seatsPerTicket),
-  ));
+  const lines = useMemo<BasketLine[]>(
+    () => (basket.length || !tariffs[0] ? basket : [{ type: tariffs[0].id, quantity: 1 }]),
+    [basket, tariffs],
+  );
+  // MAX_TICKETS_PER_BOOKING обязателен: сервер отклоняет запрос с большим
+  // числом билетов. Остаток мест неизвестен — ограничиваем только лимитами,
+  // авторитетную проверку вместимости делает сервер.
+  const limits = useMemo(() => ({ maxTickets: MAX_TICKETS_PER_BOOKING, seatsLeft }), [seatsLeft]);
 
   const loyaltyAvailable = useMemo(
     () => loyaltySummary(userBookings).available,
     [userBookings],
   );
-  // Скидка — на ОДИН билет, как у сервера; сервер всё равно пересчитает цену.
-  const discountAmount = loyaltyAvailable && activeTicket ? loyaltyDiscountForTicket(activeTicket.price) : 0;
-  const totalAmount    = baseAmount - discountAmount;
+  // Скидка — на ОДИН билет брони (самый дорогой в корзине), как у сервера.
+  const price = useMemo(() => priceBasket(tariffs, lines, loyaltyAvailable), [tariffs, lines, loyaltyAvailable]);
+  const { baseAmount, discountAmount, totalAmount } = price;
+  const soldOut = seatsLeft !== null && seatsLeft <= 0;
 
   // Realtime subscription — обновляет loyalty reward без refresh.
   // Запускается только пока модалка открыта (show != null), чистится при закрытии.
@@ -122,13 +127,14 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
     return () => { cancelled = true; };
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Ограничиваем количество билетов, когда остаток известен и меньше выбранного.
+  // Урезаем корзину, когда остаток известен и меньше выбранного.
   useEffect(() => {
-    if (maxTickets >= 1 && tickets > maxTickets) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTickets(maxTickets);
-    }
-  }, [maxTickets, tickets]);
+    const clamped = clampBasket(tariffs, lines, limits);
+    const same = clamped.length === lines.length
+      && clamped.every(c => lines.some(l => l.type === c.type && l.quantity === c.quantity));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!same) setBasket(clamped);
+  }, [tariffs, lines, limits]);
 
   useEffect(() => {
     // Переходим на форму сразу после авторизации, не дожидаясь следующего рендера
@@ -147,7 +153,7 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
     if (!show) return;
     /* eslint-disable react-hooks/set-state-in-effect */
     setStep(user ? 'form' : 'auth');
-    setTickets(1); setSelectedTicket(null); setPayment('on_site');
+    setBasket([]); setPayment(defaultPaymentMethod(onlineEnabled));
     setComment(''); setSubmitError(''); setPhoneError(''); setRedirecting(false);
     setAuthEmail(''); setAuthPassword(''); setAuthName(''); setAuthError('');
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -214,7 +220,9 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   }
 
   async function handleAuth(e: FormEvent) {
-    e.preventDefault(); setAuthLoading(true); setAuthError('');
+    e.preventDefault();
+    if (emailTypo.blocksSubmit()) return;
+    setAuthLoading(true); setAuthError('');
     try {
       if (authTab === 'signIn') await signInWithEmail(authEmail, authPassword);
       else                      await signUpWithEmail(authEmail, authPassword, authName);
@@ -227,13 +235,13 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!user || !activeTicket || !show || authContextLoading) return;
+    if (!user || !show || authContextLoading || price.ticketsCount < 1) return;
     // Двойной Enter успевает пройти раньше, чем React перерисует disabled у кнопки.
     if (submitLoading) return;
     if (redirecting) return;
     // Клиентская проверка — только для быстрой обратной связи; отказать по-настоящему
     // может лишь сервер, который считает вместимость в транзакции.
-    if (seatsLeft !== null && seatsLeft < tickets * seatsPerTicket) {
+    if (seatsLeft !== null && seatsLeft < price.seatsCount) {
       setSubmitError(seatsLeft <= 0 ? t.booking.soldOut : t.booking.notEnoughSeats(seatsLeft));
       return;
     }
@@ -252,10 +260,12 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
 
       // Сервер сам считает totalAmount, status, paymentStatus, ticketCode —
       // любые значения этих полей из клиента игнорируются.
+      // Состав корзины: тарифы и количества. Цены сервер берёт из каталога.
       const result = await createBookingViaApi({
         showId:        show.id,
-        ticketType:    activeTicket.id,
-        ticketsCount:  tickets,
+        items:         price.items.map(i => ({ ticketType: i.type, quantity: i.quantity })),
+        ticketType:    price.items[0]!.type,
+        ticketsCount:  price.ticketsCount,
         paymentMethod: payment,
         comment,
         phone:         normalizePhone(phone),
@@ -307,8 +317,8 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
         errorCode:       fe?.code,
         errorMessage:    fe?.message,
         showId:          show?.id,
-        ticketType:      activeTicket?.id,
-        ticketsCount:    tickets,
+        ticketTypes:     price.items.map(i => i.type),
+        ticketsCount:    price.ticketsCount,
         phoneValid:      isValidPhone(phone),
         paymentMethod:   payment,
         isAuthenticated: !!user,
@@ -409,8 +419,12 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
                   type="email" value={authEmail} placeholder={t.auth.emailLabel}
                   aria-label={t.auth.emailLabel}
                   onChange={e => setAuthEmail(e.target.value)} required disabled={authLoading}
+                  onBlur={emailTypo.onBlur}
                   autoComplete="email"
                 />
+                {emailTypo.visible && emailTypo.suggestion && (
+                  <EmailTypoHint suggestion={emailTypo.suggestion} t={t.auth} onFix={emailTypo.fix} onKeep={emailTypo.keep} />
+                )}
                 <input
                   className={styles.input}
                   type="password" value={authPassword} placeholder={t.auth.passwordLabel}
@@ -433,8 +447,12 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
             show={show}
             lang={lang}
             t={t}
-            tickets={tickets}
-            selectedTicket={selectedTicket}
+            quantities={Object.fromEntries(price.items.map(i => [i.type, i.quantity]))}
+            ticketsCount={price.ticketsCount}
+            canAdd={(type: TicketTypeId) => canAddTicket(tariffs, lines, type, limits)}
+            canRemove={(type: TicketTypeId) => canRemoveTicket(lines, type)}
+            onQuantityChange={(type: TicketTypeId, q: number) => setBasket(setLineQuantity(lines, type, q))}
+            soldOut={soldOut}
             payment={payment}
             phone={phone}
             comment={comment}
@@ -442,15 +460,11 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
             redirecting={redirecting}
             paymentMethods={paymentMethods}
             submitError={submitError}
-            activeTicket={activeTicket}
             baseAmount={baseAmount}
             totalAmount={totalAmount}
             discountAmount={discountAmount}
             loyaltyAvailable={loyaltyAvailable}
-            maxTickets={maxTickets}
             seatsLeft={seatsLeft}
-            onTicketsChange={setTickets}
-            onSelectedTicketChange={tt => { setSelectedTicket(tt); setTickets(1); }}
             onPaymentChange={setPayment}
             onPhoneChange={v => { setPhone(formatPhone(v)); setPhoneError(''); }}
             phoneError={phoneError}
@@ -465,8 +479,7 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
             show={show}
             lang={lang}
             t={t}
-            tickets={tickets}
-            activeTicket={activeTicket}
+            composition={ticketBreakdownLabel(price.items, lang)}
             savedAmount={savedAmount}
             ticketEmailSent={ticketEmailSent}
             ticketCode={ticketCode}

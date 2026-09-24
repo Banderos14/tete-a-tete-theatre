@@ -654,3 +654,124 @@ describe('проход: только действующая оплаченная
       .toBe('already_attended');
   });
 });
+
+// ── Несколько тарифов в одной брони ─────────────────────────────────────────
+
+describe('смешанная корзина: одна бронь, одна сессия Stripe', () => {
+  const mixed = (items: Array<Record<string, unknown>>, patch: Record<string, unknown> = {}, uid = UID, key: string | null = null) =>
+    request({ items, ...patch }, uid, key);
+  const twoAndTwo = [{ ticketType: 'standard', quantity: 2 }, { ticketType: 'student', quantity: 2 }];
+  const unitAmounts = () => stripe.created.map(p => (p.line_items as Array<{ price_data: { unit_amount: number } }>)[0]!.price_data.unit_amount);
+
+  it('2 × Обычный 30 € + 2 × Ученик 20 € — одна бронь на 4 билета и 100 €, одна сессия на 10000 центов', async () => {
+    const res = await createBooking(mixed(twoAndTwo));
+    expect(res).toMatchObject({ totalAmount: 100, ticketsCount: 4, seatsCount: 4 });
+    expect(store.listDocs('bookings')).toHaveLength(1);
+    expect(stripe.created).toHaveLength(1);
+    expect(unitAmounts()).toEqual([10000]);
+    const b = booking(res.bookingId);
+    expect(b).toMatchObject({
+      ticketsCount: 4, seatsCount: 4, totalAmount: 100, ticketType: 'standard',
+      ticketItems: [
+        { type: 'standard', quantity: 2, unitPrice: 30, seats: 1, subtotal: 60 },
+        { type: 'student',  quantity: 2, unitPrice: 20, seats: 1, subtotal: 40 },
+      ],
+    });
+    expect(String(b.priceInfo)).toBe('Обычный · 30€ × 2; Ученик / студент · 20€ × 2 = 100€');
+    expect((await readShowAvailability())[SHOW]!.sold).toBe(4);
+  });
+
+  it('поддельные цены и суммы клиента игнорируются', async () => {
+    const res = await createBooking(mixed(
+      [{ ticketType: 'standard', quantity: 2, unitPrice: 1, subtotal: 1 }, { ticketType: 'student', quantity: 2, price: 0 }],
+      { totalAmount: 1, amount: 1, ticketsCount: 1, ticketType: 'student' },
+    ));
+    expect(res.totalAmount).toBe(100);
+    expect(unitAmounts()).toEqual([10000]);
+    expect(booking(res.bookingId).ticketsCount).toBe(4);
+  });
+
+  it('вместимость — по сумме мест всех тарифов', async () => {
+    const { THEATRE_CAPACITY } = await import('../../shared/catalog/shows.js');
+    store.seed('bookings', 'hall', {
+      userId: 'other', showId: SHOW, showDate: '02 Окт 2026', showTime: '20:00',
+      status: 'confirmed', paymentStatus: 'paid', paymentMethod: 'on_site', ticketsCount: THEATRE_CAPACITY - 3, seatsCount: THEATRE_CAPACITY - 3,
+    });
+    const err = await refusal(createBooking(mixed(twoAndTwo)));
+    expect(err).toMatchObject({ reason: 'capacity_exceeded' });
+    expect(stripe.created).toHaveLength(0);
+    const ok = await createBooking(mixed([{ ticketType: 'standard', quantity: 1 }, { ticketType: 'student', quantity: 2 }]));
+    expect(ok.ticketsCount).toBe(3);
+    expect((await readShowAvailability())[SHOW]!.sold).toBe(THEATRE_CAPACITY);
+  });
+
+  it('оплата на месте и перевод — та же корзина, без Stripe', async () => {
+    const onSite   = await createBooking(mixed(twoAndTwo, { paymentMethod: 'on_site' }));
+    const transfer = await createBooking(mixed(twoAndTwo, { paymentMethod: 'bank_transfer' }));
+    expect(stripe.created).toHaveLength(0);
+    for (const r of [onSite, transfer]) {
+      expect(r.totalAmount).toBe(100);
+      expect((booking(r.bookingId).ticketItems as unknown[])).toHaveLength(2);
+    }
+    expect(booking(onSite.bookingId).paymentStatus).toBe('not_paid');
+    expect(booking(transfer.bookingId)).toMatchObject({ paymentStatus: 'awaiting_transfer', paymentMethod: 'bank_transfer' });
+  });
+
+  it('лояльность + смешанная корзина: 100 − 15 = 85 €, скидка один раз, Stripe получает итог', async () => {
+    seedVisits();
+    const res = await createBooking(mixed(twoAndTwo));
+    expect(res).toMatchObject({ totalAmount: 85, originalAmount: 100, loyaltyDiscountApplied: true, loyaltyDiscountAmount: 15 });
+    expect(unitAmounts()).toEqual([8500]);
+    expect(booking(res.bookingId)).toMatchObject({ loyaltyDiscountTicketType: 'standard', totalAmount: 85 });
+    // Награда использована — следующая бронь без скидки.
+    const next = await createBooking(mixed(twoAndTwo));
+    expect(next.totalAmount).toBe(100);
+  });
+
+  it('прежний формат запроса (ticketType × ticketsCount) работает и пишет одну строку состава', async () => {
+    const res = await createBooking(request({ ticketType: 'student', ticketsCount: 3 }));
+    expect(res.totalAmount).toBe(60);
+    expect(booking(res.bookingId)).toMatchObject({
+      ticketType: 'student', ticketsCount: 3,
+      ticketItems: [{ type: 'student', quantity: 3, unitPrice: 20, seats: 1, subtotal: 60 }],
+    });
+    expect(String(booking(res.bookingId).priceInfo)).toBe('Ученик / студент · 20€ × 3 = 60€');
+  });
+
+  it('валидация корзины: повтор тарифа, чужой тариф, пусто, сверх лимита, дробное и отрицательное количество', () => {
+    const bad: Array<unknown> = [
+      [], [{ ticketType: 'standard', quantity: 0 }],
+      [{ ticketType: 'standard', quantity: 1 }, { ticketType: 'standard', quantity: 1 }],
+      [{ ticketType: 'family', quantity: 1 }],
+      [{ ticketType: '__proto__', quantity: 1 }],
+      [{ ticketType: 'standard', quantity: 6 }, { ticketType: 'student', quantity: 5 }],
+      [{ ticketType: 'standard', quantity: 1.5 }],
+      [{ ticketType: 'standard', quantity: -1 }, { ticketType: 'student', quantity: 3 }],
+      'standard', null,
+    ];
+    for (const items of bad) {
+      expect(() => validateCreateBooking({
+        showId: SHOW, items, paymentMethod: 'online', comment: '', phone: '+33 6 12 34 56 78', lang: 'RU',
+      })).toThrow(ApiError);
+    }
+  });
+
+  it('проход: один QR на всю бронь, к проходу — общее число мест, тариф — состав', async () => {
+    const res = await createBooking(mixed(twoAndTwo, { paymentMethod: 'on_site' }));
+    const code = String(booking(res.bookingId).ticketCode);
+    const view = await checkinTicket({ adminUid: 'admin-1', ticketCode: code, action: 'inspect', showId: SHOW });
+    expect(view.booking).toMatchObject({ ticketsCount: 4, seatsCount: 4, ticketTypeLabel: '2 × Обычный, 2 × Ученик / студент' });
+    await checkinTicket({ adminUid: 'admin-1', ticketCode: code, action: 'mark_paid' });
+    const done = await checkinTicket({ adminUid: 'admin-1', ticketCode: code, action: 'mark_attended', showId: SHOW });
+    expect(done.booking.status).toBe('attended');
+  });
+
+  it('старая бронь без ticketItems: проход и тариф — как раньше', async () => {
+    store.seed('bookings', 'legacy-mixed', {
+      userId: UID, showId: SHOW, showDate: '02 Окт 2026', showTime: '20:00', ticketType: 'student',
+      status: 'confirmed', paymentStatus: 'paid', ticketsCount: 2, totalAmount: 40, ticketCode: 'OLDB-2345',
+    });
+    const view = await checkinTicket({ adminUid: 'admin-1', ticketCode: 'OLDB-2345', action: 'inspect', showId: SHOW });
+    expect(view.booking).toMatchObject({ ticketsCount: 2, seatsCount: 2, ticketTypeLabel: 'Ученик / студент' });
+  });
+});

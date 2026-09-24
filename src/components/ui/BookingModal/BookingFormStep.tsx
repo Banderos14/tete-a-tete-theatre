@@ -1,6 +1,7 @@
 import type { FormEvent, ReactElement } from 'react';
 import { IconBuildingBank, IconCreditCard, IconTransfer } from '@tabler/icons-react';
-import type { Show, TicketType } from '../../../types';
+import type { Show } from '../../../types';
+import type { TicketTypeId } from '../../../../shared/catalog/shows';
 import type { PaymentMethod } from '../../../types/booking';
 import { RECOMMENDED_PAYMENT_METHOD } from '../../../utils/onlinePayment';
 import { MAX_COMMENT_LEN } from '../../../../shared/contracts/limits';
@@ -32,6 +33,9 @@ interface Props {
       loyaltyDiscount: string;
       loyaltyTotal: string;
       seatsAvailable: (n: number, total: number) => string;
+      ticketsTotal: (n: number) => string;
+      addTicket: (label: string) => string;
+      removeTicket: (label: string) => string;
       soldOut: string;
       notEnoughSeats: (n: number) => string;
       showAlreadyStarted: string;
@@ -47,31 +51,33 @@ interface Props {
     months: Record<string, string>;
   };
 
-  tickets: number;
+  /** Количество по тарифам; тарифа нет в объекте — 0. */
+  quantities: Partial<Record<TicketTypeId, number>>;
+  /** Всего билетов в корзине. */
+  ticketsCount: number;
+  canAdd: (type: TicketTypeId) => boolean;
+  canRemove: (type: TicketTypeId) => boolean;
+  soldOut: boolean;
   /** Доступные способы оплаты: онлайн — только при включённом флаге интерфейса. */
   paymentMethods: PaymentMethod[];
   /** Бронь создана, идёт переход на страницу оплаты Stripe. */
   redirecting?: boolean;
-  selectedTicket: TicketType | null;
   payment: PaymentMethod;
   phone: string;
   comment: string;
   submitLoading: boolean;
   submitError: string;
 
-  activeTicket: TicketType | null;
   baseAmount: number;
   totalAmount: number;
   discountAmount: number;
   loyaltyAvailable: boolean;
-  maxTickets: number;
   // null = остаток мест неизвестен (сервер недоступен) — индикатор не показываем.
   seatsLeft: number | null;
 
   phoneError?: string;
 
-  onTicketsChange: (v: number) => void;
-  onSelectedTicketChange: (tt: TicketType) => void;
+  onQuantityChange: (type: TicketTypeId, quantity: number) => void;
   onPaymentChange: (pm: PaymentMethod) => void;
   onPhoneChange: (v: string) => void;
   onCommentChange: (v: string) => void;
@@ -81,10 +87,11 @@ interface Props {
 
 export function BookingFormStep({
   show, lang, t,
-  tickets, payment, phone, comment, paymentMethods, redirecting = false,
+  quantities, ticketsCount, canAdd, canRemove, soldOut,
+  payment, phone, comment, paymentMethods, redirecting = false,
   submitLoading, submitError, phoneError,
-  activeTicket, baseAmount, totalAmount, discountAmount, loyaltyAvailable, maxTickets, seatsLeft,
-  onTicketsChange, onSelectedTicketChange, onPaymentChange, onPhoneChange, onCommentChange,
+  baseAmount, totalAmount, discountAmount, loyaltyAvailable, seatsLeft,
+  onQuantityChange, onPaymentChange, onPhoneChange, onCommentChange,
   onSubmit,
 }: Props) {
   const showTitle  = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
@@ -92,7 +99,6 @@ export function BookingFormStep({
   const seatsLeftLabel = lang === 'FR'
     ? `Places restantes : ${seatsLeft}`
     : `Свободно мест: ${seatsLeft}`;
-  const soldOut = maxTickets <= 0;
   const busy    = submitLoading || redirecting;
 
   // Карточки способов оплаты. Онлайн — первой и с бейджем «рекомендуем», если
@@ -137,48 +143,53 @@ export function BookingFormStep({
           </div>
         </div>
 
-        {/* Ticket types — карточки */}
-        <div className={styles.section}>
-          <div className={styles.sectionLabel}>{t.booking.ticketType}</div>
-          <div className={styles.ticketTypes}>
-            {show.ticketTypes.map(tt => (
-              <button key={tt.id} type="button"
-                className={`${styles.ticketTypeBtn} ${activeTicket?.id === tt.id ? styles.ticketTypeActive : ''}`}
-                onClick={() => { onSelectedTicketChange(tt); onTicketsChange(1); }}>
-                <span className={`${styles.ttRadio} ${activeTicket?.id === tt.id ? styles.ttRadioActive : ''}`} />
-                <span className={styles.ttName}>{lang === 'FR' ? tt.labelFR : tt.label}</span>
-                <span className={styles.ttPrice}>{tt.price}&nbsp;€</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Qty + total */}
+        {/* Тарифы — у каждого своё количество: несколько тарифов в одной брони.
+            Переключение между тарифами ничего не сбрасывает. */}
         <div className={styles.section}>
           <div className={styles.sectionLabelRow}>
-            <div className={styles.sectionLabel}>{t.booking.tickets}</div>
+            <div className={styles.sectionLabel}>{t.booking.ticketType}</div>
             {seatsLeft !== null && seatsLeft > 0 && (
               <span className={styles.seatsInline}>{seatsLeftLabel}</span>
             )}
           </div>
           {soldOut && <p className={styles.soldOutHint}>{t.booking.soldOut}</p>}
+          <div className={styles.ticketTypes}>
+            {show.ticketTypes.map(tt => {
+              const qty   = quantities[tt.id] ?? 0;
+              const label = lang === 'FR' ? tt.labelFR : tt.label;
+              return (
+                <div key={tt.id} className={`${styles.ticketTypeRow} ${qty > 0 ? styles.ticketTypeActive : ''}`}>
+                  <span className={`${styles.ttRadio} ${qty > 0 ? styles.ttRadioActive : ''}`} aria-hidden="true" />
+                  <span className={styles.ttName}>{label}</span>
+                  <span className={styles.ttPrice}>{tt.price}&nbsp;€</span>
+                  <div className={`${styles.counter} ${styles.counterCompact}`}>
+                    <button type="button" aria-label={t.booking.removeTicket(label)}
+                      onClick={() => onQuantityChange(tt.id, qty - 1)}
+                      disabled={busy || !canRemove(tt.id)}>−</button>
+                    <span aria-live="polite">{qty}</span>
+                    <button type="button" aria-label={t.booking.addTicket(label)}
+                      onClick={() => onQuantityChange(tt.id, qty + 1)}
+                      disabled={busy || soldOut || !canAdd(tt.id)}>+</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Итог корзины */}
+        <div className={styles.section}>
           <div className={styles.qtyRow}>
-            <div className={styles.counter}>
-              <button type="button" onClick={() => onTicketsChange(Math.max(1, tickets - 1))} disabled={tickets <= 1}>−</button>
-              <span>{tickets}</span>
-              <button type="button" onClick={() => onTicketsChange(Math.min(maxTickets, tickets + 1))} disabled={tickets >= maxTickets || soldOut}>+</button>
+            <span className={styles.basketCount}>{t.booking.ticketsTotal(ticketsCount)}</span>
+            <div className={styles.totalBox}>
+              <span className={styles.totalLabel}>{t.booking.total}</span>
+              <span className={styles.totalAmount}>{totalAmount}&nbsp;€</span>
             </div>
-            {activeTicket && (
-              <div className={styles.totalBox}>
-                <span className={styles.totalLabel}>{t.booking.total}</span>
-                <span className={styles.totalAmount}>{totalAmount}&nbsp;€</span>
-              </div>
-            )}
           </div>
         </div>
 
         {/* Loyalty summary */}
-          {activeTicket && loyaltyAvailable && (
+          {ticketsCount > 0 && loyaltyAvailable && (
             <div className={`${styles.section} ${styles.loyaltySection}`}>
               <div className={styles.loyaltyBlock}>
               <p className={styles.loyaltyTitle}>{t.booking.loyaltyGift}</p>
@@ -275,7 +286,7 @@ export function BookingFormStep({
 
         {submitError && <p className={styles.error} role="alert">{submitError}</p>}
 
-        <button type="submit" className={styles.submitBtn} disabled={busy || !activeTicket || soldOut} aria-busy={busy}>
+        <button type="submit" className={styles.submitBtn} disabled={busy || ticketsCount < 1 || soldOut} aria-busy={busy}>
           {submitLabel}
           {!busy && <span className={styles.submitArrow}>→</span>}
         </button>

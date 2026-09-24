@@ -1,6 +1,8 @@
 import type { Booking } from '../types/booking';
 import { isSfntFontBinary, isPlausibleFontContentType } from '../utils/fontBinary';
 import { localizedShowTitle } from '../../shared/catalog/showTitle';
+import { bookingTicketLines } from '../../shared/domain/ticketBasket';
+import { ticketTypeLabel } from '../../shared/catalog/ticketTypes';
 
 // Транслитерация кириллицы → латиница — запасной вариант, если кирилличные шрифты не загрузились.
 const CYR: Record<string, string> = {
@@ -410,6 +412,13 @@ export async function buildTicketPdf(
     [L.guest,   guestName],
     [L.tickets, String(booking.ticketsCount)],
   ];
+  // Несколько тарифов — по строке на тариф под общим числом билетов. Названия
+  // тарифов по-русски только с кириллическим шрифтом, иначе — французские (латиница).
+  const ticketLines = bookingTicketLines(booking);
+  if (ticketLines.length > 1) {
+    const labelLang = isRU && hasCyrillicFont ? 'RU' : 'FR';
+    for (const l of ticketLines) rows.push(['', `${l.quantity} x ${ticketTypeLabel(l.type, labelLang)}`]);
+  }
   // Сколько человек проходит по билету (семейный тариф: один билет — три места).
   rows.push([L.seats, String(booking.seatsCount && booking.seatsCount > 0 ? booking.seatsCount : booking.ticketsCount)]);
   if (booking.totalAmount > 0) rows.push([L.amount, `${booking.totalAmount} EUR`]);

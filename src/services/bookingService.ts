@@ -11,12 +11,15 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import type { Booking } from '../types/booking';
-import type { TicketTypeId, PaymentMethod, ResumeCheckoutResponse } from '../../shared/contracts/booking';
+import type { TicketTypeId, PaymentMethod, ResumeCheckoutResponse, BookingItemRequest } from '../../shared/contracts/booking';
 
 // ── Server-side booking API ───────────────────────────────────────────────────
 
 export interface CreateBookingRequest {
   showId:        string;
+  /** Несколько тарифов в одной брони: тариф и количество. Цену считает сервер. */
+  items:         BookingItemRequest[];
+  /** Первый тариф и всего билетов — для совместимости, сервер берёт items. */
   ticketType:    TicketTypeId;
   ticketsCount:  number;
   paymentMethod: PaymentMethod;

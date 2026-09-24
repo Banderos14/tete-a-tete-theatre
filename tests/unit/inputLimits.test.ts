@@ -50,7 +50,8 @@ describe('серверная валидация ввода', () => {
 
   it('количество билетов ограничено сверху', () => {
     expect(createBooking).toContain('MAX_TICKETS_PER_BOOKING');
-    expect(createBooking).toMatch(/ticketsCount > MAX_TICKETS_PER_BOOKING/);
+    // Лимит — на сумму билетов всех тарифов корзины (и на старый формат запроса).
+    expect(createBooking).toMatch(/total > MAX_TICKETS_PER_BOOKING/);
   });
 
   it('тело запроса ограничено по размеру', () => {

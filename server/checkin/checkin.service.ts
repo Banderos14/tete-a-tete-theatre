@@ -7,6 +7,8 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { badRequest, notFound, conflict } from '../shared/errors.js';
 import { SHOWS } from '../../shared/catalog/shows.js';
+import { ticketBreakdownLabel } from '../../shared/catalog/ticketTypes.js';
+import { bookingTicketLines } from '../../shared/domain/ticketBasket.js';
 import { isBookingForShow, isKnownShow } from '../../shared/domain/performance.js';
 import type { CheckinAction, CheckinBooking, CheckinRefusalReason } from '../../shared/contracts/checkin.js';
 import { db, findByTicketCode } from '../booking/booking.repository.js';
@@ -21,7 +23,13 @@ export function parseShowId(raw: unknown): string | null {
   return raw;
 }
 
+/**
+ * Тариф брони для сканера. Бронь одного тарифа — его название, как раньше;
+ * несколько тарифов — состав «2 × Обычный, 2 × Ученик / студент».
+ */
 function ticketTypeLabelOf(data: Record<string, unknown>): string {
+  const lines = bookingTicketLines(data);
+  if (lines.length > 1) return ticketBreakdownLabel(lines, 'RU');
   const show = typeof data.showId === 'string' ? SHOWS[data.showId] : undefined;
   const type = typeof data.ticketType === 'string' ? data.ticketType : '';
   return (show?.tickets as Record<string, { label: string } | undefined> | undefined)?.[type]?.label ?? '';

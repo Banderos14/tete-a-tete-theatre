@@ -16,7 +16,7 @@ import { parseShowStartUtcMs } from '../../../../shared/domain/showTime';
 import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant, type StubVariant } from '../../../utils/ticketStub';
-import { ticketTypeLabel } from '../../../utils/ticketType';
+import { bookingBreakdown } from '../../../utils/ticketBreakdown';
 import { StampBadge, TicketQrPanel } from '../TicketCard';
 import styles from './ProfileDrawer.module.scss';
 
@@ -93,7 +93,8 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
   const { day, monthAbbrev } = parseShowDateParts(b.showDate, isFR);
   const timeLabel = `${monthAbbrev} · ${b.showTime}`;
 
-  const ticketLabel = ticketTypeLabel(b.ticketType, isFR ? 'FR' : 'RU');
+  // Состав: «2 × Обычный» или «2 × Обычный, 2 × Ученик / студент».
+  const composition = bookingBreakdown(b, isFR ? 'FR' : 'RU');
 
   let actionText = '';
   let actionClass = styles.bookingActionMuted;
@@ -181,7 +182,7 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
 
           {/* Row 2: composition line */}
           <p className={styles.bookingCompositionLine}>
-            <span>{b.ticketsCount} × {ticketLabel}</span>
+            <span>{composition}</span>
             {b.totalAmount > 0 && (
               <>
                 <span className={styles.bookingCompositionSep}> · </span>

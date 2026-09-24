@@ -1,4 +1,4 @@
-import type { Show, TicketType } from '../../../types';
+import type { Show } from '../../../types';
 import styles from './BookingModal.module.scss';
 
 interface Props {
@@ -23,8 +23,8 @@ interface Props {
     months: Record<string, string>;
   };
 
-  tickets: number;
-  activeTicket: TicketType | null;
+  /** Состав брони словами: «2 × Обычный, 2 × Ученик / студент». */
+  composition: string;
   savedAmount: number;
   /** false — сервер не смог отправить письмо-билет; билет всё равно есть в кабинете. */
   ticketEmailSent: boolean;
@@ -41,7 +41,7 @@ interface Props {
 
 export function BookingSuccessStep({
   show, lang, t,
-  tickets, activeTicket, savedAmount, ticketEmailSent, ticketCode, payment, userEmail,
+  composition, savedAmount, ticketEmailSent, ticketCode, payment, userEmail,
   copiedCode,
   onCopyCode,
   onOpenTickets,
@@ -89,7 +89,7 @@ export function BookingSuccessStep({
           <div className={styles.successSummary}>
             <div className={styles.summaryRow}>
               <span>{t.booking.labelTickets}</span>
-              <span>{tickets} × {activeTicket ? (lang === 'FR' ? activeTicket.labelFR : activeTicket.label) : ''}</span>
+              <span>{composition}</span>
             </div>
             <div className={styles.summaryRow}>
               <span>{t.booking.labelAmount}</span>

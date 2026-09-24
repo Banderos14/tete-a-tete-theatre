@@ -37,6 +37,10 @@ export interface T {
     hasAccount: string;
     register: string;
     resetSent: string;
+    /** Похоже на опечатку в домене почты: подсказка с исправленным адресом. */
+    emailTypo: (suggestion: string) => string;
+    emailTypoFix: string;
+    emailTypoKeep: string;
     errors: {
       invalidEmail: string;
       wrongPassword: string;
@@ -158,6 +162,11 @@ export interface T {
     loyaltyDiscount: string;
     loyaltyTotal: string;
     seatsAvailable: (n: number, total: number) => string;
+    /** Итог корзины: «4 билета». */
+    ticketsTotal: (n: number) => string;
+    /** Подписи кнопок −/+ у тарифа (для экранного диктора). */
+    addTicket: (label: string) => string;
+    removeTicket: (label: string) => string;
     soldOut: string;
     notEnoughSeats: (n: number) => string;
     showAlreadyStarted: string;

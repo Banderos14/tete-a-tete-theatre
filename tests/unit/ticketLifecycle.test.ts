@@ -262,9 +262,10 @@ describe('вместимость зала — 50 мест', () => {
     // и узнаёт об этом общей ошибкой уже после отправки.
     const modal = projectSource('src/components/ui/BookingModal/BookingModal.tsx');
     expect(modal).toContain('MAX_TICKETS_PER_BOOKING');
-    expect(modal).toContain('Math.floor(seatsLeft / seatsPerTicket)');
+    // Кнопка «+» тарифа — canAddTicket: лимит брони и остаток мест по всей корзине.
+    expect(modal).toContain('canAddTicket(tariffs, lines, type, limits)');
     expect(projectSource('server/booking/booking.validation.ts'))
-      .toContain('ticketsCount > MAX_TICKETS_PER_BOOKING');
+      .toContain('total > MAX_TICKETS_PER_BOOKING');
   });
 });
 

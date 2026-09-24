@@ -252,6 +252,13 @@
   padding: 3px 7px;
 }
 
+// Несколько тарифов в одной брони — бейджи столбиком, по одному на тариф.
+.badgeStack {
+  display: table;
+  margin: 3px auto 0;
+  white-space: nowrap;
+}
+
 .statusBadge {
   font-size: 10px;
   letter-spacing: 0.08em;
