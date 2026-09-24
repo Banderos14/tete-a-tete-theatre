@@ -237,6 +237,7 @@ export const RU: T = {
         : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'билета' : 'билетов';
       return `${n} ${word}`;
     },
+    quantity:     'Количество',
     addTicket:    (label) => `Добавить билет: ${label}`,
     removeTicket: (label) => `Убрать билет: ${label}`,
     soldOut: 'На этот спектакль мест больше нет.',

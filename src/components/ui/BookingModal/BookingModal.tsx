@@ -17,7 +17,7 @@ import {
   checkoutErrorKey, needsFreshBookingAttempt,
 } from '../../../utils/onlinePayment';
 import {
-  priceBasket, canAddTicket, canRemoveTicket, setLineQuantity, clampBasket,
+  priceBasket, canAddTicket, canRemoveTicket, setLineQuantity, clampBasket, basketLinesFor,
   type BasketLine, type BasketTariff,
 } from '../../../../shared/domain/ticketBasket';
 import { ticketBreakdownLabel } from '../../../../shared/catalog/ticketTypes';
@@ -54,9 +54,14 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   // Опечатка в домене почты (gnail.com) — только при регистрации: там адрес сохраняется.
   const emailTypo = useEmailTypoGuard(authEmail, setAuthEmail, authTab === 'signUp');
 
-  // Корзина: количество по каждому тарифу. Пустая — ещё не трогали, тогда
-  // действует выбор по умолчанию (1 билет первого тарифа, как и раньше).
-  const [basket,           setBasket]           = useState<BasketLine[]>([]);
+  // Корзина: количество по каждому тарифу — и спектакль, для которого она
+  // собрана. Пустая — ещё не трогали, действует выбор по умолчанию (1 билет
+  // первого тарифа). Привязка к спектаклю обязательна: при открытии формы
+  // другого спектакля первый рендер идёт ДО эффекта сброса, и корзина с чужими
+  // тарифами роняла расчёт цены — модалка не открывалась до перезагрузки.
+  const [basket,           setBasketState]      = useState<{ showId: string | null; lines: BasketLine[] }>(
+    { showId: null, lines: [] },
+  );
   const onlineEnabled = useMemo(() => isOnlinePaymentUiEnabled(), []);
   const [payment,          setPayment]          = useState<PaymentMethod>(() => defaultPaymentMethod(onlineEnabled));
   const [phone,            setPhone]            = useState('');
@@ -93,9 +98,10 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
     [show],
   );
   const lines = useMemo<BasketLine[]>(
-    () => (basket.length || !tariffs[0] ? basket : [{ type: tariffs[0].id, quantity: 1 }]),
-    [basket, tariffs],
+    () => basketLinesFor(tariffs, basket.showId === (show?.id ?? null) ? basket.lines : []),
+    [basket, tariffs, show?.id],
   );
+  const setBasket = (next: BasketLine[]) => setBasketState({ showId: show?.id ?? null, lines: next });
   // MAX_TICKETS_PER_BOOKING обязателен: сервер отклоняет запрос с большим
   // числом билетов. Остаток мест неизвестен — ограничиваем только лимитами,
   // авторитетную проверку вместимости делает сервер.
@@ -133,8 +139,8 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
     const same = clamped.length === lines.length
       && clamped.every(c => lines.some(l => l.type === c.type && l.quantity === c.quantity));
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!same) setBasket(clamped);
-  }, [tariffs, lines, limits]);
+    if (!same) setBasketState({ showId: show?.id ?? null, lines: clamped });
+  }, [tariffs, lines, limits, show?.id]);
 
   useEffect(() => {
     // Переходим на форму сразу после авторизации, не дожидаясь следующего рендера
@@ -153,7 +159,7 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
     if (!show) return;
     /* eslint-disable react-hooks/set-state-in-effect */
     setStep(user ? 'form' : 'auth');
-    setBasket([]); setPayment(defaultPaymentMethod(onlineEnabled));
+    setBasketState({ showId: show.id, lines: [] }); setPayment(defaultPaymentMethod(onlineEnabled));
     setComment(''); setSubmitError(''); setPhoneError(''); setRedirecting(false);
     setAuthEmail(''); setAuthPassword(''); setAuthName(''); setAuthError('');
     /* eslint-enable react-hooks/set-state-in-effect */

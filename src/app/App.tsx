@@ -57,6 +57,9 @@ export default function App() {
   // и кнопке на экране успешного бронирования.
   const [profileSection, setProfileSection] = useState<Section>('personal');
   const [bookingShow, setBookingShow] = useState<Show | null>(null);
+  // Счётчик открытий формы брони — ключ сброса её границы ошибок: каждое
+  // открытие начинается с живой модалки, даже если прошлое упало.
+  const [bookingSeq,  setBookingSeq]  = useState(0);
   // Модалки монтируются только после первого открытия: до этого их чанки
   // (а вместе с ними и Firebase SDK) не нужны для показа лендинга. Флаг «липкий»,
   // чтобы не ломать анимацию закрытия — она играет на уже смонтированном узле.
@@ -133,7 +136,7 @@ export default function App() {
     setLang(l);
     try { localStorage.setItem('lang', l); } catch { /* приватный режим — не критично */ }
   }, []);
-  const handleBook        = useCallback((show: Show) => setBookingShow(show), []);
+  const handleBook        = useCallback((show: Show) => { setBookingShow(show); setBookingSeq(n => n + 1); }, []);
 
   const openProfileAt = useCallback((section: Section) => {
     setProfileSection(section);
@@ -206,7 +209,7 @@ export default function App() {
                 />
               </Suspense>
             </ErrorBoundary>
-            <ErrorBoundary label="BookingModal">
+            <ErrorBoundary label="BookingModal" resetKey={bookingSeq}>
               <Suspense fallback={null}>
                 <BookingModal
                   show={bookingShow}

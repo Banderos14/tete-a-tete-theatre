@@ -6,6 +6,12 @@ interface Props {
   fallback?: ReactNode;
   /** Метка для логов: какая часть приложения упала. */
   label?:    string;
+  /**
+   * Смена значения снимает состояние ошибки. Без него упавшая модалка
+   * оставалась пустым местом до перезагрузки страницы: следующее открытие
+   * брони снова показывало fallback, даже если причины уже не было.
+   */
+  resetKey?: unknown;
 }
 
 interface State {
@@ -33,6 +39,10 @@ export class ErrorBoundary extends Component<Props, State> {
       error.message,
       info.componentStack,
     );
+  }
+
+  componentDidUpdate(prev: Props): void {
+    if (this.state.hasError && prev.resetKey !== this.props.resetKey) this.setState({ hasError: false });
   }
 
   render(): ReactNode {

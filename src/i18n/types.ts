@@ -164,6 +164,8 @@ export interface T {
     seatsAvailable: (n: number, total: number) => string;
     /** Итог корзины: «4 билета». */
     ticketsTotal: (n: number) => string;
+    /** Подпись над числом билетов в итоге формы. */
+    quantity: string;
     /** Подписи кнопок −/+ у тарифа (для экранного диктора). */
     addTicket: (label: string) => string;
     removeTicket: (label: string) => string;

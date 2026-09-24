@@ -242,6 +242,7 @@ export const FR: T = {
     loyaltyTotal:  'Total à payer',
     seatsAvailable: (n, total) => `Places disponibles : ${n} sur ${total}`,
     ticketsTotal: (n) => `${n} billet${n > 1 ? 's' : ''}`,
+    quantity:     'Quantité',
     addTicket:    (label) => `Ajouter un billet : ${label}`,
     removeTicket: (label) => `Retirer un billet : ${label}`,
     soldOut: 'Il n\'y a plus de places disponibles pour ce spectacle.',

@@ -118,6 +118,20 @@ function totals(tariffs: readonly BasketTariff[], lines: readonly BasketLine[]) 
   return { tickets, seats };
 }
 
+/**
+ * Корзина формы для текущего спектакля: только тарифы этого спектакля с
+ * количеством больше нуля; пусто — один билет первого тарифа (выбор по умолчанию).
+ *
+ * Тарифы другого спектакля (корзина осталась с прошлого открытия формы)
+ * отбрасываются: иначе priceBasket бросил бы «Unknown ticket type», и форма
+ * падала бы при открытии брони следующего спектакля.
+ */
+export function basketLinesFor(tariffs: readonly BasketTariff[], stored: readonly BasketLine[]): BasketLine[] {
+  const own = stored.filter(l => l.quantity > 0 && tariffs.some(t => t.id === l.type));
+  if (own.length || !tariffs[0]) return own;
+  return [{ type: tariffs[0].id, quantity: 1 }];
+}
+
 /** Можно ли добавить ещё один билет тарифа, не нарушив лимиты. */
 export function canAddTicket(
   tariffs: readonly BasketTariff[], lines: readonly BasketLine[], type: TicketTypeId, limits: BasketLimits,

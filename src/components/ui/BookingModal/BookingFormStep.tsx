@@ -34,6 +34,7 @@ interface Props {
       loyaltyTotal: string;
       seatsAvailable: (n: number, total: number) => string;
       ticketsTotal: (n: number) => string;
+      quantity: string;
       addTicket: (label: string) => string;
       removeTicket: (label: string) => string;
       soldOut: string;
@@ -158,16 +159,17 @@ export function BookingFormStep({
               const qty   = quantities[tt.id] ?? 0;
               const label = lang === 'FR' ? tt.labelFR : tt.label;
               return (
-                <div key={tt.id} className={`${styles.ticketTypeRow} ${qty > 0 ? styles.ticketTypeActive : ''}`}>
-                  <span className={`${styles.ttRadio} ${qty > 0 ? styles.ttRadioActive : ''}`} aria-hidden="true" />
+                // Строка тарифа — не «выбор из вариантов»: несколько тарифов
+                // живут в корзине одновременно, главный элемент — количество.
+                <div key={tt.id} className={`${styles.ticketTypeRow} ${qty > 0 ? styles.ticketTypeRowFilled : ''}`}>
                   <span className={styles.ttName}>{label}</span>
                   <span className={styles.ttPrice}>{tt.price}&nbsp;€</span>
-                  <div className={`${styles.counter} ${styles.counterCompact}`}>
-                    <button type="button" aria-label={t.booking.removeTicket(label)}
+                  <div className={styles.stepper} role="group" aria-label={label}>
+                    <button type="button" className={styles.stepperBtn} aria-label={t.booking.removeTicket(label)}
                       onClick={() => onQuantityChange(tt.id, qty - 1)}
                       disabled={busy || !canRemove(tt.id)}>−</button>
-                    <span aria-live="polite">{qty}</span>
-                    <button type="button" aria-label={t.booking.addTicket(label)}
+                    <span className={styles.stepperValue} aria-live="polite">{qty}</span>
+                    <button type="button" className={styles.stepperBtn} aria-label={t.booking.addTicket(label)}
                       onClick={() => onQuantityChange(tt.id, qty + 1)}
                       disabled={busy || soldOut || !canAdd(tt.id)}>+</button>
                   </div>
@@ -179,11 +181,15 @@ export function BookingFormStep({
 
         {/* Итог корзины */}
         <div className={styles.section}>
-          <div className={styles.qtyRow}>
-            <span className={styles.basketCount}>{t.booking.ticketsTotal(ticketsCount)}</span>
-            <div className={styles.totalBox}>
-              <span className={styles.totalLabel}>{t.booking.total}</span>
-              <span className={styles.totalAmount}>{totalAmount}&nbsp;€</span>
+          {/* Количество и итог — симметрично: одинаковые подписи, одинаковые значения. */}
+          <div className={styles.basketSummary}>
+            <div className={styles.summaryCol}>
+              <span className={styles.summaryLabel}>{t.booking.quantity}</span>
+              <span className={styles.summaryValue}>{t.booking.ticketsTotal(ticketsCount)}</span>
+            </div>
+            <div className={`${styles.summaryCol} ${styles.summaryColEnd}`}>
+              <span className={styles.summaryLabel}>{t.booking.total}</span>
+              <span className={styles.summaryValue}>{totalAmount}&nbsp;€</span>
             </div>
           </div>
         </div>
@@ -256,9 +262,8 @@ export function BookingFormStep({
                   aria-pressed={active}
                   disabled={busy}
                   onClick={() => onPaymentChange(pm)}>
-                  <span className={`${styles.paymentDot} ${active ? styles.paymentDotActive : ''}`} aria-hidden="true" />
                   <span className={styles.paymentIcon} aria-hidden="true">{option.icon}</span>
-                  <div>
+                  <div className={styles.paymentBody}>
                     <div className={styles.paymentNameRow}>
                       <span className={styles.paymentName}>{option.name}</span>
                       {pm === RECOMMENDED_PAYMENT_METHOD && (
@@ -267,6 +272,9 @@ export function BookingFormStep({
                     </div>
                     <div className={styles.paymentDesc}>{option.desc}</div>
                   </div>
+                  {/* Точка — обычный элемент строки справа, без absolute и transform:
+                      по центру карточки и на целых пикселях. */}
+                  <span className={`${styles.paymentDot} ${active ? styles.paymentDotActive : ''}`} aria-hidden="true" />
                 </button>
               );
             })}
