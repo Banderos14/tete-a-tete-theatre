@@ -10,6 +10,10 @@ import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../ut
 import { formatPhone, normalizePhone, isValidPhone } from '../../../utils/phone';
 import { MAX_TICKETS_PER_BOOKING } from '../../../../shared/catalog/shows';
 import { loyaltySummary, loyaltyDiscountForTicket } from '../../../services/loyaltyService';
+import {
+  isOnlinePaymentUiEnabled, paymentMethodsFor, checkoutRedirectUrl, redirectToCheckout,
+  checkoutErrorKey, needsFreshBookingAttempt,
+} from '../../../utils/onlinePayment';
 import type { Show, TicketType } from '../../../types';
 import type { Booking, PaymentMethod } from '../../../types/booking';
 import { BookingFormStep } from './BookingFormStep';
@@ -47,6 +51,9 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   const [comment,          setComment]          = useState('');
   const [submitLoading,    setSubmitLoading]    = useState(false);
   const [submitError,      setSubmitError]      = useState('');
+  // Бронь создана, браузер уходит на страницу оплаты Stripe: форма заблокирована
+  // до самой навигации, чтобы второй клик не создал вторую попытку.
+  const [redirecting,      setRedirecting]      = useState(false);
   const [phoneError,       setPhoneError]       = useState('');
   const [ticketCode,       setTicketCode]       = useState('');
   const [savedAmount,      setSavedAmount]      = useState(0);
@@ -57,6 +64,15 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   const [seatsLeft,        setSeatsLeft]        = useState<number | null>(null);
 
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
+
+  // Ключ идемпотентности одной попытки бронирования. Пересоздаётся эффектом
+  // открытия модалки, поэтому следующая осознанная бронь — уже новая операция,
+  // а повторы одной и той же отправки схлопываются на сервере.
+  const idempotencyKeyRef = useRef<string>(newIdempotencyKey());
+
+  // «Оплатить онлайн» — только при включённом флаге интерфейса. Принимает ли
+  // оплату сервер, решает его собственный ONLINE_PAYMENT_ENABLED.
+  const paymentMethods = useMemo(() => paymentMethodsFor(isOnlinePaymentUiEnabled()), []);
 
   const defaultTicket = useMemo(
     () => (show?.ticketTypes?.length ? show.ticketTypes[0] : null),
@@ -132,11 +148,27 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
     /* eslint-disable react-hooks/set-state-in-effect */
     setStep(user ? 'form' : 'auth');
     setTickets(1); setSelectedTicket(null); setPayment('on_site');
-    setComment(''); setSubmitError(''); setPhoneError('');
+    setComment(''); setSubmitError(''); setPhoneError(''); setRedirecting(false);
     setAuthEmail(''); setAuthPassword(''); setAuthName(''); setAuthError('');
     /* eslint-enable react-hooks/set-state-in-effect */
     idempotencyKeyRef.current = newIdempotencyKey();
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // «Назад» из Stripe браузер может вернуть страницу из bfcache вместе с
+  // состоянием «Переходим к оплате…». Бронь уже создана и ждёт оплату: не
+  // отправляем форму заново (вторая бронь заняла бы места), а ведём в «Мои
+  // билеты» — там у брони есть «Продолжить оплату».
+  const redirectingRef = useRef(false);
+  useEffect(() => { redirectingRef.current = redirecting; }, [redirecting]);
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (!e.persisted || !redirectingRef.current) return;
+      setRedirecting(false);
+      onOpenTickets?.();
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, [onOpenTickets]);
 
   useScrollLock(!!show);
 
@@ -146,10 +178,6 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
 
   // Дополнительный non-passive listener прямо на оверлее — ловит события,
   // которые могли не всплыть из-за stopPropagation в дочерних элементах.
-  // Ключ идемпотентности одной попытки бронирования. Пересоздаётся эффектом
-  // открытия модалки, поэтому следующая осознанная бронь — уже новая операция,
-  // а повторы одной и той же отправки схлопываются на сервере.
-  const idempotencyKeyRef = useRef<string>(newIdempotencyKey());
   const overlayRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = overlayRef.current;
@@ -202,6 +230,7 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
     if (!user || !activeTicket || !show || authContextLoading) return;
     // Двойной Enter успевает пройти раньше, чем React перерисует disabled у кнопки.
     if (submitLoading) return;
+    if (redirecting) return;
     // Клиентская проверка — только для быстрой обратной связи; отказать по-настоящему
     // может лишь сервер, который считает вместимость в транзакции.
     if (seatsLeft !== null && seatsLeft < tickets * seatsPerTicket) {
@@ -232,6 +261,28 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
         phone:         normalizePhone(phone),
         lang,
       }, idToken, idempotencyKeyRef.current);
+
+      // Онлайн-оплата: экран «бронь принята» не показываем — билета до оплаты
+      // нет, письма тоже. Сразу уходим на страницу оплаты Stripe; оплату
+      // подтвердит webhook, а не возврат на сайт.
+      if (payment === 'online') {
+        const url = checkoutRedirectUrl(result);
+        if (url) {
+          setRedirecting(true);
+          redirectToCheckout(url);
+          return;
+        }
+        if (result.checkoutState === 'paid' || result.checkoutState === 'processing') {
+          // Повтор запроса после уже начатой оплаты: состояние — в «Моих билетах».
+          onOpenTickets?.();
+          return;
+        }
+        // Ссылки нет — оплату открыть нельзя. Ни «оплачено», ни «принято».
+        // Ключ НЕ меняем: бронь жива, повтор вернёт её же вместе с сессией,
+        // а не создаст вторую бронь на те же места.
+        setSubmitError(t.payment.checkoutError);
+        return;
+      }
 
       // Письмо-билет с QR отправил сервер в том же запросе — браузер больше
       // ничего не шлёт: закрытая вкладка не оставит зрителя без билета.
@@ -274,6 +325,11 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
         setSubmitError(remaining <= 0 ? t.booking.soldOut : t.booking.notEnoughSeats(remaining));
       } else if (apiErr?.reason === 'show_started') {
         setSubmitError(t.booking.showAlreadyStarted);
+      } else if (payment === 'online') {
+        // Сессия не создалась или истекла — сервер уже освободил места.
+        // Следующая попытка — новая бронь, а не повтор мёртвой.
+        if (needsFreshBookingAttempt(apiErr?.reason)) idempotencyKeyRef.current = newIdempotencyKey();
+        setSubmitError(t.payment[checkoutErrorKey(apiErr?.reason)]);
       } else {
         setSubmitError(t.booking.submitError);
       }
@@ -383,6 +439,8 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
             phone={phone}
             comment={comment}
             submitLoading={submitLoading}
+            redirecting={redirecting}
+            paymentMethods={paymentMethods}
             submitError={submitError}
             activeTicket={activeTicket}
             baseAmount={baseAmount}

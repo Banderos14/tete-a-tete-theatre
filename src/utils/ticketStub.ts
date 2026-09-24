@@ -34,7 +34,7 @@ export function getStubVariant(b: Booking): StubVariant {
   const payStatus = b.paymentStatus ?? 'not_paid';
   if (b.status === 'cancelled' || payStatus === 'expired') return 'grey';
   if (payStatus === 'paid') return 'burgundy';
-  if (payStatus === 'awaiting_transfer') return 'amber';
+  if (payStatus === 'awaiting_transfer' || payStatus === 'awaiting_online') return 'amber';
   if (b.paymentMethod === 'on_site' && payStatus === 'not_paid') return 'amber';
   return 'burgundy';
 }

@@ -4,6 +4,7 @@ import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant } from '../../.
 import { ticketTypeLabel } from '../../../utils/ticketType';
 import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
 import { TicketQrPanel } from './TicketQrPanel';
+import { onlineBookingState } from '../../../utils/onlinePayment';
 import styles from './TicketCard.module.scss';
 
 interface Props {
@@ -128,8 +129,10 @@ export function TicketCard({ booking: b, isExpanded, onToggle }: Props) {
 }
 
 export function StampBadge({ booking: b, isFR }: { booking: Booking; isFR: boolean }) {
+  const { t } = useLang();
   const payStatus = b.paymentStatus ?? 'not_paid';
   const status    = b.status;
+  const online    = onlineBookingState(b);
 
   let rotation = 'rotate(4deg)';
   if (payStatus === 'expired')                                         rotation = 'rotate(2deg)';
@@ -140,9 +143,16 @@ export function StampBadge({ booking: b, isFR }: { booking: Booking; isFR: boole
   let stampClass: string;
   let label: string;
 
-  if (status === 'cancelled' || payStatus === 'expired') {
+  if (online === 'refund_pending' || online === 'refunded') {
+    stampClass = styles.stampMuted;
+    label = t.payment.stampRefund;
+  } else if (status === 'cancelled' || payStatus === 'expired') {
     stampClass = styles.stampMuted;
     label = isFR ? 'ANNULÉ' : 'ОТМЕНЕНО';
+  } else if (online === 'awaiting') {
+    // Онлайн-оплата не завершена: билета нет, пока Stripe не подтвердит оплату.
+    stampClass = styles.stampAmber;
+    label = t.payment.stampAwaiting;
   } else if (payStatus === 'awaiting_transfer') {
     stampClass = styles.stampAmber;
     label = isFR ? 'EN ATTENTE' : 'ОЖИДАЕТ ОПЛАТЫ';

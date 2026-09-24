@@ -91,6 +91,9 @@ function ticketsWord(n: number): string {
 function invalidReason(b: CheckinBooking): string {
   if (b.paymentStatus === 'expired')            return 'Срок оплаты перевода истёк — бронь аннулирована';
   if (b.status === 'cancelled')                 return 'Бронь отменена';
+  // Онлайн-оплата не завершена: билета нет, принять деньги на входе нельзя —
+  // оплату подтверждает только Stripe.
+  if (b.paymentStatus === 'awaiting_online')    return 'Онлайн-оплата не завершена — билета нет';
   return 'Состояние брони не позволяет пропустить — проверьте её в админке';
 }
 

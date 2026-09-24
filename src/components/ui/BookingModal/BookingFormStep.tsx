@@ -1,5 +1,5 @@
-import type { FormEvent } from 'react';
-import { IconBuildingBank, IconTransfer } from '@tabler/icons-react';
+import type { FormEvent, ReactElement } from 'react';
+import { IconBuildingBank, IconCreditCard, IconTransfer } from '@tabler/icons-react';
 import type { Show, TicketType } from '../../../types';
 import type { PaymentMethod } from '../../../types/booking';
 import { MAX_COMMENT_LEN } from '../../../../shared/contracts/limits';
@@ -18,6 +18,9 @@ interface Props {
       payOnSiteDesc: string;
       payTransfer: string;
       payTransferDesc: string;
+      payOnline: string;
+      payOnlineDesc: string;
+      submitOnline: string;
       comment: string;
       commentPlaceholder: string;
       submit: string;
@@ -36,10 +39,17 @@ interface Props {
       ticketStandard: string;
       ticketStudent: string;
     };
+    payment: {
+      redirecting: string;
+    };
     months: Record<string, string>;
   };
 
   tickets: number;
+  /** Доступные способы оплаты: онлайн — только при включённом флаге интерфейса. */
+  paymentMethods: PaymentMethod[];
+  /** Бронь создана, идёт переход на страницу оплаты Stripe. */
+  redirecting?: boolean;
   selectedTicket: TicketType | null;
   payment: PaymentMethod;
   phone: string;
@@ -69,7 +79,7 @@ interface Props {
 
 export function BookingFormStep({
   show, lang, t,
-  tickets, payment, phone, comment,
+  tickets, payment, phone, comment, paymentMethods, redirecting = false,
   submitLoading, submitError, phoneError,
   activeTicket, baseAmount, totalAmount, discountAmount, loyaltyAvailable, maxTickets, seatsLeft,
   onTicketsChange, onSelectedTicketChange, onPaymentChange, onPhoneChange, onCommentChange,
@@ -81,6 +91,18 @@ export function BookingFormStep({
     ? `Places restantes : ${seatsLeft}`
     : `Свободно мест: ${seatsLeft}`;
   const soldOut = maxTickets <= 0;
+  const busy    = submitLoading || redirecting;
+
+  // Карточки способов оплаты. Онлайн — третьей, если флаг интерфейса включён;
+  // при трёх способах карточки встают столбиком, иначе не помещаются в колонку.
+  const paymentOptions: Record<PaymentMethod, { name: string; desc: string; icon: ReactElement }> = {
+    on_site:       { name: t.booking.payOnSite,   desc: t.booking.payOnSiteDesc,   icon: <IconBuildingBank size={16} stroke={1.5} /> },
+    bank_transfer: { name: t.booking.payTransfer, desc: t.booking.payTransferDesc, icon: <IconTransfer size={16} stroke={1.5} /> },
+    online:        { name: t.booking.payOnline,   desc: t.booking.payOnlineDesc,   icon: <IconCreditCard size={16} stroke={1.5} /> },
+  };
+  const submitLabel = redirecting
+    ? t.payment.redirecting
+    : submitLoading ? '…' : payment === 'online' ? t.booking.submitOnline : t.booking.submit;
   const showYearNumber = Number(show.year);
   const seasonLabel = Number.isFinite(showYearNumber)
     ? (lang === 'FR'
@@ -205,28 +227,30 @@ export function BookingFormStep({
 
         {/* Payment — карточки */}
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>{t.booking.paymentMethod}</div>
-          <div className={styles.paymentCards}>
-            <button type="button"
-              className={`${styles.paymentCard} ${payment === 'on_site' ? styles.paymentCardActive : ''}`}
-              onClick={() => onPaymentChange('on_site')}>
-              <span className={`${styles.paymentDot} ${payment === 'on_site' ? styles.paymentDotActive : ''}`} />
-              <span className={styles.paymentIcon}><IconBuildingBank size={16} stroke={1.5} /></span>
-              <div>
-                <div className={styles.paymentName}>{t.booking.payOnSite}</div>
-                <div className={styles.paymentDesc}>{t.booking.payOnSiteDesc}</div>
-              </div>
-            </button>
-            <button type="button"
-              className={`${styles.paymentCard} ${payment === 'bank_transfer' ? styles.paymentCardActive : ''}`}
-              onClick={() => onPaymentChange('bank_transfer')}>
-              <span className={`${styles.paymentDot} ${payment === 'bank_transfer' ? styles.paymentDotActive : ''}`} />
-              <span className={styles.paymentIcon}><IconTransfer size={16} stroke={1.5} /></span>
-              <div>
-                <div className={styles.paymentName}>{t.booking.payTransfer}</div>
-                <div className={styles.paymentDesc}>{t.booking.payTransferDesc}</div>
-              </div>
-            </button>
+          <div className={styles.sectionLabel} id="bk-payment-label">{t.booking.paymentMethod}</div>
+          <div
+            className={`${styles.paymentCards} ${paymentMethods.length > 2 ? styles.paymentCardsStack : ''}`}
+            role="group"
+            aria-labelledby="bk-payment-label"
+          >
+            {paymentMethods.map(pm => {
+              const option = paymentOptions[pm];
+              const active = payment === pm;
+              return (
+                <button key={pm} type="button"
+                  className={`${styles.paymentCard} ${active ? styles.paymentCardActive : ''}`}
+                  aria-pressed={active}
+                  disabled={busy}
+                  onClick={() => onPaymentChange(pm)}>
+                  <span className={`${styles.paymentDot} ${active ? styles.paymentDotActive : ''}`} aria-hidden="true" />
+                  <span className={styles.paymentIcon} aria-hidden="true">{option.icon}</span>
+                  <div>
+                    <div className={styles.paymentName}>{option.name}</div>
+                    <div className={styles.paymentDesc}>{option.desc}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -241,11 +265,11 @@ export function BookingFormStep({
             placeholder={t.booking.commentPlaceholder} rows={3} />
         </div>
 
-        {submitError && <p className={styles.error}>{submitError}</p>}
+        {submitError && <p className={styles.error} role="alert">{submitError}</p>}
 
-        <button type="submit" className={styles.submitBtn} disabled={submitLoading || !activeTicket || soldOut}>
-          {submitLoading ? '…' : t.booking.submit}
-          {!submitLoading && <span className={styles.submitArrow}>→</span>}
+        <button type="submit" className={styles.submitBtn} disabled={busy || !activeTicket || soldOut} aria-busy={busy}>
+          {submitLabel}
+          {!busy && <span className={styles.submitArrow}>→</span>}
         </button>
 
       </div>

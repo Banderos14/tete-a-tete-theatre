@@ -1452,6 +1452,47 @@
   border-radius: var(--radius-xs);
 }
 
+// Онлайн-оплата ждёт завершения: янтарный тон «ожидает», как у перевода.
+.bookingNoteWait {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #cdb27a;
+  line-height: 1.5;
+  padding: 5px 10px;
+  background: rgba(205, 178, 122, 0.08);
+  border-left: 2px solid #b08a3e;
+  border-radius: var(--radius-xs);
+}
+
+// «Продолжить оплату» — главное действие карточки неоплаченной онлайн-брони.
+.resumePaymentBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  margin-right: 8px;
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  color: #fff;
+  background: var(--accent);
+  border-radius: 6px;
+  transition: background 0.15s, opacity 0.15s;
+
+  &:hover:not(:disabled) { background: var(--accent-bright); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+
+  @include mixins.small {
+    display: flex;
+    width: 100%;
+    margin-right: 0;
+  }
+}
+
 .attendedList {
   display: flex;
   flex-direction: column;
@@ -2119,6 +2160,12 @@
 
   .bookingActionAmber {
     color: #8a6418;
+  }
+
+  .bookingNoteWait {
+    color: #8a6418;
+    background: rgba(138, 100, 24, 0.08);
+    border-left-color: #8a6418;
   }
 
   .bookingStubCutoutTop,

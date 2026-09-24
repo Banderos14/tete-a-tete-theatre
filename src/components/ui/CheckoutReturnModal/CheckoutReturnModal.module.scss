@@ -1,0 +1,189 @@
+@use '../../../styles/mixins';
+
+// Экран возврата со Stripe — в палитре модалок редизайна (фон #1c1916,
+// тёплые поля #26211c, крем #f3e7dc, штампы green/amber).
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-booking);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.65);
+  overscroll-behavior: contain;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 30px 32px 26px;
+  background: #1c1916;
+  color: #f3e7dc;
+  border: 0.5px solid rgba(243, 231, 220, 0.14);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  @include mixins.small { padding: 24px 20px 20px; }
+}
+
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #9c938a;
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.icon {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+}
+
+.tonePaid { color: #7fb07f; }
+.toneWait { color: #cdb27a; }
+.toneBad  { color: #d9a89a; }
+
+.spin {
+  animation: spin 1.1s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #f3e7dc;
+}
+
+.text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #d9cfc6;
+  overflow-wrap: anywhere;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: #26211c;
+  border: 0.5px solid rgba(243, 231, 220, 0.10);
+  border-radius: var(--radius-sm);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+
+  dt { color: #9c938a; flex-shrink: 0; }
+  dd { color: #f3e7dc; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+}
+
+.amount {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 15px;
+}
+
+.error {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--accent-glow);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  @include mixins.small {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+%btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: var(--radius-s);
+  text-align: center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s;
+
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+}
+
+.primaryBtn {
+  @extend %btn;
+  background: var(--accent);
+  color: #fff;
+
+  &:hover:not(:disabled) { background: var(--accent-bright); }
+}
+
+.secondaryBtn {
+  @extend %btn;
+  color: #9c938a;
+  border: 0.5px solid rgba(243, 231, 220, 0.16);
+
+  &:hover:not(:disabled) { color: #f3e7dc; border-color: rgba(243, 231, 220, 0.3); }
+}
+
+:global([data-theme='light']) {
+  .dialog {
+    background: var(--bg);
+    color: var(--fg);
+    border-color: rgba(90, 60, 45, 0.16);
+  }
+
+  .title, .summaryRow dd { color: var(--fg); }
+  .text { color: var(--fg-dim); }
+  .eyebrow, .summaryRow dt { color: var(--fg-mute); }
+
+  .summary {
+    background: var(--bg-3);
+    border-color: rgba(90, 60, 45, 0.14);
+  }
+
+  .tonePaid { color: #2a8a4a; }
+  .toneWait { color: #8a6418; }
+  .toneBad  { color: #b04040; }
+
+  .secondaryBtn {
+    color: var(--fg-mute);
+    border-color: rgba(90, 60, 45, 0.22);
+
+    &:hover:not(:disabled) { color: var(--fg); border-color: rgba(90, 60, 45, 0.4); }
+  }
+}

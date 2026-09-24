@@ -1577,3 +1577,24 @@
     border-color: rgba(26, 23, 21, 0.30);
   }
 }
+
+// Три способа оплаты (с онлайн-оплатой) в ряд не помещаются в правую колонку:
+// карточки встают столбиком и становятся ниже — описание в одну-две строки.
+.paymentCardsStack {
+  flex-direction: column;
+
+  .paymentCard {
+    min-height: 0;
+    padding: 10px 14px;
+  }
+}
+
+.paymentCard:disabled {
+  cursor: not-allowed;
+}
+
+.paymentCard:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+  opacity: 1;
+}

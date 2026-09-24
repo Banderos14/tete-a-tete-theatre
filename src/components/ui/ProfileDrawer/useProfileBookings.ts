@@ -6,6 +6,7 @@ import type { User } from 'firebase/auth';
 import { subscribeToUserBookings, expireOverdueBookings } from '../../../services/bookingService';
 import { computedIsAttended, isShowOver } from '../../../services/attendanceService';
 import type { Booking } from '../../../types/booking';
+import { isOnlineMoneyNotice } from '../../../utils/onlinePayment';
 import type { Lang } from '../../../i18n/translations';
 
 /** Длительность CSS-анимации ухода карточки, мс. */
@@ -78,11 +79,15 @@ export function useProfileBookings(open: boolean, user: User | null, lang: Lang)
   // Активный билет — на спектакль, который ещё не прошёл. Посещение теперь
   // ставит только check-in, поэтому календарь проверяется отдельно (isShowOver):
   // иначе билет прошлогоднего спектакля висел бы в «Моих билетах» вечно.
+  //
+  // Исключение — отменённая онлайн-бронь с возвратом денег или проблемой
+  // оплаты: зритель должен видеть, что деньги возвращаются (isOnlineMoneyNotice).
   const activeBookings = bookings.filter(b =>
-    !computedIsAttended(b) &&
-    b.status !== 'cancelled' &&
-    b.paymentStatus !== 'expired' &&
-    !isShowOver(b)
+    !isShowOver(b) && (isOnlineMoneyNotice(b) || (
+      !computedIsAttended(b) &&
+      b.status !== 'cancelled' &&
+      b.paymentStatus !== 'expired'
+    ))
   );
   const attendedBookings = bookings.filter(computedIsAttended);
   const ticketCount = activeBookings.filter(b =>

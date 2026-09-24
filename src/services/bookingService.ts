@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import type { Booking } from '../types/booking';
-import type { TicketTypeId, PaymentMethod } from '../../shared/contracts/booking';
+import type { TicketTypeId, PaymentMethod, ResumeCheckoutResponse } from '../../shared/contracts/booking';
 
 // ── Server-side booking API ───────────────────────────────────────────────────
 
@@ -86,6 +86,36 @@ export async function createBookingViaApi(
     throw err;
   }
   return data as unknown as CreateBookingResult;
+}
+
+/**
+ * Вернуться к онлайн-оплате своей брони (action resume_checkout).
+ *
+ * Сервер сам спрашивает Stripe: открытая сессия — вернётся её адрес; уже
+ * оплачено — checkoutState 'paid' (и сервер подтвердит оплату, если webhook
+ * задержался); истекла — ошибка с reason 'checkout_expired'. Ссылку на оплату
+ * клиент не строит и не хранит.
+ */
+export async function resumeCheckoutViaApi(bookingId: string, idToken: string): Promise<ResumeCheckoutResponse> {
+  const resp = await fetch('/api/create-booking', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+    body:    JSON.stringify({ action: 'resume_checkout', bookingId }),
+  });
+  const data = await resp.json().catch(() => ({})) as Record<string, unknown>;
+  if (!resp.ok) {
+    const err = new Error(typeof data['error'] === 'string' ? data['error'] : `HTTP ${resp.status}`) as BookingApiError;
+    if (typeof data['reason'] === 'string') err.reason = data['reason'];
+    throw err;
+  }
+  return data as unknown as ResumeCheckoutResponse;
+}
+
+/** То же для вошедшего зрителя — из кабинета. */
+export async function resumeCheckoutForCurrentUser(bookingId: string): Promise<ResumeCheckoutResponse> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('Not authenticated');
+  return resumeCheckoutViaApi(bookingId, await currentUser.getIdToken());
 }
 
 function getTimestampMs(ts: unknown): number {

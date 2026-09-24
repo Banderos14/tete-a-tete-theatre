@@ -5,7 +5,12 @@ import { useState } from 'react';
 import { useLang } from '../../../i18n/LangContext';
 import type { T } from '../../../i18n/translations';
 import type { Booking, BookingStatus } from '../../../types/booking';
-import { cancelBookingByUser, hoursUntilExpiry } from '../../../services/bookingService';
+import { cancelBookingByUser, hoursUntilExpiry, resumeCheckoutForCurrentUser } from '../../../services/bookingService';
+import type { BookingApiError } from '../../../services/bookingService';
+import {
+  onlineBookingState, canResumeCheckout, checkoutRedirectUrl, redirectToCheckout,
+  holdUntilMs, formatHoldTime,
+} from '../../../utils/onlinePayment';
 import { computedIsAttended } from '../../../services/attendanceService';
 import { parseShowStartUtcMs } from '../../../../shared/domain/showTime';
 import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
@@ -44,6 +49,8 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelError,   setCancelError]   = useState('');
   const [qrOpen,        setQrOpen]        = useState(false);
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeError,   setResumeError]   = useState('');
 
   const isAttended     = computedIsAttended(b);
   const displayStatus: BookingStatus = isAttended ? 'attended' : b.status;
@@ -52,6 +59,13 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
   const isAwaitingTransfer = payStatus === 'awaiting_transfer';
   const isExpiredTransfer  = payStatus === 'expired';
   const isCancelled        = b.status === 'cancelled';
+  // Онлайн-оплата: состояние целиком из брони, которую пишет сервер (webhook).
+  const online             = onlineBookingState(b);
+  const isAwaitingOnline   = online === 'awaiting';
+  const onlineMoneyNote    = online === 'refund_pending' ? t.payment.refundPending
+    : online === 'refunded' ? t.payment.refunded
+    : online === 'issue'    ? t.payment.issue
+    : null;
 
   // Отмена зрителем: нельзя отменить посещённую, уже отменённую и ОПЛАЧЕННУЮ бронь
   // (оплата окончательна, автоматических возвратов в системе нет), а также бронь
@@ -88,6 +102,9 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
   } else if (isAwaitingTransfer) {
     actionText = isFR ? 'Détails du virement →' : 'Реквизиты для перевода →';
     actionClass = styles.bookingActionAmber;
+  } else if (isAwaitingOnline) {
+    actionText = t.payment.actionAwaiting;
+    actionClass = styles.bookingActionAmber;
   } else if (b.paymentMethod === 'on_site' && payStatus === 'not_paid' && !isCancelled) {
     actionText = isFR ? 'Paiement sur place' : 'Оплата на месте';
     actionClass = styles.bookingActionAmber;
@@ -99,6 +116,26 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
     { value: 'mistake', label: t.booking.cancelReasonMistake },
     { value: 'other',   label: t.booking.cancelReasonOther   },
   ];
+
+  // «Продолжить оплату»: адрес сессии даёт сервер (resume_checkout), клиент его
+  // не строит и не хранит. Оплату по-прежнему подтверждает только webhook.
+  async function handleResume() {
+    if (resumeLoading) return;
+    setResumeLoading(true);
+    setResumeError('');
+    try {
+      const res = await resumeCheckoutForCurrentUser(b.id);
+      const url = checkoutRedirectUrl(res);
+      if (url) { redirectToCheckout(url); return; }
+      // 'paid' / 'processing': сервер сверился со Stripe, карточку обновит подписка.
+      setResumeLoading(false);
+    } catch (err) {
+      setResumeLoading(false);
+      setResumeError((err as BookingApiError)?.reason === 'checkout_expired'
+        ? t.payment.checkoutExpired
+        : t.payment.resumeError);
+    }
+  }
 
   async function handleCancelSubmit() {
     if (!cancelReason) { setCancelError(t.booking.cancelReasonRequired); return; }
@@ -155,7 +192,8 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
 
           {/* Row 3: code + action */}
           <div className={styles.bookingCardRow3}>
-            {b.ticketCode && (
+            {/* До онлайн-оплаты код брони не показываем: билета ещё нет. */}
+            {b.ticketCode && !isAwaitingOnline && (
               <code className={styles.bookingCode}>{b.ticketCode}</code>
             )}
             {/* Countdown for awaiting transfers */}
@@ -235,6 +273,33 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
             </div>
           )}
 
+          {/* Онлайн-оплата не завершена: места удержаны до срока сессии Stripe. */}
+          {isAwaitingOnline && (
+            <p className={styles.bookingNoteWait}>
+              {(() => {
+                const time = formatHoldTime(holdUntilMs(b), isFR ? 'FR' : 'RU');
+                return time ? t.payment.awaitingNote(time) : t.payment.awaitingNoteNoTime;
+              })()}
+            </p>
+          )}
+          {canResumeCheckout(b) && (
+            <>
+              <button
+                type="button"
+                className={styles.resumePaymentBtn}
+                onClick={handleResume}
+                disabled={resumeLoading}
+                aria-busy={resumeLoading}
+              >
+                {resumeLoading ? t.payment.redirecting : t.payment.resume}
+              </button>
+              {resumeError && <p className={styles.cancelDialogError} role="alert">{resumeError}</p>}
+            </>
+          )}
+          {onlineMoneyNote && (
+            <p className={online === 'issue' ? styles.bookingNoteWait : styles.bookingNoteBad}>{onlineMoneyNote}</p>
+          )}
+
           {/* Notes. Посещённая бронь сюда не попадает: у неё displayStatus === 'attended'. */}
           {displayStatus === 'confirmed' && (
             <p className={styles.bookingNoteOk}>{t.profile.bookingNoteConfirmed}</p>
@@ -242,7 +307,7 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
           {!isAttended && isExpiredTransfer && (
             <p className={styles.bookingNoteBad}>{t.profile.bookingNoteExpired}</p>
           )}
-          {displayStatus === 'cancelled' && !isExpiredTransfer && (
+          {displayStatus === 'cancelled' && !isExpiredTransfer && !onlineMoneyNote && (
             <p className={styles.bookingNoteBad}>{t.profile.bookingNoteCancelled}</p>
           )}
           {payStatus === 'paid' && displayStatus === 'pending' && (

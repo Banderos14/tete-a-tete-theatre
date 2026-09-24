@@ -14,6 +14,7 @@ import { CookieConsent } from '../components/ui/CookieConsent';
 import { UserLanguageSync } from './UserLanguageSync';
 import { AccountDeepLink } from './AccountDeepLink';
 import { IS_MOBILE, INTRO_SPEED } from './intro';
+import { getCheckoutReturnFromLocation, clearCheckoutParams, type CheckoutReturn } from '../utils/onlinePayment';
 
 import { HomePage } from '../pages/HomePage';
 const AdminPage       = lazy(() => import('../pages/AdminPage').then(m => ({ default: m.AdminPage })));
@@ -24,6 +25,8 @@ const TicketPage      = lazy(() => import('../pages/TicketPage').then(m => ({ de
 const AuthModal       = lazy(() => import('../components/ui/AuthModal').then(m => ({ default: m.AuthModal })));
 const ProfileDrawer   = lazy(() => import('../components/ui/ProfileDrawer').then(m => ({ default: m.ProfileDrawer })));
 const BookingModal    = lazy(() => import('../components/ui/BookingModal').then(m => ({ default: m.BookingModal })));
+// Возврат со Stripe Checkout — только по ссылке возврата, поэтому тоже лениво.
+const CheckoutReturnModal = lazy(() => import('../components/ui/CheckoutReturnModal').then(m => ({ default: m.CheckoutReturnModal })));
 
 export default function App() {
   const [theme,       setTheme]       = useState<Theme>(() => {
@@ -48,6 +51,9 @@ export default function App() {
   // и кнопке на экране успешного бронирования.
   const [profileSection, setProfileSection] = useState<Section>('personal');
   const [bookingShow, setBookingShow] = useState<Show | null>(null);
+  // Возврат со Stripe (?checkout=success|cancelled&booking=…). Параметр — не
+  // доказательство оплаты: экран покажет бронь такой, какой её записал сервер.
+  const [checkoutReturn, setCheckoutReturn] = useState<CheckoutReturn | null>(() => getCheckoutReturnFromLocation());
   // Модалки монтируются только после первого открытия: до этого их чанки
   // (а вместе с ними и Firebase SDK) не нужны для показа лендинга. Флаг «липкий»,
   // чтобы не ломать анимацию закрытия — она играет на уже смонтированном узле.
@@ -58,6 +64,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Параметры возврата читаются один раз: перезагрузка не должна снова
+  // открывать экран оплаты.
+  useEffect(() => {
+    if (getCheckoutReturnFromLocation()) clearCheckoutParams();
+  }, []);
 
   // lang на <html> обязателен: от него зависит и озвучка скринридером, и выбор
   // display-шрифта (Bad Russian не умеет во французские акценты — см. variables.scss).
@@ -201,6 +213,21 @@ export default function App() {
               </Suspense>
             </ErrorBoundary>
           </>
+        )}
+
+        {/* Возврат со Stripe: после интро и не поверх окна входа — иначе оно
+            оказалось бы под экраном и войти было бы нельзя. */}
+        {checkoutReturn && introState === 'done' && !authOpen && (
+          <ErrorBoundary label="CheckoutReturnModal">
+            <Suspense fallback={null}>
+              <CheckoutReturnModal
+                checkout={checkoutReturn}
+                onClose={() => setCheckoutReturn(null)}
+                onOpenTickets={() => { setCheckoutReturn(null); openMyTickets(); }}
+                onRequireAuth={requireAuth}
+              />
+            </Suspense>
+          </ErrorBoundary>
         )}
 
         {/* Баннер согласия: GA4 не стартует, пока выбор не сделан. */}

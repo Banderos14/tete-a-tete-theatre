@@ -131,6 +131,11 @@ export interface T {
     payOnSiteDesc: string;
     payTransfer: string;
     payTransferDesc: string;
+    /** Онлайн-оплата (Stripe Hosted Checkout). Показывается только при VITE_ONLINE_PAYMENT_ENABLED. */
+    payOnline: string;
+    payOnlineDesc: string;
+    /** Кнопка отправки формы при онлайн-оплате: бронь → страница оплаты. */
+    submitOnline: string;
     comment: string;
     commentPlaceholder: string;
     submit: string;
@@ -167,6 +172,43 @@ export interface T {
     cancelCommentPlaceholder: string;
     cancelConfirm: string;
     cancelByUserLabel: string;
+  };
+  /** Онлайн-оплата: переход на Stripe, возврат, состояние брони в кабинете. */
+  payment: {
+    redirecting: string;
+    checkoutError: string;
+    onlineUnavailable: string;
+    checkoutExpired: string;
+    resume: string;
+    resumeError: string;
+    stampAwaiting: string;
+    stampRefund: string;
+    actionAwaiting: string;
+    /** Места удержаны до указанного времени; билет — после оплаты. */
+    awaitingNote: (time: string) => string;
+    awaitingNoteNoTime: string;
+    refundPending: string;
+    refunded: string;
+    issue: string;
+    checkingTitle: string;
+    checkingText: string;
+    paidTitle: string;
+    paidText: string;
+    processingTitle: string;
+    processingText: string;
+    notCompletedTitle: string;
+    notCompletedText: (time: string | null) => string;
+    inactiveTitle: string;
+    inactiveText: string;
+    issueTitle: string;
+    notFoundTitle: string;
+    notFoundText: string;
+    signInTitle: string;
+    summaryShow: string;
+    summaryDate: string;
+    signInText: string;
+    signIn: string;
+    refresh: string;
   };
   admin: {
     title: string;

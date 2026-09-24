@@ -13,6 +13,7 @@ import styles from './TicketCheckPage.module.scss';
 const PAYMENT_METHOD: Record<string, string> = {
   on_site:       'Оплата на месте',
   bank_transfer: 'Банковский перевод',
+  online:        'Онлайн',
 };
 
 /** Буква брони в группе — «Бронь A», «Бронь B». */
