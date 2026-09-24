@@ -68,6 +68,11 @@ export async function reconcileRefund(refund: RefundView): Promise<RefundSyncOut
       update.paymentStatus = 'refunded';
       update.refundedAt    = FieldValue.serverTimestamp();
     }
+    if (d.revertRefunded) {
+      // Возврат не состоялся: деньги у театра. Бронь остаётся отменённой.
+      update.paymentStatus = 'paid';
+      update.refundedAt    = FieldValue.delete();
+    }
     tx.update(ref, update);
     return d;
   });

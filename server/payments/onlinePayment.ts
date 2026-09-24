@@ -230,9 +230,17 @@ export type RefundDecision =
       cancel: boolean;
       /** Деньги вернулись полностью: paymentStatus → refunded. */
       refunded: boolean;
+      /**
+       * Возврат, уже бывший succeeded, не прошёл (Stripe это допускает):
+       * paymentStatus refunded → paid — деньги у театра. Бронь не воскрешается.
+       */
+      revertRefunded: boolean;
     };
 
-const RANK: Record<string, number> = { pending: 1, succeeded: 2, failed: 2 };
+// Порядок статусов одного возврата: pending → succeeded → failed.
+// failed — конечный: succeeded может смениться на failed, но не наоборот,
+// поэтому запоздавшее succeeded после failed игнорируется.
+const RANK: Record<string, number> = { pending: 1, succeeded: 2, failed: 3 };
 
 export function decideRefund(b: OnlineBookingView, r: RefundView): RefundDecision {
   if (b.paymentMethod !== 'online' || !b.stripePaymentIntentId) return { kind: 'ignore', reason: 'foreign' };
@@ -249,8 +257,11 @@ export function decideRefund(b: OnlineBookingView, r: RefundView): RefundDecisio
   }
 
   const full = Number.isFinite(b.totalAmount) && r.amount >= amountInCents(b.totalAmount);
-  if (r.status === 'failed') return { kind: 'record', status: 'failed', full, cancel: false, refunded: false };
+  if (r.status === 'failed') {
+    const revertRefunded = prev?.id === r.id && prev.status === 'succeeded' && b.paymentStatus === 'refunded';
+    return { kind: 'record', status: 'failed', full, cancel: false, refunded: false, revertRefunded };
+  }
 
   const cancel = full && b.status !== 'cancelled' && b.status !== 'attended';
-  return { kind: 'record', status: r.status, full, cancel, refunded: full && r.status === 'succeeded' };
+  return { kind: 'record', status: r.status, full, cancel, refunded: full && r.status === 'succeeded', revertRefunded: false };
 }

@@ -367,6 +367,23 @@ describe('возврат из Stripe Dashboard (синхронизация)', ()
     expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'paid', refund: { status: 'failed' } });
   });
 
+  it('succeeded → failed: деньги не вернулись — refunded снимается, бронь не воскрешается', async () => {
+    paid();
+    await deliver(event('refund.updated', refund({ status: 'succeeded' })));
+    await deliver(event('refund.updated', refund({ status: 'failed' })));
+    expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'paid', refund: { status: 'failed' } });
+    expect(booking().refundedAt).toBe('<delete>');
+  });
+
+  it('запоздавшее succeeded после failed не перезаписывает окончательный failed', async () => {
+    paid();
+    await deliver(event('refund.created', refund()));
+    await deliver(event('refund.updated', refund({ status: 'failed' })));
+    const late = await deliver(event('refund.updated', refund({ status: 'succeeded' })));
+    expect(late.body.outcome).toBe('ignored:stale');
+    expect(booking()).toMatchObject({ paymentStatus: 'paid', refund: { status: 'failed' } });
+  });
+
   it('частичный возврат — бронь действует, partial_refund', async () => {
     paid();
     await deliver(event('refund.created', refund({ amount: 1500, status: 'succeeded' })));
