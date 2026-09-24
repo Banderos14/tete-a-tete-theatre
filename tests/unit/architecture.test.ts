@@ -44,8 +44,11 @@ function targetOf(file: string, spec: string): string | null {
 // ── Server-only код недосягаем из браузера ──────────────────────────────────
 
 describe('граница server / client', () => {
+  // stripe — серверный SDK с секретным ключом. Stripe.js (@stripe/stripe-js)
+  // проекту не нужен вовсе: оплата идёт через Hosted Checkout по ссылке.
   const SERVER_ONLY_PACKAGES = ['firebase-admin', 'firebase-admin/app', 'firebase-admin/auth',
-                                'firebase-admin/firestore', 'node:crypto', 'node:http'];
+                                'firebase-admin/firestore', 'node:crypto', 'node:http',
+                                'stripe', '@stripe/stripe-js'];
 
   it('frontend не импортирует server/', () => {
     const leaks = srcFiles.flatMap(f =>
@@ -64,6 +67,13 @@ describe('граница server / client', () => {
   it('frontend не тянет firebase-admin и серверные модули Node', () => {
     const leaks = srcFiles.flatMap(f =>
       importsOf(f).filter(s => SERVER_ONLY_PACKAGES.includes(s)).map(s => `${rel(f)} → ${s}`));
+    expect(leaks).toEqual([]);
+  });
+
+  it('пакеты Stripe не импортируются frontend-кодом ни в каком виде', () => {
+    const leaks = [...srcFiles, ...sharedFiles].flatMap(f =>
+      importsOf(f).filter(s => s === 'stripe' || s.startsWith('stripe/') || s.startsWith('@stripe/'))
+        .map(s => `${rel(f)} → ${s}`));
     expect(leaks).toEqual([]);
   });
 
@@ -174,7 +184,8 @@ describe('стили лежат рядом со своим компоненто�
 describe('секреты остаются на сервере', () => {
   // Vite подставляет в бандл только VITE_*-переменные, но упоминание серверного
   // ключа во frontend-коде означает, что его туда собираются передать.
-  const SECRETS = ['RESEND_API_KEY', 'FIREBASE_SERVICE_ACCOUNT', 'CRON_SECRET', 'EMAIL_FROM'];
+  const SECRETS = ['RESEND_API_KEY', 'FIREBASE_SERVICE_ACCOUNT', 'CRON_SECRET', 'EMAIL_FROM',
+                   'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'TEST_EMAIL_RECIPIENT'];
 
   it('серверные переменные окружения не читаются во frontend и shared', () => {
     // Упоминание имени в комментарии или в подсказке администратору безобидно;
@@ -183,6 +194,28 @@ describe('секреты остаются на сервере', () => {
     const leaks = [...srcFiles, ...sharedFiles]
       .filter(f => reads.test(readFileSync(f, 'utf8')))
       .map(rel);
+    expect(leaks).toEqual([]);
+  });
+
+  it('серверный флаг онлайн-оплаты читается только сервером', () => {
+    // VITE_ONLINE_PAYMENT_ENABLED — лишь кнопка в интерфейсе. Решение «принимать
+    // ли оплату» — ONLINE_PAYMENT_ENABLED без префикса, и frontend его не читает.
+    const reads = /(?:process|import\.meta)\.env(?:\.|\[')ONLINE_PAYMENT_ENABLED/;
+    const leaks = [...srcFiles, ...sharedFiles].filter(f => reads.test(readFileSync(f, 'utf8'))).map(rel);
+    expect(leaks).toEqual([]);
+  });
+
+  it('ни один ключ Stripe не объявлен как VITE_-переменная', () => {
+    // Publishable key не нужен (Hosted Checkout), а секретный с VITE_ попал бы в бандл.
+    const files = [...srcFiles, ...sharedFiles, ...serverFiles, join(ROOT, '.env.example'), join(ROOT, 'vite.config.ts')];
+    const leaks = files.filter(f => /VITE_STRIPE_/.test(readFileSync(f, 'utf8'))).map(rel);
+    expect(leaks).toEqual([]);
+  });
+
+  it('секреты Stripe и тестовый адрес читаются только в server/', () => {
+    const reads = /process\.env(?:\.|\[')(STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|TEST_EMAIL_RECIPIENT)/;
+    const apiSrc = apiFiles.map(f => join(ROOT, 'api', f));
+    const leaks = [...srcFiles, ...sharedFiles, ...apiSrc].filter(f => reads.test(readFileSync(f, 'utf8'))).map(rel);
     expect(leaks).toEqual([]);
   });
 

@@ -39,6 +39,8 @@ export function formatBirthday(b?: string): string | null {
 export const PAY_STATUS_LABELS: Record<PaymentStatus, string> = {
   not_paid:          'Не оплачено',
   awaiting_transfer: 'Ожидает перевода',
+  awaiting_online:   'Ожидает онлайн-оплаты',
   paid:              'Оплачено',
   expired:           'Истекло',
+  refunded:          'Возвращено',
 };

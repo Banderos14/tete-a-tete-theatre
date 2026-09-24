@@ -2,8 +2,10 @@
 // поэтому их можно и нужно покрывать юнит-тестами, а сервер лишь применяет вердикт.
 
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'attended';
-export type PaymentStatus = 'not_paid' | 'paid' | 'awaiting_transfer' | 'expired';
-export type PaymentMethod = 'on_site' | 'bank_transfer';
+// awaiting_online — зритель в Stripe Checkout, места и скидка удержаны;
+// refunded — деньги за онлайн-оплату возвращены (бронь при этом cancelled).
+export type PaymentStatus = 'not_paid' | 'paid' | 'awaiting_transfer' | 'awaiting_online' | 'expired' | 'refunded';
+export type PaymentMethod = 'on_site' | 'bank_transfer' | 'online';
 
 export interface BookingStateSnapshot {
   status:        BookingStatus | string;
@@ -61,6 +63,23 @@ export function isTransferOverdue(
   nowMs: number = Date.now(),
 ): boolean {
   if (booking.paymentStatus !== 'awaiting_transfer') return false;
+  if (booking.status === 'cancelled')                return false;
+  const expires = booking.paymentExpiresAtMs;
+  return typeof expires === 'number' && expires > 0 && expires < nowMs;
+}
+
+// Истёк ли срок удержания брони, ожидающей оплаты (перевод или онлайн).
+//
+// Для онлайн-оплаты это лишь повод СВЕРИТЬСЯ со Stripe, а не приговор:
+// сессия могла быть оплачена, и протухает бронь только после того, как Stripe
+// подтвердит, что оплаты нет (server/payments/reconcile.service.ts). Клиентское
+// «ленивое» протухание по-прежнему касается только переводов (isTransferOverdue).
+export function isPaymentOverdue(
+  booking: BookingStateSnapshot & { paymentExpiresAtMs?: number | null },
+  nowMs: number = Date.now(),
+): boolean {
+  if (booking.paymentStatus === 'awaiting_transfer') return isTransferOverdue(booking, nowMs);
+  if (booking.paymentStatus !== 'awaiting_online')   return false;
   if (booking.status === 'cancelled')                return false;
   const expires = booking.paymentExpiresAtMs;
   return typeof expires === 'number' && expires > 0 && expires < nowMs;
@@ -137,6 +156,9 @@ export function isBookingAttended(booking: BookingStateSnapshot): boolean {
 // действующей брони — оплаченной, «оплата на месте» и с ещё не полученным
 // переводом — есть билет. Неоплаченный билет проходит на входе через «принять
 // оплату и пропустить». Отменённая, протухшая и уже использованная — нет.
+// Онлайн-оплата, не завершённая в Stripe (awaiting_online), билета НЕ даёт:
+// билет с QR появляется только после подтверждения оплаты webhook'ом.
+// Возвращённая (refunded) — тоже нет.
 export function isScannableTicket(booking: BookingStateSnapshot): boolean {
   if (booking.status === 'cancelled' || booking.status === 'attended') return false;
   return booking.paymentStatus === 'paid'

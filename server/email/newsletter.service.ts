@@ -25,6 +25,8 @@ import {
 import { MAX_HTML_LEN, MAX_SUBJECT_LEN } from './email.validation.js';
 import { logEmailDeliveries } from './email.repository.js';
 import { loadNewsletterRecipients, type NewsletterRecipient } from './newsletter.recipients.js';
+import { routeEmail } from './recipient.js';
+import { isProductionRuntime } from '../shared/runtimeEnv.js';
 import {
   combineUsage, decideQuota, readEmailLogUsage, readResendUsage, resolveDailyLimit, utcDayStartMs,
   type SentTodayReading,
@@ -133,12 +135,24 @@ export function classifyResendError(status: number, body: unknown): NewsletterSt
 
 export function createResendBatchSender(apiKey: string, fetchImpl: typeof fetch = fetch) {
   return async (emails: ResendEmail[]): Promise<BatchOutcome> => {
+    // Единая точка маршрутизации: вне production адресат подменяется тестовым,
+    // а без тестового адреса пачка не уходит вовсе (fail closed).
+    const routedEmails: ResendEmail[] = [];
+    for (const e of emails) {
+      const route = routeEmail({ to: e.to, subject: e.subject, html: e.html, text: e.text });
+      if (route.kind !== 'send') {
+        console.warn('[newsletter] not sent: staging without TEST_EMAIL_RECIPIENT');
+        return { ok: false, status: 0, reason: 'provider_error' };
+      }
+      routedEmails.push({ ...e, ...route.email, text: route.email.text ?? e.text });
+    }
+
     let res: Response;
     try {
       res = await fetchImpl(RESEND_BATCH_URL, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body:    JSON.stringify(emails),
+        body:    JSON.stringify(routedEmails),
       });
     } catch (err) {
       console.error('[newsletter] Resend batch request failed:', err);
@@ -271,7 +285,11 @@ export function defaultNewsletterDeps(): NewsletterDeps {
     dailyLimit: resolveDailyLimit(),
     apiKey,
     from,
-    loadRecipients: loadNewsletterRecipients,
+    // Вне production рассылка — одно письмо на тестовый адрес, а не N копий
+    // (квота Resend общая с production).
+    loadRecipients: isProductionRuntime()
+      ? loadNewsletterRecipients
+      : async () => (await loadNewsletterRecipients()).slice(0, 1),
     readUsage: async () => {
       const dayStart = utcDayStartMs();
       const [resend, emailLog] = await Promise.all([

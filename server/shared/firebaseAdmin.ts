@@ -1,6 +1,7 @@
 // Единая инициализация Firebase Admin SDK для всех serverless-функций.
 
 import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
+import { assertFirebaseProjectAllowed } from './runtimeEnv.js';
 
 export function getAdminApp(): App {
   const existing = getApps();
@@ -20,6 +21,9 @@ export function getAdminApp(): App {
   if (!sa.project_id)   throw new Error('FIREBASE_SERVICE_ACCOUNT is missing project_id');
   if (!sa.client_email) throw new Error('FIREBASE_SERVICE_ACCOUNT is missing client_email');
   if (!sa.private_key)  throw new Error('FIREBASE_SERVICE_ACCOUNT is missing private_key');
+
+  // Staging никогда не подключается к production-базе: проверка ДО initializeApp.
+  assertFirebaseProjectAllowed(String(sa.project_id));
 
   return initializeApp({ credential: cert(sa) });
 }

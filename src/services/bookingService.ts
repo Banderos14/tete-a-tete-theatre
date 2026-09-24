@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import type { Booking } from '../types/booking';
-import type { TicketTypeId } from '../../shared/contracts/booking';
+import type { TicketTypeId, PaymentMethod } from '../../shared/contracts/booking';
 
 // ── Server-side booking API ───────────────────────────────────────────────────
 
@@ -19,7 +19,7 @@ export interface CreateBookingRequest {
   showId:        string;
   ticketType:    TicketTypeId;
   ticketsCount:  number;
-  paymentMethod: 'on_site' | 'bank_transfer';
+  paymentMethod: PaymentMethod;
   comment:       string;
   phone:         string;
   lang:          'RU' | 'FR';
@@ -49,6 +49,9 @@ interface CreateBookingResult {
   originalAmount?:         number;
   loyaltyDiscountApplied?: boolean;
   loyaltyDiscountAmount?:  number;
+  /** Онлайн-оплата: адрес Stripe Hosted Checkout для location.assign. */
+  checkoutUrl?:            string;
+  checkoutState?:          'open' | 'paid' | 'processing';
 }
 
 // Ошибка API бронирования с машиночитаемой причиной — чтобы UI показал

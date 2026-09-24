@@ -18,8 +18,10 @@ import styles from './AdminPage.module.scss';
 const PAY_STATUS_STYLE: Record<PaymentStatus, string> = {
   not_paid:          styles.payNotPaid,
   awaiting_transfer: styles.payAwaiting,
+  awaiting_online:   styles.payAwaiting,
   paid:              styles.payPaid,
   expired:           styles.payExpired,
+  refunded:          styles.payExpired,
 };
 
 const t = RU;

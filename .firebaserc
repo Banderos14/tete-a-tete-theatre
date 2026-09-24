@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "theatre-tete-a-tete"
+    "default": "theatre-tete-a-tete",
+    "staging": "theatre-tete-a-tete-staging"
   }
 }

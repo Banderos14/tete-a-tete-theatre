@@ -22,6 +22,8 @@ export interface RawBooking {
   lang?:                   string;
   loyaltyDiscountApplied?: boolean;
   paymentExpiresAtMs?:     number | null;
+  stripeCheckoutSessionId?: string;
+  stripePaymentIntentId?:   string;
 }
 
 /** Firestore Timestamp в том виде, в каком он нужен серверному коду. */

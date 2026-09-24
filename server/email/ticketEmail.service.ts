@@ -18,6 +18,7 @@
 import QRCode from 'qrcode';
 import { db, BOOKINGS } from '../booking/booking.repository.js';
 import { logEmailDelivery } from './email.repository.js';
+import { routeEmail, type OutgoingEmail } from './recipient.js';
 import type { TicketEmailType } from './email.types.js';
 import { ticketQrPayload, CANONICAL_SITE_URL } from '../../shared/domain/ticketCode.js';
 import { isScannableTicket } from '../../shared/domain/bookingRules.js';
@@ -125,6 +126,15 @@ async function claim(bookingId: string, trigger: EmailTrigger, force: boolean, n
   });
 }
 
+/**
+ * Письмо через единую точку маршрутизации (server/email/recipient.ts): вне
+ * production адресат подменяется тестовым. null — отправка запрещена.
+ */
+function routed(mail: OutgoingEmail, extra: Record<string, unknown> = {}): Record<string, unknown> | null {
+  const route = routeEmail(mail);
+  return route.kind === 'send' ? { ...route.email, ...extra } : null;
+}
+
 async function postToResend(payload: Record<string, unknown>, apiKey: string): Promise<{ ok: boolean; status: number }> {
   const res = await fetch(RESEND_API_URL, {
     method:  'POST',
@@ -183,12 +193,19 @@ export async function sendBookingEmail(
       return await finish({ status: 'skipped', reason: 'not_configured' });
     }
 
+    // Вне production без тестового адреса письмо не уходит никому (fail closed).
+    if (routeEmail({ to, subject: '', html: '' }).kind === 'blocked') {
+      return await finish({ status: 'skipped', reason: 'staging_no_test_recipient' });
+    }
+
     const booking  = toTicketBooking(data);
     const siteBase = publicSiteUrl();
 
     if (trigger === 'cancelled') {
-      const mail = buildCancellationEmail(booking, siteBase);
-      const res  = await postToResend({ from, to, subject: mail.subject, html: mail.html, text: mail.text }, apiKey);
+      const mail    = buildCancellationEmail(booking, siteBase);
+      const payload = routed({ to, subject: mail.subject, html: mail.html, text: mail.text }, { from });
+      if (!payload) return await finish({ status: 'skipped', reason: 'staging_no_test_recipient' });
+      const res  = await postToResend(payload, apiKey);
       return await finish(res.ok ? { status: 'sent' } : { status: 'failed', reason: 'provider_error' },
         { providerStatus: res.status });
     }
@@ -204,14 +221,16 @@ export async function sendBookingEmail(
     }
 
     const send = (withQr: boolean) => {
-      const mail = buildTicketEmail(booking, { kind: trigger, withQr, siteBase });
-      return postToResend({
-        from, to, subject: mail.subject, html: mail.html, text: mail.text,
+      const mail    = buildTicketEmail(booking, { kind: trigger, withQr, siteBase });
+      const payload = routed({ to, subject: mail.subject, html: mail.html, text: mail.text }, {
+        from,
         ...(withQr && qrPng ? { attachments: [{
           filename: `ticket-${booking.ticketCode}.png`, content: qrPng,
           content_type: 'image/png', content_id: TICKET_QR_CID,
         }] } : {}),
-      }, apiKey);
+      });
+      // Маршрут проверен выше; повторная проверка — на случай смены окружения между вызовами.
+      return payload ? postToResend(payload, apiKey) : Promise.resolve({ ok: false, status: 0 });
     };
 
     let withQr = qrPng !== null;

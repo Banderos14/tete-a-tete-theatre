@@ -4,8 +4,20 @@ import type { TicketTypeId } from '../../shared/catalog/shows';
 export type { TicketTypeId } from '../../shared/catalog/shows';
 
 export type BookingStatus  = 'pending' | 'confirmed' | 'cancelled' | 'attended';
-export type PaymentMethod  = 'on_site' | 'bank_transfer';
-export type PaymentStatus  = 'not_paid' | 'paid' | 'awaiting_transfer' | 'expired';
+export type PaymentMethod  = 'on_site' | 'bank_transfer' | 'online';
+export type PaymentStatus  = 'not_paid' | 'paid' | 'awaiting_transfer' | 'awaiting_online' | 'expired' | 'refunded';
+
+/** Возврат онлайн-оплаты — синхронизируется из Stripe webhook (refund.created/updated). */
+export interface BookingRefund {
+  id:        string;
+  status:    'pending' | 'succeeded' | 'failed';
+  /** Сумма возврата в евро. */
+  amount:    number;
+  updatedAtMs: number;
+}
+
+/** Деньги пришли, но принять их автоматически нельзя — показать администратору. */
+export type PaymentIssue = 'amount_mismatch' | 'paid_after_cancel' | 'partial_refund';
 
 export interface Booking {
   id: string;
@@ -61,5 +73,12 @@ export interface Booking {
   }>>;
   cancelReason?:  string;
   cancelComment?: string;
+  // ── Онлайн-оплата (Stripe Hosted Checkout). Пишет только сервер. ──
+  stripeCheckoutSessionId?: string;
+  stripePaymentIntentId?:   string;
+  refund?:                  BookingRefund;
+  refundedAt?:              Timestamp;
+  paymentIssue?:            PaymentIssue;
+  paymentIssueDetails?:     Record<string, unknown>;
   cancelledAt?:   import('firebase/firestore').Timestamp;
 }

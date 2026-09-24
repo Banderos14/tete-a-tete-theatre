@@ -51,20 +51,31 @@ export function respond(
 const MAX_BODY_BYTES = 64 * 1024;
 
 export async function readBody(req: IncomingMessage): Promise<string> {
+  return (await readRawBody(req, MAX_BODY_BYTES)).toString('utf8');
+}
+
+/**
+ * Тело запроса как есть, байт в байт.
+ *
+ * Нужно webhook'у Stripe: подпись считается по исходным байтам, и тело,
+ * распарсенное в JSON и собранное обратно, подпись уже не пройдёт.
+ * Handler не должен обращаться к req.body — поток читается только здесь.
+ */
+export async function readRawBody(req: IncomingMessage, maxBytes: number = MAX_BODY_BYTES): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let total = 0;
     req.on('data', (chunk: unknown) => {
       const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
       total += buf.length;
-      if (total > MAX_BODY_BYTES) {
+      if (total > maxBytes) {
         reject(new Error('Request body too large'));
         req.destroy();
         return;
       }
       chunks.push(buf);
     });
-    req.on('end',   () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('end',   () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
