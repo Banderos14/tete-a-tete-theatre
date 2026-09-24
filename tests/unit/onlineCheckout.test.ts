@@ -415,3 +415,242 @@ describe('доменные правила онлайн-оплаты', () => {
     expect(isPaymentOverdue({ status: 'confirmed', paymentStatus: 'paid' }, NOW.getTime())).toBe(false);
   });
 });
+
+// ── Phase 6: аудит — гонки, сбои Stripe, прежние способы оплаты ─────────────
+
+describe('вместимость и гонки при онлайн-оплате', () => {
+  const fillHall = (seats: number) => store.seed('bookings', 'hall', {
+    userId: 'other', showId: SHOW, showDate: '02 Окт 2026', showTime: '20:00',
+    status: 'confirmed', paymentStatus: 'paid', paymentMethod: 'on_site', ticketsCount: seats, seatsCount: seats,
+  });
+
+  it('два зрителя одновременно за последними местами — продано не больше вместимости', async () => {
+    const { THEATRE_CAPACITY } = await import('../../shared/catalog/shows.js');
+    fillHall(THEATRE_CAPACITY - 2);
+    const results = await Promise.allSettled([
+      createBooking(request({}, 'user-a', 'ka')),
+      createBooking(request({}, 'user-b', 'kb')),
+    ]);
+    const ok      = results.filter(r => r.status === 'fulfilled');
+    const refused = results.filter(r => r.status === 'rejected') as PromiseRejectedResult[];
+    expect(ok).toHaveLength(1);
+    expect(refused).toHaveLength(1);
+    expect((refused[0]!.reason as { reason?: string }).reason).toBe('capacity_exceeded');
+    expect((await readShowAvailability())[SHOW]!.sold).toBe(THEATRE_CAPACITY);
+    expect(stripe.created).toHaveLength(1);
+  });
+
+  it('ожидающая онлайн-оплаты бронь держит места против оплаты на месте', async () => {
+    const { THEATRE_CAPACITY } = await import('../../shared/catalog/shows.js');
+    fillHall(THEATRE_CAPACITY - 2);
+    await createBooking(request({}, 'user-a'));
+    const err = await refusal(createBooking(request({ paymentMethod: 'on_site' }, 'user-b')));
+    expect(err.reason).toBe('capacity_exceeded');
+  });
+
+  it('двойной клик: два одновременных запроса с одним ключом — одна бронь, одна сессия, одна ссылка', async () => {
+    const [a, b] = await Promise.all([
+      createBooking(request({}, UID, 'dbl')),
+      createBooking(request({}, UID, 'dbl')),
+    ]);
+    expect(a.bookingId).toBe(b.bookingId);
+    expect(a.checkoutUrl).toBe(b.checkoutUrl);
+    expect(store.listDocs('bookings')).toHaveLength(1);
+    expect(stripe.created).toHaveLength(1);
+  });
+
+  it('две вкладки с разными ключами и одной наградой лояльности — скидку получает только одна бронь', async () => {
+    seedVisits();
+    const [a, b] = await Promise.all([
+      createBooking(request({}, UID, 'tab-1')),
+      createBooking(request({}, UID, 'tab-2')),
+    ]);
+    expect([a.loyaltyDiscountApplied, b.loyaltyDiscountApplied].filter(Boolean)).toHaveLength(1);
+    const amounts = (stripe.created.map(p => (p.line_items as Array<{ price_data: { unit_amount: number } }>)[0]!.price_data.unit_amount)).sort();
+    expect(amounts).toEqual([4500, 6000]);
+  });
+
+  it('отмена ожидающей онлайн-брони возвращает награду лояльности', async () => {
+    seedVisits();
+    const a = await createBooking(request());
+    expect(a.loyaltyDiscountApplied).toBe(true);
+    await cancelBookingByUser({ uid: UID, bookingId: a.bookingId, reason: 'plans', comment: '' });
+    const next = await createBooking(request());
+    expect(next.loyaltyDiscountApplied).toBe(true);
+    expect(next.totalAmount).toBe(45);
+  });
+});
+
+describe('сбои Stripe при создании и продолжении оплаты', () => {
+  it('Stripe ещё обрабатывает тот же idempotency key — 409, бронь НЕ освобождается', async () => {
+    stripe.checkout.sessions.create = async () => {
+      throw Object.assign(new Error('in progress'), { type: 'StripeIdempotencyError', statusCode: 409 });
+    };
+    const err = await refusal(createBooking(request({}, UID, 'slow')));
+    expect(err).toMatchObject({ status: 409, reason: 'checkout_in_progress' });
+    const [, b] = store.listDocs('bookings')[0]!;
+    expect(b).toMatchObject({ paymentStatus: 'awaiting_online', status: 'pending' });
+  });
+
+  it('сессия без URL — 502, ссылки клиенту нет, фальшивого успеха нет', async () => {
+    const create = stripe.checkout.sessions.create;
+    stripe.checkout.sessions.create = async (params, opts) => ({ ...(await create(params, opts)), url: null });
+    const err = await refusal(createBooking(request()));
+    expect(err).toMatchObject({ status: 502, reason: 'payment_unavailable' });
+  });
+
+  it('бронь отменили, пока создавалась сессия — сессия закрывается, клиенту checkout_expired', async () => {
+    const create = stripe.checkout.sessions.create;
+    stripe.checkout.sessions.create = async (params, opts) => {
+      const s = await create(params, opts);
+      const id = String((params as { client_reference_id: string }).client_reference_id);
+      store.seed('bookings', id, { ...booking(id), status: 'cancelled' });
+      return s;
+    };
+    const err = await refusal(createBooking(request()));
+    expect(err.reason).toBe('checkout_expired');
+    const [id] = store.listDocs('bookings')[0]!;
+    expect(stripe.sessions.get(`cs_test_1`)!.status).toBe('expired');
+    expect(booking(id).stripeCheckoutSessionId).toBeUndefined();
+  });
+
+  it('retrieve недоступен при «Продолжить оплату» — 502, бронь не тронута', async () => {
+    const a = await createBooking(request());
+    stripe.checkout.sessions.retrieve = async () => { throw new Error('timeout'); };
+    const err = await refusal((await import('../../server/payments/checkout.service.js')).resumeCheckout(UID, a.bookingId));
+    expect(err).toMatchObject({ status: 502, reason: 'payment_unavailable' });
+    expect(booking(a.bookingId)).toMatchObject({ paymentStatus: 'awaiting_online', status: 'pending' });
+  });
+
+  it('сессия complete, но не оплачена — «обрабатывается», бронь не протухает и не оплачивается', async () => {
+    const a = await createBooking(request());
+    Object.assign(stripe.sessions.get(String(booking(a.bookingId).stripeCheckoutSessionId))!, { status: 'complete', payment_status: 'unpaid' });
+    const r = await (await import('../../server/payments/checkout.service.js')).resumeCheckout(UID, a.bookingId);
+    expect(r.checkoutState).toBe('processing');
+    expect(booking(a.bookingId).paymentStatus).toBe('awaiting_online');
+  });
+
+  it('resume_checkout: мусорный id — 400; чужая оплаченная бронь — 404 без подробностей', async () => {
+    const { resumeCheckout } = await import('../../server/payments/checkout.service.js');
+    expect((await refusal(resumeCheckout(UID, '../users/x'))).status).toBe(400);
+    expect((await refusal(resumeCheckout(UID, 42))).status).toBe(400);
+    const a = await createBooking(request());
+    stripe.pay(String(booking(a.bookingId).stripeCheckoutSessionId));
+    const err = await refusal(resumeCheckout('intruder', a.bookingId));
+    expect(err.status).toBe(404);
+    // Чужой запрос не подтверждает оплату за владельца и не трогает Stripe.
+    expect(booking(a.bookingId).paymentStatus).toBe('awaiting_online');
+  });
+});
+
+describe('деньги: только целые центы из серверной суммы', () => {
+  it('дробные евро не теряют цент (19.99 → 1999, 0.1+0.2 → 30)', async () => {
+    const { amountInCents } = await import('../../server/payments/onlinePayment.js');
+    expect(amountInCents(19.99)).toBe(1999);
+    expect(amountInCents(0.1 + 0.2)).toBe(30);
+    expect(amountInCents(45)).toBe(4500);
+    expect(Number.isInteger(amountInCents(37.5))).toBe(true);
+  });
+
+  it('любой тариф каталога со скидкой лояльности — положительная сумма не меньше минимума Stripe (0,50 €)', async () => {
+    const { SHOWS } = await import('../../shared/catalog/shows.js');
+    const { loyaltyDiscountForTicket } = await import('../../shared/domain/loyalty.js');
+    for (const show of Object.values(SHOWS)) {
+      for (const t of Object.values(show.tickets) as Array<{ price: number }>) {
+        expect(Number.isInteger(t.price)).toBe(true);
+        expect(t.price - loyaltyDiscountForTicket(t.price)).toBeGreaterThanOrEqual(0.5);
+      }
+    }
+  });
+
+  it('сумма без totalAmount или с NaN никогда не подтверждается', async () => {
+    const { decidePayment } = await import('../../server/payments/onlinePayment.js');
+    const view = {
+      bookingId: 'b1', paymentMethod: 'online', paymentStatus: 'awaiting_online', status: 'pending',
+      totalAmount: NaN, stripeCheckoutSessionId: 'cs', stripePaymentIntentId: null, paymentIssue: null,
+      refund: null, refunds: {},
+    };
+    const s = {
+      id: 'cs', bookingId: 'b1', clientReferenceId: 'b1', metadataBookingId: 'b1', status: 'complete',
+      paymentStatus: 'paid', amountTotal: 0, currency: 'eur', paymentIntentId: 'pi', expiresAtMs: 0, url: null, livemode: false,
+    };
+    expect(decidePayment(view, s).kind).toBe('amount_mismatch');
+    expect(decidePayment({ ...view, totalAmount: 45 }, { ...s, amountTotal: null }).kind).toBe('amount_mismatch');
+    expect(decidePayment({ ...view, totalAmount: 45 }, { ...s, amountTotal: 4500, currency: 'usd' }).kind).toBe('amount_mismatch');
+    expect(decidePayment({ ...view, totalAmount: 45 }, { ...s, amountTotal: 4500 }).kind).toBe('confirm');
+  });
+});
+
+describe('прежние способы оплаты не задеты Stripe', () => {
+  it('на месте и перевод: Stripe не вызывается, статусы как раньше, ссылки на оплату нет', async () => {
+    const onSite   = await createBooking(request({ paymentMethod: 'on_site' }));
+    const transfer = await createBooking(request({ paymentMethod: 'bank_transfer' }));
+    expect(stripe.created).toHaveLength(0);
+    expect(onSite.checkoutUrl).toBeUndefined();
+    expect(transfer.checkoutUrl).toBeUndefined();
+    expect(booking(onSite.bookingId)).toMatchObject({ status: 'pending', paymentStatus: 'not_paid', paymentMethod: 'on_site' });
+    expect(booking(onSite.bookingId).paymentExpiresAt).toBeUndefined();
+    expect(booking(transfer.bookingId)).toMatchObject({ paymentStatus: 'awaiting_transfer', paymentMethod: 'bank_transfer' });
+    expect(transfer.paymentReference).toMatch(/^TETEATETE-/);
+  });
+
+  it('при выключенном онлайн-приёме наличные и перевод работают', async () => {
+    onlineEnabled = false;
+    const r = await createBooking(request({ paymentMethod: 'on_site' }));
+    expect(r.ok).toBe(true);
+  });
+
+  it('наличные: «Оплачено» на входе, «Не оплачено», отмена администратором — как раньше', async () => {
+    const r = await createBooking(request({ paymentMethod: 'on_site' }));
+    const code = String(booking(r.bookingId).ticketCode);
+    await checkinTicket({ adminUid: 'admin-1', ticketCode: code, action: 'mark_paid' });
+    expect(booking(r.bookingId)).toMatchObject({ paymentStatus: 'paid', status: 'confirmed', paidBy: 'admin-1' });
+    await markUnpaidByAdmin(r.bookingId);
+    expect(booking(r.bookingId).paymentStatus).toBe('not_paid');
+    await cancelBookingByAdmin('admin-1', r.bookingId);
+    expect(booking(r.bookingId).status).toBe('cancelled');
+    expect(stripe.created).toHaveLength(0);
+  });
+
+  it('старая бронь без paymentMethod: отмена администратором не обращается к Stripe', async () => {
+    store.seed('bookings', 'legacy', {
+      userId: 'old', showId: SHOW, showDate: '02 Окт 2026', showTime: '20:00',
+      status: 'confirmed', paymentStatus: 'paid', ticketsCount: 1, totalAmount: 30, ticketCode: 'LEGA-CY23',
+    });
+    await cancelBookingByAdmin('admin-1', 'legacy');
+    expect(booking('legacy').status).toBe('cancelled');
+    expect(stripe.created).toHaveLength(0);
+  });
+});
+
+describe('проход: только действующая оплаченная бронь', () => {
+  const seedAt = (id: string, code: string, patch: Record<string, unknown>) => store.seed('bookings', id, {
+    userId: UID, showId: SHOW, showDate: '02 Окт 2026', showTime: '20:00', ticketsCount: 1, totalAmount: 30,
+    paymentMethod: 'online', ticketCode: code, stripePaymentIntentId: 'pi_x', ...patch,
+  });
+
+  it.each([
+    ['awaiting_online',            { status: 'pending',   paymentStatus: 'awaiting_online' }, 'not_paid'],
+    ['expired',                    { status: 'cancelled', paymentStatus: 'expired' },         'cancelled'],
+    ['refunded',                   { status: 'cancelled', paymentStatus: 'refunded' },        'cancelled'],
+    ['paid_after_cancel',          { status: 'cancelled', paymentStatus: 'paid', paymentIssue: 'paid_after_cancel' }, 'cancelled'],
+    ['refund_failed + cancelled',  { status: 'cancelled', paymentStatus: 'paid', paymentIssue: 'refund_failed', refund: { id: 're', status: 'failed' } }, 'cancelled'],
+    ['refund pending',             { status: 'cancelled', paymentStatus: 'paid', refund: { id: 're', status: 'pending' } }, 'cancelled'],
+  ])('%s — проход запрещён', async (_name, patch, reason) => {
+    seedAt('x', 'WXYZ-2345', patch);
+    const err = await refusal(checkinTicket({ adminUid: 'admin-1', ticketCode: 'WXYZ-2345', action: 'mark_attended', showId: SHOW }));
+    expect(err.reason).toBe(reason);
+    expect(booking('x').status).toBe(patch.status);
+  });
+
+  it('оплаченная онлайн — проходит один раз, повтор — already_attended; чужой спектакль — wrong_show', async () => {
+    seedAt('ok', 'PAID-2345', { status: 'confirmed', paymentStatus: 'paid' });
+    const other = Object.keys((await import('../../shared/catalog/shows.js')).SHOWS).find(id => id !== SHOW)!;
+    expect((await refusal(checkinTicket({ adminUid: 'admin-1', ticketCode: 'PAID-2345', action: 'mark_attended', showId: other }))).reason)
+      .toBe('wrong_show');
+    const r = await checkinTicket({ adminUid: 'admin-1', ticketCode: 'PAID-2345', action: 'mark_attended', showId: SHOW });
+    expect(r.changed).toBe(true);
+    expect((await refusal(checkinTicket({ adminUid: 'admin-1', ticketCode: 'PAID-2345', action: 'mark_attended', showId: SHOW }))).reason)
+      .toBe('already_attended');
+  });
+});

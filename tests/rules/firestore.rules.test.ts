@@ -79,6 +79,19 @@ beforeEach(async () => {
       paymentMethod: 'online', paymentStatus: 'awaiting_online', paymentExpiresAt: PAST,
       stripeCheckoutSessionId: 'cs_test_1',
     }));
+    await setDoc(doc(db, 'bookings', 'a-online-waiting'), baseBooking(USER_A, {
+      paymentMethod: 'online', paymentStatus: 'awaiting_online', paymentExpiresAt: FUTURE,
+      stripeCheckoutSessionId: 'cs_test_2',
+    }));
+    await setDoc(doc(db, 'bookings', 'a-online-paid'), baseBooking(USER_A, {
+      paymentMethod: 'online', paymentStatus: 'paid', status: 'confirmed',
+      stripeCheckoutSessionId: 'cs_test_3', stripePaymentIntentId: 'pi_test_3',
+    }));
+    await setDoc(doc(db, 'bookings', 'a-online-issue'), baseBooking(USER_A, {
+      paymentMethod: 'online', paymentStatus: 'paid', status: 'cancelled',
+      stripeCheckoutSessionId: 'cs_test_4', stripePaymentIntentId: 'pi_test_4',
+      paymentIssue: 'paid_after_cancel',
+    }));
 
     await setDoc(doc(db, 'stats', 'siteStats'), { audienceCount: 2500 });
     await setDoc(doc(db, 'showCounters', 'nulin'), { lastKnownSoldTickets: 10 });
@@ -235,6 +248,63 @@ describe('bookings — запись', () => {
     await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-overdue'), {
       paymentStatus: 'paid', status: 'confirmed', stripePaymentIntentId: 'pi_fake',
     }));
+  });
+
+  // Phase 6: статусы оплаты и возврата пишет только сервер (webhook Stripe,
+  // сверка cron). Ни один из этих переходов браузер сделать не может.
+  it('онлайн-оплату клиент НЕ может отметить протухшей до срока (своя бронь, awaiting_online)', async () => {
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-waiting'), {
+      paymentStatus: 'expired', status: 'cancelled', updatedAt: Timestamp.now(),
+    }));
+  });
+
+  it('клиент НЕ может поставить refunded', async () => {
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-paid'), {
+      paymentStatus: 'refunded', status: 'cancelled',
+    }));
+  });
+
+  it('клиент НЕ может записать статус возврата', async () => {
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-paid'), {
+      refund: { id: 're_fake', status: 'succeeded', amount: 60 },
+    }));
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-paid'), {
+      'refund.status': 'failed',
+    }));
+  });
+
+  it('клиент НЕ может записать или подменить Stripe-идентификаторы', async () => {
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-waiting'), { stripeCheckoutSessionId: 'cs_test_foreign' }));
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-paid'),    { stripePaymentIntentId: 'pi_foreign' }));
+  });
+
+  it('клиент НЕ может записать или снять paymentIssue', async () => {
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-paid'), { paymentIssue: 'amount_mismatch' }));
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-issue'), { paymentIssue: null }));
+  });
+
+  it('клиент НЕ может сменить способ оплаты, чтобы попасть под правило протухания перевода', async () => {
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-online-overdue'), {
+      paymentMethod: 'bank_transfer', paymentStatus: 'awaiting_transfer',
+    }));
+  });
+
+  it('протухание своего просроченного перевода с полями Stripe отклоняется', async () => {
+    await assertFails(updateDoc(doc(asUserA(), 'bookings', 'a-overdue'), {
+      paymentStatus: 'expired', status: 'cancelled', stripePaymentIntentId: 'pi_x',
+    }));
+  });
+
+  it('администратор тоже НЕ пишет возврат или Stripe-поля из браузера', async () => {
+    await assertFails(updateDoc(doc(asAdmin(), 'bookings', 'a-online-paid'), {
+      paymentStatus: 'refunded', status: 'cancelled', refund: { status: 'succeeded' },
+    }));
+    await assertFails(updateDoc(doc(asAdmin(), 'bookings', 'a-online-issue'), { paymentIssue: null }));
+  });
+
+  it('пользователь читает свою онлайн-бронь, но НЕ чужую', async () => {
+    await assertSucceeds(getDoc(doc(asUserA(), 'bookings', 'a-online-paid')));
+    await assertFails(getDoc(doc(asUserB(), 'bookings', 'a-online-paid')));
   });
 
   it('переход в expired с лишними полями отклоняется', async () => {
