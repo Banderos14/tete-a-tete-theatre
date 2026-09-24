@@ -10,6 +10,9 @@
 //         (Sandbox — 3 попытки за несколько часов, live — до 3 суток);
 //   200 — событие обработано, дубль или не нужно нам.
 //
+// Возвраты (refund.created / updated / failed) только синхронизируются —
+// инициирует их администратор в Stripe Dashboard.
+//
 // Обработка идемпотентна по состоянию брони: повтор события ничего не меняет,
 // письмо «Оплата получена» защищено claim'ом emails.paid.
 
@@ -20,7 +23,14 @@ import { refundViewOf, sessionViewOf } from './onlinePayment.js';
 import { confirmOnlinePayment, expireOnlineBooking } from './onlinePayment.service.js';
 import { reconcileRefund } from './refundSync.service.js';
 
-/** События, на которые подписан endpoint в Stripe Dashboard. refund.failed не нужен: его покрывает refund.updated. */
+/**
+ * События, на которые подписан endpoint в Stripe Dashboard.
+ *
+ * refund.failed дублирует refund.updated со status=failed, но подписан тоже:
+ * неудачный возврат (в том числе после succeeded) не должен потеряться, если
+ * одно из двух событий не дойдёт. Оба идут через reconcileRefund, поэтому
+ * второе из пары — no-op (duplicate).
+ */
 export const HANDLED_EVENTS = [
   'checkout.session.completed',
   'checkout.session.async_payment_succeeded',
@@ -28,6 +38,7 @@ export const HANDLED_EVENTS = [
   'checkout.session.expired',
   'refund.created',
   'refund.updated',
+  'refund.failed',
 ] as const;
 
 /** Событие Checkout Session с объектом — сессии всегда небольшие, но запас не помешает. */
@@ -83,7 +94,8 @@ export async function handleStripeWebhook(raw: Buffer, signature: unknown): Prom
       return { received: true, type, outcome: r.outcome, bookingId: r.bookingId };
     }
     case 'refund.created':
-    case 'refund.updated': {
+    case 'refund.updated':
+    case 'refund.failed': {
       const r = await reconcileRefund(refundViewOf(event.data.object));
       return { received: true, type, outcome: r.reason ? `${r.outcome}:${r.reason}` : r.outcome, bookingId: r.bookingId };
     }

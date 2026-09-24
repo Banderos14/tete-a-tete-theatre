@@ -164,10 +164,11 @@ afterEach(() => {
 });
 
 describe('подпись и окружение (fail closed)', () => {
-  it('подписываемся ровно на 6 событий, refund.failed не нужен', () => {
+  it('подписываемся ровно на 7 событий, включая refund.failed', () => {
     expect([...HANDLED_EVENTS].sort()).toEqual([
       'checkout.session.async_payment_failed', 'checkout.session.async_payment_succeeded',
-      'checkout.session.completed', 'checkout.session.expired', 'refund.created', 'refund.updated',
+      'checkout.session.completed', 'checkout.session.expired',
+      'refund.created', 'refund.failed', 'refund.updated',
     ]);
   });
 
@@ -373,6 +374,30 @@ describe('возврат из Stripe Dashboard (синхронизация)', ()
     await deliver(event('refund.updated', refund({ status: 'failed' })));
     expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'paid', refund: { status: 'failed' } });
     expect(booking().refundedAt).toBe('<delete>');
+  });
+
+  it('refund.failed после succeeded: refunded снимается, бронь не воскрешается', async () => {
+    paid();
+    await deliver(event('refund.updated', refund({ status: 'succeeded' })));
+    const r = await deliver(event('refund.failed', refund({ status: 'failed' })));
+    expect(r).toMatchObject({ status: 200, body: { outcome: 'recorded', bookingId: BID } });
+    expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'paid', refund: { status: 'failed' } });
+    expect(booking().refundedAt).toBe('<delete>');
+  });
+
+  it('refund.failed и refund.updated(failed) — одно изменение, второе событие no-op', async () => {
+    paid();
+    await deliver(event('refund.created', refund()));
+    await deliver(event('refund.failed', refund({ status: 'failed' })));
+    const second = await deliver(event('refund.updated', refund({ status: 'failed' })));
+    expect(second.body.outcome).toBe('ignored:duplicate');
+    expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'paid', refund: { status: 'failed' } });
+  });
+
+  it('refund.failed до любого другого события: бронь остаётся оплаченной и активной', async () => {
+    paid();
+    await deliver(event('refund.failed', refund({ status: 'failed' })));
+    expect(booking()).toMatchObject({ status: 'confirmed', paymentStatus: 'paid', refund: { status: 'failed' } });
   });
 
   it('запоздавшее succeeded после failed не перезаписывает окончательный failed', async () => {
