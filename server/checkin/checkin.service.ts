@@ -145,6 +145,10 @@ export async function checkinTicket(input: CheckinInput): Promise<CheckinResult>
     // в зал в обход проверки вместимости. Групповой проход отказывает так же.
     if (paymentStatus === 'expired') return { kind: 'refused', refusal: 'expired',   message: 'Booking expired',   booking };
     if (paymentStatus === 'paid') return { kind: 'refused', refusal: 'already_paid', message: 'Already paid',      booking };
+    // Онлайн-оплату подтверждает только Stripe (webhook), не кнопка «Оплачено».
+    if (booking.paymentMethod === 'online') {
+      return { kind: 'refused', refusal: 'online_payment', message: 'Online payment is confirmed by Stripe only', booking };
+    }
     // Уже прошедшему зрителю оплата не должна возвращать статус «confirmed».
     const { status: confirmed, ...paymentOnly } = paidTransition(input.adminUid);
     tx.update(ref, status === 'attended' ? paymentOnly : { ...paymentOnly, status: confirmed });

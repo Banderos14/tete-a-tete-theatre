@@ -16,6 +16,7 @@ import { parseShowStartUtcMs } from '../../shared/domain/showTime.js';
 import { SHOWS, showStartUtcMs } from '../../shared/catalog/shows.js';
 import { MAX_CANCEL_COMMENT_LEN } from '../../shared/contracts/limits.js';
 import { db, BOOKINGS, SHOW_COUNTERS } from './booking.repository.js';
+import { releaseCheckoutBeforeCancel } from '../payments/checkout.service.js';
 
 // Человекочитаемые отказы. Ключи совпадают с CancelRefusal.
 const REFUSAL_MESSAGES: Record<string, string> = {
@@ -47,6 +48,11 @@ export async function cancelBookingByUser(input: CancelBookingInput): Promise<{ 
   const comment   = typeof input.comment === 'string'
     ? input.comment.trim().slice(0, MAX_CANCEL_COMMENT_LEN)
     : '';
+
+  // Онлайн-бронь, ожидающая оплаты: сначала закрыть сессию Stripe (вне
+  // транзакции). После этого оплатить её уже нельзя, и отмена не разойдётся
+  // с деньгами. Stripe говорит «уже оплачено» — отмены нет (already_paid).
+  await releaseCheckoutBeforeCancel(bookingId, uid);
 
   const database = db();
   const ref = database.collection(BOOKINGS).doc(bookingId);

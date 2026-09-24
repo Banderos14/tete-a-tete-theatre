@@ -11,7 +11,7 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { getAdminApp } from '../shared/firebaseAdmin.js';
-import { conflict } from '../shared/errors.js';
+import { ApiError, conflict } from '../shared/errors.js';
 import { normalizeIdempotencyKey } from '../shared/idempotency.js';
 import { checkCapacity } from '../../shared/domain/bookingRules.js';
 import {
@@ -25,6 +25,9 @@ import {
 import { computeLoyalty, loyaltyDiscount } from './loyalty.js';
 import { generateTicketCode } from './ticketCode.js';
 import type { ValidatedBookingRequest } from './booking.validation.js';
+import { isOnlinePaymentEnabled } from '../payments/stripe.client.js';
+import { openCheckoutForBooking } from '../payments/checkout.service.js';
+import { ONLINE_HOLD_BEFORE_SESSION_MS } from '../payments/onlinePayment.js';
 
 // ── Константы оплаты ─────────────────────────────────────────────────────────
 
@@ -56,6 +59,12 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const startMs = showStartUtcMs(show);
   if (startMs !== null && startMs <= Date.now()) {
     throw conflict('Show has already started', 'show_started');
+  }
+
+  // Онлайн-оплату разрешает только сервер: клиентский флаг лишь прячет кнопку.
+  const isOnline = paymentMethod === 'online';
+  if (isOnline && !isOnlinePaymentEnabled()) {
+    throw new ApiError(503, 'Online payment is not available', 'online_payment_unavailable');
   }
 
   const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKeyRaw);
@@ -135,9 +144,12 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       ? `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${baseAmount}€, скидка 50% на 1 билет = ${totalAmount}€`
       : `${ticketLabel} · ${ticketInfo.price}€ × ${ticketsCount} = ${totalAmount}€`;
 
+    // Перевод — 24 часа. Онлайн — временный hold до создания сессии Stripe;
+    // после создания его заменит фактический session.expires_at.
+    // Оплата на месте срока не имеет.
     const paymentExpiresAt = isBankTransfer
       ? Timestamp.fromDate(new Date(nowMs + PAYMENT_EXPIRY_HOURS * 60 * 60 * 1000))
-      : null;
+      : isOnline ? Timestamp.fromMillis(nowMs + ONLINE_HOLD_BEFORE_SESSION_MS) : null;
     const paymentReference = isBankTransfer ? `${PAYMENT_REF_PREFIX}-${ticketCode}` : null;
 
     // Запись в счётчик — это ТОЧКА КОНФЛИКТА, а не источник правды:
@@ -179,7 +191,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       ticketCode,
       status:        'pending',
       paymentMethod,
-      paymentStatus: isBankTransfer ? 'awaiting_transfer' : 'not_paid',
+      paymentStatus: isOnline ? 'awaiting_online' : isBankTransfer ? 'awaiting_transfer' : 'not_paid',
       comment,
       lang,
       createdAt:     FieldValue.serverTimestamp(),
@@ -226,6 +238,15 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     showTitleFR: show.titleFR,
   };
 
+  // Онлайн-оплата: после коммита брони — сессия Stripe (вне транзакции).
+  // Для повтора запроса вернётся та же сессия, а не новая.
+  const checkout = isOnline ? await openCheckoutForBooking(result.bookingId) : null;
+  const online   = checkout ? {
+    checkoutState: checkout.checkoutState,
+    ...(checkout.checkoutUrl      ? { checkoutUrl: checkout.checkoutUrl }           : {}),
+    ...(checkout.paymentExpiresAt ? { paymentExpiresAt: checkout.paymentExpiresAt } : {}),
+  } : {};
+
   if (result.kind === 'replayed') {
     // Повторный запрос с тем же ключом: бронь уже создана, дубликата нет.
     return {
@@ -234,6 +255,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       ticketCode:  result.ticketCode,
       totalAmount: result.totalAmount,
       ...common,
+      ...online,
     };
   }
 
@@ -251,5 +273,6 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       loyaltyDiscountApplied: true,
       loyaltyDiscountAmount:  result.discountAmount,
     } : {}),
+    ...online,
   };
 }

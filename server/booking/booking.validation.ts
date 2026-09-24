@@ -13,7 +13,7 @@ export interface ValidatedBookingRequest {
   show:          ShowInfo;
   ticketType:    TicketTypeId;
   ticketsCount:  number;
-  paymentMethod: 'on_site' | 'bank_transfer';
+  paymentMethod: 'on_site' | 'bank_transfer' | 'online';
   phone:         string;
   comment:       string;
   lang:          'RU' | 'FR';
@@ -39,8 +39,8 @@ export function validateCreateBooking(body: Record<string, unknown>): ValidatedB
   ) {
     throw badRequest(`ticketsCount must be integer 1–${MAX_TICKETS_PER_BOOKING}`);
   }
-  if (paymentMethod !== 'on_site' && paymentMethod !== 'bank_transfer') {
-    throw badRequest('paymentMethod must be on_site or bank_transfer');
+  if (paymentMethod !== 'on_site' && paymentMethod !== 'bank_transfer' && paymentMethod !== 'online') {
+    throw badRequest('paymentMethod must be on_site, bank_transfer or online');
   }
 
   const phoneValue = typeof phone === 'string' ? phone.trim() : '';

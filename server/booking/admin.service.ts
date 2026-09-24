@@ -7,6 +7,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { badRequest, notFound, conflict } from '../shared/errors.js';
 import { db, BOOKINGS, SHOW_COUNTERS } from './booking.repository.js';
+import { releaseCheckoutBeforeCancel } from '../payments/checkout.service.js';
 
 const SAFE_DOC_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
@@ -27,10 +28,15 @@ export interface AdminChangeResult {
 /**
  * Отмена администратором. Посещённую бронь отменить нельзя — зритель уже в зале
  * (раньше устаревшая строка админки молча превращала прошедшего в «отменено»).
- * Оплаченную — можно: возврат денег театр делает вручную.
+ * Оплаченную на месте или переводом — можно: возврат денег театр делает вручную.
+ *
+ * Онлайн-оплата: оплаченную бронь простой отменой не снять (refund_required) —
+ * возврат делается в Stripe Dashboard, и webhook refund.* отменит бронь сам.
+ * Ожидающую оплаты — можно, но сначала закрывается сессия Stripe.
  */
 export async function cancelBookingByAdmin(adminUid: string, rawId: unknown): Promise<AdminChangeResult> {
   const bookingId = parseBookingId(rawId);
+  await releaseCheckoutBeforeCancel(bookingId, null);
   const database  = db();
   const ref       = database.collection(BOOKINGS).doc(bookingId);
 
@@ -41,6 +47,9 @@ export async function cancelBookingByAdmin(adminUid: string, rawId: unknown): Pr
     const status = String(data.status ?? '');
     if (status === 'cancelled') return { kind: 'refused' as const, reason: 'already_cancelled' };
     if (status === 'attended')  return { kind: 'refused' as const, reason: 'already_attended' };
+    if (data.paymentMethod === 'online' && data.paymentStatus === 'paid') {
+      return { kind: 'refused' as const, reason: 'refund_required' };
+    }
 
     if (typeof data.showId === 'string' && data.showId) {
       // Точка конфликта с параллельным бронированием того же спектакля.
@@ -73,6 +82,8 @@ export async function markUnpaidByAdmin(rawId: unknown): Promise<AdminChangeResu
     if (!snap.exists) return { kind: 'missing' as const };
     const data = snap.data() as Record<string, unknown>;
     if (data.paymentStatus !== 'paid') return { kind: 'refused' as const, reason: 'not_paid' };
+    // Онлайн-оплату подтверждает Stripe, снять её кнопкой нельзя.
+    if (data.paymentMethod === 'online') return { kind: 'refused' as const, reason: 'online_payment' };
     if (data.status === 'attended')   return { kind: 'refused' as const, reason: 'already_attended' };
     tx.update(ref, {
       paymentStatus: 'not_paid',

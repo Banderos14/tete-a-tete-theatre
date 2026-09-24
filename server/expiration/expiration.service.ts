@@ -5,10 +5,10 @@
 // только если кто-нибудь откроет личный кабинет или админку: пока никто
 // не заходил, протухшая бронь держала место сколько угодно.
 
-import { FieldValue } from 'firebase-admin/firestore';
 import { isTransferOverdue } from '../../shared/domain/bookingRules.js';
-import { db, bookingsRef, SHOW_COUNTERS } from '../booking/booking.repository.js';
+import { db, bookingsRef } from '../booking/booking.repository.js';
 import { timestampToMs } from '../booking/booking.types.js';
+import { applyExpiry } from '../booking/expiry.js';
 
 // За один запуск обрабатываем ограниченное число броней: если их накопилось
 // больше, остаток разберёт следующий запуск по расписанию.
@@ -52,19 +52,9 @@ export async function expireOverdueTransfers(nowMs: number = Date.now()): Promis
       const data  = fresh.data() as Record<string, unknown> | undefined;
       if (!fresh.exists || !data || !overdue(data, nowMs)) return null;
 
-      const id = String(data.showId ?? '');
-      // Счётчик спектакля — точка конфликта с параллельным бронированием.
-      if (id) {
-        tx.set(database.collection(SHOW_COUNTERS).doc(id),
-          { updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      }
-      tx.update(d.ref, {
-        paymentStatus: 'expired',
-        status:        'cancelled',
-        expiredAt:     FieldValue.serverTimestamp(),
-        updatedAt:     FieldValue.serverTimestamp(),
-      });
-      return id;
+      // Общий переход (server/booking/expiry.ts): те же поля, что у онлайн-оплаты,
+      // плюс касание счётчика спектакля — точки конфликта с бронированием.
+      return applyExpiry(tx, database, d.ref, data);
     });
 
     if (showId === null) continue;

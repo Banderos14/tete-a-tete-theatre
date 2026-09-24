@@ -126,10 +126,14 @@ describe('ни один механизм протухания не смотри�
   });
 
 
-  it('paymentExpiresAt ставится только банковскому переводу', () => {
+  it('срок оплаты есть у перевода и онлайн-оплаты, но не у оплаты на месте', () => {
+    // Онлайн-бронь держит места, пока открыт Stripe Checkout (hold → фактический
+    // session.expires_at). Оплата на месте по-прежнему срока не имеет: ветка
+    // без перевода и без онлайна даёт null и статус not_paid.
     const create = endpointSource('api/create-booking.ts');
     expect(create).toMatch(/const paymentExpiresAt = isBankTransfer/);
-    expect(create).toMatch(/paymentStatus: isBankTransfer \? 'awaiting_transfer' : 'not_paid'/);
+    expect(create).toMatch(/: isOnline \? Timestamp\.fromMillis\(nowMs \+ ONLINE_HOLD_BEFORE_SESSION_MS\) : null;/);
+    expect(create).toMatch(/paymentStatus: isOnline \? 'awaiting_online' : isBankTransfer \? 'awaiting_transfer' : 'not_paid'/);
   });
 
   it('кабинет не прячет бронь на месте из «Моих билетов»', () => {

@@ -8,6 +8,8 @@
 //   - требуется Authorization: Bearer <Firebase ID token>
 //   - totalAmount, status, paymentStatus и ticketCode считаются на сервере
 //     и никогда не читаются из запроса
+//   - онлайн-оплата: в ответе checkoutUrl сессии Stripe Hosted Checkout;
+//     action 'resume_checkout' возвращает к оплате своей брони
 //
 // Обязательные переменные окружения: FIREBASE_SERVICE_ACCOUNT
 // Опционально: ALLOWED_ORIGIN
@@ -19,6 +21,7 @@ import { errorResponse } from '../server/shared/errors.js';
 import { validateCreateBooking } from '../server/booking/booking.validation.js';
 import { createBooking } from '../server/booking/booking.service.js';
 import { sendBookingEmail } from '../server/email/ticketEmail.service.js';
+import { resumeCheckout } from '../server/payments/checkout.service.js';
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === 'OPTIONS') { respond(res, 204, {}, req); return; }
@@ -34,6 +37,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   try {
     const caller  = await requireCaller(req);
+    if (body.action === 'resume_checkout') {
+      respond(res, 200, await resumeCheckout(caller.uid, body.bookingId), req);
+      return;
+    }
     const request = validateCreateBooking(body);
 
     const booking = await createBooking({
@@ -48,9 +55,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     // не оставляет зрителя без письма. Сбой почты бронь не откатывает, а
     // повтор запроса (тот же Idempotency-Key) не шлёт второе письмо — защита
     // внутри sendBookingEmail; если первое письмо не ушло, повтор его дошлёт.
-    const email = await sendBookingEmail(booking.bookingId, 'booking');
+    // Онлайн-оплата: билета до оплаты нет — письмо «Оплата получена» пошлёт webhook.
+    const email = request.paymentMethod === 'online' ? null : await sendBookingEmail(booking.bookingId, 'booking');
 
-    respond(res, 200, { ...booking, ticketEmail: email.status }, req);
+    respond(res, 200, { ...booking, ...(email ? { ticketEmail: email.status } : {}) }, req);
   } catch (err) {
     const { status, body: payload } = errorResponse(err, 'Failed to create booking');
     if (status >= 500) console.error('[create-booking]', err);
