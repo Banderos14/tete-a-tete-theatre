@@ -514,3 +514,235 @@ describe('страховочная сверка cron', () => {
     expect(booking().paymentStatus).toBe('awaiting_online');
   });
 });
+
+// ── Phase 6: аудит — отказоустойчивость, гонки, возвраты в несколько частей ──
+
+describe('webhook: некорректные запросы и сбои окружения', () => {
+  it('PUT / DELETE — 405; OPTIONS — 204 без обработки события', async () => {
+    seedOnline();
+    for (const method of ['PUT', 'DELETE', 'PATCH']) {
+      expect((await deliver(event('checkout.session.completed', session()), { method })).status).toBe(405);
+    }
+    expect((await deliver(event('checkout.session.completed', session()), { method: 'OPTIONS' })).status).toBe(204);
+    expect(booking().paymentStatus).toBe('awaiting_online');
+  });
+
+  it('подписанное, но не-JSON тело — 400, бронь не меняется', async () => {
+    seedOnline();
+    const payload = 'not json at all {';
+    rawBody = Buffer.from(payload);
+    const signature = realStripe.webhooks.generateTestHeaderString({ payload, secret: SECRET });
+    await webhookHandler({ method: 'POST', headers: { 'stripe-signature': signature } } as never, {} as never);
+    expect(responses.at(-1)!.status).toBe(400);
+    expect(booking().paymentStatus).toBe('awaiting_online');
+  });
+
+  it('пустое тело и мусорная подпись — 400', async () => {
+    seedOnline();
+    rawBody = Buffer.from('');
+    await webhookHandler({ method: 'POST', headers: { 'stripe-signature': 't=1,v1=deadbeef' } } as never, {} as never);
+    expect(responses.at(-1)).toMatchObject({ status: 400, body: { reason: 'invalid_signature' } });
+  });
+
+  it('ответ на отказ не раскрывает секрет и внутренние детали', async () => {
+    const r = await deliver(event('checkout.session.completed', session()), { secret: 'whsec_attacker' });
+    expect(JSON.stringify(r.body)).not.toContain(SECRET);
+    expect(JSON.stringify(r.body)).not.toContain('whsec_');
+  });
+
+  it('ключ Stripe не задан — 503 (Stripe повторит), бронь не меняется', async () => {
+    seedOnline();
+    stripeConfigured = false;
+    const r = await deliver(event('checkout.session.completed', session()));
+    expect(r.status).toBe(503);
+    expect(booking().paymentStatus).toBe('awaiting_online');
+  });
+
+  it('бронь не найдена — 200 not_found, ничего не создаётся', async () => {
+    const r = await deliver(event('checkout.session.completed', session()));
+    expect(r).toMatchObject({ status: 200, body: { outcome: 'not_found' } });
+    expect(store.listDocs('bookings')).toHaveLength(0);
+    expect(mail).toHaveLength(0);
+  });
+
+  it('небезопасный bookingId в metadata (путь документа) — foreign, без записи', async () => {
+    seedOnline();
+    const r = await deliver(event('checkout.session.completed', session({
+      metadata: { bookingId: '../users/u1' }, client_reference_id: '../users/u1',
+    })));
+    expect(r.body.outcome).toBe('foreign');
+    expect(booking().paymentStatus).toBe('awaiting_online');
+  });
+
+  it('оплаченная бронь + completed с другим PaymentIntent — ничего не меняется', async () => {
+    seedOnline({ paymentStatus: 'paid', status: 'confirmed', stripePaymentIntentId: PI });
+    const r = await deliver(event('checkout.session.completed', session({ payment_intent: 'pi_other' })));
+    expect(r.body.outcome).toBe('already_recorded');
+    expect(booking()).toMatchObject({ paymentStatus: 'paid', stripePaymentIntentId: PI });
+  });
+
+  it('сумма на цент меньше / валюта в верхнем регистре', async () => {
+    seedOnline();
+    await deliver(event('checkout.session.completed', session({ amount_total: 4499 })));
+    expect(booking()).toMatchObject({ paymentStatus: 'awaiting_online', paymentIssue: 'amount_mismatch' });
+
+    seedOnline({}, 'b2');
+    sessions.clear();
+    const r = await deliver(event('checkout.session.completed', session({
+      id: 'cs_b2', client_reference_id: 'b2', metadata: { bookingId: 'b2' }, currency: 'EUR',
+    })));
+    // Для b2 записана другая сессия (SID) — чужая; валюту проверяем отдельно ниже.
+    expect(r.body.outcome).toBe('foreign');
+    store.seed('bookings', 'b3', { ...booking('b2'), stripeCheckoutSessionId: 'cs_b3' });
+    const ok = await deliver(event('checkout.session.completed', session({
+      id: 'cs_b3', client_reference_id: 'b3', metadata: { bookingId: 'b3' }, currency: 'EUR',
+    })));
+    expect(ok.body.outcome).toBe('confirm');
+  });
+});
+
+describe('письмо не влияет на оплату', () => {
+  it('Resend упал: бронь остаётся оплаченной, письмо failed; повтор webhook дошлёт письмо, оплата одна', async () => {
+    seedOnline();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 500 })));
+    const r = await deliver(event('checkout.session.completed', session()));
+    expect(r).toMatchObject({ status: 200, body: { outcome: 'confirm' } });
+    expect(booking()).toMatchObject({ paymentStatus: 'paid', status: 'confirmed' });
+    expect((booking().emails as Record<string, { status: string }>).paid.status).toBe('failed');
+
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: { body: string }) => {
+      mail.push(JSON.parse(init.body) as Record<string, unknown>);
+      return new Response('{}', { status: 200 });
+    }));
+    const again = await deliver(event('checkout.session.completed', session()));
+    expect(again.body.outcome).toBe('duplicate');
+    expect(paidMails()).toHaveLength(1);
+    expect((booking().emails as Record<string, { status: string }>).paid.status).toBe('sent');
+  });
+
+  it('Resend бросает исключение (сеть) — 200, оплата записана', async () => {
+    seedOnline();
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('ECONNRESET'); }));
+    const r = await deliver(event('checkout.session.completed', session()));
+    expect(r.status).toBe(200);
+    expect(booking().paymentStatus).toBe('paid');
+  });
+});
+
+describe('гонки: параллельные доставки и cron', () => {
+  const overdue = { paymentExpiresAt: { seconds: (NOW - 2 * 60 * 60 * 1000) / 1000 } };
+
+  it('два одинаковых completed одновременно — одна оплата, одно письмо', async () => {
+    seedOnline();
+    const evt = event('checkout.session.completed', session());
+    await Promise.all([deliver(evt), deliver(evt), deliver(event('checkout.session.completed', session()))]);
+    expect(booking()).toMatchObject({ paymentStatus: 'paid', status: 'confirmed' });
+    expect(paidMails()).toHaveLength(1);
+  });
+
+  it('cron-сверка одновременно с webhook completed — бронь оплачена, не протухла, одно письмо', async () => {
+    seedOnline(overdue);
+    sessions.set(SID, session());
+    await Promise.all([reconcileOnlineBookings(NOW), deliver(event('checkout.session.completed', session()))]);
+    expect(booking()).toMatchObject({ paymentStatus: 'paid', status: 'confirmed' });
+    expect(paidMails()).toHaveLength(1);
+    expect(expireCalls).toEqual([]);
+  });
+
+  it('completed уже записан, затем запоздавший expired — оплата не теряется', async () => {
+    seedOnline();
+    await deliver(event('checkout.session.completed', session()));
+    await deliver(event('checkout.session.expired', session({ status: 'expired', payment_status: 'unpaid' })));
+    expect(booking()).toMatchObject({ paymentStatus: 'paid', status: 'confirmed' });
+  });
+
+  it('expired уже записан, затем completed (деньги пришли) — paid_after_cancel, места не возвращаются', async () => {
+    seedOnline();
+    await deliver(event('checkout.session.expired', session({ status: 'expired', payment_status: 'unpaid' })));
+    await deliver(event('checkout.session.completed', session()));
+    expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'paid', paymentIssue: 'paid_after_cancel' });
+    expect((await readShowAvailability())[SHOW]!.sold).toBe(0);
+    expect(paidMails()).toHaveLength(0);
+  });
+
+  it('повторный прогон cron по оплаченной брони ничего не меняет', async () => {
+    seedOnline(overdue);
+    sessions.set(SID, session());
+    await reconcileOnlineBookings(NOW);
+    const before = JSON.stringify(booking());
+    const again  = await reconcileOnlineBookings(NOW);
+    expect(again.checked).toBe(0);
+    expect(JSON.stringify(booking())).toBe(before);
+    expect(paidMails()).toHaveLength(1);
+  });
+
+  it('refund.created и refund.updated(succeeded) одновременно — refunded, место освобождено один раз, одно письмо', async () => {
+    seedOnline({ paymentStatus: 'paid', status: 'confirmed', stripePaymentIntentId: PI });
+    seedOnline({ paymentStatus: 'paid', status: 'confirmed', stripePaymentIntentId: 'pi_neighbour', stripeCheckoutSessionId: 'cs_n' }, 'neighbour');
+    await Promise.all([
+      deliver(event('refund.created', refund())),
+      deliver(event('refund.updated', refund({ status: 'succeeded' }))),
+    ]);
+    expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'refunded', refund: { status: 'succeeded' } });
+    // Освободились ровно места этой брони: соседняя по-прежнему занимает свои.
+    expect((await readShowAvailability())[SHOW]!.sold).toBe(2);
+    expect(mail.filter(m => String(m.subject).includes('отменено'))).toHaveLength(1);
+  });
+});
+
+describe('возврат в несколько частей (регрессия Phase 6)', () => {
+  // Раньше «полный ли возврат» решал только последний возврат, а второй
+  // возврат после succeeded первого игнорировался: деньги вернулись целиком,
+  // а билет оставался действующим, и обычная отмена отвечала refund_required.
+  const paid = () => seedOnline({ paymentStatus: 'paid', status: 'confirmed', stripePaymentIntentId: PI });
+  const cancelMails = () => mail.filter(m => String(m.subject).includes('отменено'));
+
+  it('частичный, затем остаток — бронь отменена, refunded, проблема закрыта, одно письмо', async () => {
+    paid();
+    await deliver(event('refund.created', refund({ id: 're_a', amount: 1500, status: 'succeeded' })));
+    expect(booking()).toMatchObject({ status: 'confirmed', paymentIssue: 'partial_refund' });
+
+    await deliver(event('refund.created', refund({ id: 're_b', amount: 3000, status: 'pending' })));
+    expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'paid', refund: { id: 're_b', status: 'pending' } });
+    expect((await readShowAvailability())[SHOW]!.sold).toBe(0);
+
+    await deliver(event('refund.updated', refund({ id: 're_b', amount: 3000, status: 'succeeded' })));
+    expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'refunded', refundedAt: '<ts>' });
+    // FieldValue.delete() в тестовой модели — метка '<delete>'.
+    expect(booking().paymentIssue).toBe('<delete>');
+    expect(booking().paymentIssueResolved).toMatchObject({ issue: 'partial_refund', via: 'refund', refundId: 're_b' });
+    expect(booking().refunds).toEqual({
+      re_a: { status: 'succeeded', amountCents: 1500 },
+      re_b: { status: 'succeeded', amountCents: 3000 },
+    });
+    expect(cancelMails()).toHaveLength(1);
+  });
+
+  it('два частичных, второй не прошёл — бронь действует, деньги частично у театра', async () => {
+    paid();
+    await deliver(event('refund.created', refund({ id: 're_a', amount: 1500, status: 'succeeded' })));
+    await deliver(event('refund.created', refund({ id: 're_b', amount: 3000, status: 'pending' })));
+    await deliver(event('refund.failed',  refund({ id: 're_b', amount: 3000, status: 'failed' })));
+    // Бронь уже была отменена на pending — не воскрешается, но и refunded не ставится.
+    expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'paid' });
+    expect(booking().paymentIssue).toBeTruthy();
+  });
+
+  it('полный succeeded, затем он же failed — refunded снимается, даже если был частичный возврат раньше', async () => {
+    paid();
+    await deliver(event('refund.created', refund({ id: 're_a', amount: 4500, status: 'succeeded' })));
+    expect(booking().paymentStatus).toBe('refunded');
+    await deliver(event('refund.updated', refund({ id: 're_a', amount: 4500, status: 'failed' })));
+    expect(booking()).toMatchObject({ status: 'cancelled', paymentStatus: 'paid', paymentIssue: 'refund_failed' });
+  });
+
+  it('бронь со старой записью refund (без реестра): повтор того же события — дубль', async () => {
+    seedOnline({
+      paymentStatus: 'refunded', status: 'cancelled', stripePaymentIntentId: PI,
+      refund: { id: 're_test_1', status: 'succeeded', amount: 45 },
+    });
+    const r = await deliver(event('refund.updated', refund({ status: 'succeeded' })));
+    expect(r.body.outcome).toBe('ignored:duplicate');
+    expect(booking().paymentStatus).toBe('refunded');
+  });
+});

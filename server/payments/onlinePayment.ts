@@ -44,6 +44,39 @@ export interface OnlineBookingView {
   paymentIssue:            string | null;
   /** Возврат, уже синхронизированный из Stripe (refund.created/updated). */
   refund:                  { id: string; status: string } | null;
+  /**
+   * Все известные возвраты платежа по id: статус и сумма в центах. Возвратов
+   * может быть несколько (частичный, затем остаток) — «полный ли возврат»
+   * решает их сумма, а не последний из них.
+   */
+  refunds:                 Record<string, RefundLedgerEntry>;
+}
+
+export interface RefundLedgerEntry { status: string; amountCents: number }
+
+/**
+ * Реестр возвратов брони. Брони, записанные до реестра, хранили только
+ * последний возврат (refund, сумма в евро) — он становится единственной записью.
+ */
+export function refundLedgerOf(d: Record<string, unknown>): Record<string, RefundLedgerEntry> {
+  const ledger: Record<string, RefundLedgerEntry> = {};
+  const raw = d.refunds;
+  if (raw && typeof raw === 'object') {
+    for (const [id, v] of Object.entries(raw as Record<string, unknown>)) {
+      const e = v as { status?: unknown; amountCents?: unknown } | null;
+      if (e && typeof e.status === 'string' && typeof e.amountCents === 'number') {
+        ledger[id] = { status: e.status, amountCents: e.amountCents };
+      }
+    }
+  }
+  const last = d.refund as { id?: unknown; status?: unknown; amount?: unknown } | undefined;
+  if (last && typeof last.id === 'string' && !ledger[last.id] && typeof last.status === 'string') {
+    ledger[last.id] = {
+      status:      last.status,
+      amountCents: typeof last.amount === 'number' ? amountInCents(last.amount) : 0,
+    };
+  }
+  return ledger;
 }
 
 export function bookingViewOf(bookingId: string, d: Record<string, unknown>): OnlineBookingView {
@@ -60,6 +93,7 @@ export function bookingViewOf(bookingId: string, d: Record<string, unknown>): On
     refund: d.refund && typeof d.refund === 'object' && typeof (d.refund as { id?: unknown }).id === 'string'
       ? { id: String((d.refund as { id: string }).id), status: String((d.refund as { status?: unknown }).status ?? '') }
       : null,
+    refunds: refundLedgerOf(d),
   };
 }
 
@@ -224,17 +258,23 @@ export type RefundDecision =
   | {
       kind: 'record';
       status: 'pending' | 'succeeded' | 'failed';
-      /** Возврат на всю сумму брони. Частичный бронь не отменяет. */
+      /**
+       * Возвраты платежа (не failed) вместе покрывают всю сумму брони.
+       * Частичный — бронь не отменяет.
+       */
       full: boolean;
       /** Перевести бронь в cancelled (места и скидка освобождаются). */
       cancel: boolean;
-      /** Деньги вернулись полностью: paymentStatus → refunded. */
+      /** Деньги вернулись полностью (сумма succeeded): paymentStatus → refunded. */
       refunded: boolean;
       /**
-       * Возврат, уже бывший succeeded, не прошёл (Stripe это допускает):
-       * paymentStatus refunded → paid — деньги у театра. Бронь не воскрешается.
+       * Возврат, уже бывший succeeded, не прошёл (Stripe это допускает), и
+       * вернувшихся денег больше не хватает на всю сумму: paymentStatus
+       * refunded → paid — деньги у театра. Бронь не воскрешается.
        */
       revertRefunded: boolean;
+      /** Реестр возвратов после этого события — пишется в бронь целиком. */
+      ledger: Record<string, RefundLedgerEntry>;
     };
 
 // Порядок статусов одного возврата: pending → succeeded → failed.
@@ -247,21 +287,28 @@ export function decideRefund(b: OnlineBookingView, r: RefundView): RefundDecisio
   if (r.paymentIntentId !== b.stripePaymentIntentId)            return { kind: 'ignore', reason: 'foreign' };
   if (!r.status)                                                return { kind: 'ignore', reason: 'unknown_status' };
 
-  const prev = b.refund;
-  if (prev && prev.id === r.id) {
-    // События могут прийти не по порядку: назад (succeeded → pending) не идём.
+  // События могут прийти не по порядку: назад (succeeded → pending) не идём.
+  // Сравнивается состояние ЭТОГО возврата, другие возвраты платежа его не блокируют.
+  const prev = b.refunds[r.id];
+  if (prev) {
     if (prev.status === r.status)                           return { kind: 'ignore', reason: 'duplicate' };
     if ((RANK[r.status] ?? 0) < (RANK[prev.status] ?? 0))   return { kind: 'ignore', reason: 'stale' };
-  } else if (prev && prev.status === 'succeeded') {
-    return { kind: 'ignore', reason: 'already_refunded' };
   }
 
-  const full = Number.isFinite(b.totalAmount) && r.amount >= amountInCents(b.totalAmount);
+  const ledger = { ...b.refunds, [r.id]: { status: r.status, amountCents: r.amount } };
+  const sum = (pred: (s: string) => boolean) =>
+    Object.values(ledger).reduce((acc, e) => acc + (pred(e.status) ? e.amountCents : 0), 0);
+  const expected  = amountInCents(b.totalAmount);
+  const known     = Number.isFinite(expected);
+  const full      = known && sum(s => s === 'pending' || s === 'succeeded') >= expected;
+  const refunded  = known && sum(s => s === 'succeeded') >= expected;
+  const wasRefunded = b.paymentStatus === 'refunded';
+
   if (r.status === 'failed') {
-    const revertRefunded = prev?.id === r.id && prev.status === 'succeeded' && b.paymentStatus === 'refunded';
-    return { kind: 'record', status: 'failed', full, cancel: false, refunded: false, revertRefunded };
+    return { kind: 'record', status: 'failed', full, cancel: false, refunded: false,
+      revertRefunded: wasRefunded && !refunded, ledger };
   }
 
   const cancel = full && b.status !== 'cancelled' && b.status !== 'attended';
-  return { kind: 'record', status: r.status, full, cancel, refunded: full && r.status === 'succeeded', revertRefunded: false };
+  return { kind: 'record', status: r.status, full, cancel, refunded: refunded && !wasRefunded, revertRefunded: false, ledger };
 }

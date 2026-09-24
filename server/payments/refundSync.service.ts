@@ -45,7 +45,9 @@ export async function reconcileRefund(refund: RefundView): Promise<RefundSyncOut
     if (d.kind === 'ignore') return d;
 
     const update: Record<string, unknown> = {
-      refund: { id: refund.id, status: d.status, amount: refund.amount / 100, updatedAtMs: Date.now() },
+      refund:  { id: refund.id, status: d.status, amount: refund.amount / 100, updatedAtMs: Date.now() },
+      // Все возвраты платежа: «полный возврат» — их сумма (частичный, затем остаток).
+      refunds: d.ledger,
       updatedAt: FieldValue.serverTimestamp(),
     };
     const currentIssue = typeof data.paymentIssue === 'string' ? data.paymentIssue : null;
@@ -62,7 +64,7 @@ export async function reconcileRefund(refund: RefundView): Promise<RefundSyncOut
         refundId: refund.id, amountCents: refund.amount, afterSucceeded: d.revertRefunded, atMs: Date.now(),
       };
     }
-    if (d.refunded && (currentIssue === 'refund_failed' || currentIssue === 'paid_after_cancel')) {
+    if (d.refunded && (currentIssue === 'refund_failed' || currentIssue === 'paid_after_cancel' || currentIssue === 'partial_refund')) {
       // Полный возврат прошёл — деньги у зрителя, проблема закрыта. След — в paymentIssueResolved.
       update.paymentIssue         = FieldValue.delete();
       update.paymentIssueDetails  = FieldValue.delete();
