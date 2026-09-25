@@ -54,7 +54,10 @@ export function AfishaSlider({ onCardClick }: Props) {
 
   const outerRef     = useRef<HTMLDivElement>(null);
   const trackRef     = useRef<HTMLDivElement>(null);
+  // 0 — кадр не запланирован. Цикл автопрокрутки крутится только пока он нужен.
   const rafRef       = useRef<number>(0);
+  const inViewRef    = useRef(false);
+  const startLoopRef = useRef<() => void>(() => {});
   const offsetRef    = useRef(0);
   const velocityRef  = useRef(-AUTO_SPEED);
   const loopWidthRef = useRef(0); // ширина одного набора (px); 0 = ещё не измерено
@@ -137,16 +140,43 @@ export function AfishaSlider({ onCardClick }: Props) {
     };
   }, []);
 
+  // Автопрокрутка. Раньше цикл requestAnimationFrame не останавливался никогда:
+  // и когда афиша далеко за пределами экрана, и когда карточки стоят под
+  // курсором, — каждый кадр (~120 раз в секунду на 120 Гц) писал transform
+  // и пересчитывал стили всей страницы. Теперь кадр планируется, только если
+  // слайдер виден, вкладка активна, а карточки не держат курсором/пальцем;
+  // события ниже перезапускают цикл, когда условие снова выполняется.
   useEffect(() => {
+    const shouldRun = () =>
+      inViewRef.current && !document.hidden && !isHoveredRef.current && !drag.current.isDragging;
+
     const tick = () => {
-      if (!drag.current.isDragging && !isHoveredRef.current) {
-        velocityRef.current += (-AUTO_SPEED - velocityRef.current) * LERP;
-        applyOffset(offsetRef.current + velocityRef.current);
-      }
+      if (!shouldRun()) { rafRef.current = 0; return; }
+      velocityRef.current += (-AUTO_SPEED - velocityRef.current) * LERP;
+      applyOffset(offsetRef.current + velocityRef.current);
       rafRef.current = requestAnimationFrame(tick);
     };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
+    // Не более одного запланированного кадра.
+    const start = () => {
+      if (rafRef.current === 0 && shouldRun()) rafRef.current = requestAnimationFrame(tick);
+    };
+    startLoopRef.current = start;
+
+    // Запас по вертикали — лента уже едет, когда афиша появляется на экране.
+    const io = new IntersectionObserver(([entry]) => {
+      inViewRef.current = entry!.isIntersecting;
+      start();
+    }, { rootMargin: '200px 0px' });
+    if (outerRef.current) io.observe(outerRef.current);
+    document.addEventListener('visibilitychange', start);
+
+    return () => {
+      io.disconnect();
+      document.removeEventListener('visibilitychange', start);
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+      startLoopRef.current = () => {};
+    };
   }, [applyOffset]);
 
   useEffect(() => {
@@ -160,7 +190,7 @@ export function AfishaSlider({ onCardClick }: Props) {
   }, []);
 
   const onMouseEnter = useCallback(() => { isHoveredRef.current = true;  }, []);
-  const onMouseLeave = useCallback(() => { isHoveredRef.current = false; }, []);
+  const onMouseLeave = useCallback(() => { isHoveredRef.current = false; startLoopRef.current(); }, []);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -229,6 +259,8 @@ export function AfishaSlider({ onCardClick }: Props) {
     }
 
     d.isDragging = false;
+    // Инерция и автопрокрутка после перетаскивания — снова в цикле.
+    startLoopRef.current();
   }, [onCardClick]);
 
   const onPointerCancel = useCallback((e: React.PointerEvent) => {
@@ -238,6 +270,7 @@ export function AfishaSlider({ onCardClick }: Props) {
     d.isDragging = false;
     outerRef.current?.removeAttribute('data-dragging');
     velocityRef.current = -AUTO_SPEED;
+    startLoopRef.current();
   }, []);
 
   return (
