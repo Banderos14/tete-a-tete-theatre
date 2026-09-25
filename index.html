@@ -78,19 +78,18 @@
     <meta name="twitter:description" content="Театр в Ницце: спектакли, афиша, репертуар и онлайн-бронирование билетов." />
 
     <title>Théâtre Tête-à-Tête à Nice — Spectacles en russe et billetterie</title>
-    <!-- Favicons: официальный знак на прозрачном фоне, форма не изменена.
-         favicon-96x96.png — основной растровый favicon для Google Search: чёрный знак
-         с тонким белым контуром, читается и на светлом, и на тёмном фоне (растр не
-         умеет prefers-color-scheme, поэтому контраст зашит в саму картинку).
-         Прежний белый apple-touch-icon Google показывал как пустой белый кружок.
-         favicon.svg — для браузеров: чёрный знак в светлой теме, белый в тёмной.
-         favicon.ico (16/32/48) — тот же знак с контуром, запасной вариант.
+    <!-- Favicons: фирменный знак театра — тот же, что в шапке сайта
+         (public/images/favicon-source.png), сплошным силуэтом на прозрачном фоне,
+         без подложки и контура. favicon.svg — для вкладок: чёрный знак в светлой
+         теме, белый в тёмной. favicon-96x96.png (основной для Google, кратно 48px)
+         и favicon.ico (16/32/48) — чёрный знак. Растр не умеет prefers-color-scheme,
+         поэтому на тёмном фоне вне вкладок чёрный силуэт менее контрастен.
          У ICO явные sizes, не "any": иначе Chrome выбирает ICO вместо SVG. -->
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-    <!-- iOS заливает прозрачный фон чёрным, поэтому знак белый; тёмный контур
-         оставляет его читаемым на белом фоне -->
+    <!-- iOS заливает прозрачный фон чёрным, поэтому здесь это сделано явно:
+         белый знак на чёрном. В выдаче такой файл не превратится в «пустой белый кружок». -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 

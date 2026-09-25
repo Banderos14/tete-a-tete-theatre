@@ -7,9 +7,9 @@ import { inflateSync } from 'node:zlib';
 // зрителями (сначала og:image, затем "image" в JSON-LD → zal-v2.webp), а Google —
 // пустой белый кружок вместо favicon (белый apple-touch-icon на прозрачном фоне)
 // и домен вместо имени сайта (не было WebSite в структурированных данных).
-// Иконки — официальный знак на прозрачном фоне без подложки, контраст дан контуром.
-// Вариант с белым квадратом (ac1a7a7) выглядел в выдаче серой плашкой и был
-// отменён: восстановлены файлы production без изменений.
+// Favicon — фирменный знак из шапки сайта на прозрачном фоне, без подложки и
+// контура (как во вкладке Chrome). Вариант с белым квадратом (ac1a7a7) выглядел
+// в выдаче серой плашкой и был отменён.
 
 const ROOT   = resolve(__dirname, '../..');
 const PUBLIC = join(ROOT, 'public');
@@ -82,14 +82,15 @@ function inspect({ pixels }: Rgba) {
   };
 }
 
-// Иконка без собственного фона должна читаться и на белом, и на тёмном: у неё есть
-// и заметная тёмная часть (видна на белом), и заметная светлая (видна на тёмном).
-function expectReadableOnLightAndDark(frame: Rgba, label: string) {
+// Favicon — фирменный знак (тот же, что в шапке) сплошным чёрным силуэтом на
+// прозрачном фоне: без подложки, контура и белой каёмки.
+function expectBlackMarkOnTransparent(frame: Rgba, label: string, minTransparent = 0.2) {
   const info = inspect(frame);
   expect(info.cornerAlpha, label).toBe(0);
-  expect(info.transparentShare, label).toBeGreaterThan(0.2);
-  expect(info.darkShare, label).toBeGreaterThan(0.15);
-  expect(info.lightShare, label).toBeGreaterThan(0.15);
+  expect(info.transparentShare, label).toBeGreaterThan(minTransparent);
+  // все непрозрачные пиксели — тёмные: белого контура нет
+  expect(info.darkShare, label).toBeGreaterThan(0.97);
+  expect(info.lightShare, label).toBe(0);
 }
 
 const jsonLdNodes = (): Record<string, unknown>[] =>
@@ -155,7 +156,7 @@ describe('имя сайта для Google — WebSite в структуриро�
   });
 });
 
-describe('favicon — знак на прозрачном фоне, читается на светлом и тёмном', () => {
+describe('favicon — прозрачный фирменный знак, как во вкладке Chrome', () => {
   const icons = [...html.matchAll(/<link rel="(?:icon|apple-touch-icon)"[^>]*href="([^"]+)"/g)].map(m => m[1]!);
 
   it('объявлен ровно один набор иконок со стабильными адресами', () => {
@@ -172,18 +173,18 @@ describe('favicon — знак на прозрачном фоне, читает�
     expect(html).toContain('<link rel="icon" type="image/svg+xml" href="/favicon.svg" />');
   });
 
-  it('favicon-96x96.png: квадрат 96px (кратно 48 — рекомендация Google)', () => {
+  it('favicon-96x96.png: квадрат 96px (кратно 48 — рекомендация Google), чёрный знак без контура', () => {
     const png = decodePng(readFileSync(join(PUBLIC, 'favicon-96x96.png')));
     expect({ w: png.width, h: png.height }).toEqual({ w: 96, h: 96 });
-    expectReadableOnLightAndDark(png, 'favicon-96x96.png');
+    expectBlackMarkOnTransparent(png, 'favicon-96x96.png');
   });
 
-  it('favicon.ico: 16/32/48, тот же знак с контуром', () => {
+  it('favicon.ico: 16/32/48, тот же прозрачный знак', () => {
     const frames = decodeIco(readFileSync(join(PUBLIC, 'favicon.ico')));
     expect(frames.map(f => f.width).sort((a, b) => a - b)).toEqual([16, 32, 48]);
     for (const frame of frames) {
       expect(frame.height).toBe(frame.width);
-      if (frame.width >= 32) expectReadableOnLightAndDark(frame, `${frame.width}px`);
+      expectBlackMarkOnTransparent(frame, `${frame.width}px`, 0.1);
     }
   });
 
@@ -191,20 +192,18 @@ describe('favicon — знак на прозрачном фоне, читает�
     for (const [file, size] of [['icons/icon-192.png', 192], ['icons/icon-512.png', 512]] as const) {
       const png = decodePng(readFileSync(join(PUBLIC, file)));
       expect({ w: png.width, h: png.height }, file).toEqual({ w: size, h: size });
-      const info = inspect(png);
-      expect(info.cornerAlpha, file).toBe(0);
-      expect(info.transparentShare, file).toBeGreaterThan(0.4);
-      expect(info.darkShare, file).toBeGreaterThan(0.9);
+      expectBlackMarkOnTransparent(png, file, 0.4);
     }
   });
 
-  it('apple-touch-icon: белый знак (iOS подкладывает чёрный) с тёмным контуром — не пустой на белом', () => {
-    const png = decodePng(readFileSync(join(PUBLIC, 'apple-touch-icon.png')));
-    expect({ w: png.width, h: png.height }).toEqual({ w: 180, h: 180 });
-    expectReadableOnLightAndDark(png, 'apple-touch-icon.png');
+  it('apple-touch-icon: белый знак на чёрном — так его и показывает iOS; в выдаче не «пустой белый кружок»', () => {
+    const buf = readFileSync(join(PUBLIC, 'apple-touch-icon.png'));
+    expect({ w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) }).toEqual({ w: 180, h: 180 });
+    // RGB без альфы: iOS всё равно заливает прозрачное чёрным
+    expect(buf[25]).toBe(2);
   });
 
-  it('favicon.svg: без фона, цвет знака зависит от темы', () => {
+  it('favicon.svg: без фона, чёрный знак в светлой теме и белый в тёмной', () => {
     const svg = readFileSync(join(PUBLIC, 'favicon.svg'), 'utf8');
     expect(svg).toContain('prefers-color-scheme:dark');
     expect(svg).toMatch(/rect\{fill:#000\}/);
@@ -219,7 +218,7 @@ describe('favicon — знак на прозрачном фоне, читает�
     expect(manifest.icons.map(i => i.purpose)).toEqual(['any', 'any']);
   });
 
-  it('логотип в JSON-LD читается на белом фоне (не белая версия)', () => {
+  it('логотип в JSON-LD — тот же знак, что в шапке, читается на белом фоне', () => {
     expect(html).toContain('"logo": "https://www.theatre-teteatete.fr/images/favicon-source.png"');
     expect(existsSync(join(PUBLIC, 'images/favicon-source.png'))).toBe(true);
   });
