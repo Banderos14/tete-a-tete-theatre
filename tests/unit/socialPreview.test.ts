@@ -159,8 +159,15 @@ describe('имя сайта для Google — WebSite в структуриро�
 describe('favicon — прозрачный фирменный знак, как во вкладке Chrome', () => {
   const icons = [...html.matchAll(/<link rel="(?:icon|apple-touch-icon)"[^>]*href="([^"]+)"/g)].map(m => m[1]!);
 
-  it('объявлен ровно один набор иконок со стабильными адресами', () => {
-    expect(icons).toEqual(['/favicon-96x96.png', '/favicon.svg', '/favicon.ico', '/apple-touch-icon.png']);
+  it('объявлен ровно один набор иконок со стабильными адресами — только прозрачные rel="icon"', () => {
+    expect(icons).toEqual(['/favicon-96x96.png', '/favicon.svg', '/favicon.ico']);
+  });
+
+  it('apple-touch-icon не объявлен: Google выбирал для выдачи именно его, а не прозрачный favicon', () => {
+    const head = html.slice(0, html.indexOf('</head>')).replace(/<!--[\s\S]*?-->/g, '');
+    expect(head).not.toContain('apple-touch-icon');
+    // файл остаётся по стандартному пути — iOS находит его без ссылки
+    expect(existsSync(join(PUBLIC, 'apple-touch-icon.png'))).toBe(true);
   });
 
   it('каждый файл существует', () => {
