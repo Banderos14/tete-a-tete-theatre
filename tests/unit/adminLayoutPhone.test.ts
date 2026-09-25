@@ -73,13 +73,15 @@ describe('таблица броней: раскладка', () => {
 
   it('ширины колонок задаёт colgroup, раскладка фиксированная, всё по центру', () => {
     expect(tab.match(/<col className=\{styles\.col\w+\} \/>/g)).toHaveLength(11);
-    const table = block('.bookingsTable');
-    expect(table).toContain('table-layout: fixed;');
-    expect(table).toMatch(/text-align: center;\s*vertical-align: middle;/);
+    // Раскладка — общая с таблицей «Зрители».
+    const shared = css.slice(css.indexOf('.bookingsTable,\n.usersTable {'));
+    expect(shared).toMatch(/^\.bookingsTable,\n\.usersTable \{\s*table-layout: fixed;/);
+    expect(shared.slice(0, shared.indexOf('\n}'))).toMatch(/text-align: center;\s*vertical-align: middle;/);
   });
 
   it('сумма ширин колонок помещается на MacBook (≤ 1356px = 1440 − поля − рамка)', () => {
-    const widths = [...css.matchAll(/^\.col\w+\s*\{ width: (\d+)px; \}/gm)].map(m => Number(m[1]));
+    // Колонки броней (у «Зрителей» свои — .colUser*).
+    const widths = [...css.matchAll(/^\.col(?!User)\w+\s*\{ width: (\d+)px; \}/gm)].map(m => Number(m[1]));
     expect(widths).toHaveLength(11);
     const sum = widths.reduce((a, b) => a + b, 0);
     expect(sum).toBeLessThanOrEqual(1356);
@@ -177,5 +179,38 @@ describe('брони на планшете и телефоне — карточ�
     for (const label of ['t.admin.tickets', 't.admin.amount', 't.admin.payment', 'Код брони', 't.admin.paymentStatus', 't.admin.date', 't.admin.comment']) {
       expect(card).toContain(label);
     }
+  });
+});
+
+describe('таблица «Зрители» — та же система, что у «Бронирований»', () => {
+  const tab = projectSource('src/pages/AdminPage/UsersTab.tsx');
+  const css = projectSource('src/pages/AdminPage/AdminPage.module.scss');
+
+  it('фиксированные колонки через <colgroup>, по центру — общие правила с таблицей броней', () => {
+    expect(tab).toContain('<table className={`${styles.table} ${styles.usersTable}`}>');
+    expect(tab.match(/<col className=/g)).toHaveLength(9);
+    expect(css).toMatch(/\.bookingsTable,\s*\.usersTable \{\s*table-layout: fixed;/);
+  });
+
+  it('колонки укладываются в ту же ширину, что у броней (≤ 1356px): «Действия» видны без скролла', () => {
+    const widths = [...css.matchAll(/^\.colUser\w+\s*\{ width: (\d+)px; \}/gm)].map(m => Number(m[1]));
+    const actions = Number(/^\.colActions\s*\{ width: (\d+)px; \}/m.exec(css)![1]);
+    const total = widths.reduce((a, b) => a + b, 0) + actions;
+    expect(widths).toHaveLength(8);
+    expect(total).toBeLessThanOrEqual(1356);
+    expect(css).toContain(`.usersTable { min-width: ${total}px; }`);
+  });
+
+  it('на планшете и телефоне — карточки из тех же блоков, что и строка таблицы', () => {
+    expect(tab).toContain('<div className={`${styles.tableWrap} ${styles.desktopOnly}`}>');
+    expect(tab).toContain('<div className={styles.mobileList}>');
+    expect(tab).toContain('<article className={styles.mCard}>');
+    // шапка карточки прижимает вправо только свой прямой .stack (статус брони)
+    expect(css).toMatch(/\.mHead \{[\s\S]*?> \.stack \{/);
+  });
+
+  it('телефон показывается в международном формате, в tel: — номер как хранится', () => {
+    expect(tab).toContain("href={`tel:${u.phone.replace(/[^\\d+]/g, '')}`}");
+    expect(tab).toContain('{formatPhoneForDisplay(u.phone)}');
   });
 });

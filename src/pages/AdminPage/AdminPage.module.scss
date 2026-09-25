@@ -243,9 +243,12 @@
 // Заголовки и содержимое — по центру по горизонтали и по вертикали.
 // Ничего не наезжает на соседнюю колонку: бейджи и даты переносятся внутри
 // своей ячейки, а не вылезают за неё.
-.bookingsTable {
+//
+// Та же система у таблицы «Зрители» (.usersTable): админка выглядит одной
+// системой, а не двумя разными таблицами.
+.bookingsTable,
+.usersTable {
   table-layout: fixed;
-  min-width: 1356px;
 
   th,
   td {
@@ -254,6 +257,12 @@
     text-align: center;
     vertical-align: middle;
   }
+
+  .badge { max-width: 100%; }
+}
+
+.bookingsTable {
+  min-width: 1356px;
 
   // Дополнительный воздух справа от «Оплата» и «Дата брони»: соседние
   // бейджи («ОНЛАЙН» / «ОПЛАЧЕНО ОНЛАЙН») больше не липнут друг к другу.
@@ -278,6 +287,19 @@
 .colStatus   { width: 130px; }
 .colComment  { width: 124px; }
 .colActions  { width: 138px; }
+
+// «Зрители»: сумма — 1336px, в пределах тех же 1356px, что у броней, —
+// колонка «Действия» на MacBook видна без горизонтального скролла.
+.usersTable { min-width: 1336px; }
+
+.colUserName    { width: 170px; }
+.colUserEmail   { width: 210px; }
+.colUserPhone   { width: 150px; }
+.colUserRole    { width: 90px; }
+.colUserSocials { width: 216px; }
+.colUserNotify  { width: 120px; }
+.colUserLang    { width: 78px; }
+.colUserCreated { width: 164px; }
 
 // Содержимое ячейки столбиком по центру: бейдж, под ним пояснения.
 .stack {
@@ -1416,7 +1438,8 @@
   gap: 12px;
 
   // Статус брони справа в шапке: бейдж целиком, пометки под ним переносятся.
-  .stack {
+  // Только прямой потомок: блок имени слева тоже может быть .stack.
+  > .stack {
     flex-shrink: 0;
     max-width: 45%;
     align-items: flex-end;

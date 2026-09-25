@@ -19,6 +19,7 @@ import { summarizeBookings, summarizeByShow, adminShowList } from './adminStats'
 import { filterBookings } from '../../utils/bookingSearch';
 import { formatPhoneForDisplay } from '../../utils/phoneDisplay';
 import { AdminShowCard } from './AdminShowCard';
+import { breakableEmail } from './adminEmail';
 import styles from './AdminPage.module.scss';
 
 const PAY_TONE_STYLE: Record<AdminPayTone, string> = {
@@ -250,14 +251,6 @@ export function BookingsTab({
       )}
     </>
   );
-}
-
-/**
- * E-mail с точками переноса после «@» и перед точками: длинный адрес
- * переносится по частям (anna.petrova@ / example.com), а не посреди слова.
- */
-function breakableEmail(email: string) {
-  return email.split(/(?<=@)|(?=\.)/).map((part, i) => <span key={i}>{i > 0 && <wbr />}{part}</span>);
 }
 
 /**
