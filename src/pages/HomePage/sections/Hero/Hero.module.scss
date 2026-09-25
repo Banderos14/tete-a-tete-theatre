@@ -64,23 +64,26 @@
 
 $stage-ease: cubic-bezier(.37, 0, .63, 1);
 
-// Центральный луч и пятно дышат синхронно, разница яркости ~5–6%
-@keyframes keyBreathe  { from { opacity: .94; } to { opacity: 1; } }
-@keyframes poolBreathe { from { opacity: .95; } to { opacity: 1; } }
-// Покачивание центрального прибора (±0.6° от точки источника) и ответное
-// смещение пятна на полу на ±9px — ~ то, на сколько при этом уходит низ луча
+// «Дыхание» света: база — обычная яркость (.92 при градиенте, поднятом на ~5%,
+// выглядит как прежде), раз в период прибор мягко «разгорается» на ~8% и
+// возвращается. Пятно на полу дышит синхронно с лучом.
+@keyframes keyBreathe  { 0%, 100% { opacity: .92; } 50% { opacity: 1; } }
+@keyframes poolBreathe { 0%, 100% { opacity: .93; } 50% { opacity: 1; } }
+// Покачивание центрального прибора (±0.8° от точки источника) и ответное
+// смещение пятна на полу на ±12px — ~ то, на сколько при этом уходит низ луча
 // на 1440×900. Тот же период и easing, так что свет на полу «привязан» к лучу.
 // Поворот по часовой уводит низ луча влево, поэтому пятно движется в
 // противофазе знаку угла.
-@keyframes keySway     { from { transform: rotate(-.6deg); } to { transform: rotate(.6deg); } }
-@keyframes poolDrift   { from { transform: translateX(9px); } to { transform: translateX(-9px); } }
-// Качание красных от точки прибора: ~2° в каждую сторону — луч заметно, но
-// спокойно «ведут» по сцене; низ проходит около половины ширины луча.
-@keyframes swayL       { from { transform: rotate(-2.2deg); } to { transform: rotate(1.8deg); } }
-@keyframes swayR       { from { transform: rotate(2deg); }    to { transform: rotate(-1.7deg); } }
-// Планшет: спокойнее, чем на десктопе
-@keyframes swayLTablet { from { transform: rotate(-1.2deg); } to { transform: rotate(1.2deg); } }
-@keyframes swayRTablet { from { transform: rotate(1.2deg); }  to { transform: rotate(-1.2deg); } }
+@keyframes keySway     { from { transform: rotate(-.8deg); } to { transform: rotate(.8deg); } }
+@keyframes poolDrift   { from { transform: translateX(12px); } to { transform: translateX(-12px); } }
+// Качание красных от точки прибора: ~3° в каждую сторону за 8–9 с — за первые
+// секунды низ луча заметно проходит по полу (~40–60px), но плавно, без рывков:
+// медленно работающий сценический прибор, а не концертный «свип».
+@keyframes swayL       { from { transform: rotate(-3.2deg); } to { transform: rotate(2.8deg); } }
+@keyframes swayR       { from { transform: rotate(3deg); }    to { transform: rotate(-2.6deg); } }
+// Планшет: слабее десктопа, но не статично
+@keyframes swayLTablet { from { transform: rotate(-2deg); } to { transform: rotate(2deg); } }
+@keyframes swayRTablet { from { transform: rotate(2deg); }  to { transform: rotate(-2deg); } }
 
 .stage {
   position: absolute;
@@ -125,20 +128,20 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
   background: conic-gradient(
     from 165deg at 50% -18%,
     transparent 0deg,
-    rgba(255, 230, 202, .11) 2.5deg,
-    rgba(255, 236, 212, .16) 5deg,
-    rgba(255, 240, 220, .19) 10deg,
-    rgba(255, 245, 230, .23) 15deg,
-    rgba(255, 240, 220, .19) 20deg,
-    rgba(255, 236, 212, .16) 25deg,
-    rgba(255, 230, 202, .11) 27.5deg,
+    rgba(255, 230, 202, .12) 2.5deg,
+    rgba(255, 236, 212, .17) 5deg,
+    rgba(255, 240, 220, .20) 10deg,
+    rgba(255, 245, 230, .245) 15deg,
+    rgba(255, 240, 220, .20) 20deg,
+    rgba(255, 236, 212, .17) 25deg,
+    rgba(255, 230, 202, .12) 27.5deg,
     transparent 30deg
   );
   mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, .78) 35%, rgba(0, 0, 0, .4) 72%, transparent 100%);
   transform-origin: 50% -18%;
   animation:
-    keyBreathe 9s $stage-ease infinite alternate,
-    keySway 16s $stage-ease -7s infinite alternate;
+    keyBreathe 6s $stage-ease infinite,
+    keySway 12s $stage-ease -5s infinite alternate;
 }
 
 // Красные боковые — узкие акцентные приборы из-за верхних углов, ось ~36°
@@ -163,7 +166,7 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
     rgba(180, 26, 18, .09) 8.2deg,
     transparent 10deg
   );
-  animation: swayL 11s $stage-ease -4s infinite alternate;
+  animation: swayL 8s $stage-ease -3s infinite alternate;
 }
 
 .beamRedR {
@@ -179,7 +182,7 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
     rgba(180, 26, 18, .09) 8.2deg,
     transparent 10deg
   );
-  animation: swayR 14s $stage-ease -9s infinite alternate;
+  animation: swayR 9s $stage-ease -6s infinite alternate;
 }
 
 // Пол сцены: без линии авансцены и без ступеньки на верхнем крае —
@@ -207,8 +210,8 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
     radial-gradient(ellipse 34% 40% at 50% 52%, rgba(255, 242, 222, .30) 0%, rgba(255, 230, 204, .18) 30%, rgba(255, 214, 184, .07) 62%, transparent 100%),
     radial-gradient(ellipse 50% 50% at 50% 52%, transparent 38%, rgba(190, 40, 28, .07) 62%, transparent 100%);
   animation:
-    poolBreathe 9s $stage-ease infinite alternate,
-    poolDrift 16s $stage-ease -7s infinite alternate;
+    poolBreathe 6s $stage-ease infinite,
+    poolDrift 12s $stage-ease -5s infinite alternate;
 }
 
 // Виньетка — вне рига, возвращает настоящий чёрный в углы
@@ -231,13 +234,13 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
     background: conic-gradient(
       from 168deg at 50% -18%,
       transparent 0deg,
-      rgba(255, 230, 202, .11) 2deg,
-      rgba(255, 236, 212, .16) 4deg,
-      rgba(255, 240, 220, .19) 8deg,
-      rgba(255, 245, 230, .23) 12deg,
-      rgba(255, 240, 220, .19) 16deg,
-      rgba(255, 236, 212, .16) 20deg,
-      rgba(255, 230, 202, .11) 22deg,
+      rgba(255, 230, 202, .12) 2deg,
+      rgba(255, 236, 212, .17) 4deg,
+      rgba(255, 240, 220, .20) 8deg,
+      rgba(255, 245, 230, .245) 12deg,
+      rgba(255, 240, 220, .20) 16deg,
+      rgba(255, 236, 212, .17) 20deg,
+      rgba(255, 230, 202, .12) 22deg,
       transparent 24deg
     );
   }
@@ -246,11 +249,11 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
   .beamRedR { animation: none; }
 
   // Только дыхание: без покачивания центрального луча и смещения пятна
-  .beamKey { animation: keyBreathe 9s $stage-ease infinite alternate; }
+  .beamKey { animation: keyBreathe 6s $stage-ease infinite; }
 
   .pool {
     top: 72%;
-    animation: poolBreathe 9s $stage-ease infinite alternate;
+    animation: poolBreathe 6s $stage-ease infinite;
   }
 }
 
@@ -260,7 +263,7 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
   .pool,
   .stage { animation: none !important; }
 
-  .beamKey { opacity: .97; }
+  .beamKey { opacity: .96; }
 }
 
 .content {

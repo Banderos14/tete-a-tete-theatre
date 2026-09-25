@@ -87,13 +87,14 @@ describe('анимация: только opacity и transform, медленно 
     const all = [...keyframes.matchAll(/@keyframes \w+\s*\{([^\n]*)\}/g)];
     expect(all.length).toBeGreaterThan(0);
     for (const m of all) {
-      expect(m[1]!.replace(/opacity:[^;]+;|transform:[^;]+;|from|to|[{}\s]/g, '')).toBe('');
+      expect(m[1]!.replace(/opacity:[^;]+;|transform:[^;]+;|from|to|\d+%|[{},\s]/g, '')).toBe('');
     }
   });
 
-  it('повороты сцены не больше 2.5° (живое движение, не прожектор концерта), дыхание — не больше 10%', () => {
-    for (const m of keyframes.matchAll(/rotate\((-?[\d.]+)deg\)/g)) expect(Math.abs(Number(m[1]))).toBeLessThanOrEqual(2.5);
-    const key = /@keyframes keyBreathe\s*\{ from \{ opacity: ([\d.]+); \} to \{ opacity: ([\d.]+); \} \}/.exec(code)!;
+  it('повороты сцены не больше 3.5° (живое движение, не концертный свип), дыхание — не больше 10%', () => {
+    for (const m of keyframes.matchAll(/rotate\((-?[\d.]+)deg\)/g)) expect(Math.abs(Number(m[1]))).toBeLessThanOrEqual(3.5);
+    const key = /@keyframes keyBreathe\s*\{ 0%, 100% \{ opacity: ([\d.]+); \} 50% \{ opacity: ([\d.]+); \} \}/.exec(code)!;
+    expect(Number(key[2]) - Number(key[1])).toBeGreaterThan(0);
     expect(Number(key[2]) - Number(key[1])).toBeLessThanOrEqual(0.1);
   });
 
@@ -138,7 +139,7 @@ describe('адаптив, reduced-motion и светлая тема', () => {
     expect(mobile).toMatch(/\.beamRedL,\s*\.beamRedR \{ animation: none; \}/);
     expect(mobile).toMatch(/\.beamKey \{[\s\S]*conic-gradient/);
     // На телефоне — только дыхание, без покачивания луча и смещения пятна.
-    expect(mobile).toContain('.beamKey { animation: keyBreathe 9s $stage-ease infinite alternate; }');
+    expect(mobile).toContain('.beamKey { animation: keyBreathe 6s $stage-ease infinite; }');
     expect(mobile).not.toMatch(/keySway|poolDrift/);
     expect(rule('.hero')).toContain('min-height: 100svh;');
   });
