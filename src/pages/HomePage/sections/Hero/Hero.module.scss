@@ -5,144 +5,6 @@
   50%       { opacity: 0.4; }
 }
 
-// Left: sweep from far-left toward vertical (bottom moves right = toward center)
-@keyframes sweepLeftToCenter {
-  0%   { transform: rotate(-22deg); }
-  22%  { transform: rotate(-10deg); }
-  42%  { transform: rotate(  0deg); }
-  62%  { transform: rotate(-12deg); }
-  82%  { transform: rotate(-20deg); }
-  100% { transform: rotate(-22deg); }
-}
-
-// Right: mirror
-@keyframes sweepRightToCenter {
-  0%   { transform: rotate( 22deg); }
-  22%  { transform: rotate( 10deg); }
-  42%  { transform: rotate(  0deg); }
-  62%  { transform: rotate( 12deg); }
-  82%  { transform: rotate( 20deg); }
-  100% { transform: rotate( 22deg); }
-}
-
-// Centre: cross in front of logo, both sides
-@keyframes crossCenter {
-  0%   { transform: rotate(-12deg); }
-  18%  { transform: rotate(  7deg); }
-  40%  { transform: rotate( -5deg); }
-  62%  { transform: rotate( 10deg); }
-  85%  { transform: rotate( -9deg); }
-  100% { transform: rotate(-12deg); }
-}
-
-// Centre B: opposite phase partner
-@keyframes crossCenterB {
-  0%   { transform: rotate(  9deg); }
-  22%  { transform: rotate( -6deg); }
-  45%  { transform: rotate( 11deg); }
-  68%  { transform: rotate( -3deg); }
-  88%  { transform: rotate(  7deg); }
-  100% { transform: rotate(  9deg); }
-}
-
-// Left focus: swing all the way to centre, pause near logo, return
-@keyframes focusCenterL {
-  0%   { transform: rotate(-28deg); }
-  16%  { transform: rotate(-14deg); }
-  32%  { transform: rotate(  2deg); }
-  52%  { transform: rotate(  1deg); }
-  68%  { transform: rotate( -8deg); }
-  84%  { transform: rotate(-22deg); }
-  100% { transform: rotate(-28deg); }
-}
-
-// Right focus: mirror
-@keyframes focusCenterR {
-  0%   { transform: rotate( 28deg); }
-  16%  { transform: rotate( 14deg); }
-  32%  { transform: rotate( -2deg); }
-  52%  { transform: rotate( -1deg); }
-  68%  { transform: rotate(  8deg); }
-  84%  { transform: rotate( 22deg); }
-  100% { transform: rotate( 28deg); }
-}
-
-// Narrow arc left — quick dart across left quarter
-@keyframes narrowArcL {
-  0%   { transform: rotate(-32deg); }
-  28%  { transform: rotate( -8deg); }
-  55%  { transform: rotate(-24deg); }
-  78%  { transform: rotate(-12deg); }
-  100% { transform: rotate(-32deg); }
-}
-
-// Narrow arc right — mirror
-@keyframes narrowArcR {
-  0%   { transform: rotate( 32deg); }
-  28%  { transform: rotate(  8deg); }
-  55%  { transform: rotate( 24deg); }
-  78%  { transform: rotate( 12deg); }
-  100% { transform: rotate( 32deg); }
-}
-
-// Red far: dramatic wide sweep, twice crosses toward centre per cycle
-@keyframes redSweep {
-  0%   { transform: rotate(-32deg); }
-  20%  { transform: rotate( -4deg); }
-  42%  { transform: rotate(-26deg); }
-  65%  { transform: rotate( -1deg); }
-  85%  { transform: rotate(-34deg); }
-  100% { transform: rotate(-32deg); }
-}
-
-@keyframes redSweepR {
-  0%   { transform: rotate( 32deg); }
-  20%  { transform: rotate(  4deg); }
-  42%  { transform: rotate( 26deg); }
-  65%  { transform: rotate(  1deg); }
-  85%  { transform: rotate( 34deg); }
-  100% { transform: rotate( 32deg); }
-}
-
-// Red near-centre: tight arc crossing logo zone
-@keyframes redCenterL {
-  0%   { transform: rotate(-16deg); }
-  30%  { transform: rotate(  4deg); }
-  60%  { transform: rotate(-10deg); }
-  85%  { transform: rotate(  2deg); }
-  100% { transform: rotate(-16deg); }
-}
-
-@keyframes redCenterR {
-  0%   { transform: rotate( 16deg); }
-  30%  { transform: rotate( -4deg); }
-  60%  { transform: rotate( 10deg); }
-  85%  { transform: rotate( -2deg); }
-  100% { transform: rotate( 16deg); }
-}
-
-// Atmosphere: ultra-slow drift + opacity shift — "light through stage smoke"
-@keyframes airDrift {
-  0%   { transform: rotate(-6deg);  opacity: 0.07; }
-  40%  { transform: rotate( 4deg);  opacity: 0.13; }
-  70%  { transform: rotate(-2deg);  opacity: 0.06; }
-  100% { transform: rotate(-6deg);  opacity: 0.07; }
-}
-
-// White breathe — alive pulsation
-@keyframes breathe {
-  0%, 100% { opacity: 0.75; }
-  50%       { opacity: 1.00; }
-}
-
-// Red flicker — theatrical, not disco
-@keyframes flickerRed {
-  0%, 100% { opacity: 0.72; }
-  25%       { opacity: 1.00; }
-  50%       { opacity: 0.55; }
-  75%       { opacity: 0.92; }
-}
-
 @keyframes scrollLine {
   0%   { transform: scaleY(0); transform-origin: top; }
   50%  { transform: scaleY(1); transform-origin: top; }
@@ -153,12 +15,6 @@
 @keyframes pulseDot {
   0%, 100% { transform: scale(1);   opacity: 0.55; }
   50%       { transform: scale(1.8); opacity: 1; }
-}
-
-// Theatrical haze — very slow breath, barely perceptible
-@keyframes hazeBreath {
-  0%, 100% { opacity: 0.022; }
-  50%       { opacity: 0.042; }
 }
 
 .hero {
@@ -175,13 +31,14 @@
   // Перебивает `section { border-top }` из globals.scss. !important не нужен:
   // селектор класса специфичнее селектора элемента.
   border-top: none;
-  background: #000000;
+  // Отдельный контекст наложения: blend-режим зерна не выходит за пределы hero.
+  isolation: isolate;
+  // Цвет края базы сцены: на ультрашироких экранах риг уже экрана, и по бокам
+  // остаётся фон hero — так нет шва между базой и чёрным.
+  background: #060505;
 
   @include mixins.mobile {
     padding: 92px 18px 0;
-    background:
-      radial-gradient(ellipse 80% 45% at 50% 0%, rgba(184, 0, 0, 0.12) 0%, transparent 60%),
-      #000000;
   }
 
   @include mixins.small {
@@ -189,319 +46,237 @@
   }
 }
 
-.stageLights {
+// ─── «Живая сцена» ──────────────────────────────────────────────────────────
+// Декоративный свет hero. Значения — из спецификации «Живая сцена» (макет
+// 1440×900): проценты — от размера рига, px — для 1440×900.
+//
+// Правила резкости текста: blur, анимации и will-change — только на слоях
+// внутри .stage. У .hero, .content и их предков нет filter / transform /
+// will-change / blend / анимации opacity. .stage — сосед контента, не предок.
+//
+// Анимация — только transform и opacity (композитор), периоды ≥ 9s,
+// движение < 2°: свет «дышит», а не работает как эффект.
+
+$stage-ease: cubic-bezier(.37, 0, .63, 1);
+
+@keyframes keyBreathe  { from { opacity: .86; } to { opacity: 1; } }
+@keyframes poolBreathe { from { opacity: .80; } to { opacity: 1; } }
+@keyframes swayL       { from { transform: rotate(-1.4deg); } to { transform: rotate(1.2deg); } }
+@keyframes swayR       { from { transform: rotate(1.3deg); }  to { transform: rotate(-1.1deg); } }
+// Планшет: амплитуда качания ±1°
+@keyframes swayLTablet { from { transform: rotate(-1deg); } to { transform: rotate(1deg); } }
+@keyframes swayRTablet { from { transform: rotate(1deg); }  to { transform: rotate(-1deg); } }
+@keyframes hazeDrift   { from { transform: translateX(-1.5%); } to { transform: translateX(1.5%); } }
+
+.stage {
   position: absolute;
   inset: 0;
-  overflow: hidden;
+  z-index: 0;
   pointer-events: none;
-  contain: strict;
-  z-index: 1;
+  contain: paint;
 }
 
-// Base: position + cone shape come from each modifier
-// top: 0 keeps the pivot at the rig bar — no overflow clipping of the bright gradient peak
-// mask fades first 4% of element height so no dot/glow artifact shows at the top edge
-.beam {
+// Риг держит пропорции сцены: углы лучей не ломаются на узких экранах,
+// а на ультрашироких лучи не растягиваются в плоские полосы.
+.rig {
   position: absolute;
   top: 0;
-  height: 130%;
-  transform-origin: 50% 0;
-  will-change: transform, opacity;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 4%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 4%);
+  left: 50%;
+  height: 100%;
+  width: min(max(100%, 160svh), 220svh);
+  translate: -50% 0;
+}
 
-  @media (prefers-reduced-motion: reduce) {
-    animation: none !important;
+// 0. База: тёплая темнота театра, центр тяжести у пола
+.base {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 55% at 50% 88%, #2b1611 0%, #120a08 45%, #060505 80%);
+}
+
+// Луч = внешний элемент (blur + анимация) > <i> (clip-path + градиент).
+// clip-path применяется после filter, поэтому на одном элементе края луча
+// остались бы резкими.
+.beam {
+  position: absolute;
+  inset: 0;
+  will-change: transform, opacity;
+
+  > i {
+    position: absolute;
+    inset: 0;
   }
 }
 
-// Wide stage wash — medium-distance tier
-.beamCW {
-  left: 31vw;
-  width: 32vw;
-  clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
-  background:
-    radial-gradient(ellipse 28% 68% at 50% 0%, rgba(255,245,230,0.34) 0%, rgba(255,235,215,0.11) 40%, transparent 100%),
-    radial-gradient(ellipse 70% 88% at 50% 0%, rgba(255,235,215,0.11) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.038) 0%, rgba(255,225,200,0.013) 55%, transparent 78%);
-  animation:
-    crossCenter 13s ease-in-out -3s  infinite,
-    breathe      7s ease-in-out  0s  infinite;
+// 1. Дальние белые — едва заметная глубина второго плана.
+// «Вся группа с opacity .55»: лучи не пересекаются, поэтому opacity на
+// каждом равна opacity на общей группе.
+.beamFarL,
+.beamFarR {
+  filter: blur(clamp(9px, .97vw, 19px));
+  opacity: .55;
+
+  > i {
+    background: linear-gradient(180deg, rgba(255, 238, 214, .22) 0%, rgba(255, 238, 214, .02) 90%);
+  }
 }
 
-// Narrow centre 1 — near-stage tier: warm bright core dissolves softly
-.beamCN1 {
-  left: 43vw;
-  width: 9vw;
-  clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
-  background:
-    radial-gradient(ellipse 36% 70% at 50% 0%, rgba(255,245,230,0.44) 0%, rgba(255,235,215,0.14) 40%, transparent 100%),
-    radial-gradient(ellipse 78% 88% at 50% 0%, rgba(255,235,215,0.17) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.053) 0%, rgba(255,225,200,0.018) 55%, transparent 78%);
-  animation:
-    crossCenter  9s ease-in-out -6s  infinite,
-    breathe      4s ease-in-out -1s  infinite;
+.beamFarL > i { clip-path: polygon(23.5% 0, 25.5% 0, 31% 86%, 19% 86%); }
+.beamFarR > i { clip-path: polygon(74.5% 0, 76.5% 0, 81% 86%, 69% 86%); }
+
+// 2. Красные боковые — контровой свет, диагонали к пятну на полу.
+// Качаются от точки источника: низ смещается по полу на ~20–30px.
+.beamRedL,
+.beamRedR {
+  filter: blur(clamp(8px, .83vw, 16px));
 }
 
-// Narrow centre 2 — opposite phase, dissolves into haze
-.beamCN2 {
-  left: 47vw;
-  width: 6.5vw;
-  clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
-  background:
-    radial-gradient(ellipse 38% 70% at 50% 0%, rgba(255,245,230,0.43) 0%, rgba(255,235,215,0.13) 40%, transparent 100%),
-    radial-gradient(ellipse 80% 88% at 50% 0%, rgba(255,235,215,0.15) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.049) 0%, rgba(255,225,200,0.017) 55%, transparent 78%);
-  animation:
-    crossCenterB 11s ease-in-out -1s  infinite,
-    breathe       5s ease-in-out -3s  infinite;
+.beamRedL {
+  transform-origin: 7.75% 0;
+  animation: swayL 13s $stage-ease -4s infinite alternate;
+
+  > i {
+    clip-path: polygon(5% 0, 10.5% 0, 54% 90%, 36% 92%);
+    background: linear-gradient(165deg, rgba(210, 36, 24, .55) 0%, rgba(180, 24, 16, .18) 50%, rgba(160, 20, 14, .02) 92%);
+  }
 }
 
-// Medium-distance tier — secondary, reduced brightness
-.beamL1 {
-  left: 4vw;
-  width: 17vw;
-  clip-path: polygon(49% 0, 51% 0, 100% 100%, 0% 100%);
-  background:
-    radial-gradient(ellipse 15% 65% at 50% 0%, rgba(255,245,230,0.27) 0%, rgba(255,235,215,0.09) 40%, transparent 100%),
-    radial-gradient(ellipse 46% 86% at 50% 0%, rgba(255,235,215,0.10) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.031) 0%, rgba(255,225,200,0.010) 55%, transparent 78%);
-  animation:
-    sweepLeftToCenter 11s ease-in-out -4s  infinite,
-    breathe            5s ease-in-out -2s  infinite;
+.beamRedR {
+  transform-origin: 92.25% 0;
+  animation: swayR 17s $stage-ease -9s infinite alternate;
+
+  > i {
+    clip-path: polygon(89.5% 0, 95% 0, 64% 92%, 46% 90%);
+    background: linear-gradient(195deg, rgba(210, 36, 24, .55) 0%, rgba(180, 24, 16, .18) 50%, rgba(160, 20, 14, .02) 92%);
+  }
 }
 
-// Medium-near tier — focuses on logo
-.beamL2 {
-  left: 13vw;
-  width: 11vw;
-  clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
-  background:
-    radial-gradient(ellipse 30% 65% at 50% 0%, rgba(255,245,230,0.36) 0%, rgba(255,235,215,0.11) 40%, transparent 100%),
-    radial-gradient(ellipse 70% 86% at 50% 0%, rgba(255,235,215,0.12) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.038) 0%, rgba(255,225,200,0.013) 55%, transparent 78%);
-  animation:
-    focusCenterL 13s ease-in-out -7s  infinite,
-    breathe       4s ease-in-out -5s  infinite;
+// 3. Центральный тёплый белый — главный источник, проходит за названием
+.beamKey {
+  filter: blur(clamp(6px, .62vw, 12px));
+  animation: keyBreathe 9s $stage-ease infinite alternate;
+
+  > i {
+    clip-path: polygon(47% 0, 53% 0, 71% 87%, 29% 87%);
+    background: linear-gradient(180deg, rgba(255, 240, 220, .42) 0%, rgba(255, 232, 205, .16) 50%, rgba(255, 228, 198, .05) 87%);
+  }
 }
 
-// Near-stage tier — warm dart, secondary
-.beamL3 {
-  left: 25vw;
-  width: 7vw;
-  clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
-  background:
-    radial-gradient(ellipse 32% 68% at 50% 0%, rgba(255,245,230,0.41) 0%, rgba(255,235,215,0.12) 40%, transparent 100%),
-    radial-gradient(ellipse 75% 88% at 50% 0%, rgba(255,235,215,0.15) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.045) 0%, rgba(255,225,200,0.015) 55%, transparent 78%);
-  animation:
-    narrowArcL  8s ease-in-out -2s infinite,
-    breathe     3s ease-in-out -1s infinite;
-}
-
-// Far-distance tier — pencil thin, very dim, earliest fade
-.beamLX {
-  left: 9vw;
-  width: 4vw;
-  clip-path: polygon(49.5% 0, 50.5% 0, 100% 100%, 0% 100%);
-  background:
-    radial-gradient(ellipse 24% 62% at 50% 0%, rgba(255,245,230,0.10) 0%, rgba(255,235,215,0.04) 40%, transparent 100%),
-    radial-gradient(ellipse 68% 78% at 50% 0%, rgba(255,235,215,0.04) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.013) 0%, transparent 68%);
-  animation: airDrift 22s ease-in-out -9s infinite;
-}
-
-.beamR1 {
-  right: 4vw;
-  width: 17vw;
-  clip-path: polygon(49% 0, 51% 0, 100% 100%, 0% 100%);
-  background:
-    radial-gradient(ellipse 15% 65% at 50% 0%, rgba(255,245,230,0.27) 0%, rgba(255,235,215,0.09) 40%, transparent 100%),
-    radial-gradient(ellipse 46% 86% at 50% 0%, rgba(255,235,215,0.10) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.031) 0%, rgba(255,225,200,0.010) 55%, transparent 78%);
-  animation:
-    sweepRightToCenter 12s ease-in-out -1s  infinite,
-    breathe             5s ease-in-out -5s  infinite;
-}
-
-.beamR2 {
-  right: 13vw;
-  width: 11vw;
-  clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
-  background:
-    radial-gradient(ellipse 30% 65% at 50% 0%, rgba(255,245,230,0.36) 0%, rgba(255,235,215,0.11) 40%, transparent 100%),
-    radial-gradient(ellipse 70% 86% at 50% 0%, rgba(255,235,215,0.12) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.038) 0%, rgba(255,225,200,0.013) 55%, transparent 78%);
-  animation:
-    focusCenterR 14s ease-in-out -5s  infinite,
-    breathe       4s ease-in-out  0s  infinite;
-}
-
-.beamR3 {
-  right: 25vw;
-  width: 7vw;
-  clip-path: polygon(49.5% 0, 50.5% 0, 93% 100%, 7% 100%);
-  background:
-    radial-gradient(ellipse 32% 68% at 50% 0%, rgba(255,245,230,0.41) 0%, rgba(255,235,215,0.12) 40%, transparent 100%),
-    radial-gradient(ellipse 75% 88% at 50% 0%, rgba(255,235,215,0.15) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.045) 0%, rgba(255,225,200,0.015) 55%, transparent 78%);
-  animation:
-    narrowArcR  9s ease-in-out -6s infinite,
-    breathe     3s ease-in-out -2s infinite;
-}
-
-.beamRX {
-  right: 9vw;
-  width: 4vw;
-  clip-path: polygon(49.5% 0, 50.5% 0, 100% 100%, 0% 100%);
-  background:
-    radial-gradient(ellipse 24% 62% at 50% 0%, rgba(255,245,230,0.10) 0%, rgba(255,235,215,0.04) 40%, transparent 100%),
-    radial-gradient(ellipse 68% 78% at 50% 0%, rgba(255,235,215,0.04) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(255,225,200,0.013) 0%, transparent 68%);
-  animation: airDrift 28s ease-in-out -15s infinite;
-}
-
-// Far left red — wide secondary daze via wider div; light-through-smoke feel
-.beamRedL1 {
-  left: -2vw;
-  width: 22vw;
-  clip-path: polygon(49% 0, 51% 0, 100% 100%, 0% 100%);
-  background:
-    radial-gradient(ellipse 10% 65% at 50% 0%, rgba(255,20,20,0.50) 0%, rgba(220,0,0,0.16) 40%, transparent 100%),
-    radial-gradient(ellipse 7% 52% at 51% 4%, rgba(255,30,10,0.10) 0%, transparent 100%),
-    radial-gradient(ellipse 35% 80% at 50% 0%, rgba(220,0,0,0.22) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(120,0,0,0.05) 0%, rgba(120,0,0,0.018) 55%, transparent 78%);
-  animation:
-    redSweep   10s ease-in-out  -2s infinite,
-    flickerRed  6s ease-in-out  -1s infinite;
-}
-
-// Near centre-left red — near-stage tier, slight smoke offset streak
-.beamRedL2 {
-  left: 27vw;
-  width: 20vw;
-  clip-path: polygon(49% 0, 51% 0, 100% 100%, 0% 100%);
-  background:
-    radial-gradient(ellipse 18% 65% at 50% 0%, rgba(255,20,20,0.50) 0%, rgba(220,0,0,0.16) 38%, transparent 100%),
-    radial-gradient(ellipse 9% 50% at 49% 3%, rgba(255,30,10,0.12) 0%, transparent 100%),
-    radial-gradient(ellipse 48% 74% at 50% 0%, rgba(220,0,0,0.22) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(120,0,0,0.05) 0%, rgba(120,0,0,0.018) 58%, transparent 76%);
-  animation:
-    redCenterL  11s ease-in-out  -4s infinite,
-    flickerRed   5s ease-in-out  -3s infinite;
-}
-
-// Far right red — mirror of RedL1
-.beamRedR1 {
-  right: -2vw;
-  width: 22vw;
-  clip-path: polygon(49% 0, 51% 0, 100% 100%, 0% 100%);
-  background:
-    radial-gradient(ellipse 10% 65% at 50% 0%, rgba(255,20,20,0.50) 0%, rgba(220,0,0,0.16) 40%, transparent 100%),
-    radial-gradient(ellipse 7% 52% at 49% 4%, rgba(255,30,10,0.10) 0%, transparent 100%),
-    radial-gradient(ellipse 35% 80% at 50% 0%, rgba(220,0,0,0.22) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(120,0,0,0.05) 0%, rgba(120,0,0,0.018) 55%, transparent 78%);
-  animation:
-    redSweepR  12s ease-in-out  -6s infinite,
-    flickerRed   7s ease-in-out  -2s infinite;
-}
-
-// Near centre-right red — mirror of RedL2
-.beamRedR2 {
-  right: 27vw;
-  width: 10vw;
-  clip-path: polygon(49% 0, 51% 0, 100% 100%, 0% 100%);
-  background:
-    radial-gradient(ellipse 18% 65% at 50% 0%, rgba(255,20,20,0.50) 0%, rgba(220,0,0,0.16) 38%, transparent 100%),
-    radial-gradient(ellipse 9% 50% at 51% 3%, rgba(255,30,10,0.12) 0%, transparent 100%),
-    radial-gradient(ellipse 48% 74% at 50% 0%, rgba(220,0,0,0.22) 0%, transparent 100%),
-    linear-gradient(to bottom, rgba(120,0,0,0.05) 0%, rgba(120,0,0,0.018) 58%, transparent 76%);
-  animation:
-    redCenterR  13s ease-in-out  -8s infinite,
-    flickerRed   4s ease-in-out  -1s infinite;
-}
-
-
-.vignette {
+// 4. Пол сцены от 85.5% высоты и линия авансцены (1px на той же высоте)
+.floor {
   position: absolute;
-  inset: 0;
-  background:
-    // White beam intersection: subtle additive brightness where beams converge
-    radial-gradient(
-      ellipse 16% 10% at 50% 33%,
-      rgba(255, 245, 230, 0.04) 0%,
-      transparent 100%
-    ),
-    // Red+white intersection: theatrical pink-red tint near logo
-    radial-gradient(
-      ellipse 24% 14% at 50% 35%,
-      rgba(255, 40, 20, 0.05) 0%,
-      transparent 100%
-    ),
-    // Logo zone warm red ambient
-    radial-gradient(
-      ellipse 30% 20% at 50% 36%,
-      rgba(180, 0, 0, 0.09) 0%,
-      rgba(100, 0, 0, 0.04) 55%,
-      transparent 85%
-    ),
-    // Edge darkening to true black
-    radial-gradient(
-      ellipse 90% 70% at 50% 38%,
-      transparent 48%,
-      rgba(0, 0, 0, 0.85) 100%
-    );
+  top: 85.5%;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(180deg, rgba(38, 20, 15, .55), #050404);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 10%, rgba(243, 236, 226, .28) 50%, transparent 90%);
+  }
 }
 
-// Sits above beams, below vignette edge-dark; barely visible warm fog layer
+// 5. Световое пятно на полу — дышит синхронно с центральным лучом
+.pool {
+  position: absolute;
+  top: 78%;
+  left: 23%;
+  width: 54%;
+  height: 16.7%;
+  border-radius: 50%;
+  filter: blur(6px);
+  background: radial-gradient(ellipse at center, rgba(255, 236, 210, .32) 0%, rgba(255, 215, 185, .08) 50%, transparent 72%);
+  animation: poolBreathe 9s $stage-ease infinite alternate;
+}
 
+// Красный ореол — след красных лучей на полу
+.halo {
+  position: absolute;
+  top: 81%;
+  left: 15.5%;
+  width: 69%;
+  height: 13%;
+  border-radius: 50%;
+  filter: blur(10px);
+  background: radial-gradient(rgba(200, 40, 28, .16), transparent 70%);
+}
+
+// 6. Дымка — на грани заметности; размыта самими градиентами, без blur
 .haze {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  opacity: 0.022;
   background:
-    radial-gradient(ellipse 90% 55% at 22% 18%, rgba(255,235,210,1) 0%, transparent 65%),
-    radial-gradient(ellipse 80% 65% at 78% 28%, rgba(255,225,200,1) 0%, transparent 65%),
-    radial-gradient(ellipse 65% 42% at 50% 8%,  rgba(210,160,130,1) 0%, transparent 68%);
-  animation: hazeBreath 9s ease-in-out infinite;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none !important;
-    opacity: 0.022;
-  }
+    radial-gradient(ellipse 38% 26% at 50% 42%, rgba(255, 240, 225, .07), transparent 70%),
+    radial-gradient(ellipse 30% 40% at 28% 62%, rgba(190, 40, 28, .07), transparent 70%),
+    radial-gradient(ellipse 30% 40% at 72% 62%, rgba(190, 40, 28, .07), transparent 70%);
+  animation: hazeDrift 40s $stage-ease infinite alternate;
 }
 
-// Visible: CW, CN1, CN2 (added), L2 (added as left warm), RedL1, RedR1
-// Hidden:  L1, L3, LX, R1, R2, R3, RX, RedL2, RedR2
-
-@include mixins.mobile {
-  .beamL1, .beamL3, .beamLX,
-  .beamR1, .beamR2, .beamR3, .beamRX,
-  .beamRedL2, .beamRedR2 { display: none; }
-
-  // Centre wash: +27% wider
-  .beamCW    { width: 70vw; left: 15vw;  }
-  // Centre narrow 1: +33% wider
-  .beamCN1   { width: 24vw; left: 38vw;  }
-  // Centre narrow 2: newly shown — layering over CN1
-  .beamCN2   { width: 18vw; left: 41vw;  }
-  // Left warm beam: repositioned to left edge, +136% wider than desktop
-  .beamL2    { width: 26vw; left: 0vw;   }
-  // Red sides: +27% wider
-  .beamRedL1 { width: 19vw;              }
-  .beamRedR1 { width: 19vw;              }
-}
-
-.floor {
+// 7. Виньетка — вне рига, возвращает настоящий чёрный в углы
+.vignette {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 30%;
-  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.6) 100%);
-  pointer-events: none;
-  z-index: 2;
+  inset: 0;
+  background: radial-gradient(ellipse 78% 72% at 50% 48%, transparent 52%, rgba(0, 0, 0, .72) 100%);
+}
+
+// 8. Зерно — тайл 220px, под текстом; на буквы не влияет.
+// feColorMatrix saturate 0 — нейтральное (серое) зерно, без цветных точек.
+.stageGrain {
+  position: absolute;
+  inset: 0;
+  opacity: .09;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>");
+  background-size: 220px;
+}
+
+// Laptop (1024–1439): геометрия та же, blur масштабируется clamp().
+
+// Tablet (<1024): без дальних лучей, качание красных ±1°
+@media (max-width: 1023px) {
+  .beamFarL,
+  .beamFarR { display: none; }
+
+  .beamRedL { animation-name: swayLTablet; }
+  .beamRedR { animation-name: swayRTablet; }
+}
+
+// Mobile (<768): узкий центральный луч, blur 6/8px, пятно под кнопками,
+// без качания красных — остаётся только дыхание центрального луча и пятна.
+@media (max-width: 767px) {
+  .beamKey {
+    filter: blur(6px);
+
+    > i { clip-path: polygon(48% 0, 52% 0, 64% 87%, 36% 87%); }
+  }
+
+  .beamRedL,
+  .beamRedR {
+    filter: blur(8px);
+    animation: none;
+  }
+
+  .haze { animation: none; }
+
+  .pool { top: 73%; }
+
+  .stageGrain { opacity: .06; }
+}
+
+// Без движения: всё статично, центральный луч — на средней яркости
+@media (prefers-reduced-motion: reduce) {
+  .beam,
+  .pool,
+  .haze,
+  .stage { animation: none !important; }
+
+  .beamKey { opacity: .93; }
 }
 
 .content {
@@ -818,133 +593,9 @@
       var(--bg);
   }
 
-  .floor {
-    background: linear-gradient(180deg, transparent 0%, var(--bg) 100%);
-  }
-
-  .beamCW {
-    background:
-      radial-gradient(ellipse 28% 68% at 50% 0%, rgba(120,80,50,0.14) 0%, rgba(100,65,35,0.045) 40%, transparent 100%),
-      radial-gradient(ellipse 70% 88% at 50% 0%, rgba(90,60,30,0.045) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.016) 0%, transparent 65%);
-  }
-
-  .beamCN1 {
-    background:
-      radial-gradient(ellipse 36% 70% at 50% 0%, rgba(120,80,50,0.18) 0%, rgba(100,65,35,0.056) 40%, transparent 100%),
-      radial-gradient(ellipse 78% 88% at 50% 0%, rgba(90,60,30,0.070) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.022) 0%, transparent 65%);
-  }
-
-  .beamCN2 {
-    background:
-      radial-gradient(ellipse 38% 70% at 50% 0%, rgba(120,80,50,0.17) 0%, rgba(100,65,35,0.053) 40%, transparent 100%),
-      radial-gradient(ellipse 80% 88% at 50% 0%, rgba(90,60,30,0.063) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.020) 0%, transparent 65%);
-  }
-
-  .beamL1 {
-    background:
-      radial-gradient(ellipse 15% 65% at 50% 0%, rgba(120,80,50,0.12) 0%, rgba(100,65,35,0.039) 40%, transparent 100%),
-      radial-gradient(ellipse 46% 86% at 50% 0%, rgba(90,60,30,0.042) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.013) 0%, transparent 65%);
-  }
-
-  .beamL2 {
-    background:
-      radial-gradient(ellipse 30% 65% at 50% 0%, rgba(120,80,50,0.15) 0%, rgba(100,65,35,0.046) 40%, transparent 100%),
-      radial-gradient(ellipse 70% 86% at 50% 0%, rgba(90,60,30,0.049) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.016) 0%, transparent 65%);
-  }
-
-  .beamL3 {
-    background:
-      radial-gradient(ellipse 32% 68% at 50% 0%, rgba(120,80,50,0.17) 0%, rgba(100,65,35,0.053) 40%, transparent 100%),
-      radial-gradient(ellipse 75% 88% at 50% 0%, rgba(90,60,30,0.063) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.019) 0%, transparent 65%);
-  }
-
-  .beamLX {
-    background:
-      radial-gradient(ellipse 24% 62% at 50% 0%, rgba(120,80,50,0.035) 0%, rgba(100,65,35,0.014) 40%, transparent 100%),
-      radial-gradient(ellipse 68% 78% at 50% 0%, rgba(90,60,30,0.014) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.005) 0%, transparent 55%);
-  }
-
-  .beamR1 {
-    background:
-      radial-gradient(ellipse 15% 65% at 50% 0%, rgba(120,80,50,0.12) 0%, rgba(100,65,35,0.039) 40%, transparent 100%),
-      radial-gradient(ellipse 46% 86% at 50% 0%, rgba(90,60,30,0.042) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.013) 0%, transparent 65%);
-  }
-
-  .beamR2 {
-    background:
-      radial-gradient(ellipse 30% 65% at 50% 0%, rgba(120,80,50,0.15) 0%, rgba(100,65,35,0.046) 40%, transparent 100%),
-      radial-gradient(ellipse 70% 86% at 50% 0%, rgba(90,60,30,0.049) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.016) 0%, transparent 65%);
-  }
-
-  .beamR3 {
-    background:
-      radial-gradient(ellipse 32% 68% at 50% 0%, rgba(120,80,50,0.17) 0%, rgba(100,65,35,0.053) 40%, transparent 100%),
-      radial-gradient(ellipse 75% 88% at 50% 0%, rgba(90,60,30,0.063) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.019) 0%, transparent 65%);
-  }
-
-  .beamRX {
-    background:
-      radial-gradient(ellipse 24% 62% at 50% 0%, rgba(120,80,50,0.035) 0%, rgba(100,65,35,0.014) 40%, transparent 100%),
-      radial-gradient(ellipse 68% 78% at 50% 0%, rgba(90,60,30,0.014) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(80,55,25,0.005) 0%, transparent 55%);
-  }
-
-  .beamRedL1 {
-    background:
-      radial-gradient(ellipse 10% 65% at 50% 0%, rgba(140,0,0,0.23) 0%, rgba(100,0,0,0.069) 40%, transparent 100%),
-      radial-gradient(ellipse 7% 52% at 51% 4%,  rgba(90,0,0,0.046) 0%, transparent 100%),
-      radial-gradient(ellipse 35% 80% at 50% 0%, rgba(90,0,0,0.10) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(70,0,0,0.021) 0%, transparent 65%);
-  }
-
-  .beamRedL2 {
-    background:
-      radial-gradient(ellipse 18% 65% at 50% 0%, rgba(140,0,0,0.23) 0%, rgba(100,0,0,0.064) 38%, transparent 100%),
-      radial-gradient(ellipse 9% 50% at 49% 3%,  rgba(90,0,0,0.048) 0%, transparent 100%),
-      radial-gradient(ellipse 48% 74% at 50% 0%, rgba(90,0,0,0.10) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(70,0,0,0.021) 0%, transparent 65%);
-  }
-
-  .beamRedR1 {
-    background:
-      radial-gradient(ellipse 10% 65% at 50% 0%, rgba(140,0,0,0.23) 0%, rgba(100,0,0,0.069) 40%, transparent 100%),
-      radial-gradient(ellipse 7% 52% at 49% 4%,  rgba(90,0,0,0.046) 0%, transparent 100%),
-      radial-gradient(ellipse 35% 80% at 50% 0%, rgba(90,0,0,0.10) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(70,0,0,0.021) 0%, transparent 65%);
-  }
-
-  .beamRedR2 {
-    background:
-      radial-gradient(ellipse 18% 65% at 50% 0%, rgba(140,0,0,0.23) 0%, rgba(100,0,0,0.064) 38%, transparent 100%),
-      radial-gradient(ellipse 9% 50% at 51% 3%,  rgba(90,0,0,0.048) 0%, transparent 100%),
-      radial-gradient(ellipse 48% 74% at 50% 0%, rgba(90,0,0,0.10) 0%, transparent 100%),
-      linear-gradient(to bottom, rgba(70,0,0,0.021) 0%, transparent 65%);
-  }
-
-  .vignette {
-    background:
-      radial-gradient(ellipse 16% 10% at 50% 33%, rgba(80,50,20,0.030) 0%, transparent 100%),
-      radial-gradient(ellipse 24% 14% at 50% 35%, rgba(140,50,20,0.025) 0%, transparent 100%),
-      radial-gradient(ellipse 30% 20% at 50% 36%, rgba(130,0,0,0.040) 0%, transparent 85%);
-  }
-
-  .haze {
-    opacity: 0.045;
-    background:
-      radial-gradient(ellipse 90% 55% at 22% 18%, rgba(180,140,100,1) 0%, transparent 65%),
-      radial-gradient(ellipse 80% 65% at 78% 28%, rgba(170,130,90,1)  0%, transparent 65%),
-      radial-gradient(ellipse 65% 42% at 50%  8%, rgba(150,110,80,1)  0%, transparent 68%);
-  }
+  // Тёплые лучи на светлом фоне не работают (спецификация «Живая сцена»):
+  // в светлой теме сцену не показываем, остаётся прежний светлый фон hero.
+  .stage { display: none; }
 
   .accentDot {
     background: #B80000;
