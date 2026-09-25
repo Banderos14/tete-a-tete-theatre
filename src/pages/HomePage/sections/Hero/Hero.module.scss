@@ -67,18 +67,20 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
 // Центральный луч и пятно дышат синхронно, разница яркости ~5–6%
 @keyframes keyBreathe  { from { opacity: .94; } to { opacity: 1; } }
 @keyframes poolBreathe { from { opacity: .95; } to { opacity: 1; } }
-// Микропокачивание центрального прибора (±0.25° от точки источника) и
-// ответное смещение пятна на полу на ±4px — тот же период и easing, так что
-// свет на полу «привязан» к лучу. Поворот по часовой уводит низ луча влево,
-// поэтому пятно движется в противофазе знаку угла.
-@keyframes keySway     { from { transform: rotate(-.25deg); } to { transform: rotate(.25deg); } }
-@keyframes poolDrift   { from { transform: translateX(4px); } to { transform: translateX(-4px); } }
-// Качание красных от точки прибора, меньше 1°
-@keyframes swayL       { from { transform: rotate(-.8deg); } to { transform: rotate(.7deg); } }
-@keyframes swayR       { from { transform: rotate(.75deg); } to { transform: rotate(-.65deg); } }
-// Планшет: ещё спокойнее
-@keyframes swayLTablet { from { transform: rotate(-.5deg); } to { transform: rotate(.5deg); } }
-@keyframes swayRTablet { from { transform: rotate(.5deg); }  to { transform: rotate(-.5deg); } }
+// Покачивание центрального прибора (±0.6° от точки источника) и ответное
+// смещение пятна на полу на ±9px — ~ то, на сколько при этом уходит низ луча
+// на 1440×900. Тот же период и easing, так что свет на полу «привязан» к лучу.
+// Поворот по часовой уводит низ луча влево, поэтому пятно движется в
+// противофазе знаку угла.
+@keyframes keySway     { from { transform: rotate(-.6deg); } to { transform: rotate(.6deg); } }
+@keyframes poolDrift   { from { transform: translateX(9px); } to { transform: translateX(-9px); } }
+// Качание красных от точки прибора: ~2° в каждую сторону — луч заметно, но
+// спокойно «ведут» по сцене; низ проходит около половины ширины луча.
+@keyframes swayL       { from { transform: rotate(-2.2deg); } to { transform: rotate(1.8deg); } }
+@keyframes swayR       { from { transform: rotate(2deg); }    to { transform: rotate(-1.7deg); } }
+// Планшет: спокойнее, чем на десктопе
+@keyframes swayLTablet { from { transform: rotate(-1.2deg); } to { transform: rotate(1.2deg); } }
+@keyframes swayRTablet { from { transform: rotate(1.2deg); }  to { transform: rotate(-1.2deg); } }
 
 .stage {
   position: absolute;
@@ -136,7 +138,7 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
   transform-origin: 50% -18%;
   animation:
     keyBreathe 9s $stage-ease infinite alternate,
-    keySway 20s $stage-ease -7s infinite alternate;
+    keySway 16s $stage-ease -7s infinite alternate;
 }
 
 // Красные боковые — узкие акцентные приборы из-за верхних углов, ось ~36°
@@ -161,7 +163,7 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
     rgba(180, 26, 18, .09) 8.2deg,
     transparent 10deg
   );
-  animation: swayL 13s $stage-ease -4s infinite alternate;
+  animation: swayL 11s $stage-ease -4s infinite alternate;
 }
 
 .beamRedR {
@@ -177,7 +179,7 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
     rgba(180, 26, 18, .09) 8.2deg,
     transparent 10deg
   );
-  animation: swayR 17s $stage-ease -9s infinite alternate;
+  animation: swayR 14s $stage-ease -9s infinite alternate;
 }
 
 // Пол сцены: без линии авансцены и без ступеньки на верхнем крае —
@@ -206,7 +208,7 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
     radial-gradient(ellipse 50% 50% at 50% 52%, transparent 38%, rgba(190, 40, 28, .07) 62%, transparent 100%);
   animation:
     poolBreathe 9s $stage-ease infinite alternate,
-    poolDrift 20s $stage-ease -7s infinite alternate;
+    poolDrift 16s $stage-ease -7s infinite alternate;
 }
 
 // Виньетка — вне рига, возвращает настоящий чёрный в углы

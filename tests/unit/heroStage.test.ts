@@ -91,17 +91,17 @@ describe('анимация: только opacity и transform, медленно 
     }
   });
 
-  it('качание красных меньше 1°, дыхание центрального — не больше 10%', () => {
-    for (const m of keyframes.matchAll(/rotate\((-?[\d.]+)deg\)/g)) expect(Math.abs(Number(m[1]))).toBeLessThan(1);
+  it('повороты сцены не больше 2.5° (живое движение, не прожектор концерта), дыхание — не больше 10%', () => {
+    for (const m of keyframes.matchAll(/rotate\((-?[\d.]+)deg\)/g)) expect(Math.abs(Number(m[1]))).toBeLessThanOrEqual(2.5);
     const key = /@keyframes keyBreathe\s*\{ from \{ opacity: ([\d.]+); \} to \{ opacity: ([\d.]+); \} \}/.exec(code)!;
     expect(Number(key[2]) - Number(key[1])).toBeLessThanOrEqual(0.1);
   });
 
-  it('центральный луч лишь едва покачивается, пятно на полу следует за ним синхронно', () => {
+  it('центральный луч покачивается мягко, пятно на полу следует за ним синхронно', () => {
     const sway = /@keyframes keySway\s*\{ from \{ transform: rotate\((-?[\d.]+)deg\); \} to \{ transform: rotate\((-?[\d.]+)deg\); \} \}/.exec(code)!;
-    expect(Math.max(Math.abs(Number(sway[1])), Math.abs(Number(sway[2])))).toBeLessThanOrEqual(0.3);
+    expect(Math.max(Math.abs(Number(sway[1])), Math.abs(Number(sway[2])))).toBeLessThanOrEqual(0.8);
     const drift = /@keyframes poolDrift\s*\{ from \{ transform: translateX\((-?[\d.]+)px\); \} to \{ transform: translateX\((-?[\d.]+)px\); \} \}/.exec(code)!;
-    expect(Math.max(Math.abs(Number(drift[1])), Math.abs(Number(drift[2])))).toBeLessThanOrEqual(8);
+    expect(Math.max(Math.abs(Number(drift[1])), Math.abs(Number(drift[2])))).toBeLessThanOrEqual(12);
     // Одинаковые период, easing и задержка — пятно «привязано» к лучу.
     const timing = (sel: string, name: string) => new RegExp(`${name} ([\\d.]+s \\$stage-ease -?[\\d.]+s)`).exec(rule(sel))![1];
     expect(timing('.pool', 'poolDrift')).toBe(timing('.beamKey', 'keySway'));
