@@ -15,7 +15,7 @@ import { onlineBookingState } from '../../utils/onlinePayment';
 import type { ConfirmAction, FilterShowId, FilterStatus } from './adminTypes';
 import { bookingTicketLines } from '../../utils/ticketBreakdown';
 import { ticketTypeLabel } from '../../utils/ticketType';
-import { summarizeBookings, summarizeByShow } from './adminStats';
+import { summarizeBookings, summarizeByShow, adminShowList } from './adminStats';
 import { filterBookings } from '../../utils/bookingSearch';
 import { formatPhoneForDisplay } from '../../utils/phoneDisplay';
 import { AdminShowCard } from './AdminShowCard';
@@ -88,7 +88,10 @@ export function BookingsTab({
   // Сводка пересчитывается из текущего списка броней на каждом рендере: когда
   // админ отменяет бронь, useAdminData меняет её статус в состоянии — и цифры
   // обновляются сразу, без перезагрузки и без отдельного listener'а.
-  const statsByShow = summarizeByShow(SHOWS, bookings);
+  // Спектакли — из того же каталога и с той же публикацией, что на сайте;
+  // плюс спектакли, по которым есть брони (заготовки, удалённые из каталога).
+  const adminShows  = adminShowList(SHOWS, bookings);
+  const statsByShow = summarizeByShow(adminShows, bookings);
   const total       = summarizeBookings(bookings);
 
   return (
@@ -148,7 +151,7 @@ export function BookingsTab({
           {filterShow !== 'all' && (
             <>
               <span className={styles.filterLabel}>
-                {SHOWS.find(s => s.id === filterShow)?.title ?? filterShow}
+                {adminShows.find(s => s.id === filterShow)?.title ?? filterShow}
               </span>
               <button className={styles.clearFilter} onClick={() => onFilterShow('all')}>×</button>
             </>

@@ -16,6 +16,7 @@ import { generateTicketCode } from '../../server/booking/ticketCode.js';
 import { parseTicketCodeFromScan } from '../../src/utils/parseTicketCode.js';
 import { endpointSource, projectSource, screenSource } from '../helpers/serverSource.js';
 import { getShowPublicUrl, getShowIdFromLocation } from '../../src/utils/showUrl.js';
+import { SHOWS as FRONT_SHOWS, PUBLISHED_REPERTOIRE } from '../../src/data/shows';
 
 // Контрольные моменты сезона в настенном времени Ниццы.
 const SEP_12 = parseShowStartUtcMs('12 Сен 2026', '12:00')!;
@@ -34,7 +35,8 @@ describe('«Романтика обреченности» — 17 сентябр�
 
   it('июньской даты в каталоге не осталось', () => {
     expect(showDateString(romantika)).not.toContain('Июн');
-    expect(projectSource('src/data/shows.ts')).toContain("date: '17.09', day: '17', month: 'Сен', time: '20:00'");
+    const front = FRONT_SHOWS.find(s => s.id === 'romantika')!;
+    expect([front.date, front.day, front.month, front.time]).toEqual(['17.09', '17', 'Сен', '20:00']);
   });
 
   it('опубликован — значит, виден в Афише и доступен для брони', () => {
@@ -45,7 +47,7 @@ describe('«Романтика обреченности» — 17 сентябр�
 
   it('вместимость зала — 50 мест', () => {
     expect(THEATRE_CAPACITY).toBe(50);
-    expect(projectSource('src/data/shows.ts')).toMatch(/id: 'romantika'[\s\S]*?totalSeats: 50/);
+    expect(FRONT_SHOWS.find(s => s.id === 'romantika')!.totalSeats).toBe(50);
   });
 
   it('12 сентября 2026 спектакль ещё не начался', () => {
@@ -169,10 +171,7 @@ describe('deep-link /#/?show=<id> открывает опубликованны�
   });
 
   it('у каждого опубликованного спектакля есть карточка репертуара — иначе ссылка ни во что не упрётся', () => {
-    const repertoireIds = [...projectSource('src/data/shows.ts')
-      .slice(projectSource('src/data/shows.ts').indexOf('export const REPERTOIRE'))
-      .matchAll(/id: '([a-z]+)', status:/g)].map(m => m[1]!);
-
+    const repertoireIds = PUBLISHED_REPERTOIRE.map(r => r.id);
     for (const id of Object.keys(SHOWS)) expect(repertoireIds).toContain(id);
   });
 
@@ -215,9 +214,9 @@ describe('сезон целиком: осенняя афиша 2026', () => {
     }
   });
 
-  it('все девять спектаклей опубликованы в афише', () => {
-    expect(Object.keys(SHOWS).sort()).toEqual(EXPECTED.map(([id]) => id).sort());
-    expect(Object.keys(DRAFT_SHOWS)).toEqual([]);
+  it('опубликованы восемь спектаклей; «Летучий корабль» — заготовка (постера ещё нет)', () => {
+    expect(Object.keys(SHOWS).sort()).toEqual(EXPECTED.map(([id]) => id).filter(id => id !== 'letuchiy').sort());
+    expect(Object.keys(DRAFT_SHOWS)).toEqual(['letuchiy']);
   });
 
   it('цены совпадают с программой открытия восьмого сезона', () => {
@@ -229,7 +228,7 @@ describe('сезон целиком: осенняя афиша 2026', () => {
     expect(SHOWS.razgovor!.tickets.student!.price).toBe(20);
     expect(SHOWS.lubov!.tickets.standard!.price).toBe(20);
     expect(SHOWS.lubov!.tickets.student!.price).toBe(15);
-    expect(SHOWS.letuchiy!.tickets.standard!.price).toBe(30);
+    expect(SEASON_CATALOG.letuchiy!.tickets.standard!.price).toBe(30);
     expect(SHOWS.kovcheg!.tickets.student!.price).toBe(20);
   });
 

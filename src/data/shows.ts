@@ -1,5 +1,8 @@
-import type { Show, DraftShow, RepertoireItem } from '../types';
-import { parseShowStartUtcMs } from '../../shared/domain/showTime';
+import type { Show, RepertoireItem } from '../types';
+import { parseShowStartUtcMs, MONTH_RU } from '../../shared/domain/showTime';
+import {
+  SEASON_CATALOG, THEATRE_CAPACITY, type ShowInfo, type TicketInfo, type TicketTypeId,
+} from '../../shared/catalog/shows';
 
 // Постеры спектаклей — ЕДИНСТВЕННОЕ место, где файл связывается со спектаклем.
 // SHOWS и REPERTOIRE ниже ссылаются на эти же константы, а Афиша, Репертуар,
@@ -50,15 +53,33 @@ const showPhoto = (fileName: string) => `${import.meta.env.BASE_URL}images/showP
 // Desktop всегда показывает фото целиком (object-fit: contain).
 // Mobile использует object-fit: cover + mobileScale для крупного кадра.
 
-export const SHOWS: Show[] = [
+// ─────────────────────────────────────────────────────────────────────────────
+// Спектакли афиши
+//
+// ЕДИНЫЙ ИСТОЧНИК ФАКТОВ — серверный каталог shared/catalog/shows.ts
+// (SEASON_CATALOG): id, название RU/FR, дата и время, опубликован ли спектакль,
+// тарифы и цены, вместимость. Здесь эти данные НЕ повторяются — только
+// оформление, которое серверу не нужно: постер, фото, описание, возраст,
+// длительность, подпись автора, цвет подложки.
+//
+// SHOWS ниже собирается из каталога + оформления по showId. Афиша, Репертуар,
+// форма брони, кабинет, админка и сканер читают одно и то же: спектакль,
+// скрытый в каталоге (published: false), скрыт везде, а цены на сайте всегда
+// те, по которым считает сервер.
+//
+// НОВЫЙ СПЕКТАКЛЬ: 1) запись в SEASON_CATALOG (факты); 2) запись здесь, в
+// SHOW_CONTENT (оформление), с тем же id. Больше нигде ничего менять не нужно.
+
+type ShowContent = Omit<Show,
+  'title' | 'titleFR' | 'date' | 'day' | 'month' | 'time' | 'year'
+  | 'price' | 'priceFR' | 'totalSeats' | 'ticketTypes' | 'published'>;
+
+const SHOW_CONTENT: ShowContent[] = [
   {
     id: 'romantika',
-    title: '«Романтика обреченности»',
-    titleFR: '«La Romanesque de la Fatalité»',
     author: 'Цветаева · Жизнь и творчество',
     authorFR: 'Tsvetaïeva · Vie et œuvre',
-    date: '17.09', day: '17', month: 'Сен', time: '20:00', year: '2026',
-    age: '10+', price: '20 € / 15 € (ученики и студенты)', priceFR: '20 € / 15 € (scolaires et étudiants)',
+    age: '10+',
     duration: '1 час (без антракта)', durationFR: '1 h (sans entracte)',
     desc:   'Литературно-музыкальный спектакль по биографии Марины Цветаевой.',
     descFR: 'Spectacle littéraire et musical consacré à la biographie de Marina Tsvetaïeva.',
@@ -70,20 +91,12 @@ export const SHOWS: Show[] = [
       { src: showPhoto('romantika3.webp'), position: 'center 35%', size: '100%' },
       { src: showPhoto('romantika4.webp'), position: 'center 70%', size: '150%' },
     ],
-    totalSeats: 50,
-    ticketTypes: [
-      { id: 'standard', label: 'Обычный', labelFR: 'Plein tarif', price: 20, available: 50, seats: 1 },
-      { id: 'student',  label: 'Ученик / студент', labelFR: 'Scolaire / étudiant', price: 15, available: 50, seats: 1 },
-    ],
   },
   {
     id: 'shutka',
-    title: '«И в шутку, и всерьёз»',
-    titleFR: '«Sérieusement ou pas»',
     author: 'А. П. Чехов · Две комедии',
     authorFR: 'A. P. Tchekhov · Deux comédies',
-    date: '02.10', day: '02', month: 'Окт', time: '20:00', year: '2026',
-    age: '10+', price: '30 € / 20 € (ученики и студенты)', priceFR: '30 € / 20 € (scolaires et étudiants)',
+    age: '10+',
     duration: '1 час 10 минут (с антрактом)', durationFR: '1 h 10 (avec entracte)',
     desc:   'Две комедии А. П. Чехова — «Юбилей» и «Предложение».',
     descFR: 'Deux comédies d’Anton Tchekhov — «L’Anniversaire» et «La Demande en mariage».',
@@ -96,164 +109,153 @@ export const SHOWS: Show[] = [
       { src: showPhoto('shutka4.webp'), position: 'center 25%', mobileScale: 1},
       { src: showPhoto('shutka5.webp'), position: 'center 30%', mobileScale: 1},
     ],
-    totalSeats: 50,
-    ticketTypes: [
-      { id: 'standard', label: 'Обычный', labelFR: 'Plein tarif', price: 30, available: 50, seats: 1 },
-      { id: 'student',  label: 'Ученик / студент', labelFR: 'Scolaire / étudiant', price: 20, available: 50, seats: 1 },
-    ],
   },
   {
     id: 'korablik',
-    title: '«Приключения кораблика»',
-    titleFR: '«Les Aventures du petit bateau»',
     author: 'Интерактивный детский спектакль',
     authorFR: 'Spectacle interactif pour enfants',
-    date: '04.10', day: '04', month: 'Окт', time: '10:00', year: '2026',
     age: '1+',
-    price: '20 € (ребёнок) / 15 € (взрослый) / 45 € (ребёнок + 2 родителя)',
-    priceFR: '20 € (enfant) / 15 € (adulte) / 45 € (enfant + 2 parents)',
     duration: '45 минут', durationFR: '45 min',
     desc: 'Интерактивный детский спектакль о путешествии маленького кораблика.',
     descFR: 'Un spectacle interactif pour enfants sur le voyage d’un petit bateau.',
     palette: 'var(--ph-3)',
     image: korablikPoster,
-    totalSeats: 50,
-    ticketTypes: [
-      { id: 'child',  label: 'Ребёнок', labelFR: 'Enfant', price: 20, available: 50, seats: 1 },
-      { id: 'adult',  label: 'Взрослый', labelFR: 'Adulte', price: 15, available: 50, seats: 1 },
-      { id: 'family', label: 'Ребёнок + 2 родителя', labelFR: 'Enfant + 2 parents', price: 45, available: 16, seats: 3 },
-    ],
   },
   {
     id: 'razgovor',
-    title: '«Разговор, которого не было»',
-    titleFR: '«La conversation qui n\'a pas eu lieu»',
     author: 'Р. Белецкий · Трагикомедия',
     authorFR: 'R. Beletski · Tragicomédie',
-    date: '16.10', day: '16', month: 'Окт', time: '20:00', year: '2026',
-    age: '12+', price: '25 € / 20 € (ученики и студенты)', priceFR: '25 € / 20 € (scolaires et étudiants)',
+    age: '12+',
     duration: '1 час 10 минут (без антракта)', durationFR: '1 h 10 (sans entracte)',
     desc: 'Трагикомедия по пьесе Р. Белецкого. С юмором говорим о серьёзном, смеёмся вместе с прошлым, делаем выводы на будущее.',
     descFR: 'Tragicomédie d’après la pièce de R. Beletski. Nous parlons avec humour de choses sérieuses, rions avec le passé et en tirons des leçons pour l’avenir.',
     palette: 'var(--ph-4)',
     image: razgovorPoster,
-    totalSeats: 50,
-    ticketTypes: [
-      { id: 'standard', label: 'Обычный', labelFR: 'Plein tarif', price: 25, available: 50, seats: 1 },
-      { id: 'student',  label: 'Ученик / студент', labelFR: 'Scolaire / étudiant', price: 20, available: 50, seats: 1 },
-    ],
   },
   {
     id: 'enot',
-    title: '«Крошка Енот»',
-    titleFR: '«Le Petit Raton laveur»',
     author: 'Театр «Маленькая белая рыбка» · Канны',
     authorFR: 'Théâtre «Le Petit Poisson blanc» · Cannes',
-    date: '18.10', day: '18', month: 'Окт', time: '10:00', year: '2026',
     age: '3+',
-    price: '20 € (ребёнок) / 15 € (взрослый) / 45 € (ребёнок + 2 родителя)',
-    priceFR: '20 € (enfant) / 15 € (adulte) / 45 € (enfant + 2 parents)',
     duration: '45 минут', durationFR: '45 min',
     desc: 'Кукольный спектакль театра «Маленькая белая рыбка» из Канн. Добрая сказка о смелости и дружбе для детей и для взрослых, которые ещё помнят, как быть детьми!',
     descFR: 'Spectacle de marionnettes du théâtre «Le Petit Poisson blanc» de Cannes. Un conte plein de bonté sur le courage et l’amitié, pour les enfants et les adultes qui se souviennent encore comment être enfants.',
     palette: 'var(--ph-5)',
     image: enotPoster,
-    totalSeats: 50,
-    ticketTypes: [
-      { id: 'child',  label: 'Ребёнок', labelFR: 'Enfant', price: 20, available: 50, seats: 1 },
-      { id: 'adult',  label: 'Взрослый', labelFR: 'Adulte', price: 15, available: 50, seats: 1 },
-      { id: 'family', label: 'Ребёнок + 2 родителя', labelFR: 'Enfant + 2 parents', price: 45, available: 16, seats: 3 },
-    ],
   },
   {
     id: 'lubov',
-    title: '«Счастливая любовь»',
-    titleFR: '«Un amour heureux»',
     author: 'А. Аверченко и Н. Тэффи · Пять новелл о любви',
     authorFR: 'A. Averchenko et N. Teffi · Cinq nouvelles sur l’amour',
-    date: '14.11', day: '14', month: 'Ноя', time: '19:00', year: '2026',
-    age: '12+', price: '20 € / 15 € (ученики и студенты)', priceFR: '20 € / 15 € (scolaires et étudiants)',
+    age: '12+',
     duration: '1 час 30 минут (с антрактом)', durationFR: '1 h 30 (avec entracte)',
     desc: 'Спектакль по рассказам А. Аверченко и Н. Тэффи. Пять новелл о любви.',
     descFR: 'Un spectacle d’après les récits d’A. Averchenko et de N. Teffi. Cinq nouvelles sur l’amour.',
     palette: 'var(--ph-1)',
     image: lubovPoster,
-    totalSeats: 50,
-    ticketTypes: [
-      { id: 'standard', label: 'Обычный', labelFR: 'Plein tarif', price: 20, available: 50, seats: 1 },
-      { id: 'student',  label: 'Ученик / студент', labelFR: 'Scolaire / étudiant', price: 15, available: 50, seats: 1 },
-    ],
   },
   {
     id: 'shapochka',
-    title: '«Красная Шапочка»',
-    titleFR: '«Le Petit Chaperon rouge»',
     author: 'Театр «Маленькая белая рыбка» · Канны',
     authorFR: 'Théâtre «Le Petit Poisson blanc» · Cannes',
-    date: '15.11', day: '15', month: 'Ноя', time: '10:00', year: '2026',
     age: '3–7 лет',
-    price: '20 € (ребёнок) / 15 € (взрослый) / 45 € (ребёнок + 2 родителя)',
-    priceFR: '20 € (enfant) / 15 € (adulte) / 45 € (enfant + 2 parents)',
     duration: 'Продолжительность уточняется', durationFR: 'Durée à confirmer',
     desc: 'Смешные перчаточные куклы разыгрывают новую историю с хорошим завершением и учат малышей быть отзывчивыми, открытыми и готовыми всегда помочь близким!',
     descFR: 'De drôles de marionnettes à gaine jouent une nouvelle histoire qui finit bien et apprennent aux petits à être attentifs, ouverts et toujours prêts à aider leurs proches.',
     palette: 'var(--ph-2)',
     image: shapochkaPoster,
-    totalSeats: 50,
-    ticketTypes: [
-      { id: 'child',  label: 'Ребёнок', labelFR: 'Enfant', price: 20, available: 50, seats: 1 },
-      { id: 'adult',  label: 'Взрослый', labelFR: 'Adulte', price: 15, available: 50, seats: 1 },
-      { id: 'family', label: 'Ребёнок + 2 родителя', labelFR: 'Enfant + 2 parents', price: 45, available: 16, seats: 3 },
-    ],
   },
   {
     id: 'letuchiy',
-    title: '«Летучий корабль»',
-    titleFR: '«Le Vaisseau volant»',
     author: 'Сказочный мюзикл для детей и взрослых',
     authorFR: 'Comédie musicale féerique pour enfants et adultes',
-    date: '21.11', day: '21', month: 'Ноя', time: '19:00', year: '2026',
-    age: '6+', price: '30 € / 20 € (ученики и студенты)', priceFR: '30 € / 20 € (scolaires et étudiants)',
+    age: '6+',
     duration: 'Продолжительность уточняется', durationFR: 'Durée à confirmer',
     desc: 'Сказочный мюзикл для детей и взрослых.',
     descFR: 'Une comédie musicale féerique pour les enfants et les adultes.',
     palette: 'var(--ph-3)',
-    // TODO: publish when official poster/photo is available
-    published: false,
-    totalSeats: 50,
-    ticketTypes: [
-      { id: 'standard', label: 'Обычный', labelFR: 'Plein tarif', price: 30, available: 50, seats: 1 },
-      { id: 'student',  label: 'Ученик / студент', labelFR: 'Scolaire / étudiant', price: 20, available: 50, seats: 1 },
-    ],
   },
   {
     id: 'kovcheg',
-    title: '«У ковчега в восемь»',
-    titleFR: '«À l\'arche à huit heures»',
     author: 'Урлих Хуб · Музыкальный спектакль',
     authorFR: 'Ulrich Hub · Spectacle musical',
-    date: '28.11', day: '28', month: 'Ноя', time: '19:00', year: '2026',
-    age: '6+', price: '30 € / 20 € (ученики и студенты)', priceFR: '30 € / 20 € (scolaires et étudiants)',
+    age: '6+',
     duration: '1 час 20 минут (с антрактом)', durationFR: '1 h 20 (avec entracte)',
     desc: 'Музыкальный спектакль для всей семьи по пьесе Урлиха Хуба.',
     descFR: 'Un spectacle musical pour toute la famille d’après la pièce d’Ulrich Hub.',
     palette: 'var(--ph-4)',
     image: kovchegPoster,
-    totalSeats: 50,
-    ticketTypes: [
-      { id: 'standard', label: 'Обычный', labelFR: 'Plein tarif', price: 30, available: 50, seats: 1 },
-      { id: 'student',  label: 'Ученик / студент', labelFR: 'Scolaire / étudiant', price: 20, available: 50, seats: 1 },
-    ],
   },
 ];
 
-export const REPERTOIRE: RepertoireItem[] = [
+// Подпись цены в карточке: «30 € / 20 € (ученики и студенты)». Строится из
+// тарифов каталога — цифры на сайте не могут разойтись с серверными.
+const PRICE_NOTE: Partial<Record<TicketTypeId, { RU: string; FR: string }>> = {
+  student: { RU: 'ученики и студенты',   FR: 'scolaires et étudiants' },
+  child:   { RU: 'ребёнок',              FR: 'enfant' },
+  adult:   { RU: 'взрослый',             FR: 'adulte' },
+  family:  { RU: 'ребёнок + 2 родителя', FR: 'enfant + 2 parents' },
+};
+
+export function priceSummary(tickets: ShowInfo['tickets'], lang: 'RU' | 'FR'): string {
+  return (Object.entries(tickets) as Array<[TicketTypeId, TicketInfo]>)
+    .map(([id, t]) => (PRICE_NOTE[id] ? `${t.price} € (${PRICE_NOTE[id]![lang]})` : `${t.price} €`))
+    .join(' / ');
+}
+
+/** «17.09» для карточек афиши — из дня и месяца каталога. */
+function shortDate(info: ShowInfo): string {
+  const month = MONTH_RU[info.month];
+  return `${info.day}.${String((month ?? 0) + 1).padStart(2, '0')}`;
+}
+
+/** Спектакль сайта = факты каталога + оформление. */
+export function buildShow(id: string, info: ShowInfo, content: ShowContent | undefined): Show {
+  return {
+    // Без оформления (оно ещё не написано) — нейтральная подложка вместо постера.
+    palette: 'var(--ph-1)', author: '', desc: '', descFR: '', duration: '', age: '',
+    ...content,
+    id,
+    title:   info.title,
+    titleFR: info.titleFR,
+    date:    shortDate(info),
+    day:     info.day,
+    month:   info.month as Show['month'],
+    time:    info.time,
+    year:    info.year,
+    price:   priceSummary(info.tickets, 'RU'),
+    priceFR: priceSummary(info.tickets, 'FR'),
+    totalSeats: THEATRE_CAPACITY,
+    published:  info.published,
+    ticketTypes: (Object.entries(info.tickets) as Array<[TicketTypeId, TicketInfo]>).map(([ticketId, t]) => ({
+      id: ticketId, label: t.label, labelFR: t.labelFR, price: t.price, seats: t.seats,
+      // Сколько единиц тарифа помещается в зал (семейный — по 3 места).
+      available: Math.floor(THEATRE_CAPACITY / t.seats),
+    })),
+  };
+}
+
+const CONTENT_BY_ID = new Map(SHOW_CONTENT.map(c => [c.id, c]));
+
+/** Весь сезон — в порядке каталога, опубликованные и заготовки. */
+export const SHOWS: Show[] = Object.entries(SEASON_CATALOG)
+  .map(([id, info]) => buildShow(id, info, CONTENT_BY_ID.get(id)));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Репертуар — постановки театра (в том числе прошедшие и без даты в сезоне).
+//
+// У постановки, которая есть в каталоге сезона, название и признак публикации
+// берутся ИЗ КАТАЛОГА: одна правка published в SEASON_CATALOG скрывает её и в
+// Афише, и в Репертуаре. Своё название пишется только у постановок вне
+// каталога (прошедшие, «Граф Нулин»).
+type RepertoireContent = Omit<RepertoireItem, 'title' | 'titleFR' | 'published'>
+  & Partial<Pick<RepertoireItem, 'title' | 'titleFR'>>;
+
+const REPERTOIRE_CONTENT: RepertoireContent[] = [
   // ── Активные — постановка идёт в этом сезоне. Дата и кнопка «Купить билет»
   //    появляются, только если спектакль есть в SHOWS; иначе карточка пишет «скоро».
   {
     id: 'romantika', status: 'active',
-    title: '«Романтика обреченности»',
-    titleFR: '«La Romanesque de la Fatalité»',
     author: 'Марина Цветаева',
     authorFR: 'Marina Tsvetaïeva',
     tag: 'Поэзия', age: '10+',
@@ -266,8 +268,6 @@ export const REPERTOIRE: RepertoireItem[] = [
   },
   {
     id: 'shutka', status: 'active',
-    title: '«И в шутку, и всерьёз»',
-    titleFR: '«Sérieusement ou pas»',
     author: 'А. П. Чехов',
     authorFR: 'A. P. Tchekhov',
     tag: 'Комедия', age: '10+',
@@ -279,8 +279,6 @@ export const REPERTOIRE: RepertoireItem[] = [
   },
   {
     id: 'lubov', status: 'active',
-    title: '«Счастливая любовь»',
-    titleFR: '«Un amour heureux»',
     author: 'А. Аверченко и Н. Тэффи',
     authorFR: 'A. Averchenko et N. Teffi',
     tag: 'Комедия', age: '12+',
@@ -292,8 +290,6 @@ export const REPERTOIRE: RepertoireItem[] = [
   },
   {
     id: 'korablik', status: 'active',
-    title: '«Приключения кораблика»',
-    titleFR: '«Les Aventures du petit bateau»',
     author: 'Интерактивный детский спектакль',
     authorFR: 'Spectacle interactif pour enfants',
     tag: 'Сказка', age: '1+',
@@ -305,8 +301,6 @@ export const REPERTOIRE: RepertoireItem[] = [
   },
   {
     id: 'razgovor', status: 'active',
-    title: '«Разговор, которого не было»',
-    titleFR: '«La conversation qui n\'a pas eu lieu»',
     author: 'Р. Белецкий',
     authorFR: 'R. Beletski',
     tag: 'Драма', age: '12+',
@@ -318,8 +312,6 @@ export const REPERTOIRE: RepertoireItem[] = [
   },
   {
     id: 'enot', status: 'active',
-    title: '«Крошка Енот»',
-    titleFR: '«Le Petit Raton laveur»',
     author: 'Театр «Маленькая белая рыбка» · Канны',
     authorFR: 'Théâtre «Le Petit Poisson blanc» · Cannes',
     tag: 'Сказка', age: '3+',
@@ -331,8 +323,6 @@ export const REPERTOIRE: RepertoireItem[] = [
   },
   {
     id: 'shapochka', status: 'active',
-    title: '«Красная Шапочка»',
-    titleFR: '«Le Petit Chaperon rouge»',
     author: 'Театр «Маленькая белая рыбка» · Канны',
     authorFR: 'Théâtre «Le Petit Poisson blanc» · Cannes',
     tag: 'Сказка', age: '3–7 лет',
@@ -344,8 +334,6 @@ export const REPERTOIRE: RepertoireItem[] = [
   },
   {
     id: 'letuchiy', status: 'active',
-    title: '«Летучий корабль»',
-    titleFR: '«Le Vaisseau volant»',
     author: 'Сказочный мюзикл',
     authorFR: 'Comédie musicale féerique',
     tag: 'Мюзикл', age: '6+',
@@ -353,13 +341,9 @@ export const REPERTOIRE: RepertoireItem[] = [
     description: 'Сказочный мюзикл для детей и взрослых.',
     descriptionFR: 'Une comédie musicale féerique pour les enfants et les adultes.',
     duration: 'Продолжительность уточняется', durationFR: 'Durée à confirmer',
-    // TODO: publish when official poster/photo is available
-    published: false,
   },
   {
     id: 'kovcheg', status: 'active',
-    title: '«У ковчега в восемь»',
-    titleFR: '«À l\'arche à huit heures»',
     author: 'Урлих Хуб',
     authorFR: 'Ulrich Hub',
     tag: 'Мюзикл', age: '6+',
@@ -387,29 +371,31 @@ export const REPERTOIRE: RepertoireItem[] = [
   },
 ];
 
-// Заготовки будущих показов. Сейчас вся осенняя афиша опубликована, поэтому
-// массив пуст. Новые даты сначала добавляются сюда и в SEASON_CATALOG.
-export const DRAFT_SHOWS: DraftShow[] = [];
+/** Постановка репертуара с названием и публикацией из каталога сезона. */
+export function buildRepertoireItem(item: RepertoireContent): RepertoireItem {
+  const info = SEASON_CATALOG[item.id];
+  return info
+    ? { ...item, title: info.title, titleFR: info.titleFR, published: info.published }
+    : { ...item, title: item.title ?? item.id };
+}
+
+export const REPERTOIRE: RepertoireItem[] = REPERTOIRE_CONTENT.map(buildRepertoireItem);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Что показывать публично
 //
-// Спектакль с `published: false` остаётся в SHOWS и REPERTOIRE целиком — его
-// id, дата, цены и тарифы нужны серверному каталогу, бронированию, проверке
-// билетов, админке и старым броням. Он лишь не попадает в Афишу и Репертуар:
-// официального постера ещё нет, а карточка с цветной подложкой вместо фото
-// читается как забытый контент.
+// Признак публикации — ОДИН, в каталоге (SEASON_CATALOG[id].published).
+// Неопубликованный спектакль (заготовка: постера ещё нет) остаётся в SHOWS
+// целиком — по нему читаются старые брони и история посещений, — но не
+// попадает ни в Афишу, ни в Репертуар, ни в админку/сканер как активный,
+// а сервер не продаёт на него билеты.
 //
-// ЧТОБЫ ОПУБЛИКОВАТЬ СПЕКТАКЛЬ, когда фотография придёт:
-//   1. положить файл в src/assets/shows/ и импортировать его в начале файла;
-//   2. дописать спектаклю `image: <импортированный постер>` — и в SHOWS,
-//      и в его карточке в REPERTOIRE (одна и та же константа);
-//   3. убрать оттуда же строки `published: false` и TODO над ними.
-// Больше нигде ничего менять не нужно: секции читают списки ниже.
+// ЧТОБЫ ОПУБЛИКОВАТЬ СПЕКТАКЛЬ: положить постер в src/assets/shows/,
+// импортировать и указать `image` в SHOW_CONTENT (и в REPERTOIRE_CONTENT),
+// затем в SEASON_CATALOG поставить `published: true`.
 //
-// SHOWS/REPERTOIRE напрямую берут только таблица броней, deep-link и история
-// посещений — им нужен весь каталог. Рассылка анонсирует только то, что видно
-// на сайте, поэтому читает PUBLISHED_SHOWS, как и Афиша.
+// Весь каталог (SHOWS/REPERTOIRE) берут только чтение старых броней, deep-link
+// и история посещений; Афиша, Репертуар, рассылка и админка — PUBLISHED_*.
 export function publishedOnly<T extends { published?: boolean }>(items: readonly T[]): T[] {
   return items.filter(item => item.published !== false);
 }

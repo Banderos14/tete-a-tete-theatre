@@ -83,6 +83,8 @@ export interface Booking {
   stripeCheckoutSessionId?: string;
   stripePaymentIntentId?:   string;
   refund?:                  BookingRefund;
+  /** Все возвраты платежа по id (пишет сервер): статус и сумма в центах. */
+  refunds?:                 Record<string, { status: string; amountCents: number }>;
   refundedAt?:              Timestamp;
   paymentIssue?:            PaymentIssue;
   paymentIssueDetails?:     Record<string, unknown>;

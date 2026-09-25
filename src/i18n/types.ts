@@ -229,6 +229,10 @@ export interface T {
     allShows: string;
     bookings: string;
     totalTickets: string;
+    /** «мест» — занятые места из вместимости зала в карточке спектакля. */
+    seats: string;
+    /** «2 бронирования» — число броней с правильным склонением. */
+    bookingsCount: (n: number) => string;
     totalRevenue: string;
     noBookings: string;
     name: string;

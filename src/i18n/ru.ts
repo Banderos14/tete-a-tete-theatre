@@ -298,7 +298,14 @@ export const RU: T = {
     accessDenied:    'Доступ запрещён',
     allShows:        'Все спектакли',
     bookings:        'бронирований',
-    totalTickets:    'билетов',
+    totalTickets:    'мест занято',
+    seats:           'мест',
+    bookingsCount: (n) => {
+      const m10 = n % 10, m100 = n % 100;
+      const word = m10 === 1 && m100 !== 11 ? 'бронирование'
+        : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'бронирования' : 'бронирований';
+      return `${n} ${word}`;
+    },
     totalRevenue:    'оплачено',
     noBookings:      'Бронирований пока нет',
     name:            'Имя',

@@ -13,6 +13,8 @@ export function AdminShowCard({ stats, active, onToggle }: {
   onToggle: () => void;
 }) {
   const { show, bookings, tickets, revenue } = stats;
+  const capacity  = 'capacity' in show ? show.capacity : show.totalSeats;
+  const dateLabel = 'dateLabel' in show ? show.dateLabel : `${show.day} ${show.month} ${show.year} · ${show.time}`;
 
   return (
     <button
@@ -41,8 +43,11 @@ export function AdminShowCard({ stats, active, onToggle }: {
       )}
       <div className={styles.showCardInfo}>
         <p className={styles.showCardTitle}>{show.title}</p>
+        {dateLabel && <p className={styles.showCardDate}>{dateLabel}</p>}
+        {/* Места — занятые места активных броней из вместимости зала
+            (семейный билет — 3 места), а не число бронирований. */}
         <p className={styles.showCardMeta}>
-          {bookings} {t.admin.bookings} · {tickets} {t.admin.totalTickets} · {revenue}&nbsp;€ {t.admin.totalRevenue}
+          {t.admin.bookingsCount(bookings)} · {tickets}&nbsp;/&nbsp;{capacity} {t.admin.seats} · {revenue}&nbsp;€ {t.admin.totalRevenue}
         </p>
       </div>
     </button>

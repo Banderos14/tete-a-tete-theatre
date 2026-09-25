@@ -116,13 +116,13 @@ describe('вместимость зала Théâtre Tête-à-Tête', () => {
     expect(existsSync(resolve(__dirname, '../../src/config/theatre.ts'))).toBe(false);
   });
 
-  it('totalSeats в данных спектаклей не противоречит вместимости', async () => {
-    const { readFileSync } = await import('node:fs');
-    const { resolve } = await import('node:path');
-    const data = readFileSync(resolve(__dirname, '../../src/data/shows.ts'), 'utf8');
-    const values = [...data.matchAll(/totalSeats:\s*(\d+)/g)].map(m => Number(m[1]));
-    expect(values.length).toBeGreaterThan(0);
-    for (const v of values) expect(v).toBeLessThanOrEqual(THEATRE_CAPACITY);
+  it('вместимость спектаклей сайта — из того же THEATRE_CAPACITY, что у сервера', async () => {
+    const { SHOWS: FRONT_SHOWS } = await import('../../src/data/shows');
+    expect(FRONT_SHOWS.length).toBeGreaterThan(0);
+    for (const show of FRONT_SHOWS) {
+      expect(show.totalSeats, show.id).toBe(THEATRE_CAPACITY);
+      for (const t of show.ticketTypes) expect(t.available * t.seats, `${show.id}/${t.id}`).toBeLessThanOrEqual(THEATRE_CAPACITY);
+    }
   });
 
   it('зал полон ровно на 50 билетах', () => {
