@@ -78,18 +78,19 @@
     <meta name="twitter:description" content="Театр в Ницце: спектакли, афиша, репертуар и онлайн-бронирование билетов." />
 
     <title>Théâtre Tête-à-Tête à Nice — Spectacles en russe et billetterie</title>
-    <!-- Favicons: официальный знак, форма не изменена — тёмный знак на НЕПРОЗРАЧНОМ
-         белом квадрате. Google показывает favicon в круге на светлом и на тёмном фоне
-         выдачи: прозрачный знак с белыми частями там почти пропадал («пустой белый
-         кружок»), а белый квадрат с чёрным знаком читается на любом фоне.
-         favicon-96x96.png — основной для Google (кратно 48px), 48x48 — его минимальный
-         размер; favicon.ico (16/32/48) — запасной; favicon.svg — тот же знак для вкладок.
+    <!-- Favicons: официальный знак на прозрачном фоне, форма не изменена.
+         favicon-96x96.png — основной растровый favicon для Google Search: чёрный знак
+         с тонким белым контуром, читается и на светлом, и на тёмном фоне (растр не
+         умеет prefers-color-scheme, поэтому контраст зашит в саму картинку).
+         Прежний белый apple-touch-icon Google показывал как пустой белый кружок.
+         favicon.svg — для браузеров: чёрный знак в светлой теме, белый в тёмной.
+         favicon.ico (16/32/48) — тот же знак с контуром, запасной вариант.
          У ICO явные sizes, не "any": иначе Chrome выбирает ICO вместо SVG. -->
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
-    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-    <!-- iOS: тот же знак на белом, с полями под скругление углов -->
+    <!-- iOS заливает прозрачный фон чёрным, поэтому знак белый; тёмный контур
+         оставляет его читаемым на белом фоне -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
@@ -102,7 +103,7 @@
             "@type": "WebSite",
             "@id": "https://www.theatre-teteatete.fr/#website",
             "name": "Théâtre Tête-à-Tête",
-            "alternateName": ["Tête-à-Tête", "Театр Тет-а-Тет"],
+            "alternateName": "Tête-à-Tête",
             "url": "https://www.theatre-teteatete.fr/",
             "inLanguage": ["fr", "ru"],
             "publisher": { "@id": "https://www.theatre-teteatete.fr/#theatre" }
@@ -126,7 +127,7 @@
               "https://www.instagram.com/theatre_tete_a_tete/",
               "https://www.facebook.com/TheatreTeteAtete/"
             ],
-            "logo": "https://www.theatre-teteatete.fr/icons/icon-512.png"
+            "logo": "https://www.theatre-teteatete.fr/images/favicon-source.png"
           }
         ]
       }
