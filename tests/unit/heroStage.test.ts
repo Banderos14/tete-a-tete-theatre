@@ -97,9 +97,37 @@ describe('анимация: только opacity и transform, медленно 
     expect(Number(key[2]) - Number(key[1])).toBeLessThanOrEqual(0.1);
   });
 
+  it('центральный луч лишь едва покачивается, пятно на полу следует за ним синхронно', () => {
+    const sway = /@keyframes keySway\s*\{ from \{ transform: rotate\((-?[\d.]+)deg\); \} to \{ transform: rotate\((-?[\d.]+)deg\); \} \}/.exec(code)!;
+    expect(Math.max(Math.abs(Number(sway[1])), Math.abs(Number(sway[2])))).toBeLessThanOrEqual(0.3);
+    const drift = /@keyframes poolDrift\s*\{ from \{ transform: translateX\((-?[\d.]+)px\); \} to \{ transform: translateX\((-?[\d.]+)px\); \} \}/.exec(code)!;
+    expect(Math.max(Math.abs(Number(drift[1])), Math.abs(Number(drift[2])))).toBeLessThanOrEqual(8);
+    // Одинаковые период, easing и задержка — пятно «привязано» к лучу.
+    const timing = (sel: string, name: string) => new RegExp(`${name} ([\\d.]+s \\$stage-ease -?[\\d.]+s)`).exec(rule(sel))![1];
+    expect(timing('.pool', 'poolDrift')).toBe(timing('.beamKey', 'keySway'));
+    expect(rule('.beamKey')).toContain('transform-origin: 50% -18%;');
+  });
+
+  it('линии авансцены нет: у пола нет псевдоэлемента-полосы', () => {
+    expect(rule('.floor')).not.toContain('::before');
+    expect(rule('.floor')).not.toMatch(/height: 1px/);
+  });
+
   it('центральный луч и пятно дышат с одним периодом', () => {
-    const period = (sel: string) => /animation: \w+ ([\d.]+s)/.exec(rule(sel))![1];
+    const period = (sel: string) => /animation:\s*\w+ ([\d.]+s)/.exec(rule(sel))![1];
     expect(period('.pool')).toBe(period('.beamKey'));
+  });
+});
+
+describe('линия «Войти в зал»', () => {
+  it('анимируется только transform — без смены transform-origin в keyframes', () => {
+    // Смена transform-origin не анимируется композитором: линия каждый кадр
+    // гоняла пересчёт стилей и растеризацию главного потока.
+    const kf = code.slice(code.indexOf('@keyframes scrollLine'), code.indexOf('}\n}', code.indexOf('@keyframes scrollLine')));
+    expect(kf).not.toContain('transform-origin');
+    expect(kf).toContain('translateY(40px) scaleY(0)');
+    expect(rule('.scrollLine')).toContain('height: 40px;');
+    expect(rule('.scrollLine')).toContain('transform-origin: top;');
   });
 });
 
@@ -109,6 +137,9 @@ describe('адаптив, reduced-motion и светлая тема', () => {
     const mobile = media('(max-width: 767px)');
     expect(mobile).toMatch(/\.beamRedL,\s*\.beamRedR \{ animation: none; \}/);
     expect(mobile).toMatch(/\.beamKey \{[\s\S]*conic-gradient/);
+    // На телефоне — только дыхание, без покачивания луча и смещения пятна.
+    expect(mobile).toContain('.beamKey { animation: keyBreathe 9s $stage-ease infinite alternate; }');
+    expect(mobile).not.toMatch(/keySway|poolDrift/);
     expect(rule('.hero')).toContain('min-height: 100svh;');
   });
 
