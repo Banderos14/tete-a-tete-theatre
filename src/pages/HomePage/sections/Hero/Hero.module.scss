@@ -31,8 +31,6 @@
   // Перебивает `section { border-top }` из globals.scss. !important не нужен:
   // селектор класса специфичнее селектора элемента.
   border-top: none;
-  // Отдельный контекст наложения: blend-режим зерна не выходит за пределы hero.
-  isolation: isolate;
   // Цвет края базы сцены: на ультрашироких экранах риг уже экрана, и по бокам
   // остаётся фон hero — так нет шва между базой и чёрным.
   background: #060505;
@@ -47,26 +45,30 @@
 }
 
 // ─── «Живая сцена» ──────────────────────────────────────────────────────────
-// Декоративный свет hero. Значения — из спецификации «Живая сцена» (макет
-// 1440×900): проценты — от размера рига, px — для 1440×900.
+// Декоративный свет hero: тёмный зал, центральный тёплый прожектор, два
+// красных боковых прибора и свет на полу.
 //
-// Правила резкости текста: blur, анимации и will-change — только на слоях
-// внутри .stage. У .hero, .content и их предков нет filter / transform /
-// will-change / blend / анимации opacity. .stage — сосед контента, не предок.
+// Мягкость — без filter: blur. Каждый луч — conic-gradient из точки прибора:
+// угловой спад прозрачности даёт мягкий край, который идёт ровно вдоль
+// диагонали конуса, пик в середине угла — светлое ядро, а mask-image —
+// затухание вниз. Слой луча размером с сам конус, а не на весь экран.
+// Полноэкранного размытия, пересчитываемого на GPU каждый кадр, нет.
 //
-// Анимация — только transform и opacity (композитор), периоды ≥ 9s,
-// движение < 2°: свет «дышит», а не работает как эффект.
+// Правила резкости текста: анимации и will-change — только на слоях внутри
+// .stage. У .hero, .content и их предков нет filter / transform / will-change /
+// blend / анимации opacity. .stage — сосед контента, не предок.
 
 $stage-ease: cubic-bezier(.37, 0, .63, 1);
 
-@keyframes keyBreathe  { from { opacity: .86; } to { opacity: 1; } }
-@keyframes poolBreathe { from { opacity: .80; } to { opacity: 1; } }
-@keyframes swayL       { from { transform: rotate(-1.4deg); } to { transform: rotate(1.2deg); } }
-@keyframes swayR       { from { transform: rotate(1.3deg); }  to { transform: rotate(-1.1deg); } }
-// Планшет: амплитуда качания ±1°
-@keyframes swayLTablet { from { transform: rotate(-1deg); } to { transform: rotate(1deg); } }
-@keyframes swayRTablet { from { transform: rotate(1deg); }  to { transform: rotate(-1deg); } }
-@keyframes hazeDrift   { from { transform: translateX(-1.5%); } to { transform: translateX(1.5%); } }
+// Центральный луч и пятно дышат синхронно, разница яркости ~5–6%
+@keyframes keyBreathe  { from { opacity: .94; } to { opacity: 1; } }
+@keyframes poolBreathe { from { opacity: .95; } to { opacity: 1; } }
+// Качание красных от точки прибора, меньше 1°
+@keyframes swayL       { from { transform: rotate(-.8deg); } to { transform: rotate(.7deg); } }
+@keyframes swayR       { from { transform: rotate(.75deg); } to { transform: rotate(-.65deg); } }
+// Планшет: ещё спокойнее
+@keyframes swayLTablet { from { transform: rotate(-.5deg); } to { transform: rotate(.5deg); } }
+@keyframes swayRTablet { from { transform: rotate(.5deg); }  to { transform: rotate(-.5deg); } }
 
 .stage {
   position: absolute;
@@ -87,82 +89,85 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
   translate: -50% 0;
 }
 
-// 0. База: тёплая темнота театра, центр тяжести у пола
+// Тёплая темнота театра, центр тяжести у пола
 .base {
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse 70% 55% at 50% 88%, #2b1611 0%, #120a08 45%, #060505 80%);
 }
 
-// Луч = внешний элемент (blur + анимация) > <i> (clip-path + градиент).
-// clip-path применяется после filter, поэтому на одном элементе края луча
-// остались бы резкими.
 .beam {
   position: absolute;
-  inset: 0;
+  top: 0;
   will-change: transform, opacity;
-
-  > i {
-    position: absolute;
-    inset: 0;
-  }
 }
 
-// 1. Дальние белые — едва заметная глубина второго плана.
-// «Вся группа с opacity .55»: лучи не пересекаются, поэтому opacity на
-// каждом равна opacity на общей группе.
-.beamFarL,
-.beamFarR {
-  filter: blur(clamp(9px, .97vw, 19px));
-  opacity: .55;
-
-  > i {
-    background: linear-gradient(180deg, rgba(255, 238, 214, .22) 0%, rgba(255, 238, 214, .02) 90%);
-  }
+// Центральный тёплый прожектор. Источник над кадром (50% -18% слоя),
+// половина угла раскрытия 15°. Кромка набирает свет за 2.5° — край конуса
+// мягкий, но читается; внутри почти ровное плато с чуть более светлым
+// тёплым ядром по оси. Вниз луч гаснет маской.
+.beamKey {
+  left: 22%;
+  width: 56%;
+  height: 90%;
+  background: conic-gradient(
+    from 165deg at 50% -18%,
+    transparent 0deg,
+    rgba(255, 230, 202, .11) 2.5deg,
+    rgba(255, 236, 212, .16) 5deg,
+    rgba(255, 240, 220, .19) 10deg,
+    rgba(255, 245, 230, .23) 15deg,
+    rgba(255, 240, 220, .19) 20deg,
+    rgba(255, 236, 212, .16) 25deg,
+    rgba(255, 230, 202, .11) 27.5deg,
+    transparent 30deg
+  );
+  mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, .78) 35%, rgba(0, 0, 0, .4) 72%, transparent 100%);
+  animation: keyBreathe 9s $stage-ease infinite alternate;
 }
 
-.beamFarL > i { clip-path: polygon(23.5% 0, 25.5% 0, 31% 86%, 19% 86%); }
-.beamFarR > i { clip-path: polygon(74.5% 0, 76.5% 0, 81% 86%, 69% 86%); }
-
-// 2. Красные боковые — контровой свет, диагонали к пятну на полу.
-// Качаются от точки источника: низ смещается по полу на ~20–30px.
+// Красные боковые — узкие акцентные приборы из-за верхних углов, ось ~36°
+// от вертикали к пятну на полу. Слабее и уже центрального.
 .beamRedL,
 .beamRedR {
-  filter: blur(clamp(8px, .83vw, 16px));
+  width: 66%;
+  height: 96%;
+  mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, .6) 50%, transparent 96%);
 }
 
 .beamRedL {
-  transform-origin: 7.75% 0;
+  left: 0;
+  transform-origin: 11.7% -6%;
+  background: conic-gradient(
+    from 139deg at 11.7% -6%,
+    transparent 0deg,
+    rgba(180, 26, 18, .09) 1.8deg,
+    rgba(196, 32, 22, .18) 3.4deg,
+    rgba(206, 38, 26, .24) 5deg,
+    rgba(196, 32, 22, .18) 6.6deg,
+    rgba(180, 26, 18, .09) 8.2deg,
+    transparent 10deg
+  );
   animation: swayL 13s $stage-ease -4s infinite alternate;
-
-  > i {
-    clip-path: polygon(5% 0, 10.5% 0, 54% 90%, 36% 92%);
-    background: linear-gradient(165deg, rgba(210, 36, 24, .55) 0%, rgba(180, 24, 16, .18) 50%, rgba(160, 20, 14, .02) 92%);
-  }
 }
 
 .beamRedR {
-  transform-origin: 92.25% 0;
+  right: 0;
+  transform-origin: 88.3% -6%;
+  background: conic-gradient(
+    from 211deg at 88.3% -6%,
+    transparent 0deg,
+    rgba(180, 26, 18, .09) 1.8deg,
+    rgba(196, 32, 22, .18) 3.4deg,
+    rgba(206, 38, 26, .24) 5deg,
+    rgba(196, 32, 22, .18) 6.6deg,
+    rgba(180, 26, 18, .09) 8.2deg,
+    transparent 10deg
+  );
   animation: swayR 17s $stage-ease -9s infinite alternate;
-
-  > i {
-    clip-path: polygon(89.5% 0, 95% 0, 64% 92%, 46% 90%);
-    background: linear-gradient(195deg, rgba(210, 36, 24, .55) 0%, rgba(180, 24, 16, .18) 50%, rgba(160, 20, 14, .02) 92%);
-  }
 }
 
-// 3. Центральный тёплый белый — главный источник, проходит за названием
-.beamKey {
-  filter: blur(clamp(6px, .62vw, 12px));
-  animation: keyBreathe 9s $stage-ease infinite alternate;
-
-  > i {
-    clip-path: polygon(47% 0, 53% 0, 71% 87%, 29% 87%);
-    background: linear-gradient(180deg, rgba(255, 240, 220, .42) 0%, rgba(255, 232, 205, .16) 50%, rgba(255, 228, 198, .05) 87%);
-  }
-}
-
-// 4. Пол сцены от 85.5% высоты и линия авансцены (1px на той же высоте)
+// Пол сцены и едва заметная граница авансцены
 .floor {
   position: absolute;
   top: 85.5%;
@@ -178,105 +183,69 @@ $stage-ease: cubic-bezier(.37, 0, .63, 1);
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent 10%, rgba(243, 236, 226, .28) 50%, transparent 90%);
+    background: linear-gradient(90deg, transparent 22%, rgba(243, 236, 226, .09) 50%, transparent 78%);
   }
 }
 
-// 5. Световое пятно на полу — дышит синхронно с центральным лучом
+// Свет на полу: тёплое ядро под центральным лучом, мягкий спад к краям
+// и слабый красный отсвет по периметру — след боковых приборов. Эллипсы
+// мягкие сами по себе, blur не нужен.
 .pool {
   position: absolute;
-  top: 78%;
-  left: 23%;
-  width: 54%;
-  height: 16.7%;
-  border-radius: 50%;
-  filter: blur(6px);
-  background: radial-gradient(ellipse at center, rgba(255, 236, 210, .32) 0%, rgba(255, 215, 185, .08) 50%, transparent 72%);
+  top: 77%;
+  left: 12%;
+  width: 76%;
+  height: 18%;
+  background:
+    radial-gradient(ellipse 34% 40% at 50% 52%, rgba(255, 242, 222, .30) 0%, rgba(255, 230, 204, .18) 30%, rgba(255, 214, 184, .07) 62%, transparent 100%),
+    radial-gradient(ellipse 50% 50% at 50% 52%, transparent 38%, rgba(190, 40, 28, .07) 62%, transparent 100%);
   animation: poolBreathe 9s $stage-ease infinite alternate;
 }
 
-// Красный ореол — след красных лучей на полу
-.halo {
-  position: absolute;
-  top: 81%;
-  left: 15.5%;
-  width: 69%;
-  height: 13%;
-  border-radius: 50%;
-  filter: blur(10px);
-  background: radial-gradient(rgba(200, 40, 28, .16), transparent 70%);
-}
-
-// 6. Дымка — на грани заметности; размыта самими градиентами, без blur
-.haze {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 38% 26% at 50% 42%, rgba(255, 240, 225, .07), transparent 70%),
-    radial-gradient(ellipse 30% 40% at 28% 62%, rgba(190, 40, 28, .07), transparent 70%),
-    radial-gradient(ellipse 30% 40% at 72% 62%, rgba(190, 40, 28, .07), transparent 70%);
-  animation: hazeDrift 40s $stage-ease infinite alternate;
-}
-
-// 7. Виньетка — вне рига, возвращает настоящий чёрный в углы
+// Виньетка — вне рига, возвращает настоящий чёрный в углы
 .vignette {
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse 78% 72% at 50% 48%, transparent 52%, rgba(0, 0, 0, .72) 100%);
 }
 
-// 8. Зерно — тайл 220px, под текстом; на буквы не влияет.
-// feColorMatrix saturate 0 — нейтральное (серое) зерно, без цветных точек.
-.stageGrain {
-  position: absolute;
-  inset: 0;
-  opacity: .09;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>");
-  background-size: 220px;
-}
-
-// Laptop (1024–1439): геометрия та же, blur масштабируется clamp().
-
-// Tablet (<1024): без дальних лучей, качание красных ±1°
+// Tablet (<1024): качание красных ±0.5°
 @media (max-width: 1023px) {
-  .beamFarL,
-  .beamFarR { display: none; }
-
   .beamRedL { animation-name: swayLTablet; }
   .beamRedR { animation-name: swayRTablet; }
 }
 
-// Mobile (<768): узкий центральный луч, blur 6/8px, пятно под кнопками,
-// без качания красных — остаётся только дыхание центрального луча и пятна.
+// Mobile (<768): центральный луч уже, красные неподвижны, пятно под кнопками.
+// Остаётся только дыхание центрального луча и пятна.
 @media (max-width: 767px) {
   .beamKey {
-    filter: blur(6px);
-
-    > i { clip-path: polygon(48% 0, 52% 0, 64% 87%, 36% 87%); }
+    background: conic-gradient(
+      from 168deg at 50% -18%,
+      transparent 0deg,
+      rgba(255, 230, 202, .11) 2deg,
+      rgba(255, 236, 212, .16) 4deg,
+      rgba(255, 240, 220, .19) 8deg,
+      rgba(255, 245, 230, .23) 12deg,
+      rgba(255, 240, 220, .19) 16deg,
+      rgba(255, 236, 212, .16) 20deg,
+      rgba(255, 230, 202, .11) 22deg,
+      transparent 24deg
+    );
   }
 
   .beamRedL,
-  .beamRedR {
-    filter: blur(8px);
-    animation: none;
-  }
+  .beamRedR { animation: none; }
 
-  .haze { animation: none; }
-
-  .pool { top: 73%; }
-
-  .stageGrain { opacity: .06; }
+  .pool { top: 72%; }
 }
 
 // Без движения: всё статично, центральный луч — на средней яркости
 @media (prefers-reduced-motion: reduce) {
   .beam,
   .pool,
-  .haze,
   .stage { animation: none !important; }
 
-  .beamKey { opacity: .93; }
+  .beamKey { opacity: .97; }
 }
 
 .content {

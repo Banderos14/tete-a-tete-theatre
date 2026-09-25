@@ -1,178 +1,125 @@
-// Световой фон hero «Живая сцена»: значения спецификации, отдельный слой
-// света рядом с контентом (резкость текста), адаптив и reduced-motion.
+// Световой фон hero «Живая сцена» — структурные гарантии, а не декоративные
+// значения: их художественно подстраивают на staging, тест не должен мешать.
+// Проверяется: свет — отдельный слой рядом с контентом (резкость текста),
+// без полноэкранного blur, адаптив, reduced-motion, светлая тема.
 
 import { describe, it, expect } from 'vitest';
 import { projectSource } from '../helpers/serverSource.js';
 
 const tsx  = projectSource('src/pages/HomePage/sections/Hero/Hero.tsx');
 const scss = projectSource('src/pages/HomePage/sections/Hero/Hero.module.scss');
+const code = scss.replace(/\/\/.*$/gm, '');
 
-/** Тело правила верхнего уровня `selector { … }` (первое вхождение). */
-function rule(selector: string, from = 0): string {
-  const i = scss.indexOf(`\n${selector} {`, from);
+/** Тело правила верхнего уровня `selector { … }`. */
+function rule(selector: string): string {
+  const i = code.indexOf(`\n${selector} {`);
   expect(i, selector).toBeGreaterThan(-1);
-  return scss.slice(i, scss.indexOf('\n}', i));
+  return code.slice(i, code.indexOf('\n}', i));
 }
 
 function media(query: string): string {
-  const i = scss.indexOf(`@media ${query} {`);
+  const i = code.indexOf(`@media ${query} {`);
   expect(i, query).toBeGreaterThan(-1);
-  return scss.slice(i, scss.indexOf('\n}', i));
+  return code.slice(i, code.indexOf('\n}', i));
 }
 
 describe('структура: свет — сосед контента, а не его предок', () => {
-  it('сцена стоит перед контентом, отдельным блоком, и скрыта от скринридеров', () => {
+  it('сцена стоит перед контентом отдельным блоком и скрыта от скринридеров', () => {
     const stage = tsx.indexOf('<div className={styles.stage} aria-hidden="true">');
     const content = tsx.indexOf('<div className={styles.content}>');
     expect(stage).toBeGreaterThan(-1);
     expect(stage).toBeLessThan(content);
-    // Сцена закрывается до начала контента.
     const between = tsx.slice(stage, content);
-    // Открывающие <div …> (не самозакрывающиеся) и </div> уравновешены.
     const opens = between.match(/<div\b[^>]*[^/]>/g)!.length;
     expect(opens).toBe(between.match(/<\/div>/g)!.length);
   });
 
-  it('слои в порядке спецификации: база → дальние → красные → центральный → пол → пятно → ореол → дымка; виньетка и зерно вне рига', () => {
-    const order = ['styles.base', 'styles.beamFarL', 'styles.beamFarR', 'styles.beamRedL', 'styles.beamRedR',
-      'styles.beamKey', 'styles.floor', 'styles.pool', 'styles.halo', 'styles.haze', 'styles.vignette', 'styles.stageGrain'];
-    const positions = order.map(c => tsx.indexOf(c));
-    expect(positions.every(p => p > -1)).toBe(true);
-    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+  it('композиция: центральный луч и два красных, база, пол, пятно, виньетка', () => {
+    for (const cls of ['base', 'beamKey', 'beamRedL', 'beamRedR', 'floor', 'pool', 'vignette']) {
+      expect(tsx, cls).toContain(`styles.${cls}`);
+    }
   });
 
-  it('старой системы из ~17 лучей больше нет', () => {
-    expect(tsx).not.toMatch(/beamC[WN]|beamL[123X]|beamR[123X]|beamRed[LR][12]|stageLights/);
-    expect(scss).not.toMatch(/sweepLeftToCenter|flickerRed|redSweep|crossCenter|hazeBreath|airDrift/);
+  it('старых систем света нет: ни 17 лучей, ни дымки и зерна сцены', () => {
+    expect(tsx).not.toMatch(/beamC[WN]|beamL[123X]|beamR[123X]|beamRed[LR][12]|stageLights|beamFar|styles\.haze|stageGrain/);
+    expect(code).not.toMatch(/sweepLeftToCenter|flickerRed|redSweep|crossCenter|hazeBreath|airDrift/);
   });
 
   it('у hero и контента нет filter / transform / will-change / blend / анимаций', () => {
     for (const sel of ['.hero', '.content', '.headline', '.title']) {
-      const body = rule(sel).replace(/\/\/.*$/gm, '');
-      expect(body, sel).not.toMatch(/(?<![-\w])(filter|backdrop-filter|transform|will-change|mix-blend-mode|animation):/);
+      expect(rule(sel), sel).not.toMatch(/(?<![-\w])(filter|backdrop-filter|transform|will-change|mix-blend-mode|animation):/);
     }
-    expect(rule('.hero')).toContain('isolation: isolate;');
-    // Контент выше сцены.
     expect(rule('.stage')).toContain('z-index: 0;');
     expect(rule('.content')).toContain('z-index: 3;');
   });
 
   it('will-change — только у лучей', () => {
-    const uses = scss.match(/will-change:[^;]+;/g) ?? [];
-    expect(uses).toEqual(['will-change: transform, opacity;']);
-    expect(rule('.beam')).toContain('will-change: transform, opacity;');
+    expect(code.match(/will-change:[^;]+;/g)).toEqual(['will-change: transform, opacity;']);
+    expect(rule('.beam')).toContain('will-change');
   });
 });
 
-describe('значения спецификации «Живая сцена»', () => {
-  it('риг и база', () => {
-    expect(rule('.rig')).toContain('width: min(max(100%, 160svh), 220svh);');
-    expect(rule('.rig')).toContain('translate: -50% 0;');
-    expect(rule('.base')).toContain('radial-gradient(ellipse 70% 55% at 50% 88%, #2b1611 0%, #120a08 45%, #060505 80%)');
+describe('мягкость без полноэкранного размытия', () => {
+  const stage = code.slice(code.indexOf('\n.stage {'), code.indexOf('\n.content {'));
+
+  it('в световой сцене нет filter: blur, clip-path и blend-режимов', () => {
+    expect(stage).not.toMatch(/filter:\s*blur|clip-path|mix-blend-mode/);
   });
 
-  it('геометрия лучей', () => {
-    expect(scss).toContain('clip-path: polygon(47% 0, 53% 0, 71% 87%, 29% 87%);');
-    expect(scss).toContain('clip-path: polygon(5% 0, 10.5% 0, 54% 90%, 36% 92%);');
-    expect(scss).toContain('clip-path: polygon(89.5% 0, 95% 0, 64% 92%, 46% 90%);');
-    expect(scss).toContain('clip-path: polygon(23.5% 0, 25.5% 0, 31% 86%, 19% 86%);');
-    expect(scss).toContain('clip-path: polygon(74.5% 0, 76.5% 0, 81% 86%, 69% 86%);');
-  });
-
-  it('градиенты лучей и группа дальних с opacity .55', () => {
-    expect(scss).toContain('linear-gradient(180deg, rgba(255, 240, 220, .42) 0%, rgba(255, 232, 205, .16) 50%, rgba(255, 228, 198, .05) 87%)');
-    expect(scss).toContain('linear-gradient(165deg, rgba(210, 36, 24, .55) 0%, rgba(180, 24, 16, .18) 50%, rgba(160, 20, 14, .02) 92%)');
-    expect(scss).toContain('linear-gradient(195deg, rgba(210, 36, 24, .55) 0%, rgba(180, 24, 16, .18) 50%, rgba(160, 20, 14, .02) 92%)');
-    expect(scss).toContain('linear-gradient(180deg, rgba(255, 238, 214, .22) 0%, rgba(255, 238, 214, .02) 90%)');
-    expect(rule('.beamFarL,\n.beamFarR')).toContain('opacity: .55;');
-  });
-
-  it('blur — на внешнем элементе луча, clip-path — на внутреннем <i>', () => {
-    expect(scss).toContain('filter: blur(clamp(6px, .62vw, 12px));');
-    expect(scss).toContain('filter: blur(clamp(8px, .83vw, 16px));');
-    const beamRule = rule('.beam');
-    expect(beamRule).not.toContain('clip-path');
-    // Ни у одного правила blur и clip-path не стоят вместе на одном уровне.
+  it('лучи — конические градиенты от точки прибора с маской затухания вниз', () => {
     for (const sel of ['.beamKey', '.beamRedL', '.beamRedR']) {
-      const outer = rule(sel, scss.indexOf('\n.beamRedL {')).split('> i')[0]!;
-      expect(outer, sel).not.toContain('clip-path');
+      expect(stage, sel).toMatch(new RegExp(`\\n\\${sel} \\{[\\s\\S]*?conic-gradient\\(`));
     }
+    expect(rule('.beamKey')).toContain('mask-image: linear-gradient(to bottom');
+    expect(stage).toMatch(/\.beamRedR \{[\s\S]*?mask-image: linear-gradient\(to bottom/);
   });
 
-  it('пол, линия авансцены, пятно, ореол, дымка, виньетка, зерно', () => {
-    expect(rule('.floor')).toContain('top: 85.5%;');
-    expect(rule('.floor')).toContain('linear-gradient(180deg, rgba(38, 20, 15, .55), #050404)');
-    expect(rule('.floor')).toContain('linear-gradient(90deg, transparent 10%, rgba(243, 236, 226, .28) 50%, transparent 90%)');
-    const pool = rule('.pool');
-    for (const v of ['top: 78%;', 'width: 54%;', 'height: 16.7%;', 'filter: blur(6px);',
-      'radial-gradient(ellipse at center, rgba(255, 236, 210, .32) 0%, rgba(255, 215, 185, .08) 50%, transparent 72%)']) {
-      expect(pool).toContain(v);
-    }
-    const halo = rule('.halo');
-    for (const v of ['top: 81%;', 'width: 69%;', 'height: 13%;', 'filter: blur(10px);', 'radial-gradient(rgba(200, 40, 28, .16), transparent 70%)']) {
-      expect(halo).toContain(v);
-    }
-    expect(rule('.haze')).toContain('radial-gradient(ellipse 38% 26% at 50% 42%, rgba(255, 240, 225, .07), transparent 70%)');
-    expect(rule('.haze')).toContain('radial-gradient(ellipse 30% 40% at 28% 62%, rgba(190, 40, 28, .07), transparent 70%)');
-    expect(rule('.haze')).toContain('radial-gradient(ellipse 30% 40% at 72% 62%, rgba(190, 40, 28, .07), transparent 70%)');
-    expect(rule('.vignette')).toContain('radial-gradient(ellipse 78% 72% at 50% 48%, transparent 52%, rgba(0, 0, 0, .72) 100%)');
-    const grain = rule('.stageGrain');
-    expect(grain).toContain("baseFrequency='.85' numOctaves='3'");
-    expect(grain).toContain('opacity: .09;');
-    expect(grain).toContain('mix-blend-mode: overlay;');
-    expect(grain).toContain('background-size: 220px;');
+  it('лучи не на весь экран: у каждого своя ширина меньше рига', () => {
+    expect(rule('.beamKey')).toMatch(/width: \d+%;/);
+    expect(stage).toMatch(/\.beamRedL,\s*\.beamRedR \{\s*width: \d+%;/);
   });
 });
 
-describe('анимация: медленная, < 2°, только opacity и transform', () => {
-  it('keyframes и тайминги', () => {
-    expect(scss).toContain('@keyframes keyBreathe  { from { opacity: .86; } to { opacity: 1; } }');
-    expect(scss).toContain('@keyframes poolBreathe { from { opacity: .80; } to { opacity: 1; } }');
-    expect(scss).toContain('@keyframes swayL       { from { transform: rotate(-1.4deg); } to { transform: rotate(1.2deg); } }');
-    expect(scss).toContain('@keyframes swayR       { from { transform: rotate(1.3deg); }  to { transform: rotate(-1.1deg); } }');
-    expect(scss).toContain('$stage-ease: cubic-bezier(.37, 0, .63, 1);');
-    expect(rule('.beamKey')).toContain('animation: keyBreathe 9s $stage-ease infinite alternate;');
-    expect(rule('.pool')).toContain('animation: poolBreathe 9s $stage-ease infinite alternate;');
-    expect(rule('.beamRedL')).toContain('animation: swayL 13s $stage-ease -4s infinite alternate;');
-    const redR = rule('.beamRedR', scss.indexOf('\n.beamRedL {'));
-    expect(redR).toContain('animation: swayR 17s $stage-ease -9s infinite alternate;');
-    expect(rule('.beamRedL')).toContain('transform-origin: 7.75% 0;');
-    expect(redR).toContain('transform-origin: 92.25% 0;');
+describe('анимация: только opacity и transform, медленно и мало', () => {
+  const keyframes = code.slice(code.indexOf('$stage-ease'), code.indexOf('\n.stage {'));
+
+  it('keyframes сцены меняют только opacity и transform', () => {
+    const all = [...keyframes.matchAll(/@keyframes \w+\s*\{([^\n]*)\}/g)];
+    expect(all.length).toBeGreaterThan(0);
+    for (const m of all) {
+      expect(m[1]!.replace(/opacity:[^;]+;|transform:[^;]+;|from|to|[{}\s]/g, '')).toBe('');
+    }
   });
 
-  it('никаких поворотов больше 2° в keyframes сцены', () => {
-    const stageCss = scss.slice(scss.indexOf('$stage-ease'), scss.indexOf('\n.stage {'));
-    for (const m of stageCss.matchAll(/rotate\((-?[\d.]+)deg\)/g)) expect(Math.abs(Number(m[1]))).toBeLessThan(2);
+  it('качание красных меньше 1°, дыхание центрального — не больше 10%', () => {
+    for (const m of keyframes.matchAll(/rotate\((-?[\d.]+)deg\)/g)) expect(Math.abs(Number(m[1]))).toBeLessThan(1);
+    const key = /@keyframes keyBreathe\s*\{ from \{ opacity: ([\d.]+); \} to \{ opacity: ([\d.]+); \} \}/.exec(code)!;
+    expect(Number(key[2]) - Number(key[1])).toBeLessThanOrEqual(0.1);
+  });
+
+  it('центральный луч и пятно дышат с одним периодом', () => {
+    const period = (sel: string) => /animation: \w+ ([\d.]+s)/.exec(rule(sel))![1];
+    expect(period('.pool')).toBe(period('.beamKey'));
   });
 });
 
 describe('адаптив, reduced-motion и светлая тема', () => {
-  it('<1024: без дальних лучей, качание ±1°', () => {
-    const tablet = media('(max-width: 1023px)');
-    expect(tablet).toMatch(/\.beamFarL,\s*\.beamFarR \{ display: none; \}/);
-    expect(tablet).toContain('animation-name: swayLTablet;');
-    expect(scss).toContain('@keyframes swayLTablet { from { transform: rotate(-1deg); } to { transform: rotate(1deg); } }');
-  });
-
-  it('<768: узкий центральный луч, blur 6/8, пятно 73%, без качания, зерно .06', () => {
+  it('<1024 и <768 — отдельные состояния; на телефоне красные неподвижны', () => {
+    expect(media('(max-width: 1023px)')).toMatch(/\.beamRedL \{ animation-name: \w+; \}/);
     const mobile = media('(max-width: 767px)');
-    expect(mobile).toContain('clip-path: polygon(48% 0, 52% 0, 64% 87%, 36% 87%);');
-    expect(mobile).toContain('filter: blur(6px);');
-    expect(mobile).toContain('filter: blur(8px);');
-    expect(mobile).toMatch(/\.beamRedR \{\s*filter: blur\(8px\);\s*animation: none;/);
-    expect(mobile).toContain('.pool { top: 73%; }');
-    expect(mobile).toContain('.stageGrain { opacity: .06; }');
+    expect(mobile).toMatch(/\.beamRedL,\s*\.beamRedR \{ animation: none; \}/);
+    expect(mobile).toMatch(/\.beamKey \{[\s\S]*conic-gradient/);
     expect(rule('.hero')).toContain('min-height: 100svh;');
   });
 
-  it('reduced-motion: всё статично, центральный луч .93', () => {
+  it('reduced-motion: все анимации сцены выключены, центральный луч статичен', () => {
     const reduced = media('(prefers-reduced-motion: reduce)');
-    expect(reduced).toMatch(/\.beam,\s*\.pool,\s*\.haze,\s*\.stage \{ animation: none !important; \}/);
-    expect(reduced).toContain('.beamKey { opacity: .93; }');
+    expect(reduced).toMatch(/\.beam,\s*\.pool,\s*\.stage \{ animation: none !important; \}/);
+    expect(reduced).toMatch(/\.beamKey \{ opacity: [\d.]+; \}/);
   });
 
-  it('в светлой теме сцена скрыта', () => {
-    const light = scss.slice(scss.indexOf(":global([data-theme='light'])"));
+  it('в светлой теме сцены нет вовсе', () => {
+    const light = code.slice(code.indexOf(":global([data-theme='light'])"));
     expect(light).toContain('.stage { display: none; }');
   });
 });

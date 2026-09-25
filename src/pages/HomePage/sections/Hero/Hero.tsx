@@ -14,24 +14,19 @@ export function Hero() {
   return (
     <section className={styles.hero} id="top">
       {/* «Живая сцена»: весь свет — в отдельном слое-соседе контента, а не
-          в его предке. blur, анимации и will-change живут только здесь,
-          поэтому текст hero не попадает в размываемый GPU-слой и остаётся
-          резким на 4K. Порядок слоёв — от дальнего плана к ближнему. */}
+          в его предке. Анимации и will-change живут только здесь, поэтому
+          текст hero не попадает в анимируемый GPU-слой и остаётся резким.
+          Порядок — от дальнего плана к ближнему. */}
       <div className={styles.stage} aria-hidden="true">
         <div className={styles.rig}>
           <div className={styles.base} />
-          <div className={`${styles.beam} ${styles.beamFarL}`}><i /></div>
-          <div className={`${styles.beam} ${styles.beamFarR}`}><i /></div>
-          <div className={`${styles.beam} ${styles.beamRedL}`}><i /></div>
-          <div className={`${styles.beam} ${styles.beamRedR}`}><i /></div>
-          <div className={`${styles.beam} ${styles.beamKey}`}><i /></div>
+          <div className={`${styles.beam} ${styles.beamRedL}`} />
+          <div className={`${styles.beam} ${styles.beamRedR}`} />
+          <div className={`${styles.beam} ${styles.beamKey}`} />
           <div className={styles.floor} />
           <div className={styles.pool} />
-          <div className={styles.halo} />
-          <div className={styles.haze} />
         </div>
         <div className={styles.vignette} />
-        <div className={styles.stageGrain} />
       </div>
 
       <div className={styles.content}>
