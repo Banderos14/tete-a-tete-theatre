@@ -224,6 +224,53 @@
 .rowCancelled td { opacity: 0.5; }
 // Проблема с деньгами не приглушается, даже у отменённой брони.
 .rowIssue td { background: rgba(184, 0, 0, 0.04); }
+
+// ── Таблица броней: предсказуемые колонки ─────────────────────────────────
+//
+// table-layout: fixed + ширины в <colgroup>: колонку задаёт разметка, а не
+// самое длинное содержимое. Все ячейки выровнены по верху — строка читается
+// горизонтально: имя, e-mail, билеты, статусы и кнопки начинаются на одной
+// линии, сколько бы строк ни было в соседних ячейках. На узком экране —
+// прежний горизонтальный скролл (.tableWrap).
+.bookingsTable {
+  table-layout: fixed;
+  min-width: 1488px;
+
+  td { vertical-align: top; }
+  th { vertical-align: bottom; }
+}
+
+.thCenter { text-align: center !important; }
+
+.colName     { width: 170px; }
+.colEmail    { width: 170px; }
+.colTickets  { width: 100px; }
+.colAmount   { width: 76px; }
+.colMethod   { width: 112px; }
+.colPayState { width: 200px; }
+.colCode     { width: 96px; }
+.colDate     { width: 108px; }
+.colStatus   { width: 136px; }
+.colComment  { width: 150px; }
+.colActions  { width: 170px; }
+
+// Ячейка с переносом: длинные имя, e-mail, пояснения не выходят за колонку.
+.cellWrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.phoneLink {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--fg-mute);
+  text-decoration: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  &:hover { color: var(--fg); }
+}
 .rowAttended  td { background: rgba(76, 175, 80, 0.04); }
 
 .cellName { color: var(--fg); font-weight: 500; }
@@ -231,7 +278,7 @@
 .cellShowMeta { font-size: 10px; color: var(--fg-mute); margin-top: 1px; }
 .cellCenter { text-align: center; font-weight: 600; color: var(--fg); }
 .cellMono { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; }
-.cellComment { max-width: 180px; white-space: normal; word-break: break-word; overflow-wrap: anywhere; font-size: 12px; color: var(--fg-mute); }
+.cellComment { white-space: normal; word-break: break-word; overflow-wrap: anywhere; font-size: 12px; color: var(--fg-mute); }
 .cellMuted { font-size: 11px; color: var(--fg-mute); opacity: 0.6; font-style: italic; }
 
 .emailLink {
@@ -242,30 +289,48 @@
 }
 
 .badge {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
   font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: top;
   color: var(--fg-mute);
   background: var(--bg-3);
-  border-radius: var(--radius-xs);
-  padding: 3px 7px;
 }
 
 // Несколько тарифов в одной брони — бейджи столбиком, по одному на тариф.
 .badgeStack {
-  display: table;
-  margin: 3px auto 0;
-  white-space: nowrap;
+  display: flex;
+  width: fit-content;
+  margin: 4px auto 0;
 }
 
 .statusBadge {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-family: var(--font-mono);
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid transparent;
   border-radius: var(--radius-xs);
-  padding: 3px 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: top;
 }
 
 .loyaltyBadge {
@@ -290,23 +355,27 @@
 }
 
 .statusOk {
-  background: rgba(76, 175, 80, 0.15);
+  background: rgba(76, 175, 80, 0.12);
   color: #4caf50;
+  border-color: rgba(76, 175, 80, 0.3);
 }
 
 .statusCancelled {
   background: rgba(184, 0, 0, 0.12);
   color: var(--accent-glow);
+  border-color: rgba(184, 0, 0, 0.3);
 }
 
 .statusPending {
   background: rgba(255, 160, 0, 0.12);
   color: #e08a00;
+  border-color: rgba(255, 160, 0, 0.3);
 }
 
 .statusAttended {
   background: rgba(76, 175, 80, 0.15);
   color: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.35);
 }
 
 .badgeAdmin {
@@ -316,10 +385,28 @@
 
 .actions {
   display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  flex-shrink: 0;
-  min-width: fit-content;
+}
+
+// Короткая пометка вместо кнопки (оплачено онлайн → возврат в Stripe).
+// Подробности — во всплывающей подсказке (title).
+.actionNote {
+  white-space: normal;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--fg-mute);
+  cursor: help;
+}
+
+// Состояние письма-билета — сразу под кнопкой «Отправить билет».
+.actionMeta {
+  margin-top: 6px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--fg-mute);
+  white-space: normal;
 }
 
 .actionConfirm {
@@ -351,17 +438,31 @@
 }
 
 .actionCancel {
-  font-size: 11px;
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 8px;
   border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 22px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  // Телефон: кнопки крупнее — палец, а не курсор.
+  @include mixins.small { height: 32px; padding: 0 12px; }
   background: rgba(184, 0, 0, 0.1);
   color: var(--accent-glow);
   border: 1px solid rgba(184, 0, 0, 0.2);
-  letter-spacing: 0.04em;
-  transition: background 0.2s;
 
   &:hover:not(:disabled) { background: rgba(184, 0, 0, 0.2); }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 // Корзина у отменённой брони. Красная, как и «Отменить», но компактнее —
@@ -370,26 +471,43 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border-radius: var(--radius-xs);
   background: rgba(184, 0, 0, 0.1);
   color: var(--accent-glow);
   border: 1px solid rgba(184, 0, 0, 0.2);
+  cursor: pointer;
   transition: background 0.2s;
 
   &:hover:not(:disabled) { background: rgba(184, 0, 0, 0.2); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  @include mixins.small { width: 32px; height: 32px; }
 }
 
+// Статусы оплаты и брони — одна система «штампов»: высота 20px, строка 18px,
+// рамка 1px, одинаковые отступы, 10px моно без дробных размеров — ровно по
+// одной линии в любой строке таблицы и чётко на Retina/4K. Цвета — прежние.
 .payBadge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
   font-family: var(--font-mono);
   font-size: 10px;
+  font-weight: 500;
+  line-height: 18px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  border-radius: var(--radius-xs);
-  padding: 3px 7px;
-  border: 1px solid var(--line);
+  white-space: nowrap;
+  vertical-align: top;
+  border-color: var(--line);
 }
 
 .payActions {
@@ -399,33 +517,59 @@
 }
 
 .actionPaid {
-  font-size: 10px;
-  padding: 3px 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 8px;
   border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 22px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  // Телефон: кнопки крупнее — палец, а не курсор.
+  @include mixins.small { height: 32px; padding: 0 12px; }
   background: rgba(76, 175, 80, 0.12);
   color: #4caf50;
   border: 1px solid rgba(76, 175, 80, 0.25);
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: background 0.2s;
 
   &:hover:not(:disabled) { background: rgba(76, 175, 80, 0.25); }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .actionUnpaid {
-  font-size: 10px;
-  padding: 3px 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 8px;
   border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 22px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  // Телефон: кнопки крупнее — палец, а не курсор.
+  @include mixins.small { height: 32px; padding: 0 12px; }
   background: rgba(100, 100, 100, 0.1);
   color: var(--fg-mute);
   border: 1px solid var(--line);
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: background 0.2s;
 
   &:hover:not(:disabled) { background: rgba(100, 100, 100, 0.2); }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .paySelect {
@@ -513,11 +657,10 @@
 // Пояснение вместо недоступного действия (онлайн-оплата, удаление).
 .payNote {
   // Таблица — white-space: nowrap; пояснения переносятся, как комментарий.
+  // Ширину задаёт колонка, а не пояснение.
   white-space: normal;
   overflow-wrap: anywhere;
   margin-top: 5px;
-  min-width: 180px;
-  max-width: 240px;
   font-size: 10px;
   line-height: 1.4;
   color: var(--fg-mute);
@@ -539,12 +682,35 @@
   }
 
   p { margin-top: 3px; }
+}
 
-  code {
-    font-family: var(--font-mono);
-    word-break: break-all;
-    color: var(--fg-dim);
-  }
+// Платёж (pi_…) — главный id: по нему ищут оплату и делают возврат.
+.stripePrimary {
+  font-size: 11px;
+  color: var(--fg-dim);
+
+  .stripeId { color: var(--fg); }
+}
+
+// Сессия Checkout (cs_…) — для системы и диагностики, визуально вторична.
+.stripeSecondary {
+  opacity: 0.7;
+
+  .stripeId { color: var(--fg-mute); }
+}
+
+// id целиком в тексте (копируется полностью, двойной клик выделяет всё),
+// на экране — одна строка с многоточием: колонку не раздувает.
+.stripeId {
+  display: inline-block;
+  max-width: 132px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  font-family: var(--font-mono);
+  color: var(--fg-dim);
+  user-select: all;
 }
 
 .payCountdown {
@@ -1086,24 +1252,34 @@
   line-height: 1.5;
 }
 
+// Кнопки действий в таблице — одна система: высота 24px, 10px моно,
+// компактные отступы. «Отправить билет» больше не крупнее соседних кнопок.
 .actionResend {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.04em;
-  padding: 5px 10px;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 8px;
   border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 22px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  // Телефон: кнопки крупнее — палец, а не курсор.
+  @include mixins.small { height: 32px; padding: 0 12px; }
   border: 1px solid var(--line);
   color: var(--fg-dim);
   background: transparent;
-  white-space: nowrap;
 
   &:hover:not(:disabled) { color: var(--fg); border-color: var(--fg-mute); }
-  &:disabled { opacity: 0.5; }
-
-  @include mixins.small { padding: 8px 12px; }
 }
 
 .errorDismiss {

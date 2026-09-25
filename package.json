@@ -20,6 +20,7 @@
     "firebase-admin": "^13.10.0",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
+    "libphonenumber-js": "^1.13.14",
     "pdfjs-dist": "^6.3.289",
     "qrcode": "^1.5.4",
     "react": "^19.2.5",

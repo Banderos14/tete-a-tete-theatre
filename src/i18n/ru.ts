@@ -324,6 +324,8 @@ export const RU: T = {
     filterAll:       'Все спектакли',
     markConfirmed:   'Подтвердить',
     markCancelled:   'Отменить',
+    refundInStripe:      'Отмена брони — через возврат в Stripe → Transactions.',
+    refundInStripeTitle: 'Оплачено онлайн. Stripe → Transactions → найдите платёж → Refund. После возврата бронь отменится автоматически, места освободятся.',
     markAttended:    'Посещение',
     bookingsTab:     'Бронирования',
     usersTab:        'Зрители',

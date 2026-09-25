@@ -114,3 +114,23 @@ export function deletionBlockedReason(b: Parameters<typeof financialHold>[0]): s
   const hold = financialHold(b);
   return hold ? FINANCIAL_HOLD_TEXT[hold] : null;
 }
+
+// ── Письмо-билет ────────────────────────────────────────────────────────────
+
+const TICKET_EMAIL_STATE: Record<string, string> = {
+  sent: 'Билет отправлен', failed: 'Билет НЕ ушёл', skipped: 'Билет не отправлялся', sending: 'Билет отправляется',
+};
+
+/**
+ * Последнее письмо-билет по брони одной строкой под кнопкой «Отправить билет»:
+ * «Билет отправлен: 24.09.2026, 22:18». Письмо об отмене не считается.
+ * null — писем-билетов не было.
+ */
+export function ticketEmailLine(emails: Booking['emails'] | undefined): string | null {
+  const entries = Object.entries(emails ?? {}).filter(([k, v]) => k !== 'cancelled' && v);
+  if (entries.length === 0) return null;
+  const [, last] = entries.sort(([, x], [, y]) => (y?.atMs ?? 0) - (x?.atMs ?? 0))[0]!;
+  if (!last) return null;
+  const label = TICKET_EMAIL_STATE[last.status] ?? 'Билет';
+  return `${label}: ${formatTimestamp({ seconds: last.atMs / 1000 })}`;
+}

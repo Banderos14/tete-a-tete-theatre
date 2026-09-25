@@ -22,6 +22,7 @@ import { filterBookings } from '../../utils/bookingSearch';
 import { normalizeTicketCodeInput } from '../../../shared/domain/ticketCode';
 import type { Booking } from '../../types/booking';
 import styles from './TicketCheckPage.module.scss';
+import { formatPhoneForDisplay } from '../../utils/phoneDisplay';
 
 const MAX_RESULTS = 30;
 
@@ -134,7 +135,7 @@ export function BookingSearchPanel({ showId, onOpen }: {
                 >
                   <span className={styles.searchResultName}>{b.userName || b.userEmail || 'Без имени'}</span>
                   <span className={styles.searchResultMeta}>
-                    <span className={styles.mono}>{b.ticketCode || 'без кода'}</span> · {seats} мест · {b.userPhone || b.userEmail}
+                    <span className={styles.mono}>{b.ticketCode || 'без кода'}</span> · {seats} мест · {formatPhoneForDisplay(b.userPhone) || b.userEmail}
                     {allShows && <> · {b.showTitle} · {b.showDate} {b.showTime}</>}
                   </span>
                   <span className={`${styles.stamp} ${pay.className}`}>{pay.text}</span>

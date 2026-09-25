@@ -9,7 +9,7 @@ import { SHOWS } from '../../data/shows';
 import type { Booking, BookingStatus, PaymentStatus } from '../../types/booking';
 import {
   formatTimestamp, adminPaymentState, paymentMethodLabel, paymentIssueText, deletionBlockedReason,
-  type AdminPayTone,
+  ticketEmailLine, type AdminPayTone,
 } from './adminFormatting';
 import { onlineBookingState } from '../../utils/onlinePayment';
 import type { ConfirmAction, FilterShowId, FilterStatus } from './adminTypes';
@@ -17,6 +17,7 @@ import { bookingTicketLines } from '../../utils/ticketBreakdown';
 import { ticketTypeLabel } from '../../utils/ticketType';
 import { summarizeBookings, summarizeByShow } from './adminStats';
 import { filterBookings } from '../../utils/bookingSearch';
+import { formatPhoneForDisplay } from '../../utils/phoneDisplay';
 import { AdminShowCard } from './AdminShowCard';
 import styles from './AdminPage.module.scss';
 
@@ -184,13 +185,29 @@ export function BookingsTab({
         <p className={styles.empty}>{t.admin.noBookings}</p>
       ) : (
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
+          <table className={`${styles.table} ${styles.bookingsTable}`}>
+            {/* Ширины колонок заданы здесь, а не содержимым: длинный e-mail,
+                id Stripe или комментарий переносятся внутри своей колонки и не
+                растягивают всю таблицу. */}
+            <colgroup>
+              <col className={styles.colName} />
+              <col className={styles.colEmail} />
+              <col className={styles.colTickets} />
+              <col className={styles.colAmount} />
+              <col className={styles.colMethod} />
+              <col className={styles.colPayState} />
+              <col className={styles.colCode} />
+              <col className={styles.colDate} />
+              <col className={styles.colStatus} />
+              <col className={styles.colComment} />
+              <col className={styles.colActions} />
+            </colgroup>
             <thead>
               <tr>
                 <th>{t.admin.name}</th>
                 <th>{t.admin.email}</th>
-                <th>{t.admin.tickets}</th>
-                <th>{t.admin.amount}</th>
+                <th className={styles.thCenter}>{t.admin.tickets}</th>
+                <th className={styles.thCenter}>{t.admin.amount}</th>
                 <th>{t.admin.payment}</th>
                 <th>{t.admin.paymentStatus}</th>
                 <th>Код брони</th>
@@ -218,40 +235,49 @@ export function BookingsTab({
   );
 }
 
-/** Оплаченную онлайн бронь нельзя просто отменить: место держат деньги в Stripe. */
-const REFUND_IN_STRIPE_HINT =
-  'Оплачено онлайн: отмена — через возврат в Stripe Dashboard (Payments → платёж → Refund). '
-  + 'Бронь отменится автоматически.';
+/**
+ * E-mail с точками переноса после «@» и перед точками: длинный адрес
+ * переносится по частям (anna.petrova@ / example.com), а не посреди слова.
+ */
+function breakableEmail(email: string) {
+  return email.split(/(?<=@)|(?=\.)/).map((part, i) => <span key={i}>{i > 0 && <wbr />}{part}</span>);
+}
+
+/**
+ * id Stripe: целиком в тексте (двойной клик выделяет всё, копируется полный id),
+ * но на экране — в одну строку с многоточием, чтобы не раздувать колонку.
+ */
+function StripeId({ id }: { id: string }) {
+  return <code className={styles.stripeId} title={id}>{id}</code>;
+}
 
 /**
  * Идентификаторы Stripe — свёрнуто, для поиска платежа в Dashboard.
  * Только id и статусы: ни сумм карты, ни сырых объектов Stripe.
+ *
+ * Главное — платёж (pi_…): по нему администратор находит оплату и делает
+ * возврат в Stripe → Transactions. Сессия Checkout (cs_…) нужна системе
+ * (продолжение оплаты, истечение, сверка) и для диагностики — показана
+ * мельче. Возврат — только если он есть.
  */
 function StripeDetails({ booking: b }: { booking: Booking }) {
   if (!b.stripeCheckoutSessionId && !b.stripePaymentIntentId && !b.refund) return null;
   return (
     <details className={styles.stripeDetails}>
       <summary>Stripe</summary>
-      {b.stripePaymentIntentId && <p>Платёж: <code>{b.stripePaymentIntentId}</code></p>}
-      {b.stripeCheckoutSessionId && <p>Сессия: <code>{b.stripeCheckoutSessionId}</code></p>}
+      {b.stripePaymentIntentId && (
+        <p className={styles.stripePrimary}>Платёж: <StripeId id={b.stripePaymentIntentId} /></p>
+      )}
+      {b.stripeCheckoutSessionId && (
+        <p className={styles.stripeSecondary}>Сессия: <StripeId id={b.stripeCheckoutSessionId} /></p>
+      )}
       {b.refund && (
-        <p>Возврат: <code>{b.refund.id}</code> · {b.refund.status} · {b.refund.amount}&nbsp;€</p>
+        <p>Возврат: <StripeId id={b.refund.id} /> · {b.refund.status} · {b.refund.amount}&nbsp;€</p>
       )}
       {b.refundedAt && <p>Возвращено: {formatTimestamp(b.refundedAt)}</p>}
       {b.paymentIssueResolved && <p>Проблема закрыта: {b.paymentIssueResolved.issue} ({b.paymentIssueResolved.via})</p>}
     </details>
   );
-}
-
-/** Последнее письмо-билет по брони — чтобы на «я не получил письмо» было что ответить. */
-function lastTicketEmail(b: Booking): string | null {
-  const entries = Object.entries(b.emails ?? {}).filter(([k]) => k !== 'cancelled');
-  if (entries.length === 0) return null;
-  const [, last] = entries.sort(([, x], [, y]) => (y?.atMs ?? 0) - (x?.atMs ?? 0))[0]!;
-  if (!last) return null;
-  const when = new Date(last.atMs).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-  const label = { sent: 'отправлен', failed: 'НЕ ушёл', skipped: 'не отправлялся', sending: 'отправляется' }[last.status];
-  return `Билет: ${label}, ${when}`;
 }
 
 function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
@@ -260,7 +286,8 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
   onConfirmAction: (a: ConfirmAction) => void;
   onResendTicket: (bookingId: string) => void;
 }) {
-  const emailLine = lastTicketEmail(b);
+  // «Билет отправлен: 24.09.2026, 22:18» — под кнопкой «Отправить билет».
+  const emailLine = ticketEmailLine(b.emails);
   const payStatus: PaymentStatus = b.paymentStatus ?? 'not_paid';
   const bStatus: BookingStatus   = b.status ?? 'pending';
   const account   = b.paymentMethod === 'bank_transfer' ? getPaymentAccount(b.paymentAccountId) : null;
@@ -279,14 +306,20 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
 
   return (
     <tr className={rowClass}>
-      <td>
+      <td className={styles.cellWrap}>
         <p className={styles.cellName}>{b.userName}</p>
         <p className={styles.cellShow}>{b.showTitle}</p>
         <p className={styles.cellShowMeta}>{b.showDate} · {b.showTime}</p>
-        <a href={`mailto:${b.userEmail}`} className={styles.emailLink}>{b.userEmail}</a>
-        {b.userPhone && <p className={styles.cellShowMeta}>{b.userPhone}</p>}
+        {/* Телефон — только для показа: в базе он остаётся как был сохранён. */}
+        {b.userPhone && (
+          <a href={`tel:${b.userPhone.replace(/[^\d+]/g, '')}`} className={styles.phoneLink}>
+            {formatPhoneForDisplay(b.userPhone)}
+          </a>
+        )}
       </td>
-      <td><a href={`mailto:${b.userEmail}`} className={styles.emailLink}>{b.userEmail}</a></td>
+      <td className={styles.cellWrap}>
+        <a href={`mailto:${b.userEmail}`} className={styles.emailLink}>{breakableEmail(b.userEmail)}</a>
+      </td>
       <td className={styles.cellCenter}>
         {b.ticketsCount}
         {b.seatsCount && b.seatsCount !== b.ticketsCount && <> / {b.seatsCount} мест</>}
@@ -315,7 +348,7 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
           {paymentMethodLabel(b.paymentMethod)}
         </span>
       </td>
-      <td>
+      <td className={styles.cellWrap}>
         <span className={`${styles.payBadge} ${PAY_TONE_STYLE[payState.tone]}`}>
           {payState.label}
         </span>
@@ -375,7 +408,7 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
         {b.attendedAt && <p className={styles.cellShowMeta}>Проход: {formatTimestamp(b.attendedAt)}</p>}
         {b.paidAt && <p className={styles.cellShowMeta}>Оплата: {formatTimestamp(b.paidAt)}</p>}
       </td>
-      <td className={styles.cellComment}>
+      <td className={`${styles.cellWrap} ${styles.cellComment}`}>
         {b.comment || '—'}
         {b.cancelledBy === 'user' && (
           <p className={styles.cancelReasonNote}>
@@ -385,7 +418,7 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
           </p>
         )}
       </td>
-      <td>
+      <td className={styles.cellWrap}>
         <div className={styles.actions}>
           {bStatus === 'cancelled' && deleteBlocked ? (
             // Финансово не закрытая бронь — след денег. Сервер тоже откажет (financial_hold).
@@ -401,7 +434,7 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
               aria-label="Удалить бронь"
               onClick={() => onConfirmAction({ type: 'deleteBooking', bookingId: b.id })}
             >
-              <IconTrash size={16} stroke={1.5} aria-hidden />
+              <IconTrash size={14} stroke={1.5} aria-hidden />
             </button>
           ) : (
             <>
@@ -414,7 +447,7 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
                   disabled={isBusy}
                   onClick={() => onResendTicket(b.id)}
                 >
-                  <IconMailForward size={16} stroke={1.5} aria-hidden="true" />
+                  <IconMailForward size={13} stroke={1.5} aria-hidden="true" />
                   Отправить билет
                 </button>
               )}
@@ -426,12 +459,13 @@ function BookingRow({ booking: b, isBusy, onConfirmAction, onResendTicket }: {
                 >{t.admin.markCancelled}</button>
               )}
               {refundInStripe && (
-                <p className={styles.payNote}>{REFUND_IN_STRIPE_HINT}</p>
+                <p className={styles.actionNote} title={t.admin.refundInStripeTitle}>{t.admin.refundInStripe}</p>
               )}
             </>
           )}
         </div>
-        {emailLine && <p className={styles.cellShowMeta}>{emailLine}</p>}
+        {/* Состояние письма — сразу под кнопкой, а не отдельной колонкой справа. */}
+        {emailLine && <p className={styles.actionMeta}>{emailLine}</p>}
       </td>
     </tr>
   );

@@ -163,7 +163,7 @@ describe('админка: состояние онлайн-оплаты по-че
   it('оплаченную онлайн бронь нельзя просто отменить: вместо кнопки — инструкция возврата в Stripe', () => {
     expect(tab).toContain("const refundInStripe = isOnline && payStatus === 'paid' && bStatus !== 'cancelled';");
     expect(tab).toContain("{bStatus !== 'attended' && !refundInStripe && (");
-    expect(tab).toContain('{REFUND_IN_STRIPE_HINT}');
+    expect(tab).toContain('{t.admin.refundInStripe}');
     expect(data).toMatch(/refund_required:\s+'Эта бронь оплачена онлайн\. Сначала выполните возврат в Stripe/);
   });
 
@@ -173,7 +173,7 @@ describe('админка: состояние онлайн-оплаты по-че
   });
 
   it('детализация Stripe — только id и статусы, без сырых объектов', () => {
-    const details = tab.slice(tab.indexOf('function StripeDetails'), tab.indexOf('function lastTicketEmail'));
+    const details = tab.slice(tab.indexOf('function StripeDetails'), tab.indexOf('function BookingRow'));
     expect(details).toContain('<details');
     expect(details).not.toMatch(/JSON\.stringify|paymentIssueDetails/);
   });

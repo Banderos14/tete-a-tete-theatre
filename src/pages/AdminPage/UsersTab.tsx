@@ -6,6 +6,7 @@ import type { AdminUser } from '../../services/userService';
 import { formatTimestamp, contactLabel, formatBirthday, PROVIDER_LABELS } from './adminFormatting';
 import type { ConfirmAction } from './adminTypes';
 import styles from './AdminPage.module.scss';
+import { formatPhoneForDisplay } from '../../utils/phoneDisplay';
 
 const t = RU;
 
@@ -102,7 +103,7 @@ function UserRow({ user: u, isBusy, canDelete, onConfirmAction }: {
           <p className={styles.cellShowMeta}>{PROVIDER_LABELS[u.provider] ?? u.provider}</p>
         )}
       </td>
-      <td>{u.phone || '—'}</td>
+      <td>{formatPhoneForDisplay(u.phone) || '—'}</td>
       <td>
         <span className={`${styles.badge} ${u.role === 'admin' ? styles.badgeAdmin : ''}`}>
           {u.role}

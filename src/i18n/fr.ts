@@ -329,6 +329,8 @@ export const FR: T = {
     filterAll:       'Tous les spectacles',
     markConfirmed:   'Confirmer',
     markCancelled:   'Annuler',
+    refundInStripe:      'Annulation — par remboursement dans Stripe → Transactions.',
+    refundInStripeTitle: 'Payé en ligne. Stripe → Transactions → trouvez le paiement → Refund. Après le remboursement, la réservation est annulée automatiquement et les places libérées.',
     markAttended:    'Présent',
     bookingsTab:     'Réservations',
     usersTab:        'Spectateurs',

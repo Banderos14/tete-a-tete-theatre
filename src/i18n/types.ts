@@ -254,6 +254,10 @@ export interface T {
     filterAll: string;
     markConfirmed: string;
     markCancelled: string;
+    /** Оплаченная онлайн бронь: обычной отмены нет — возврат в Stripe. Коротко, в строке таблицы. */
+    refundInStripe: string;
+    /** Подробности той же инструкции — во всплывающей подсказке. */
+    refundInStripeTitle: string;
     markAttended: string;
     bookingsTab: string;
     usersTab: string;
