@@ -126,7 +126,8 @@ describe('админка: корзина только у отменённой б
 
   it('корзина красная — тот же акцент, что у «Отменить»', () => {
     const scss = projectSource('src/pages/AdminPage/AdminPage.module.scss');
-    const rule = scss.slice(scss.indexOf('.actionDelete'), scss.indexOf('.payBadge'));
+    const start = scss.indexOf('\n.actionDelete {');
+    const rule = scss.slice(start, scss.indexOf('\n}', start));
     expect(rule).toContain('rgba(184, 0, 0');
     expect(rule).toContain('var(--accent-glow)');
   });

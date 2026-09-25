@@ -71,9 +71,24 @@ describe('таблица броней: раскладка', () => {
   const css = projectSource('src/pages/AdminPage/AdminPage.module.scss').replace(/\/\/.*$/gm, '');
   const block = (selector: string) => { const i = css.indexOf(`\n${selector} {`) + 1; return css.slice(i, css.indexOf('\n}', i)); };
 
-  it('ширины колонок задаёт colgroup, раскладка фиксированная, ячейки по верху', () => {
+  it('ширины колонок задаёт colgroup, раскладка фиксированная, всё по центру', () => {
     expect(tab.match(/<col className=\{styles\.col\w+\} \/>/g)).toHaveLength(11);
-    expect(block('.bookingsTable')).toMatch(/table-layout: fixed;[\s\S]*td \{ vertical-align: top; \}/);
+    const table = block('.bookingsTable');
+    expect(table).toContain('table-layout: fixed;');
+    expect(table).toMatch(/text-align: center;\s*vertical-align: middle;/);
+  });
+
+  it('сумма ширин колонок помещается на MacBook (≤ 1356px = 1440 − поля − рамка)', () => {
+    const widths = [...css.matchAll(/^\.col\w+\s*\{ width: (\d+)px; \}/gm)].map(m => Number(m[1]));
+    expect(widths).toHaveLength(11);
+    const sum = widths.reduce((a, b) => a + b, 0);
+    expect(sum).toBeLessThanOrEqual(1356);
+    expect(block('.bookingsTable')).toContain(`min-width: ${sum}px;`);
+  });
+
+  it('воздух справа от «Оплата» и «Дата брони»; дата брони — двумя строками', () => {
+    expect(block('.bookingsTable')).toMatch(/th:nth-child\(5\), td:nth-child\(5\),\s*th:nth-child\(8\), td:nth-child\(8\) \{ padding-right: 22px; \}/);
+    expect(tab).toContain("const [date, time] = formatTimestamp(b.createdAt).split(', ');");
   });
 
   it('оплаченная онлайн: короткая пометка из словаря, подробности — в title', () => {
@@ -100,15 +115,19 @@ describe('таблица броней: раскладка', () => {
       expect(block(btn)).toContain('height: 24px;');
       expect(block(btn)).toContain('font-size: 10px;');
     }
-    expect(tab).toContain('{emailLine && <p className={styles.actionMeta}>{emailLine}</p>}');
+    expect(tab).toContain('{m.emailLine && <p className={styles.actionMeta}>{m.emailLine}</p>}');
+    // Кнопки и подписи под ними — один центрированный блок.
+    expect(block('.actionsBlock')).toMatch(/flex-direction: column;\s*align-items: center;/);
   });
 
-  it('статусы — одна система: высота 20px, строка 18px, рамка 1px', () => {
+  it('статусы — одна система: одна строка = 20px (14 + 2×2 + 2×1), рамка 1px, перенос внутри ячейки', () => {
     for (const badge of ['.badge', '.payBadge', '.statusBadge']) {
       const b = block(badge);
-      expect(b).toContain('height: 20px;');
-      expect(b).toContain('line-height: 18px;');
+      expect(b).toContain('min-height: 20px;');
+      expect(b).toContain('padding: 2px 7px;');
+      expect(b).toContain('line-height: 14px;');
       expect(b).toContain('border: 1px solid transparent;');
+      expect(b).toContain('white-space: normal;');
     }
   });
 });
@@ -122,5 +141,41 @@ describe('репертуар: сетка без серого блока', () => 
     expect(grid).toContain('align-content: start;');
     const item = css.slice(css.indexOf('.item {'), css.indexOf('\n}', css.indexOf('.item {')));
     expect(item).toContain('box-shadow: 0 0 0 1px var(--line);');
+  });
+});
+
+describe('брони на планшете и телефоне — карточки', () => {
+  const tab = projectSource('src/pages/AdminPage/BookingsTab.tsx');
+  const css = projectSource('src/pages/AdminPage/AdminPage.module.scss').replace(/\/\/.*$/gm, '');
+  const block = (selector: string) => { const i = css.indexOf(`\n${selector} {`) + 1; return css.slice(i, css.indexOf('\n}', i)); };
+
+  it('до 1100px таблица скрыта, показан список карточек; на телефоне — одна колонка', () => {
+    expect(tab).toContain('className={`${styles.tableWrap} ${styles.desktopOnly}`}');
+    expect(tab).toContain('<div className={styles.mobileList}>');
+    expect(block('.desktopOnly')).toMatch(/@include mixins\.tablet \{ display: none; \}/);
+    const list = block('.mobileList');
+    expect(list).toMatch(/display: none;[\s\S]*@include mixins\.tablet \{\s*display: grid;/);
+    expect(list).toMatch(/@include mixins\.small \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+  });
+
+  it('карточка собрана из тех же блоков, что строка таблицы, — логика не дублируется', () => {
+    const row  = tab.slice(tab.indexOf('function BookingRow('), tab.indexOf('function BookingMobileCard('));
+    const card = tab.slice(tab.indexOf('function BookingMobileCard('));
+    for (const part of ['<NameBlock', '<PhoneLink', '<EmailLink', '<TicketsBlock', '<AmountBlock', '<MethodBadge',
+      '<PayStateBlock', '<CreatedAt', '<StatusBlock', '<CommentBlock', '<ActionsBlock']) {
+      expect(row).toContain(part);
+      expect(card).toContain(part);
+    }
+    expect(row).toContain('const m = rowModel(b);');
+    expect(card).toContain('const m = rowModel(b);');
+    // Кнопки, Stripe и правила отмены — только в общих блоках.
+    expect(card).not.toMatch(/onResendTicket\(|onConfirmAction\(|refundInStripe =/);
+  });
+
+  it('в карточке все поля брони подписаны', () => {
+    const card = tab.slice(tab.indexOf('function BookingMobileCard('));
+    for (const label of ['t.admin.tickets', 't.admin.amount', 't.admin.payment', 'Код брони', 't.admin.paymentStatus', 't.admin.date', 't.admin.comment']) {
+      expect(card).toContain(label);
+    }
   });
 });

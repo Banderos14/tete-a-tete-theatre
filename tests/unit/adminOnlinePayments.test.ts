@@ -135,10 +135,10 @@ describe('админка: состояние онлайн-оплаты по-че
     expect(adminPaymentState({ status: 'pending' } as never)).toEqual({ label: 'Не оплачено', tone: 'notPaid' });
   });
 
-  it('способ оплаты различим: на месте / перевод / онлайн · Stripe (раньше онлайн показывался «Перевод»)', () => {
+  it('способ оплаты различим: на месте / перевод / онлайн (раньше онлайн показывался «Перевод»)', () => {
     expect(paymentMethodLabel('on_site')).toBe('На месте');
     expect(paymentMethodLabel('bank_transfer')).toBe('Перевод');
-    expect(paymentMethodLabel('online')).toBe('Онлайн · Stripe');
+    expect(paymentMethodLabel('online')).toBe('Онлайн');
     expect(paymentMethodLabel(undefined)).toBe('На месте');
   });
 
@@ -156,13 +156,13 @@ describe('админка: состояние онлайн-оплаты по-че
   const data = projectSource('src/pages/AdminPage/useAdminData.ts');
 
   it('для онлайн-оплаты нет «Оплачено» / «Не оплачено» — вместо них пояснение', () => {
-    expect(tab).toContain("{bStatus !== 'cancelled' && !isOnline && (");
+    expect(tab).toContain("{m.bStatus !== 'cancelled' && !m.isOnline && (");
     expect(tab).toContain('Оплату подтверждает Stripe');
   });
 
   it('оплаченную онлайн бронь нельзя просто отменить: вместо кнопки — инструкция возврата в Stripe', () => {
     expect(tab).toContain("const refundInStripe = isOnline && payStatus === 'paid' && bStatus !== 'cancelled';");
-    expect(tab).toContain("{bStatus !== 'attended' && !refundInStripe && (");
+    expect(tab).toContain("{m.bStatus !== 'attended' && !m.refundInStripe && (");
     expect(tab).toContain('{t.admin.refundInStripe}');
     expect(data).toMatch(/refund_required:\s+'Эта бронь оплачена онлайн\. Сначала выполните возврат в Stripe/);
   });
@@ -179,7 +179,7 @@ describe('админка: состояние онлайн-оплаты по-че
   });
 
   it('корзина — только у финансово закрытой брони; тексты отказов сервера понятные', () => {
-    expect(tab).toMatch(/bStatus === 'cancelled' && deleteBlocked \? \(/);
+    expect(tab).toMatch(/m\.bStatus === 'cancelled' && m\.deleteBlocked \? \(/);
     expect(data).toContain('financial_hold:');
     expect(data).toContain('online_payment:');
   });

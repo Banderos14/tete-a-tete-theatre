@@ -53,7 +53,7 @@ export const PAY_STATUS_LABELS: Record<PaymentStatus, string> = {
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   on_site:       'На месте',
   bank_transfer: 'Перевод',
-  online:        'Онлайн · Stripe',
+  online:        'Онлайн',
 };
 
 export function paymentMethodLabel(method: string | undefined): string {

@@ -228,31 +228,74 @@
 // ── Таблица броней: предсказуемые колонки ─────────────────────────────────
 //
 // table-layout: fixed + ширины в <colgroup>: колонку задаёт разметка, а не
-// самое длинное содержимое. Все ячейки выровнены по верху — строка читается
-// горизонтально: имя, e-mail, билеты, статусы и кнопки начинаются на одной
-// линии, сколько бы строк ни было в соседних ячейках. На узком экране —
-// прежний горизонтальный скролл (.tableWrap).
+// самое длинное содержимое. Сумма ширин — 1356px: таблица целиком помещается
+// на MacBook (1440 минус поля страницы и рамка обёртки). Уже — горизонтальный скролл, а на
+// планшете и телефоне вместо таблицы карточки (.mobileList).
+//
+// Заголовки и содержимое — по центру по горизонтали и по вертикали.
+// Ничего не наезжает на соседнюю колонку: бейджи и даты переносятся внутри
+// своей ячейки, а не вылезают за неё.
 .bookingsTable {
   table-layout: fixed;
-  min-width: 1488px;
+  min-width: 1356px;
 
-  td { vertical-align: top; }
-  th { vertical-align: bottom; }
+  th,
+  td {
+    padding-left: 10px;
+    padding-right: 10px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  // Дополнительный воздух справа от «Оплата» и «Дата брони»: соседние
+  // бейджи («ОНЛАЙН» / «ОПЛАЧЕНО ОНЛАЙН») больше не липнут друг к другу.
+  th:nth-child(5), td:nth-child(5),
+  th:nth-child(8), td:nth-child(8) { padding-right: 22px; }
+
+  // Внутри таблицы бейдж может перенести длинный статус на вторую строку —
+  // но не выйти за границу ячейки.
+  .badge,
+  .payBadge,
+  .statusBadge { max-width: 100%; }
 }
 
-.thCenter { text-align: center !important; }
-
-.colName     { width: 170px; }
-.colEmail    { width: 170px; }
-.colTickets  { width: 100px; }
-.colAmount   { width: 76px; }
-.colMethod   { width: 112px; }
-.colPayState { width: 200px; }
-.colCode     { width: 96px; }
+.colName     { width: 150px; }
+.colEmail    { width: 146px; }
+.colTickets  { width: 104px; }
+.colAmount   { width: 80px; }
+.colMethod   { width: 104px; }
+.colPayState { width: 180px; }
+.colCode     { width: 92px; }
 .colDate     { width: 108px; }
-.colStatus   { width: 136px; }
-.colComment  { width: 150px; }
-.colActions  { width: 170px; }
+.colStatus   { width: 130px; }
+.colComment  { width: 124px; }
+.colActions  { width: 138px; }
+
+// Содержимое ячейки столбиком по центру: бейдж, под ним пояснения.
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  // Таблица — white-space: nowrap; пометки под бейджем («Оплата: 25.09.2026,
+  // 00:18») переносятся внутри колонки, а не заходят на соседнюю.
+  white-space: normal;
+}
+
+.cellStrong { font-weight: 600; color: var(--fg); }
+
+.cellMethod { white-space: normal; }
+
+// Дата брони — дата и время двумя строками: одной строкой (≈112px моно)
+// она была шире колонки и наезжала на «Статус брони».
+.dateStack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.dateTime { color: var(--fg-mute); }
 
 // Ячейка с переносом: длинные имя, e-mail, пояснения не выходят за колонку.
 .cellWrap {
@@ -261,7 +304,7 @@
 }
 
 .phoneLink {
-  display: block;
+  display: inline-block;
   margin-top: 2px;
   font-size: 11px;
   color: var(--fg-mute);
@@ -292,49 +335,49 @@
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
-  height: 20px;
-  padding: 0 7px;
+  min-height: 20px;
+  padding: 2px 7px;
   border: 1px solid transparent;
   border-radius: var(--radius-xs);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
-  line-height: 18px;
+  line-height: 14px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
   vertical-align: top;
   color: var(--fg-mute);
   background: var(--bg-3);
 }
 
 // Несколько тарифов в одной брони — бейджи столбиком, по одному на тариф.
-.badgeStack {
-  display: flex;
-  width: fit-content;
-  margin: 4px auto 0;
-}
 
 .statusBadge {
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
-  height: 20px;
-  padding: 0 7px;
+  min-height: 20px;
+  padding: 2px 7px;
   border: 1px solid transparent;
   border-radius: var(--radius-xs);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
-  line-height: 18px;
+  line-height: 14px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
   vertical-align: top;
 }
 
 .loyaltyBadge {
   display: inline-block;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
   font-size: 10px;
   font-family: var(--font-mono);
   letter-spacing: 0.05em;
@@ -387,7 +430,17 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+}
+
+// Колонка «Действия»: кнопки и подписи под ними — компактный блок по центру.
+.actionsBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
 }
 
 // Короткая пометка вместо кнопки (оплачено онлайн → возврат в Stripe).
@@ -402,7 +455,6 @@
 
 // Состояние письма-билета — сразу под кнопкой «Отправить билет».
 .actionMeta {
-  margin-top: 6px;
   font-size: 10px;
   line-height: 1.4;
   color: var(--fg-mute);
@@ -488,32 +540,35 @@
   @include mixins.small { width: 32px; height: 32px; }
 }
 
-// Статусы оплаты и брони — одна система «штампов»: высота 20px, строка 18px,
-// рамка 1px, одинаковые отступы, 10px моно без дробных размеров — ровно по
-// одной линии в любой строке таблицы и чётко на Retina/4K. Цвета — прежние.
+// Статусы оплаты и брони — одна система «штампов»: одна строка — ровно 20px
+// (строка 14px + отступы 2px + рамка 1px), рамка 1px, одинаковые отступы,
+// 10px моно без дробных размеров — чётко на Retina/4K. Длинный статус в узкой
+// ячейке переносится на вторую строку, а не вылезает за неё. Цвета — прежние.
 .payBadge {
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
-  height: 20px;
-  padding: 0 7px;
+  min-height: 20px;
+  padding: 2px 7px;
   border: 1px solid transparent;
   border-radius: var(--radius-xs);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
-  line-height: 18px;
+  line-height: 14px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
   vertical-align: top;
   border-color: var(--line);
 }
 
 .payActions {
   display: flex;
+  justify-content: center;
   gap: 4px;
-  margin-top: 5px;
+  margin-top: 2px;
 }
 
 .actionPaid {
@@ -660,7 +715,6 @@
   // Ширину задаёт колонка, а не пояснение.
   white-space: normal;
   overflow-wrap: anywhere;
-  margin-top: 5px;
   font-size: 10px;
   line-height: 1.4;
   color: var(--fg-mute);
@@ -670,7 +724,7 @@
   // Таблица — white-space: nowrap; пояснения переносятся, как комментарий.
   white-space: normal;
   overflow-wrap: anywhere;
-  margin-top: 6px;
+  max-width: 100%;
   font-size: 10px;
   color: var(--fg-mute);
 
@@ -1294,3 +1348,106 @@
   padding: 0 2px;
   &:hover { color: var(--fg); }
 }
+
+// ── Брони на планшете и телефоне: карточки вместо таблицы ─────────────────
+//
+// Таблица из 11 колонок на узком экране читается только горизонтальным
+// скроллом. До 1100px вместо неё — карточки из тех же блоков (BookingsTab:
+// BookingMobileCard), без горизонтального скролла.
+.desktopOnly {
+  @include mixins.tablet { display: none; }
+}
+
+.mobileList {
+  display: none;
+
+  @include mixins.tablet {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+  }
+
+  @include mixins.small { grid-template-columns: minmax(0, 1fr); }
+}
+
+.mCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--fg-dim);
+
+  // В карточке всё выровнено влево: читается сверху вниз, а не по колонкам.
+  .stack { align-items: flex-start; }
+  .payActions { justify-content: flex-start; }
+  .dateStack { align-items: flex-start; flex-direction: row; gap: 6px; }
+
+  .actionsBlock {
+    align-items: flex-start;
+    text-align: left;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .actions { justify-content: flex-start; }
+}
+
+.mCard.rowCancelled { opacity: 0.6; }
+.mCard.rowIssue     { border-color: rgba(184, 0, 0, 0.45); background: rgba(184, 0, 0, 0.05); }
+.mCard.rowAttended  { background: rgba(76, 175, 80, 0.05); }
+
+.mHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+
+  // Статус брони справа в шапке: бейдж целиком, пометки под ним переносятся.
+  .stack {
+    flex-shrink: 0;
+    max-width: 45%;
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .statusBadge { white-space: nowrap; }
+}
+
+.mWho { min-width: 0; }
+
+.mContacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+  // Длинный e-mail переносится внутри карточки, а не растягивает её.
+  overflow-wrap: anywhere;
+  min-width: 0;
+
+  .phoneLink { margin-top: 0; }
+}
+
+.mGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+  margin: 0;
+
+  dt {
+    margin-bottom: 4px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-mute);
+  }
+
+  dd { margin: 0; min-width: 0; }
+}
+
+.mWide { grid-column: 1 / -1; }
