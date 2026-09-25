@@ -19,8 +19,6 @@ import { TicketsSection } from './TicketsSection';
 import { AttendedSection } from './AttendedSection';
 import styles from './ProfileDrawer.module.scss';
 
-/** Сколько держится подсветка незаполненного обязательного поля, мс. */
-const PULSE_MS = 2100;
 /** Сколько висит предупреждение о несохранённых изменениях, мс. */
 const UNSAVED_TOAST_MS = 2500;
 
@@ -45,9 +43,6 @@ export function ProfileDrawer({ open, initialSection, onClose }: Props) {
   const [warnVisible, setWarnVisible] = useState(false);
   const warnTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const [pulseBirthday, setPulseBirthday] = useState(false);
-  const [pulsePhone,    setPulsePhone]    = useState(false);
-
   useScrollLock(open);
 
   // Кабинет умеет открываться сразу на нужном разделе — этим пользуются
@@ -68,33 +63,18 @@ export function ProfileDrawer({ open, initialSection, onClose }: Props) {
     setExpandedTicketId(null);
   }, [activeSection]);
 
-  // Pulse-анимация для незаполненных обязательных полей при смене раздела
-  useEffect(() => {
-    if (activeSection === 'personal' && !form.birthday) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPulseBirthday(true);
-      const timer = setTimeout(() => setPulseBirthday(false), PULSE_MS);
-      return () => clearTimeout(timer);
-    }
-    setPulseBirthday(false);
-  }, [activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if ((activeSection === 'contacts' || activeSection === 'personal') && !form.phone.trim()) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPulsePhone(true);
-      const timer = setTimeout(() => setPulsePhone(false), PULSE_MS);
-      return () => clearTimeout(timer);
-    }
-    setPulsePhone(false);
-  }, [activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
-
+  // Несохранённые изменения: первое закрытие предупреждает, второе — пока
+  // предупреждение на экране — закрывает без сохранения. Кабинет не должен
+  // запирать зрителя, даже если какое-то поле заполнено неверно.
   function tryClose() {
-    if (form.isDirty) {
+    if (form.isDirty && !warnVisible) {
       setWarnVisible(true);
       clearTimeout(warnTimer.current);
       warnTimer.current = setTimeout(() => setWarnVisible(false), UNSAVED_TOAST_MS);
     } else {
+      if (form.isDirty) form.reset();
+      clearTimeout(warnTimer.current);
+      setWarnVisible(false);
       // Blur before onClose to prevent "aria-hidden on element with focused descendant" warning.
       (document.activeElement as HTMLElement)?.blur();
       onClose();
@@ -136,8 +116,8 @@ export function ProfileDrawer({ open, initialSection, onClose }: Props) {
   const googleLabel = lang === 'FR' ? 'via Google' : 'через Google';
 
   const navItems: NavItem[] = [
-    { id: 'personal',      label: t.profile.sectionPersonal,      warning: form.missingBirthday },
-    { id: 'contacts',      label: t.profile.sectionContacts,      warning: form.missingPhone    },
+    { id: 'personal',      label: t.profile.sectionPersonal,      warning: !!(form.problems.displayName || form.problems.birthday) },
+    { id: 'contacts',      label: t.profile.sectionContacts,      warning: !!form.problems.phone },
     { id: 'socials',       label: t.profile.sectionSocials       },
     { id: 'notifications', label: t.profile.sectionNotifications },
     { id: 'tickets',       label: t.profile.history,              badge: tickets.ticketCount || undefined },
@@ -235,7 +215,7 @@ export function ProfileDrawer({ open, initialSection, onClose }: Props) {
           <ProfileMobileTabBar
             activeTab={activeMobileTab}
             onSelect={setMobileTab}
-            hasProfileWarning={form.missingBirthday || form.missingPhone}
+            hasProfileWarning={form.missingCount > 0}
           />
 
           {/* Scrollable content area */}
@@ -252,14 +232,12 @@ export function ProfileDrawer({ open, initialSection, onClose }: Props) {
                     : isGoogleProvider ? googleLabel : undefined
                 }
                 emailProviderLabel={isGoogleProvider ? googleLabel : undefined}
-                pulseBirthday={pulseBirthday}
-                pulsePhone={pulsePhone}
                 onSave={() => { void form.save({ withValidation: true }); }}
               />
             )}
 
             {activeSection === 'contacts' && (
-              <ContactsSection form={form} t={t} pulsePhone={pulsePhone} />
+              <ContactsSection form={form} t={t} />
             )}
 
             {activeSection === 'socials' && <SocialsSection form={form} t={t} />}

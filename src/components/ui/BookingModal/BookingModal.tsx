@@ -7,7 +7,7 @@ import { createBookingViaApi, subscribeToUserBookings, newIdempotencyKey } from 
 import { fetchShowAvailability } from '../../../services/availabilityService';
 import type { BookingApiError } from '../../../services/bookingService';
 import { mapAuthError, isPopupClosedError, isEmailInUseError } from '../../../utils/authErrors';
-import { formatPhone, normalizePhone, isValidPhone } from '../../../utils/phone';
+import { formatPhoneInput, normalizePhone, isValidPhone, sanitizePhoneTyping } from '../../../utils/phone';
 import { useEmailTypoGuard } from '../../../hooks/useEmailTypoGuard';
 import { EmailTypoHint } from '../EmailTypoHint';
 import { MAX_TICKETS_PER_BOOKING } from '../../../../shared/catalog/shows';
@@ -149,9 +149,9 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   }, [user, step]);
 
   useEffect(() => {
-    // Подставляем телефон из профиля, форматируя на случай если хранился без пробелов
+    // Подставляем телефон из профиля в виде «+33 7 49 66 19 40» (хранится E.164)
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (userProfile?.phone) setPhone(formatPhone(userProfile.phone));
+    if (userProfile?.phone) setPhone(formatPhoneInput(userProfile.phone));
   }, [userProfile]);
 
   useEffect(() => {
@@ -252,8 +252,8 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
       return;
     }
 
-    // Телефон должен быть форматированным (начинается с +, ≥10 цифр).
-    // formatPhone уже вызывается на каждом keystroke; здесь ловим голые цифры вроде '75688587880'.
+    // Номер разбирает libphonenumber: «07…» и «0033…» — Франция, «+CC…» — любая
+    // страна. Без кода страны и без ведущего 0 номер не угадываем — просим проверить.
     if (!isValidPhone(phone)) {
       setPhoneError(t.profile.phoneInvalid);
       return;
@@ -472,7 +472,12 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
             loyaltyAvailable={loyaltyAvailable}
             seatsLeft={seatsLeft}
             onPaymentChange={setPayment}
-            onPhoneChange={v => { setPhone(formatPhone(v)); setPhoneError(''); }}
+            onPhoneChange={v => { setPhone(sanitizePhoneTyping(v)); setPhoneError(''); }}
+            onPhoneBlur={() => {
+              // Уход из поля: приводим к «+33 7 49 66 19 40» и сразу говорим, если номер не разобран.
+              setPhone(formatPhoneInput(phone));
+              if (phone.trim() && !isValidPhone(phone)) setPhoneError(t.profile.phoneInvalid);
+            }}
             phoneError={phoneError}
             onCommentChange={setComment}
             onSubmit={handleSubmit}

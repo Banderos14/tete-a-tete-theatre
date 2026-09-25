@@ -15,3 +15,11 @@ export const ADDRESS = {
   city: '06000 Nice, France',
   hint: '5 минут от Place Masséna',
 } as const;
+
+// Знак театра для шапки и подвала — тот же файл, что раньше отдавался с CDN
+// Tilda (824×860, 128 КБ), уменьшенный до 176px по высоте: больше 56px в CSS
+// он не бывает, запаса хватает на экраны 3x. Самохостинг убирает стороннее
+// соединение и лишние ~115 КБ из первой загрузки.
+export const LOGO_SRC    = '/images/logo-mark.webp';
+export const LOGO_WIDTH  = 169;
+export const LOGO_HEIGHT = 176;

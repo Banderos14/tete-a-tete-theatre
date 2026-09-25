@@ -37,6 +37,7 @@
 
   img {
     height: 44px;
+    width: auto;
     filter: invert(1);
 
     [data-theme='light'] & { filter: none; }

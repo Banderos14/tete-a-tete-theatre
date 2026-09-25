@@ -107,6 +107,8 @@
 
   img {
     height: 56px;
+    // width/height у <img> задают пропорции (без сдвига макета), ширину считает браузер
+    width: auto;
     max-width: min(180px, 100%);
     object-fit: contain;
     filter: invert(1);
@@ -319,6 +321,7 @@
 
 .menuLogo {
   height: 40px;
+  width: auto;
   filter: invert(1);
 
   [data-theme='light'] & { filter: none; }

@@ -81,6 +81,7 @@ interface Props {
   onQuantityChange: (type: TicketTypeId, quantity: number) => void;
   onPaymentChange: (pm: PaymentMethod) => void;
   onPhoneChange: (v: string) => void;
+  onPhoneBlur: () => void;
   onCommentChange: (v: string) => void;
   onSubmit: (e: FormEvent) => void;
 }
@@ -92,7 +93,7 @@ export function BookingFormStep({
   payment, phone, comment, paymentMethods, redirecting = false,
   submitLoading, submitError, phoneError,
   baseAmount, totalAmount, discountAmount, loyaltyAvailable, seatsLeft,
-  onQuantityChange, onPaymentChange, onPhoneChange, onCommentChange,
+  onQuantityChange, onPaymentChange, onPhoneChange, onPhoneBlur, onCommentChange,
   onSubmit,
 }: Props) {
   const showTitle  = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
@@ -238,9 +239,10 @@ export function BookingFormStep({
             autoComplete="tel"
             value={phone}
             onChange={e => onPhoneChange(e.target.value)}
-            onPaste={e => { e.preventDefault(); onPhoneChange(e.clipboardData.getData('text')); }}
-            placeholder="+33 6 00 00 00 00"
-            maxLength={20}
+            onBlur={onPhoneBlur}
+            placeholder="06 12 34 56 78"
+            aria-invalid={!!phoneError}
+            maxLength={32}
             style={{ fontSize: '16px' }} />
           {phoneError && <p className={styles.error}>{phoneError}</p>}
         </div>

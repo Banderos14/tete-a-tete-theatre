@@ -3,7 +3,7 @@ import { useScrollLock } from '../../../../hooks/useScrollLock';
 import { IconChevronRight, IconExternalLink, IconUser } from '@tabler/icons-react';
 import { useLang } from '../../../../i18n/LangContext';
 import { useAuth } from '../../../../context/AuthContext';
-import { LINKS } from '../../../../constants/links';
+import { LINKS, LOGO_SRC, LOGO_WIDTH, LOGO_HEIGHT } from '../../../../constants/links';
 import type { Lang } from '../../../../i18n/translations';
 import type { Theme } from '../../../../types';
 import { scrollToSection } from '../../../../utils/smoothScroll';
@@ -114,7 +114,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
           className={styles.logo}
           onClick={e => { e.preventDefault(); scrollToSection('top'); }}
         >
-          <img src="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" alt="Théâtre Tête-à-Tête" />
+          <img src={LOGO_SRC} width={LOGO_WIDTH} height={LOGO_HEIGHT} alt="Théâtre Tête-à-Tête" />
         </a>
 
         {/* Right controls */}
@@ -197,7 +197,7 @@ export function Header({ theme, lang, onThemeChange, onLangChange, onAuthOpen, o
         {/* Menu header: logo + close */}
         <div className={styles.menuTop}>
           <img
-            src="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG"
+            src={LOGO_SRC} width={LOGO_WIDTH} height={LOGO_HEIGHT}
             alt="Théâtre Tête-à-Tête"
             className={styles.menuLogo}
           />

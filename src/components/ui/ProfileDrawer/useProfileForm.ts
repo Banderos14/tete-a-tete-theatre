@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useLang } from '../../../i18n/LangContext';
-import { formatPhone, normalizePhone, isCompleteFrenchPhone } from '../../../utils/phone';
+import { formatPhoneInput, normalizePhone, sanitizePhoneTyping } from '../../../utils/phone';
 import {
   extractInstagramUsername,
   isValidInstagramUsername,
@@ -29,18 +29,21 @@ export interface ProfileForm {
   setDisplayName: (v: string) => void;
   setBirthday: (v: string) => void;
   setPhone: (raw: string) => void;
+  /** Уход из поля телефона: номер приводится к виду «+33 7 49 66 19 40» и проверяется. */
+  commitPhone: () => void;
   toggleMessenger: (m: Messenger) => void;
   setInstagramUsername: (v: string) => void;
   setNotify: (v: boolean) => void;
 
+  /** Ошибки, которые уже пора показывать (после отправки или ухода из поля). */
   errors: ValidationErrors;
+  /** Ошибки текущих значений — для отметок в навигации, показываются всегда. */
+  problems: ValidationErrors;
   saving: boolean;
   savedMsg: boolean;
   isDirty: boolean;
-  /** Сколько обязательных полей ещё не заполнено — для бейджа в сайдбаре. */
+  /** Сколько полей мешает сохранению — для бейджа в сайдбаре. */
   missingCount: number;
-  missingBirthday: boolean;
-  missingPhone: boolean;
   instagram: { normalized: string; valid: boolean; showError: boolean };
 
   /**
@@ -73,6 +76,7 @@ export function useProfileForm(): ProfileForm {
   const [savedMsg,  setSavedMsg]  = useState(false);
   const [errors,    setErrors]    = useState<ValidationErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [phoneBlurred, setPhoneBlurred] = useState(false);
   const [isDirty,   setIsDirty]   = useState(false);
 
   const [fbLoading, setFbLoading] = useState(false);
@@ -84,7 +88,7 @@ export function useProfileForm(): ProfileForm {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDisplayNameState(userProfile.displayName || user?.displayName || '');
     setBirthdayState(userProfile.birthday ?? '');
-    setPhoneState(formatPhone(userProfile.phone ?? ''));
+    setPhoneState(formatPhoneInput(userProfile.phone));
     setPreferredContact(userProfile.preferredContact ?? ['whatsapp']);
     // Старый баг: Facebook access token сохранялся как socialLink — чистим.
     if ((userProfile.socialLink ?? '').startsWith('https://facebook.com/EAA')) clearBadSocialLink();
@@ -93,26 +97,33 @@ export function useProfileForm(): ProfileForm {
     setIsDirty(false);
     setErrors({});
     setSubmitted(false);
+    setPhoneBlurred(false);
   }, [userProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Пока форма не отправлялась, ошибки не показываем — иначе поля краснеют,
-  // не дав пользователю и шанса их заполнить.
-  useEffect(() => {
-    if (submitted) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setErrors(validate(displayName, birthday, phone, t.profile.required, t.profile.phoneInvalid));
-    }
-  }, [displayName, birthday, phone, submitted, t.profile.required, t.profile.phoneInvalid]);
-
+  const messages = {
+    required:        t.profile.required,
+    phoneInvalid:    t.profile.phoneInvalid,
+    birthdayInvalid: t.profile.birthdayInvalid,
+  };
   // Ошибки текущих значений нужны и сохранению, и бейджу «не заполнено»,
-  // поэтому считаются на каждый рендер — а показываются только после отправки.
-  const currentErrors = validate(displayName, birthday, phone, t.profile.required, t.profile.phoneInvalid);
+  // поэтому считаются на каждый рендер.
+  const currentErrors = validate({ displayName, birthday, phone, storedPhone: userProfile?.phone }, messages);
+
+  // Показываем их не сразу, чтобы поля не краснели на полуслове: все — после
+  // попытки сохранить, телефон — ещё и после ухода из поля.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (submitted) setErrors(currentErrors);
+    else setErrors(phoneBlurred && currentErrors.phone ? { phone: currentErrors.phone } : {});
+  }, [displayName, birthday, phone, submitted, phoneBlurred, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const markDirty = useCallback(() => setIsDirty(true), []);
 
   const setDisplayName = useCallback((v: string) => { setDisplayNameState(v); markDirty(); }, [markDirty]);
   const setBirthday    = useCallback((v: string) => { setBirthdayState(v);    markDirty(); }, [markDirty]);
-  const setPhone       = useCallback((raw: string) => { setPhoneState(formatPhone(raw)); markDirty(); }, [markDirty]);
+  // Во время набора номер не переформатируется — только отбрасываются лишние символы.
+  const setPhone       = useCallback((raw: string) => { setPhoneState(sanitizePhoneTyping(raw)); markDirty(); }, [markDirty]);
+  const commitPhone    = useCallback(() => { setPhoneState(p => formatPhoneInput(p)); setPhoneBlurred(true); }, []);
   const setInstagramUsername = useCallback((v: string) => { setInstagramState(v); markDirty(); }, [markDirty]);
   const setNotify      = useCallback((v: boolean) => { setNotifyState(v); markDirty(); }, [markDirty]);
 
@@ -146,13 +157,14 @@ export function useProfileForm(): ProfileForm {
   function reset() {
     setDisplayNameState(userProfile?.displayName || user?.displayName || '');
     setBirthdayState(userProfile?.birthday ?? '');
-    setPhoneState(formatPhone(userProfile?.phone ?? ''));
+    setPhoneState(formatPhoneInput(userProfile?.phone));
     setPreferredContact(userProfile?.preferredContact ?? ['whatsapp']);
     setInstagramState(userProfile ? resolveInstagramUsername(userProfile) : '');
     setNotifyState(userProfile?.notifications ?? true);
     setIsDirty(false);
     setErrors({});
     setSubmitted(false);
+    setPhoneBlurred(false);
   }
 
   const linkFacebookAccount = useCallback(async () => {
@@ -173,11 +185,9 @@ export function useProfileForm(): ProfileForm {
 
   return {
     displayName, birthday, phone, preferredContact, instagramUsername, notify,
-    setDisplayName, setBirthday, setPhone, toggleMessenger, setInstagramUsername, setNotify,
-    errors, saving, savedMsg, isDirty,
+    setDisplayName, setBirthday, setPhone, commitPhone, toggleMessenger, setInstagramUsername, setNotify,
+    errors, problems: currentErrors, saving, savedMsg, isDirty,
     missingCount: Object.keys(currentErrors).length,
-    missingBirthday: !birthday,
-    missingPhone: !phone.trim() || !isCompleteFrenchPhone(phone),
     instagram: {
       normalized: instagramNormalized,
       valid: instagramNormalized.length > 0 && isValidInstagramUsername(instagramNormalized),

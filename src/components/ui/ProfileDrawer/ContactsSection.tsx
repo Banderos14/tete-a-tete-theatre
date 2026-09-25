@@ -7,10 +7,9 @@ import { WhatsAppIcon, TelegramIcon } from './BrandIcons';
 import { MESSENGERS, type ProfileForm } from './useProfileForm';
 import styles from './ProfileDrawer.module.scss';
 
-export function ContactsSection({ form, t, pulsePhone }: {
+export function ContactsSection({ form, t }: {
   form: ProfileForm;
   t: T;
-  pulsePhone: boolean;
 }) {
   const { errors } = form;
 
@@ -25,10 +24,11 @@ export function ContactsSection({ form, t, pulsePhone }: {
           inputMode="tel"
           value={form.phone}
           onChange={e => form.setPhone(e.target.value)}
-          onPaste={e => { e.preventDefault(); form.setPhone(e.clipboardData.getData('text')); }}
-          placeholder="+33 6 00 00 00 00"
+          onBlur={form.commitPhone}
+          placeholder="06 12 34 56 78"
           autoComplete="tel"
-          className={`${errors.phone ? styles.inputError : ''} ${pulsePhone && !errors.phone ? styles.fieldPulse : ''}`}
+          aria-invalid={!!errors.phone}
+          className={errors.phone ? styles.inputError : ''}
         />
       </Field>
 

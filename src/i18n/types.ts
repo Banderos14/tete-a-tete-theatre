@@ -94,6 +94,9 @@ export interface T {
     logout: string;
     required: string;
     phoneInvalid: string;
+    birthdayInvalid: string;
+    /** Пометка необязательного поля. */
+    optional: string;
     incomplete: (n: number) => string;
     visitCount: (n: number) => string;
     /** Правило программы от порога n: «Посетите 4 спектакля — 5-й билет со скидкой 50%». */

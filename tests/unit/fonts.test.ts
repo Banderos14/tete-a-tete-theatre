@@ -50,10 +50,22 @@ describe('CSS-переменные шрифтов', () => {
     expect(indexHtml).toContain("html[lang='fr']{--font-display:\"Great Vibes\",cursive");
   });
 
-  it('Great Vibes подключён ровно один раз и только в index.html', () => {
-    expect(indexHtml).toContain('fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
-    expect(indexHtml.match(/family=Great\+Vibes/g)).toHaveLength(1);
-    expect(indexHtml).toContain('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />');
+  it('Great Vibes и Dela Gothic One самохостятся: без render-blocking CSS Google Fonts', () => {
+    // Раньше CSS Google Fonts блокировал первый рендер и тянул два сторонних соединения.
+    expect(indexHtml).not.toMatch(/fonts\.googleapis\.com|fonts\.gstatic\.com/);
+    for (const file of ['great-vibes-latin', 'great-vibes-latin-ext', 'dela-gothic-one-latin', 'dela-gothic-one-latin-ext', 'dela-gothic-one-cyrillic']) {
+      expect(indexHtml).toContain(`url('/fonts/${file}.woff2')`);
+      expect(readFileSync(font(`${file}.woff2`)).subarray(0, 4).toString('latin1')).toBe('wOF2');
+    }
+    expect(indexHtml.match(/font-family:'Great Vibes'/g)).toHaveLength(2);
+  });
+
+  it('Great Vibes покрывает французский — FR-заголовки не собираются из разных шрифтов', () => {
+    const covered = new Set([
+      ...fontCodepoints(font('great-vibes-latin.woff2')),
+      ...fontCodepoints(font('great-vibes-latin-ext.woff2')),
+    ]);
+    expect([...FRENCH].filter(ch => !covered.has(ch.codePointAt(0)!))).toEqual([]);
   });
 
   it('--font-title остаётся Forum в обоих языках — это не декоративный шрифт', () => {

@@ -43,9 +43,14 @@ const AuthContext = createContext<AuthContextType | null>(null);
 // which allows the main bundle to execute without waiting for Firebase to download.
 type FirebaseConfig = typeof import('../firebase/config');
 let _config: Promise<FirebaseConfig> | null = null;
+// Уже загруженный модуль. Нужен входу через Google: попап должен открыться
+// в том же синхронном обработчике клика. Любой await до signInWithPopup
+// (даже на готовом промисе) рискует потерять «жест пользователя», и Safari
+// на iPhone блокирует окно как непрошеное.
+let _loaded: FirebaseConfig | null = null;
 
 function loadFirebase(): Promise<FirebaseConfig> {
-  return (_config ??= import('../firebase/config'));
+  return (_config ??= import('../firebase/config').then(m => (_loaded = m)));
 }
 
 function defaultProfile(overrides: Partial<UserProfile> = {}): UserProfile {
@@ -123,6 +128,20 @@ async function ensureUserDocument(firebaseUser: User): Promise<UserProfile> {
   return profile;
 }
 
+// Один запрос профиля на пользователя за раз. При входе профиль нужен и
+// onAuthStateChanged, и самому обработчику входа — раньше каждый делал свои
+// getDoc + setDoc, и новый пользователь создавался двумя гонящимися записями.
+const profileRequests = new Map<string, Promise<UserProfile>>();
+
+function loadUserProfile(firebaseUser: User): Promise<UserProfile> {
+  const pending = profileRequests.get(firebaseUser.uid);
+  if (pending) return pending;
+  const request = ensureUserDocument(firebaseUser)
+    .finally(() => profileRequests.delete(firebaseUser.uid));
+  profileRequests.set(firebaseUser.uid, request);
+  return request;
+}
+
 function parseFbBirthday(fb: string): string {
   const parts = fb.split('/');
   if (parts.length === 3) return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
@@ -145,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(firebaseUser);
         if (firebaseUser) {
           try {
-            const profile = await ensureUserDocument(firebaseUser);
+            const profile = await loadUserProfile(firebaseUser);
             if (mounted) setUserProfile(profile);
           } catch (e) {
             // Профиль не загрузился — остаёмся без него, но не подвешиваем приложение.
@@ -196,19 +215,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  // Вход через Google — стандартные scope Firebase (openid, email, profile):
+  // имя, e-mail, аватар. Дату рождения и телефон у Google не запрашиваем —
+  // это отдельные чувствительные scope People API с экраном согласия и
+  // проверкой приложения, а сайту они не нужны.
   async function signInWithGoogle() {
-    const { auth, GoogleAuthProvider, signInWithPopup } = await loadFirebase();
-    const provider = new GoogleAuthProvider();
+    const fb = _loaded ?? await loadFirebase();
+    const provider = new fb.GoogleAuthProvider();
+    // Выбор аккаунта каждый раз: на семейном устройстве легко забронировать
+    // не на тот e-mail, а билет уходит именно на него.
     provider.setCustomParameters({ prompt: 'select_account' });
-    const result  = await signInWithPopup(auth, provider);
-    const profile = await ensureUserDocument(result.user);
-    setUserProfile(profile);
+    const result = await fb.signInWithPopup(fb.auth, provider);
+    // Окно входа закрывается сразу после ответа Google, не дожидаясь Firestore:
+    // профиль догружается тем же запросом, что и в onAuthStateChanged.
+    setUser(result.user);
+    loadUserProfile(result.user)
+      .then(setUserProfile)
+      .catch(e => console.error('[auth] failed to load user profile:', (e as Error)?.name));
   }
 
   async function signInWithEmail(email: string, password: string) {
     const { auth, signInWithEmailAndPassword } = await loadFirebase();
     const result  = await signInWithEmailAndPassword(auth, email, password);
-    const profile = await ensureUserDocument(result.user);
+    const profile = await loadUserProfile(result.user);
     setUserProfile(profile);
   }
 

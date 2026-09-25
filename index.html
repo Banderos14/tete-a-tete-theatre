@@ -11,12 +11,6 @@
     <link rel="preload" href="/fonts/bad-russian.woff2"          as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/ekaterinavelikayatwo.woff2" as="font" type="font/woff2" crossorigin />
 
-    <!-- Great Vibes — display-шрифт французской версии (html[lang='fr'] ниже).
-         Единственный шрифт проекта не из /public/fonts: остальные самохостятся. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet" />
-
     <!-- Critical inline CSS: registers @font-face and :root variables immediately,
          so the page has correct colours/fonts from first paint even while the
          main CSS bundle (index-*.css) is still downloading on a cold cache. -->
@@ -24,6 +18,15 @@
       @font-face{font-family:'Bad Russian';src:url('/fonts/bad-russian.woff2') format('woff2'),url('/fonts/bad-russian.woff') format('woff');font-weight:400;font-style:normal;font-display:fallback}
       @font-face{font-family:Forum;src:url('/fonts/Forum.woff2') format('woff2');font-weight:400;font-style:normal;font-display:fallback}
       @font-face{font-family:'Ekaterina Velikaya Two';src:url('/fonts/ekaterinavelikayatwo.woff2') format('woff2');font-weight:400;font-style:normal;font-display:fallback}
+      /* Great Vibes (FR display) и Dela Gothic One (номера секций) — самохостинг вместо
+         Google Fonts: их CSS был render-blocking и тянул два сторонних соединения.
+         unicode-range: браузер качает файл, только когда на странице есть такие символы;
+         Great Vibes нужен только французской версии. Лицензия SIL OFL 1.1. */
+      @font-face{font-family:'Great Vibes';src:url('/fonts/great-vibes-latin.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+      @font-face{font-family:'Great Vibes';src:url('/fonts/great-vibes-latin-ext.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+      @font-face{font-family:'Dela Gothic One';src:url('/fonts/dela-gothic-one-latin.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+      @font-face{font-family:'Dela Gothic One';src:url('/fonts/dela-gothic-one-latin-ext.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+      @font-face{font-family:'Dela Gothic One';src:url('/fonts/dela-gothic-one-cyrillic.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
       :root{
         --bg:#000000;--bg-2:#14100e;--bg-3:#1c1714;
         --fg:#f5f1ea;--fg-dim:#b8b0a4;--fg-mute:#6b6359;
@@ -75,19 +78,18 @@
     <meta name="twitter:description" content="Театр в Ницце: спектакли, афиша, репертуар и онлайн-бронирование билетов." />
 
     <title>Théâtre Tête-à-Tête à Nice — Spectacles en russe et billetterie</title>
-    <!-- Favicons: официальный знак на прозрачном фоне, форма не изменена.
-         favicon-96x96.png — основной растровый favicon для Google Search: чёрный знак
-         с тонким белым контуром, читается и на светлом, и на тёмном фоне (растр не
-         умеет prefers-color-scheme, поэтому контраст зашит в саму картинку).
-         Прежний белый apple-touch-icon Google показывал как пустой белый кружок.
-         favicon.svg — для браузеров: чёрный знак в светлой теме, белый в тёмной.
-         favicon.ico (16/32/48) — тот же знак с контуром, запасной вариант.
+    <!-- Favicons: официальный знак, форма не изменена — тёмный знак на НЕПРОЗРАЧНОМ
+         белом квадрате. Google показывает favicon в круге на светлом и на тёмном фоне
+         выдачи: прозрачный знак с белыми частями там почти пропадал («пустой белый
+         кружок»), а белый квадрат с чёрным знаком читается на любом фоне.
+         favicon-96x96.png — основной для Google (кратно 48px), 48x48 — его минимальный
+         размер; favicon.ico (16/32/48) — запасной; favicon.svg — тот же знак для вкладок.
          У ICO явные sizes, не "any": иначе Chrome выбирает ICO вместо SVG. -->
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-    <!-- iOS заливает прозрачный фон чёрным, поэтому знак белый; тёмный контур
-         оставляет его читаемым на белом фоне -->
+    <!-- iOS: тот же знак на белом, с полями под скругление углов -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
@@ -124,27 +126,12 @@
               "https://www.instagram.com/theatre_tete_a_tete/",
               "https://www.facebook.com/TheatreTeteAtete/"
             ],
-            "logo": "https://www.theatre-teteatete.fr/images/favicon-source.png"
+            "logo": "https://www.theatre-teteatete.fr/icons/icon-512.png"
           }
         ]
       }
     </script>
 
-    <!-- Preconnect for Dela Gothic One CDN -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
-    <!-- Dela Gothic One — loaded async (non-render-blocking). Used only below fold (section numbers/mono).
-         Fonts are swap-safe: system font renders first, then replaces. -->
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
-      media="print"
-      onload="this.media='all'"
-    />
-    <noscript>
-      <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet" />
-    </noscript>
     <!-- Google Analytics 4.
          Скрипт НЕ подключается здесь: GA4 ставит cookie, а театр работает во
          Франции, где для этого нужно согласие пользователя (GDPR / рекомендации

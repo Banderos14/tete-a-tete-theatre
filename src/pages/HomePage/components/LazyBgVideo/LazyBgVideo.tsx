@@ -29,11 +29,18 @@ const ROOT_MARGIN =
 // Safari трактует preload="none" как сигнал отложить вообще любую загрузку, включая
 // постер, до момента, пока видео не понадобится, и до того карточка рисует пустой
 // чёрный прямоугольник вместо постера. Поэтому постер дублируется отдельным
-// <img loading="eager">, лежащим ПОВЕРХ видео (выше по z-index): он не зависит от
+// <img>, лежащим ПОВЕРХ видео (выше по z-index): он не зависит от
 // preload видео и гарантированно показывает кадр карточки. Скрываем его только
 // после события "playing" — то есть когда видео реально показывает кадры, а не
 // просто "может начать" — иначе на медленной сети возможен чёрный кадр между
 // скрытием постера и первым отрисованным кадром видео.
+//
+// Постер при этом грузится лениво: все карточки видео ниже первого экрана, а
+// раньше их постеры (~0,6 МБ) качались сразу при открытии сайта и отнимали канал
+// у шрифтов и скриптов. <img loading="lazy"> браузер запрашивает заранее, на
+// подходе к viewport; атрибут poster у <video> Chrome грузит сразу, поэтому он
+// ставится только после первого попадания в зону наблюдения — до этого кадр
+// всё равно показывает <img> поверх видео.
 export function LazyBgVideo({ className, poster, sources, style }: Props) {
   const { ref, isIntersecting, hasBeenInView } = useInView<HTMLVideoElement>(ROOT_MARGIN);
   const [videoPlaying, setVideoPlaying] = useState(false);
@@ -55,7 +62,7 @@ export function LazyBgVideo({ className, poster, sources, style }: Props) {
         loop
         playsInline
         preload="none"
-        poster={poster}
+        poster={hasBeenInView ? poster : undefined}
         style={style}
         aria-hidden="true"
         onPlaying={() => setVideoPlaying(true)}
@@ -69,7 +76,7 @@ export function LazyBgVideo({ className, poster, sources, style }: Props) {
           aria-hidden="true"
           className={className}
           style={{ ...style, zIndex: 1 }}
-          loading="eager"
+          loading="lazy"
           decoding="async"
         />
       )}

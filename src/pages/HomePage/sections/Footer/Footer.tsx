@@ -1,3 +1,4 @@
+import { LOGO_SRC, LOGO_WIDTH, LOGO_HEIGHT } from '../../../../constants/links';
 import { useLang } from '../../../../i18n/LangContext';
 import { scrollToSection } from '../../../../utils/smoothScroll';
 import styles from './Footer.module.scss';
@@ -9,7 +10,7 @@ export function Footer() {
     <footer className={styles.footer}>
       <div className={styles.inner}>
         <a href="#top" className={styles.mark} onClick={(e) => { e.preventDefault(); scrollToSection('top', { offset: 0 }); }}>
-          <img src="https://static.tildacdn.net/tild6332-3234-4533-b063-336532366435/IMG_6877.PNG" alt="Théâtre Tête-à-Tête" />
+          <img src={LOGO_SRC} width={LOGO_WIDTH} height={LOGO_HEIGHT} alt="Théâtre Tête-à-Tête" />
           <span>
             ТЕТ <span className={styles.dot}>·</span> А <span className={styles.dot}>·</span> ТЕТ
           </span>

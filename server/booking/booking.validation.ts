@@ -8,6 +8,7 @@ import { badRequest } from '../shared/errors.js';
 import { MAX_COMMENT_LEN, MAX_PHONE_LEN, MIN_PHONE_LEN } from '../../shared/contracts/limits.js';
 import { SHOWS, MAX_TICKETS_PER_BOOKING, type TicketTypeId, type ShowInfo } from '../../shared/catalog/shows.js';
 import type { BasketLine } from '../../shared/domain/ticketBasket.js';
+import { normalizePhone } from '../../shared/domain/phone.js';
 
 export interface ValidatedBookingRequest {
   showId:        string;
@@ -108,7 +109,8 @@ export function validateCreateBooking(body: Record<string, unknown>): ValidatedB
     ticketType:   lines[0]!.type,
     ticketsCount: lines.reduce((sum, l) => sum + l.quantity, 0),
     paymentMethod,
-    phone:   phoneValue,
+    // E.164, если номер разобран; иначе как прислан — старые клиенты не ломаем.
+    phone:   normalizePhone(phoneValue),
     comment: typeof comment === 'string' ? comment.trim().slice(0, MAX_COMMENT_LEN) : '',
     lang:    lang === 'FR' ? 'FR' : 'RU',
   };

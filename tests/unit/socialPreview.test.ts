@@ -7,7 +7,8 @@ import { inflateSync } from 'node:zlib';
 // зрителями (сначала og:image, затем "image" в JSON-LD → zal-v2.webp), а Google —
 // пустой белый кружок вместо favicon (белый apple-touch-icon на прозрачном фоне)
 // и домен вместо имени сайта (не было WebSite в структурированных данных).
-// Иконки — официальный знак на прозрачном фоне без подложки, контраст дан контуром.
+// Прозрачный знак с белыми частями в круге выдачи тоже читался плохо, поэтому
+// иконки — тёмный официальный знак на непрозрачном белом квадрате.
 
 const ROOT   = resolve(__dirname, '../..');
 const PUBLIC = join(ROOT, 'public');
@@ -80,14 +81,15 @@ function inspect({ pixels }: Rgba) {
   };
 }
 
-// Иконка без собственного фона должна читаться и на белом, и на тёмном: у неё есть
-// и заметная тёмная часть (видна на белом), и заметная светлая (видна на тёмном).
-function expectReadableOnLightAndDark(frame: Rgba, label: string) {
+// Иконка для выдачи Google и вкладок: непрозрачная (углы белые, прозрачных
+// пикселей нет), фон светлый, знак тёмный и занимает заметную часть квадрата.
+function expectDarkMarkOnWhite(frame: Rgba, label: string, minDark = 0.12) {
   const info = inspect(frame);
-  expect(info.cornerAlpha, label).toBe(0);
-  expect(info.transparentShare, label).toBeGreaterThan(0.2);
-  expect(info.darkShare, label).toBeGreaterThan(0.15);
-  expect(info.lightShare, label).toBeGreaterThan(0.15);
+  expect(info.transparentShare, label).toBe(0);
+  const corner = [...frame.pixels.subarray(0, 4)];
+  expect(corner, label).toEqual([255, 255, 255, 255]);
+  expect(info.lightShare, label).toBeGreaterThan(0.4);
+  expect(info.darkShare, label).toBeGreaterThan(minDark);
 }
 
 const jsonLdNodes = (): Record<string, unknown>[] =>
@@ -153,11 +155,11 @@ describe('имя сайта для Google — WebSite в структуриро�
   });
 });
 
-describe('favicon — знак на прозрачном фоне, читается на светлом и тёмном', () => {
+describe('favicon — тёмный знак на белом квадрате, читается в выдаче Google', () => {
   const icons = [...html.matchAll(/<link rel="(?:icon|apple-touch-icon)"[^>]*href="([^"]+)"/g)].map(m => m[1]!);
 
   it('объявлен ровно один набор иконок со стабильными адресами', () => {
-    expect(icons).toEqual(['/favicon-96x96.png', '/favicon.svg', '/favicon.ico', '/apple-touch-icon.png']);
+    expect(icons).toEqual(['/favicon-96x96.png', '/favicon-48x48.png', '/favicon.svg', '/favicon.ico', '/apple-touch-icon.png']);
   });
 
   it('каждый файл существует', () => {
@@ -166,59 +168,82 @@ describe('favicon — знак на прозрачном фоне, читает�
 
   it('растровый PNG объявлен первым; у ICO явные размеры, а не "any"', () => {
     expect(html).toContain('<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />');
+    expect(html).toContain('<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />');
     expect(html).toContain('<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />');
     expect(html).toContain('<link rel="icon" type="image/svg+xml" href="/favicon.svg" />');
   });
 
-  it('favicon-96x96.png: квадрат 96px (кратно 48 — рекомендация Google)', () => {
-    const png = decodePng(readFileSync(join(PUBLIC, 'favicon-96x96.png')));
-    expect({ w: png.width, h: png.height }).toEqual({ w: 96, h: 96 });
-    expectReadableOnLightAndDark(png, 'favicon-96x96.png');
+  it('PNG-иконки для Google: квадраты кратно 48px, тёмный знак на белом', () => {
+    for (const [file, size] of [['favicon-96x96.png', 96], ['favicon-48x48.png', 48]] as const) {
+      const png = decodePng(readFileSync(join(PUBLIC, file)));
+      expect({ w: png.width, h: png.height }, file).toEqual({ w: size, h: size });
+      // На 48px тонкие линии знака сглаживаются в серый — порог ниже.
+      expectDarkMarkOnWhite(png, file, size === 48 ? 0.08 : 0.12);
+    }
   });
 
-  it('favicon.ico: 16/32/48, тот же знак с контуром', () => {
+  it('favicon.ico: 16/32/48, тот же непрозрачный знак', () => {
     const frames = decodeIco(readFileSync(join(PUBLIC, 'favicon.ico')));
     expect(frames.map(f => f.width).sort((a, b) => a - b)).toEqual([16, 32, 48]);
     for (const frame of frames) {
       expect(frame.height).toBe(frame.width);
-      if (frame.width >= 32) expectReadableOnLightAndDark(frame, `${frame.width}px`);
+      expectDarkMarkOnWhite(frame, `${frame.width}px`, 0.08);
     }
   });
 
-  it('PWA-иконки: квадратные, прозрачный фон, чёрный знак', () => {
-    for (const [file, size] of [['icons/icon-192.png', 192], ['icons/icon-512.png', 512]] as const) {
+  it('apple-touch-icon и PWA-иконки: тот же знак на белом, с полями', () => {
+    for (const [file, size] of [['apple-touch-icon.png', 180], ['icons/icon-192.png', 192], ['icons/icon-512.png', 512]] as const) {
       const png = decodePng(readFileSync(join(PUBLIC, file)));
       expect({ w: png.width, h: png.height }, file).toEqual({ w: size, h: size });
-      const info = inspect(png);
-      expect(info.cornerAlpha, file).toBe(0);
-      expect(info.transparentShare, file).toBeGreaterThan(0.4);
-      expect(info.darkShare, file).toBeGreaterThan(0.9);
+      expectDarkMarkOnWhite(png, file, 0.08);
     }
   });
 
-  it('apple-touch-icon: белый знак (iOS подкладывает чёрный) с тёмным контуром — не пустой на белом', () => {
-    const png = decodePng(readFileSync(join(PUBLIC, 'apple-touch-icon.png')));
-    expect({ w: png.width, h: png.height }).toEqual({ w: 180, h: 180 });
-    expectReadableOnLightAndDark(png, 'apple-touch-icon.png');
-  });
-
-  it('favicon.svg: без фона, цвет знака зависит от темы', () => {
+  it('favicon.svg: белая подложка в самой картинке, без переключения на белый знак в тёмной теме', () => {
     const svg = readFileSync(join(PUBLIC, 'favicon.svg'), 'utf8');
-    expect(svg).toContain('prefers-color-scheme:dark');
-    expect(svg).toMatch(/rect\{fill:#000\}/);
-    expect(svg).toMatch(/rect\{fill:#fff\}/);
-    expect(svg).toContain('mask="url(#glyph)"');
-    // единственный rect — залитый знак под маской, отдельной подложки нет
-    expect(svg.match(/<rect/g)).toHaveLength(1);
+    expect(svg).not.toContain('prefers-color-scheme');
+    expect(svg).not.toMatch(/fill:#fff/);
+    const png = decodePng(Buffer.from(svg.match(/base64,([A-Za-z0-9+/=]+)/)![1]!, 'base64'));
+    expectDarkMarkOnWhite(png, 'favicon.svg');
   });
 
-  it('PWA-иконки не объявлены maskable — у maskable фон должен быть непрозрачным', () => {
+  it('PWA-иконки объявлены как "any" (не maskable)', () => {
     const manifest = JSON.parse(readFileSync(join(PUBLIC, 'site.webmanifest'), 'utf8')) as { icons: { purpose: string }[] };
     expect(manifest.icons.map(i => i.purpose)).toEqual(['any', 'any']);
   });
 
-  it('логотип в JSON-LD читается на белом фоне (не белая версия)', () => {
-    expect(html).toContain('"logo": "https://www.theatre-teteatete.fr/images/favicon-source.png"');
-    expect(existsSync(join(PUBLIC, 'images/favicon-source.png'))).toBe(true);
+  it('логотип в JSON-LD — непрозрачный знак на белом (хорошо смотрится на белом фоне)', () => {
+    expect(html).toContain('"logo": "https://www.theatre-teteatete.fr/icons/icon-512.png"');
+  });
+});
+
+describe('техническое SEO: один адрес сайта везде', () => {
+  const robots  = readFileSync(join(PUBLIC, 'robots.txt'), 'utf8');
+  const sitemap = readFileSync(join(PUBLIC, 'sitemap.xml'), 'utf8');
+
+  it('canonical, og:url, WebSite.url и sitemap указывают на https://www. с косой чертой', () => {
+    expect(html).toContain(`<link rel="canonical" href="${HOME}" />`);
+    expect(meta('property', 'og:url')).toBe(HOME);
+    for (const node of jsonLdNodes()) expect(node['url']).toBe(HOME);
+    expect(sitemap).toContain(`<loc>${HOME}</loc>`);
+    expect(robots).toContain('Sitemap: https://www.theatre-teteatete.fr/sitemap.xml');
+  });
+
+  it('нет случайного noindex и запрета обхода', () => {
+    expect(html).not.toMatch(/<meta[^>]+name="robots"[^>]+noindex/i);
+    expect(robots).toMatch(/User-agent: \*\s*\nAllow: \//);
+    expect(robots).not.toMatch(/^Disallow: \/\s*$/m);
+  });
+
+  it('узлы JSON-LD связаны: WebSite издаётся театром', () => {
+    const site = jsonLdNodes().find(n => n['@type'] === 'WebSite')!;
+    const theatre = jsonLdNodes().find(n => n['@type'] === 'PerformingArtsTheater')!;
+    expect(site['publisher']).toEqual({ '@id': theatre['@id'] });
+    expect(theatre['alternateName']).toEqual(site['alternateName']);
+  });
+
+  it('в <head> нет staging- и preview-адресов', () => {
+    const head = html.slice(0, html.indexOf('</head>'));
+    expect(head).not.toMatch(/vercel\.app|staging|localhost/);
   });
 });

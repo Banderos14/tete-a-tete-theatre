@@ -105,11 +105,15 @@
   letter-spacing: 0.08em;
   padding: 9px 18px;
   border-radius: 8px;
-  white-space: nowrap;
+  // Текст в две строки на узком экране: плашка не должна вылезать за края.
+  max-width: calc(100% - 32px);
+  line-height: 1.4;
   display: flex;
   align-items: center;
   gap: 8px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+
+  svg { flex-shrink: 0; }
   animation: toastIn 0.22s ease;
   z-index: var(--z-drawer-inner);
 }
@@ -911,6 +915,14 @@
   font-family: var(--font-mono);
 }
 
+// «необязательно» рядом с названием поля — тише самой подписи.
+.optionalHint {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: #6e675f;
+}
+
 .providerLabel {
   display: flex;
   align-items: center;
@@ -980,16 +992,6 @@
 
 .birthdayFieldError {
   border-color: var(--accent) !important;
-}
-
-@keyframes fieldPulse {
-  0%   { border-color: rgba(192, 57, 43, 0.25); box-shadow: 0 0 0 0   rgba(192, 57, 43, 0.00); }
-  45%  { border-color: rgba(192, 57, 43, 0.80); box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.13); }
-  100% { border-color: rgba(192, 57, 43, 0.25); box-shadow: 0 0 0 0   rgba(192, 57, 43, 0.00); }
-}
-
-.fieldPulse {
-  animation: fieldPulse 1s ease-in-out 2 !important;
 }
 
 .birthdayText {

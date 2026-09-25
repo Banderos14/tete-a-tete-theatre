@@ -4,6 +4,8 @@ import { join, resolve } from 'node:path';
 import type { Booking } from '../../src/types/booking.js';
 import {
   validate,
+  isValidBirthday,
+  todayIso,
   getInitials,
   formatBirthdayDisplay,
   mapFbError,
@@ -21,25 +23,79 @@ const DRAWER_DIR = join(ROOT, 'src/components/ui/ProfileDrawer');
 // ── Валидация формы профиля ─────────────────────────────────────────────────
 
 describe('валидация профиля', () => {
-  const required = 'обязательно';
-  const invalid  = 'неверный';
+  const messages = { required: 'обязательно', phoneInvalid: 'телефон', birthdayInvalid: 'дата' };
+  const TODAY = '2026-09-25';
+  const check = (fields: Partial<Parameters<typeof validate>[0]>) =>
+    validate({ displayName: 'Аня', birthday: '', phone: '', ...fields }, messages, TODAY);
 
-  it('пустые обязательные поля дают ошибку', () => {
-    expect(validate('', '', '', required, invalid)).toEqual({
-      displayName: required, birthday: required, phone: required,
-    });
-  });
-
-  it('неполный телефон отличается от пустого', () => {
-    expect(validate('Аня', '1990-01-01', '+33 7 49', required, invalid).phone).toBe(invalid);
-  });
-
-  it('заполненная форма ошибок не даёт', () => {
-    expect(validate('Аня', '1990-01-01', '+33 7 49 66 19 40', required, invalid)).toEqual({});
+  it('обязательно только имя: пустые дата рождения и телефон не мешают сохранить', () => {
+    expect(check({})).toEqual({});
+    expect(check({ displayName: '' })).toEqual({ displayName: 'обязательно' });
   });
 
   it('пробелы в имени не считаются заполнением', () => {
-    expect(validate('   ', '1990-01-01', '+33 7 49 66 19 40', required, invalid).displayName).toBe(required);
+    expect(check({ displayName: '   ' }).displayName).toBe('обязательно');
+  });
+
+  it('введённый телефон проверяется: обрывок — ошибка, любой корректный номер — нет', () => {
+    expect(check({ phone: '+33 7 49' }).phone).toBe('телефон');
+    for (const phone of ['07 49 66 19 40', '+33 7 49 66 19 40', '0033 7 49 66 19 40', '+380 67 123 45 67', '+7 916 123 45 67']) {
+      expect(check({ phone }), phone).toEqual({});
+    }
+  });
+
+  it('старый нераспознаваемый номер из профиля не блокирует сохранение, пока его не меняли', () => {
+    expect(check({ phone: '12345678', storedPhone: '12345678' })).toEqual({});
+    expect(check({ phone: '1234567', storedPhone: '12345678' }).phone).toBe('телефон');
+  });
+
+  it('дата рождения: будущая, несуществующая и слишком ранняя — ошибка', () => {
+    expect(check({ birthday: '1990-01-01' })).toEqual({});
+    expect(check({ birthday: TODAY })).toEqual({});
+    expect(check({ birthday: '2026-09-26' }).birthday).toBe('дата');
+    expect(check({ birthday: '2027-01-01' }).birthday).toBe('дата');
+    expect(check({ birthday: '1990-02-31' }).birthday).toBe('дата');
+    expect(check({ birthday: '1899-12-31' }).birthday).toBe('дата');
+    expect(check({ birthday: '01.02.1990' }).birthday).toBe('дата');
+  });
+
+  it('29 февраля — только в високосный год', () => {
+    expect(isValidBirthday('2000-02-29', TODAY)).toBe(true);
+    expect(isValidBirthday('2001-02-29', TODAY)).toBe(false);
+  });
+
+  it('«сегодня» — по часам устройства, а не UTC: поздним вечером в Ницце граница не сдвигается', () => {
+    // 25.09 23:30 по местному времени — это уже 26.09 в UTC при положительном поясе.
+    expect(todayIso(new Date(2026, 8, 25, 23, 30))).toBe('2026-09-25');
+    expect(todayIso(new Date(2026, 0, 1, 0, 5))).toBe('2026-01-01');
+  });
+
+  it('показ даты не сдвигается на день ни в каком часовом поясе', () => {
+    expect(formatBirthdayDisplay('1990-01-01', 'RU')).toBe('1 января 1990 г.');
+    expect(formatBirthdayDisplay('1990-12-31', 'FR')).toBe('31 décembre 1990');
+  });
+});
+
+describe('кабинет не заставляет заполнять дату рождения и телефон', () => {
+  const drawer = readFileSync(join(DRAWER_DIR, 'ProfileDrawer.tsx'), 'utf8');
+  const personal = readFileSync(join(DRAWER_DIR, 'PersonalSection.tsx'), 'utf8');
+  const css = readFileSync(join(DRAWER_DIR, 'ProfileDrawer.module.scss'), 'utf8');
+
+  it('нет принудительной пульсации незаполненных полей', () => {
+    expect(drawer).not.toMatch(/pulse/i);
+    expect(personal).not.toMatch(/pulse/i);
+    expect(css).not.toContain('fieldPulse');
+  });
+
+  it('повторное закрытие с несохранёнными изменениями закрывает кабинет без сохранения', () => {
+    expect(drawer).toContain('if (form.isDirty && !warnVisible) {');
+    expect(drawer).toContain('if (form.isDirty) form.reset();');
+  });
+
+  it('поле даты: нельзя выбрать будущее и годы раньше 1900; помечено «необязательно»', () => {
+    expect(personal).toContain('max={todayIso()}');
+    expect(personal).toContain('min={`${MIN_BIRTH_YEAR}-01-01`}');
+    expect(personal).toContain('hint={t.profile.optional}');
   });
 });
 

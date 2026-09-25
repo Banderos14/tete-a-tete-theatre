@@ -25,12 +25,14 @@ export function Field({
   );
 }
 
-/** Поле раздела «Личные данные»: лейбл с пометкой провайдера (Google/Facebook). */
+/** Поле раздела «Личные данные»: лейбл с пометкой провайдера (Google/Facebook) или «необязательно». */
 export function PersonalField({
-  label, providerLabel, error, children, htmlFor,
+  label, providerLabel, hint, error, children, htmlFor,
 }: {
   label: ReactNode;
   providerLabel?: string;
+  /** Тихая пометка справа, например «необязательно». */
+  hint?: string;
   error?: string;
   children: ReactNode;
   htmlFor?: string;
@@ -45,6 +47,7 @@ export function PersonalField({
             {providerLabel}
           </span>
         )}
+        {!providerLabel && hint && <span className={styles.optionalHint}>{hint}</span>}
       </div>
       {children}
       {error && <p className={styles.fieldError}>{error}</p>}

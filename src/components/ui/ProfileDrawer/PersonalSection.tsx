@@ -7,12 +7,12 @@ import { IconCalendarEvent, IconLoader2, IconPhone, IconBrandWhatsapp, IconBrand
 import { useLang } from '../../../i18n/LangContext';
 import type { T } from '../../../i18n/translations';
 import { PersonalField } from './ProfileFields';
-import { formatBirthdayDisplay } from './profileValidation';
+import { formatBirthdayDisplay, MIN_BIRTH_YEAR, todayIso } from './profileValidation';
 import { MESSENGERS, type ProfileForm } from './useProfileForm';
 import styles from './ProfileDrawer.module.scss';
 
 export function PersonalSection({
-  form, t, email, nameProviderLabel, emailProviderLabel, pulseBirthday, pulsePhone, onSave,
+  form, t, email, nameProviderLabel, emailProviderLabel, onSave,
 }: {
   form: ProfileForm;
   t: T;
@@ -21,8 +21,6 @@ export function PersonalSection({
   nameProviderLabel?: string;
   /** У email провайдером может быть только Google. */
   emailProviderLabel?: string;
-  pulseBirthday: boolean;
-  pulsePhone: boolean;
   onSave: () => void;
 }) {
   const { lang } = useLang();
@@ -70,9 +68,10 @@ export function PersonalSection({
         <div className={styles.emailDisplay}>{email}</div>
       </PersonalField>
 
-      <PersonalField label={t.profile.birthday} error={errors.birthday}>
+      {/* Необязательное поле: на бронь, билеты и лояльность не влияет. */}
+      <PersonalField label={t.profile.birthday} hint={t.profile.optional} error={errors.birthday}>
         <div
-          className={`${styles.birthdayField} ${errors.birthday ? styles.birthdayFieldError : ''} ${pulseBirthday && !errors.birthday ? styles.fieldPulse : ''}`}
+          className={`${styles.birthdayField} ${errors.birthday ? styles.birthdayFieldError : ''}`}
           onClick={openBirthdayPicker}
           onKeyDown={e => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -93,6 +92,8 @@ export function PersonalSection({
             ref={birthdayInputRef}
             type="date"
             value={form.birthday}
+            min={`${MIN_BIRTH_YEAR}-01-01`}
+            max={todayIso()}
             onChange={e => form.setBirthday(e.target.value)}
             className={styles.hiddenDateInput}
             tabIndex={-1}
@@ -105,7 +106,7 @@ export function PersonalSection({
       <div className={styles.contactsSubsection}>
         <h3 className={styles.contactsSubtitle}>{isFR ? 'Contacts' : 'Контакты'}</h3>
 
-        <PersonalField label={isFR ? 'Téléphone' : 'Телефон'} htmlFor="profile-phone-personal" error={errors.phone}>
+        <PersonalField label={t.profile.phone} hint={t.profile.optional} htmlFor="profile-phone-personal" error={errors.phone}>
           <div className={styles.phoneInputWrap}>
             <input
               id="profile-phone-personal"
@@ -113,10 +114,11 @@ export function PersonalSection({
               inputMode="tel"
               value={form.phone}
               onChange={e => form.setPhone(e.target.value)}
-              onPaste={e => { e.preventDefault(); form.setPhone(e.clipboardData.getData('text')); }}
-              placeholder="+33 6 00 00 00 00"
+              onBlur={form.commitPhone}
+              placeholder="06 12 34 56 78"
               autoComplete="tel"
-              className={`${styles.personalInput} ${errors.phone ? styles.personalInputError : ''} ${pulsePhone && !errors.phone ? styles.fieldPulse : ''}`}
+              aria-invalid={!!errors.phone}
+              className={`${styles.personalInput} ${errors.phone ? styles.personalInputError : ''}`}
             />
             <IconPhone size={16} stroke={1.5} className={styles.phoneInputIcon} />
           </div>

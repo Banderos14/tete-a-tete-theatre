@@ -1,0 +1,7 @@
+Great Vibes (great-vibes-*.woff2) — Copyright (c) 2012 TypeSETit, LLC.
+Dela Gothic One (dela-gothic-one-*.woff2) — Copyright 2020 The Dela Gothic Project Authors.
+
+Оба шрифта распространяются по SIL Open Font License, Version 1.1:
+https://openfontlicense.org/open-font-license-official-text/
+
+Файлы — подмножества (latin, latin-ext, cyrillic) из Google Fonts, без изменений.
