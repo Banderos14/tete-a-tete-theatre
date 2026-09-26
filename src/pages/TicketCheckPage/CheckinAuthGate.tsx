@@ -55,49 +55,51 @@ export function CheckinAuthGate({ user, ticketFromUrl, signInWithEmail, signInWi
 
   return (
     <div className={styles.centered}>
-      {publicCode && (
-        <div className={styles.spectatorBox}>
-          <p className={styles.scanHint}>{t.publicTicket.spectatorHint}</p>
-          <Link className={styles.scanStartBtn} to={`/ticket?code=${encodeURIComponent(publicCode)}`}>
-            {t.publicTicket.openTicket}
-          </Link>
-        </div>
-      )}
+      <div className={styles.gateColumn}>
+        {publicCode && (
+          <div className={styles.spectatorBox}>
+            <p className={styles.scanHint}>{t.publicTicket.spectatorHint}</p>
+            <Link className={styles.scanStartBtn} to={`/ticket?code=${encodeURIComponent(publicCode)}`}>
+              {t.publicTicket.openTicket}
+            </Link>
+          </div>
+        )}
 
-      <p className={styles.accessDenied}>
-        {user
-          ? 'У этой учётной записи нет прав на проверку билетов'
-          : 'Войдите как администратор, чтобы проверить билет'}
-      </p>
+        <p className={styles.accessDenied}>
+          {user
+            ? 'У этой учётной записи нет прав на проверку билетов'
+            : 'Войдите как администратор, чтобы проверить билет'}
+        </p>
 
-      <p className={styles.scanHint}>
-        Билет <span className={styles.mono}>{scannedCode}</span> распознан —
-        после входа проверка продолжится автоматически.
-      </p>
+        <p className={styles.scanHint}>
+          Билет <span className={styles.mono}>{scannedCode}</span> распознан —
+          после входа проверка продолжится автоматически.
+        </p>
 
-      {!user && (
-        <form onSubmit={handleSignIn} className={styles.authForm}>
-          <input
-            className={styles.authInput}
-            type="email" value={email} placeholder="E-mail"
-            aria-label="E-mail" autoComplete="email" required disabled={loading}
-            onChange={e => setEmail(e.target.value)}
-          />
-          <input
-            className={styles.authInput}
-            type="password" value={password} placeholder="Пароль"
-            aria-label="Пароль" autoComplete="current-password" required disabled={loading}
-            onChange={e => setPassword(e.target.value)}
-          />
-          {error && <p className={styles.authError}>{error}</p>}
-          <button type="submit" className={styles.scanStartBtn} disabled={loading}>
-            {loading ? '…' : 'Войти'}
-          </button>
-          <button type="button" className={styles.secondaryBtn} onClick={handleGoogleSignIn} disabled={loading}>
-            Войти через Google
-          </button>
-        </form>
-      )}
+        {!user && (
+          <form onSubmit={handleSignIn} className={styles.authForm}>
+            <input
+              className={styles.authInput}
+              type="email" value={email} placeholder="E-mail"
+              aria-label="E-mail" autoComplete="email" required disabled={loading}
+              onChange={e => setEmail(e.target.value)}
+            />
+            <input
+              className={styles.authInput}
+              type="password" value={password} placeholder="Пароль"
+              aria-label="Пароль" autoComplete="current-password" required disabled={loading}
+              onChange={e => setPassword(e.target.value)}
+            />
+            {error && <p className={styles.authError}>{error}</p>}
+            <button type="submit" className={styles.scanStartBtn} disabled={loading}>
+              {loading ? '…' : 'Войти'}
+            </button>
+            <button type="button" className={styles.secondaryBtn} onClick={handleGoogleSignIn} disabled={loading}>
+              Войти через Google
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

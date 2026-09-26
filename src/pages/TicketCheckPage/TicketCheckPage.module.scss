@@ -1126,3 +1126,15 @@
 
   @include mixins.small { margin-bottom: 20px; padding-bottom: 18px; }
 }
+
+// Экран входа на странице проверки — одна колонка: у .centered каждый
+// ребёнок становился своей строкой grid и текст вылезал за края экрана.
+.gateColumn {
+  width: 100%;
+  max-width: 360px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
