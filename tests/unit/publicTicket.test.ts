@@ -256,13 +256,16 @@ describe('страница /#/ticket', () => {
     expect(app.indexOf('path="/ticket"')).toBeLessThan(app.indexOf('path="*"'));
   });
 
-  it('не требует входа: ни AuthContext, ни Firebase, ни токена', () => {
+  it('не требует входа: статус без токена, окно входа страница сама не открывает', () => {
     const svc = projectSource('src/services/publicTicketService.ts');
-    for (const src of [page, svc]) {
-      for (const forbidden of ['useAuth', 'firebase/', 'getIdToken', 'Authorization', 'setAuthOpen', 'onRequireAuth']) {
-        expect(src, forbidden).not.toContain(forbidden);
-      }
+    for (const forbidden of ['useAuth', 'firebase/', 'getIdToken', 'Authorization']) {
+      expect(svc, forbidden).not.toContain(forbidden);
     }
+    for (const forbidden of ['firebase/', 'getIdToken', 'Authorization', 'setAuthOpen', 'onRequireAuth', 'signIn']) {
+      expect(page, forbidden).not.toContain(forbidden);
+    }
+    // Состояние входа читается только для подсказки про Safari.
+    expect(page.match(/useAuth\(\)/g)).toHaveLength(1);
     expect(svc).toContain('/api/public-ticket?code=');
   });
 
@@ -294,9 +297,12 @@ describe('страница /#/ticket', () => {
   });
 
   it('не показывает персональные данные и не даёт менять бронь', () => {
-    for (const field of ['userEmail', 'userPhone', 'userName', 'cancelBooking', 'resume_checkout', '<button']) {
+    for (const field of ['userEmail', 'userPhone', 'userName', 'cancelBooking', 'resume_checkout']) {
       expect(page, field).not.toContain(field);
     }
+    // Единственная кнопка — «Скопировать ссылку».
+    expect(page.match(/<button/g)).toHaveLength(1);
+    expect(page).toContain('onClick={() => void handleCopy()}');
   });
 
   it('QR строится той же функцией, что в кабинете, PDF и письме', async () => {
@@ -306,6 +312,22 @@ describe('страница /#/ticket', () => {
     await generateTicketQR(CODE);
     expect(spy.mock.calls[0]![0]).toBe(ticketQrPayload(CODE));
     spy.mockRestore();
+  });
+
+  it('«Мои билеты и лояльность» — существующий поток кабинета: вошёл — сразу, нет — окно входа', () => {
+    expect(page).toContain('<a className={styles.accountCta} href={ACCOUNT_HREF}>{t.accountCta}</a>');
+    const gate = projectSource('src/app/AccountDeepLink.tsx');
+    expect(gate).toMatch(/if \(user\) \{\s*onOpenTickets\(\);/);
+    expect(gate).toContain('onRequireAuth();');
+  });
+
+  it('подсказка про Safari — только iOS не в Safari и без входа; копируется канонический адрес кабинета', () => {
+    expect(page).toContain('{iosOtherBrowser && !loading && !user && (');
+    expect(page).toContain('const accountUrl = myTicketsUrl(ticketQrSiteBase());');
+    expect(page).toContain('navigator.clipboard.writeText(accountUrl)');
+    expect(myTicketsUrl('')).toBe(`${SITE}/#/?account=tickets`);
+    // Никаких попыток открыть Safari.
+    expect(page).not.toMatch(/x-safari|com-apple-mobilesafari|window\.open|location\.(href|assign)\s*=/);
   });
 
   it('ссылка на кабинет — полная загрузка, чтобы кабинет действительно открылся', () => {
@@ -319,6 +341,9 @@ describe('страница /#/ticket', () => {
     expect(Object.keys(RU.publicTicket).sort()).toEqual(Object.keys(FR.publicTicket).sort());
     expect(FR.publicTicket.refundedTitle).toBe('Réservation annulée et remboursée');
     expect(RU.publicTicket.onSite(30)).toBe('на входе, 30 €');
+    expect(RU.publicTicket.accountCta).toBe('Мои билеты и лояльность');
+    expect(FR.publicTicket.accountCta).toBe('Mes billets et fidélité');
+    expect(RU.publicTicket.safariHint).toBe('Если вы обычно входите через Safari, откройте сайт в Safari — там может быть сохранён ваш вход.');
   });
 });
 
@@ -341,5 +366,30 @@ describe('«Мои билеты» по-прежнему требуют вход�
     const rules = projectSource('firestore.rules');
     expect(rules).toMatch(/match \/bookings\/\{\w+\}/);
     expect(rules).not.toMatch(/match \/bookings\/\{\w+\}\s*\{\s*allow read: if true/);
+  });
+});
+
+describe('какой браузер на iOS', async () => {
+  const { isIosNonSafari } = await import('../../src/utils/iosBrowser.js');
+  const UA = {
+    iphoneSafari:  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1',
+    iphoneChrome:  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/138.0.7204.119 Mobile/15E148 Safari/604.1',
+    iphoneFirefox: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/141.0 Mobile/15E148 Safari/605.1.15',
+    iphoneGoogle:  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) GSA/380.0.1 Mobile/15E148 Safari/604.1',
+    iphoneWebView: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+    ipadDesktop:   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/138.0 Safari/604.1',
+    ipadSafariDesktop: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15',
+    macSafari:     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15',
+    macChrome:     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+    android:       'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36',
+  };
+
+  it.each([
+    ['iphoneChrome', 5, true], ['iphoneFirefox', 5, true], ['iphoneGoogle', 5, true], ['iphoneWebView', 5, true],
+    ['ipadDesktop', 5, true],
+    ['iphoneSafari', 5, false], ['ipadSafariDesktop', 5, false],
+    ['macSafari', 0, false], ['macChrome', 0, false], ['android', 5, false],
+  ] as const)('%s → подсказка: %s', (key, touch, expected) => {
+    expect(isIosNonSafari(UA[key], touch)).toBe(expected);
   });
 });

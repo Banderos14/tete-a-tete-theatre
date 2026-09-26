@@ -153,3 +153,76 @@
 .stampRed   { border-color: var(--accent); color: var(--accent); text-decoration: line-through; }
 .stampAmber { border-color: #b08a3e; color: #cdb27a; }
 .stampGreen { border-color: #5a8a5a; color: #7fb07f; }
+
+// «Мои билеты и лояльность» — заметная второстепенная кнопка под билетом.
+.account {
+  width: min(420px, 100%);
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.accountCta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  border: 0.5px solid rgba(243, 231, 220, 0.3);
+  border-radius: 12px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--fg);
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover { border-color: rgba(243, 231, 220, 0.55); background: rgba(243, 231, 220, 0.04); }
+}
+
+// Подсказка про Safari: тихая, без тревожного цвета.
+.safariHint {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(243, 231, 220, 0.05);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+
+  @include mixins.small { font-size: 12.5px; }
+}
+
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 0.5px solid rgba(243, 231, 220, 0.16);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--fg);
+
+  &:hover { border-color: rgba(243, 231, 220, 0.35); }
+}
+
+.copyNote { font-size: 12px; color: var(--fg-mute); }
+
+.copyUrl {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  color: var(--fg);
+  word-break: break-all;
+  user-select: all;
+}
+
+:global([data-theme='light']) {
+  .accountCta { border-color: rgba(36, 26, 22, 0.3); }
+  .safariHint { background: rgba(36, 26, 22, 0.05); }
+  .copyBtn    { border-color: rgba(36, 26, 22, 0.16); }
+}

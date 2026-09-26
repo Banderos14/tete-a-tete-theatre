@@ -412,10 +412,14 @@ export interface T {
     paid: string;
     onSite: (amount: number) => string;
     transfer: string;
-    account: string;
     myTickets: string;
     spectatorHint: string;
     openTicket: string;
+    accountCta: string;
+    safariHint: string;
+    copyLink: string;
+    linkCopied: string;
+    copyFailed: string;
   };
   // Ключи перечислены явно: раньше здесь стоял Record<string, string>, и
   // компилятор молча пропускал пропуски — во французской версии выводились
