@@ -85,3 +85,20 @@ export function bearerToken(req: IncomingMessage): string | null {
   const raw = String(req.headers['authorization'] ?? '');
   return raw.startsWith('Bearer ') ? raw.slice(7).trim() || null : null;
 }
+
+/**
+ * Адрес клиента для лимитов публичных endpoint'ов.
+ *
+ * Перед Vercel стоит Cloudflare: x-real-ip и x-forwarded-for там — адрес его
+ * узла, общий для множества зрителей. Реальный адрес Cloudflare кладёт в
+ * cf-connecting-ip. Заголовок можно подделать, обратившись к Vercel в обход
+ * Cloudflare, поэтому лимит по нему — второй рубеж, а не единственная защита.
+ */
+export function clientIp(req: IncomingMessage): string {
+  const header = (name: string): string => {
+    const v = req.headers[name];
+    return (Array.isArray(v) ? v[0] : v ?? '').split(',')[0]!.trim();
+  };
+  return header('cf-connecting-ip') || header('x-real-ip') || header('x-forwarded-for')
+    || req.socket?.remoteAddress || 'unknown';
+}

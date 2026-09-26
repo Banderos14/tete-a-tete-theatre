@@ -103,3 +103,53 @@
 
   &:hover { color: var(--fg); }
 }
+
+// Данные спектакля — то, что напечатано на билете, без персональных данных.
+.details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  width: min(420px, 100%);
+  margin-top: 6px;
+  padding: 14px 18px;
+  border: 0.5px solid rgba(243, 231, 220, 0.14);
+  border-radius: 12px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.4;
+
+  dt {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--fg-mute);
+    padding-top: 3px;
+  }
+
+  dd { color: var(--fg); }
+
+  @include mixins.small {
+    padding: 12px 14px;
+    gap: 5px 12px;
+    font-size: 13px;
+  }
+}
+
+:global([data-theme='light']) .details { border-color: rgba(36, 26, 22, 0.14); }
+
+// Штамп состояния у недействующего билета: QR нет, код остаётся для справки.
+.stamp {
+  margin: 4px 0 2px;
+  padding: 3px 9px;
+  border: 1.5px solid;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  transform: rotate(-4deg);
+}
+
+.stampRed   { border-color: var(--accent); color: var(--accent); text-decoration: line-through; }
+.stampAmber { border-color: #b08a3e; color: #cdb27a; }
+.stampGreen { border-color: #5a8a5a; color: #7fb07f; }

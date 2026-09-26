@@ -1113,3 +1113,16 @@
   color: var(--fg-mute);
   overflow-wrap: anywhere;
 }
+
+// Зритель открыл QR своего билета: кнопка на публичную страницу — над входом сотрудника.
+.spectatorBox {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 0.5px solid var(--line);
+
+  .scanHint { margin: 0 auto 12px; }
+
+  @include mixins.small { margin-bottom: 20px; padding-bottom: 18px; }
+}

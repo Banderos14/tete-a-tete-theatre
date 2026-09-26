@@ -384,6 +384,39 @@ export interface T {
     errorShare: string;
     errorPreviewBlocked: string;
   };
+  // Публичная страница билета /#/ticket — открывается без входа.
+  publicTicket: {
+    title: string;
+    checking: string;
+    codeLabel: string;
+    instruction: string;
+    qrFailed: string;
+    statusUnknown: string;
+    invalidTitle: string;
+    invalidText: string;
+    notFoundTitle: string;
+    notFoundText: string;
+    cancelledTitle: string;
+    cancelledText: string;
+    refundedTitle: string;
+    refundedText: string;
+    attendedTitle: string;
+    attendedText: string;
+    pendingTitle: string;
+    pendingText: string;
+    rowShow: string;
+    rowDate: string;
+    rowSeats: string;
+    rowTickets: string;
+    rowPayment: string;
+    paid: string;
+    onSite: (amount: number) => string;
+    transfer: string;
+    account: string;
+    myTickets: string;
+    spectatorHint: string;
+    openTicket: string;
+  };
   // Ключи перечислены явно: раньше здесь стоял Record<string, string>, и
   // компилятор молча пропускал пропуски — во французской версии выводились
   // русские «Поэзия», «Сен», «Окт».

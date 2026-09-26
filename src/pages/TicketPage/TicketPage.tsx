@@ -1,13 +1,18 @@
 // Публичная страница билета: /#/ticket?code=XXXX-XXXX[&lang=FR]
 //
-// Сюда ведёт кнопка «Открыть билет» из письма. Вход НЕ нужен: письмо часто
-// открывается в другом браузере, чем покупка, а зрителю нужен только QR.
+// Сюда ведут кнопка «Открыть билет» из письма и ссылка из письма об отмене.
+// Вход НЕ нужен: письмо часто открывается в другом браузере, чем покупка
+// (Gmail → Chrome, а входил зритель в Safari), и сессии Firebase там нет.
+// Сессию между браузерами не переносим и токенов в ссылку не кладём — ссылка
+// просто не требует входа.
 //
-// Страница полностью клиентская: QR строится из кода в ссылке той же функцией,
-// что в кабинете, PDF и письме (ticketQrContent → ticketQrPayload). Ни Firestore,
-// ни API не читаются — поэтому здесь нет и не может быть персональных данных,
-// статуса оплаты или действий с бронью. QR и так является предъявляемым
-// билетом: всё, что есть на странице, уже содержится в самой ссылке.
+// Статус брони приходит с публичного endpoint'а /api/public-ticket (только
+// чтение, без персональных данных): отменённый, возвращённый или неоплаченный
+// онлайн билет QR не получает. QR строится из кода в ссылке той же функцией,
+// что в кабинете, PDF и письме (ticketQrContent → ticketQrPayload).
+// Если статус проверить не удалось (сеть, сбой), QR показывается с пометкой:
+// решает сканер на входе, а зритель без связи не должен остаться без билета.
+//
 // Личный кабинет по-прежнему требует входа. Ссылка на него — /?account=tickets,
 // а не #/?account=tickets: переход по хешу внутри уже открытого приложения
 // не перезапускает разбор параметра, и кабинет бы не открылся.
@@ -15,45 +20,85 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLang } from '../../i18n/LangContext';
+import { translations } from '../../i18n';
 import { generateTicketQR } from '../../services/qrService';
+import { fetchPublicTicket, type PublicTicketLookup } from '../../services/publicTicketService';
 import { normalizeTicketCodeInput } from '../../../shared/domain/ticketCode';
+import { ticketTypeLabel } from '../../../shared/catalog/ticketTypes';
+import type { PublicTicket } from '../../../shared/contracts/ticket';
 import styles from './TicketPage.module.scss';
 
 const EN_INSTRUCTION = 'Show this QR code to the theatre staff at the entrance.';
+const ACCOUNT_HREF = '/?account=tickets';
+
+type Copy = (typeof translations)['RU']['publicTicket'];
 
 export function TicketPage() {
   const [params] = useSearchParams();
   const { lang: appLang } = useLang();
   // Язык брони приходит в ссылке письма: в новом браузере настройки сайта ещё нет.
   const urlLang = params.get('lang');
-  const isFR = urlLang === 'FR' || (urlLang !== 'RU' && appLang === 'FR');
+  const lang = urlLang === 'FR' || (urlLang !== 'RU' && appLang === 'FR') ? 'FR' : 'RU';
+  const t = translations[lang].publicTicket;
 
   const code = normalizeTicketCodeInput(params.get('code') ?? '');
+  const [lookup, setLookup] = useState<PublicTicketLookup | null>(null);
   const [qrSrc, setQrSrc]   = useState('');
-  const [failed, setFailed] = useState(false);
+  const [qrFailed, setQrFailed] = useState(false);
 
   useEffect(() => {
     if (!code) return;
     let stale = false;
-    generateTicketQR(code)
-      .then(src => { if (!stale) setQrSrc(src); })
-      .catch(() => { if (!stale) setFailed(true); });
+    void fetchPublicTicket(code).then(r => { if (!stale) setLookup(r); });
     return () => { stale = true; };
   }, [code]);
 
-  if (!code) {
+  // QR — только действующему билету или когда статус неизвестен.
+  const showQr = lookup?.kind === 'unavailable'
+    || (lookup?.kind === 'ok' && lookup.ticket.state === 'active');
+
+  useEffect(() => {
+    if (!code || !showQr) return;
+    let stale = false;
+    generateTicketQR(code)
+      .then(src => { if (!stale) setQrSrc(src); })
+      .catch(() => { if (!stale) setQrFailed(true); });
+    return () => { stale = true; };
+  }, [code, showQr]);
+
+  if (!code || lookup?.kind === 'invalid') {
+    return <Notice title={t.invalidTitle} text={t.invalidText} link={t.myTickets} />;
+  }
+  if (lookup?.kind === 'not_found') {
+    return <Notice title={t.notFoundTitle} text={t.notFoundText} link={t.account} />;
+  }
+
+  if (!lookup) {
+    return (
+      <main className={styles.page} aria-busy="true">
+        <p className={styles.eyebrow}>Théâtre Tête-à-Tête</p>
+        <h1 className={styles.title}>{t.title}</h1>
+        <div className={styles.qrCard}>
+          <div className={`${styles.qr} ${styles.qrLoading}`} aria-hidden="true" />
+          <p className={styles.code}>{code}</p>
+        </div>
+        <p className={styles.text} role="status">{t.checking}</p>
+      </main>
+    );
+  }
+
+  const ticket = lookup.kind === 'ok' ? lookup.ticket : null;
+
+  if (ticket && ticket.state !== 'active') {
+    const { title, text, tone } = inactiveCopy(ticket, t);
     return (
       <main className={styles.page}>
         <p className={styles.eyebrow}>Théâtre Tête-à-Tête</p>
-        <h1 className={styles.title}>{isFR ? 'Lien de billet invalide' : 'Ссылка на билет повреждена'}</h1>
-        <p className={styles.text}>
-          {isFR
-            ? 'Ouvrez à nouveau l’e-mail de réservation ou votre espace « Mes billets ».'
-            : 'Откройте письмо о брони ещё раз или раздел «Мои билеты» в личном кабинете.'}
-        </p>
-        <a className={styles.secondaryLink} href="/?account=tickets">
-          {isFR ? 'Mes billets' : 'Мои билеты'}
-        </a>
+        <h1 className={styles.title}>{title}</h1>
+        <p className={`${styles.stamp} ${styles[tone]}`}>{code}</p>
+        <TicketDetails ticket={ticket} lang={lang} t={t} />
+        <p className={styles.text}>{text}</p>
+        <a className={styles.secondaryLink} href={ACCOUNT_HREF}>{t.account}</a>
       </main>
     );
   }
@@ -61,33 +106,72 @@ export function TicketPage() {
   return (
     <main className={styles.page}>
       <p className={styles.eyebrow}>Théâtre Tête-à-Tête</p>
-      <h1 className={styles.title}>{isFR ? 'Votre billet' : 'Ваш билет'}</h1>
+      <h1 className={styles.title}>{t.title}</h1>
 
       <div className={styles.qrCard}>
         {qrSrc
           ? <img className={styles.qr} src={qrSrc} alt={`QR ${code}`} />
-          : <div className={`${styles.qr} ${failed ? styles.qrFailed : styles.qrLoading}`} aria-hidden="true" />}
+          : <div className={`${styles.qr} ${qrFailed ? styles.qrFailed : styles.qrLoading}`} aria-hidden="true" />}
         <p className={styles.code}>{code}</p>
-        <p className={styles.codeLabel}>{isFR ? 'Code de réservation' : 'Код брони'}</p>
+        <p className={styles.codeLabel}>{t.codeLabel}</p>
       </div>
 
-      <p className={styles.instruction}>
-        {isFR
-          ? 'Présentez ce QR code au personnel du théâtre à l’entrée.'
-          : 'Покажите этот QR-код сотруднику театра при входе.'}
-      </p>
+      <p className={styles.instruction}>{t.instruction}</p>
       <p className={styles.instructionEn}>{EN_INSTRUCTION}</p>
-      {failed && (
-        <p className={styles.text} role="alert">
-          {isFR
-            ? 'Le QR code ne s’affiche pas : donnez simplement ce code de réservation à l’entrée.'
-            : 'QR-код не отобразился — просто назовите этот код брони на входе.'}
-        </p>
-      )}
+      {qrFailed && <p className={styles.text} role="alert">{t.qrFailed}</p>}
+      {!ticket && <p className={styles.text} role="status">{t.statusUnknown}</p>}
 
-      <a className={styles.secondaryLink} href="/?account=tickets">
-        {isFR ? 'Espace personnel' : 'Личный кабинет'}
-      </a>
+      {ticket && <TicketDetails ticket={ticket} lang={lang} t={t} withPayment />}
+
+      <a className={styles.secondaryLink} href={ACCOUNT_HREF}>{t.account}</a>
+    </main>
+  );
+}
+
+function inactiveCopy(ticket: PublicTicket, t: Copy): { title: string; text: string; tone: 'stampRed' | 'stampAmber' | 'stampGreen' } {
+  switch (ticket.state) {
+    case 'refunded':        return { title: t.refundedTitle,  text: t.refundedText,  tone: 'stampRed' };
+    case 'attended':        return { title: t.attendedTitle,  text: t.attendedText,  tone: 'stampGreen' };
+    case 'payment_pending': return { title: t.pendingTitle,   text: t.pendingText,   tone: 'stampAmber' };
+    default:                return { title: t.cancelledTitle, text: t.cancelledText, tone: 'stampRed' };
+  }
+}
+
+function TicketDetails({ ticket, lang, t, withPayment = false }: {
+  ticket: PublicTicket; lang: 'RU' | 'FR'; t: Copy; withPayment?: boolean;
+}) {
+  const payment = ticket.payment === 'paid'
+    ? t.paid
+    : ticket.payment === 'transfer'
+      ? t.transfer
+      : t.onSite(ticket.amountDue ?? 0);
+  return (
+    <dl className={styles.details}>
+      <dt>{t.rowShow}</dt>
+      <dd>{ticket.title[lang]}</dd>
+      <dt>{t.rowDate}</dt>
+      <dd>{ticket.date[lang]}{ticket.time ? ` · ${ticket.time}` : ''}</dd>
+      <dt>{t.rowSeats}</dt>
+      <dd>{ticket.seats}</dd>
+      <dt>{t.rowTickets}</dt>
+      <dd>{ticket.lines.map(l => `${l.quantity} × ${ticketTypeLabel(l.type, lang)}`).join(', ')}</dd>
+      {withPayment && ticket.payment && (
+        <>
+          <dt>{t.rowPayment}</dt>
+          <dd>{payment}</dd>
+        </>
+      )}
+    </dl>
+  );
+}
+
+function Notice({ title, text, link }: { title: string; text: string; link: string }) {
+  return (
+    <main className={styles.page}>
+      <p className={styles.eyebrow}>Théâtre Tête-à-Tête</p>
+      <h1 className={styles.title}>{title}</h1>
+      <p className={styles.text}>{text}</p>
+      <a className={styles.secondaryLink} href={ACCOUNT_HREF}>{link}</a>
     </main>
   );
 }

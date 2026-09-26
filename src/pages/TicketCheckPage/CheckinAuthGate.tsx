@@ -3,10 +3,17 @@
 // Если в адресе есть код билета, сотрудник уже отсканировал QR — выбрасывать
 // его на главную значит потерять код и заставить сканировать заново. Поэтому
 // вход показывается прямо здесь, а после него проверка продолжается сама.
+//
+// Но по той же ссылке приходит и зритель: iPhone распознаёт QR на картинке в
+// письме или PDF и открывает его по нажатию. Зрителю вход сотрудника не нужен —
+// первой стоит кнопка на публичную страницу его билета (без входа).
 
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import type { User } from 'firebase/auth';
 import { RU } from '../../i18n';
+import { useLang } from '../../i18n/LangContext';
+import { normalizeTicketCodeInput } from '../../../shared/domain/ticketCode';
 import { mapAuthError, isPopupClosedError } from '../../utils/authErrors';
 import { parseTicketCodeFromScan } from '../../utils/parseTicketCode';
 import styles from './TicketCheckPage.module.scss';
@@ -42,10 +49,21 @@ export function CheckinAuthGate({ user, ticketFromUrl, signInWithEmail, signInWi
     } finally { setLoading(false); }
   }
 
+  const { t } = useLang();
   const scannedCode = parseTicketCodeFromScan(ticketFromUrl) ?? ticketFromUrl;
+  const publicCode  = normalizeTicketCodeInput(scannedCode);
 
   return (
     <div className={styles.centered}>
+      {publicCode && (
+        <div className={styles.spectatorBox}>
+          <p className={styles.scanHint}>{t.publicTicket.spectatorHint}</p>
+          <Link className={styles.scanStartBtn} to={`/ticket?code=${encodeURIComponent(publicCode)}`}>
+            {t.publicTicket.openTicket}
+          </Link>
+        </div>
+      )}
+
       <p className={styles.accessDenied}>
         {user
           ? 'У этой учётной записи нет прав на проверку билетов'

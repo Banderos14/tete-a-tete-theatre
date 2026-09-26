@@ -234,7 +234,7 @@ describe('endpoint-файлы Vercel', () => {
   // Hobby-план Vercel — не больше 12 функций на деплой.
   const EXPECTED = [
     'admin-booking.ts', 'cancel-booking.ts', 'create-booking.ts',
-    'delete-user.ts', 'expire-bookings.ts', 'newsletter.ts', 'register-audience.ts',
+    'delete-user.ts', 'expire-bookings.ts', 'newsletter.ts', 'public-ticket.ts', 'register-audience.ts',
     'show-availability.ts', 'stripe-webhook.ts',
   ];
 

@@ -3,6 +3,7 @@ import { isSfntFontBinary, isPlausibleFontContentType } from '../utils/fontBinar
 import { localizedShowTitle } from '../../shared/catalog/showTitle';
 import { bookingTicketLines } from '../../shared/domain/ticketBasket';
 import { ticketTypeLabel } from '../../shared/catalog/ticketTypes';
+import { ticketPageUrl } from './qrService';
 
 // Транслитерация кириллицы → латиница — запасной вариант, если кирилличные шрифты не загрузились.
 const CYR: Record<string, string> = {
@@ -459,6 +460,10 @@ export async function buildTicketPdf(
   const colW    = W - MARGIN - colX;
   const blockY  = y;
   doc.addImage(qrDataUrl, 'PNG', MARGIN, blockY, qrSize, qrSize);
+  // Нажатие на QR или код в PDF открывает публичную страницу билета — без входа.
+  // Содержимое самого QR не меняется: сканер на входе читает ссылку проверки.
+  const pageUrl = ticketPageUrl(booking.ticketCode, lang);
+  doc.link(MARGIN, blockY, qrSize, qrSize, { url: pageUrl });
 
   let ry = blockY + 1;
 
@@ -508,7 +513,7 @@ export async function buildTicketPdf(
   doc.setFont('courier', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(28, 24, 22);
-  doc.text(booking.ticketCode, colX, ry + 1);
+  doc.textWithLink(booking.ticketCode, colX, ry + 1, { url: pageUrl });
   ry += 9;
 
   // 3. Главное: что делать с этим QR — обычным жирным шрифтом.

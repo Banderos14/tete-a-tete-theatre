@@ -277,11 +277,16 @@ export function buildCancellationEmail(b: TicketEmailBooking, siteBase?: string)
   const rows: [string, string][] = isRU
     ? [['Спектакль', escapeEmailHtml(title)], ['Дата', `${escapeEmailHtml(date)} · ${escapeEmailHtml(b.showTime)}`], ['Код брони', escapeEmailHtml(b.ticketCode)]]
     : [['Spectacle', escapeEmailHtml(title)], ['Date', `${escapeEmailHtml(date)} · ${escapeEmailHtml(b.showTime)}`], ['Code', escapeEmailHtml(b.ticketCode)]];
+  // Та же публичная страница, что у билета: она покажет «отменено» или
+  // «возвращено» без входа и без QR. Кабинет потребовал бы войти — а письмо
+  // часто открывается в другом браузере, чем тот, где зритель входил.
+  const statusUrl = publicTicketUrl(b.ticketCode, siteBase, b.lang);
+  const button    = isRU ? 'Посмотреть бронь' : 'Voir la réservation';
   const bodyHtml = `
     <p style="margin:0 0 20px;font-size:15px;color:#333;">${isRU ? 'Здравствуйте' : 'Bonjour'}, ${escapeEmailHtml(b.userName || '')}!</p>
     ${infoTable(rows)}
     ${noteBlock(note)}
-    ${linkButton(myTicketsUrl(siteBase), isRU ? 'Открыть мои билеты' : 'Ouvrir mes billets')}`;
-  const text = [THEATRE_NAME, '', header, '', `${title} — ${date} · ${b.showTime}`, b.ticketCode, '', note].join('\n');
+    ${linkButton(statusUrl, button)}`;
+  const text = [THEATRE_NAME, '', header, '', `${title} — ${date} · ${b.showTime}`, b.ticketCode, '', note, '', `${button}: ${statusUrl}`].join('\n');
   return { subject, html: wrapHtml(isRU ? 'ru' : 'fr', subject, header, bodyHtml), text };
 }
