@@ -305,6 +305,8 @@ export interface T {
     titleIt: string;
     meta: string;
     book: string;
+    /** Афиша пуста: все спектакли сезона уже прошли. */
+    empty: string;
   };
   socials: {
     num: string;
@@ -375,9 +377,6 @@ export interface T {
     unavailableCta: string;
     /** Статус спектакля рядом с кнопкой и на карточках. */
     pausedStatus: string;
-    /** Спокойное пояснение у Афиши. */
-    noticeTitle: string;
-    noticeText: string;
     /** Сервер отказал: booking_temporarily_unavailable. */
     bookingPaused: string;
     /** Вместо «Продолжить оплату» у брони на такой спектакль. */

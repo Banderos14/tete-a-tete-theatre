@@ -134,7 +134,9 @@ describe('заготовки сезона', () => {
       expect(PUBLISHED_SHOWS.some(s => s.id === id), id).toBe(false);
       expect(PUBLISHED_REPERTOIRE.some(r => r.id === id), id).toBe(false);
     }
-    expect(projectSource('src/pages/HomePage/sections/Afisha/AfishaSlider.tsx')).toContain('PUBLISHED_SHOWS');
+    // Афиша — предстоящие из PUBLISHED_SHOWS (src/data/shows.ts → afishaShows).
+    expect(projectSource('src/pages/HomePage/sections/Afisha/AfishaSlider.tsx')).toContain('afishaShows(');
+    expect(projectSource('src/data/shows.ts')).toContain('return PUBLISHED_SHOWS.filter(show => isShowUpcoming(show, nowMs));');
     expect(projectSource('src/pages/HomePage/sections/Repertoire/Repertoire.tsx')).toContain('PUBLISHED_REPERTOIRE');
   });
 

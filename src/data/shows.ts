@@ -401,4 +401,26 @@ export function publishedOnly<T extends { published?: boolean }>(items: readonly
 }
 
 export const PUBLISHED_SHOWS: Show[] = publishedOnly(SHOWS);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Афиша = только предстоящие спектакли
+//
+// Афиша показывает опубликованные спектакли, которые ЕЩЁ НЕ НАЧАЛИСЬ: момент
+// начала считается по дате и времени каталога как настенное время
+// Europe/Paris (isShowPast выше — та же функция, что у сервера). Прошедший
+// спектакль исчезает из Афиши сам, без ручных флагов, но остаётся в каталоге,
+// в Репертуаре, в «Моих билетах» и в админке.
+//
+// Закрытые ограниченным режимом продаж спектакли (shared/catalog/salesMode.ts)
+// здесь НЕ фильтруются: будущий спектакль остаётся в Афише, просто без покупки.
+
+/** Спектакль ещё не начался. Дату, которую нельзя разобрать, считаем предстоящей — как isShowPast. */
+export function isShowUpcoming(show: Pick<Show, 'day' | 'month' | 'year' | 'time'>, nowMs: number = Date.now()): boolean {
+  return !isShowPast(show, nowMs);
+}
+
+/** Спектакли Афиши на момент nowMs — опубликованные и предстоящие, в порядке каталога. */
+export function afishaShows(nowMs: number = Date.now()): Show[] {
+  return PUBLISHED_SHOWS.filter(show => isShowUpcoming(show, nowMs));
+}
 export const PUBLISHED_REPERTOIRE: RepertoireItem[] = publishedOnly(REPERTOIRE);

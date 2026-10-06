@@ -185,11 +185,15 @@ export function Repertoire({ onBook }: Props) {
           const linkedShow = item.status === 'active'
             ? PUBLISHED_SHOWS.find(s => s.id === item.id) ?? null
             : null;
-          const linkedPrice = linkedShow
+          // Прошедший показ сезона остаётся в Репертуаре, но без цены: красная
+          // плашка выглядела как приглашение купить. «Временно недоступно» —
+          // только у будущих: прошедший спектакль не «приостановлен».
+          const linkedPast  = !!linkedShow && isShowPast(linkedShow);
+          const linkedPrice = linkedShow && !linkedPast
             ? (lang === 'FR' ? (linkedShow.priceFR ?? linkedShow.price) : linkedShow.price)
             : null;
           const linkedDate = linkedShow?.date ?? null;
-          const salesPaused = !!linkedShow && isShowSalesPaused(linkedShow.id) && !isShowPast(linkedShow);
+          const salesPaused = !!linkedShow && !linkedPast && isShowSalesPaused(linkedShow.id);
           return (
           <button
             key={item.id}

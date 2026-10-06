@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLang } from '../../../../i18n/LangContext';
-import { PUBLISHED_SHOWS, isShowPast } from '../../../../data/shows';
+import { afishaShows } from '../../../../data/shows';
 import { isShowSalesPaused } from '../../../../../shared/catalog/salesMode';
 import type { Show } from '../../../../types';
 import styles from './AfishaSlider.module.scss';
@@ -11,7 +11,7 @@ const _schedulePreload = typeof requestIdleCallback === 'function'
   : (fn: () => void) => setTimeout(fn, 200);
 
 _schedulePreload(() => {
-  PUBLISHED_SHOWS.forEach(s => {
+  afishaShows().forEach(s => {
     if (s.image) {
       const img = new Image();
       img.onerror = () => console.warn('[show image failed]', s.id, s.image);
@@ -43,14 +43,18 @@ interface Props {
 
 export function AfishaSlider({ onCardClick }: Props) {
   const { lang, t } = useLang();
-  const total = PUBLISHED_SHOWS.length;
+  // Только предстоящие спектакли (src/data/shows.ts → afishaShows). Момент
+  // фиксируется при монтировании: Date.now() нельзя дёргать прямо в рендере.
+  const [mountedAtMs] = useState(() => Date.now());
+  const shows = useMemo(() => afishaShows(mountedAtMs), [mountedAtMs]);
+  const total = shows.length;
 
   // Число копий растёт при первом измерении если viewport шире одного набора
   const [numCopies, setNumCopies] = useState(MIN_COPIES);
   const copiesRef   = useRef(MIN_COPIES);
   const cards = useMemo(
-    () => Array.from({ length: numCopies }, () => PUBLISHED_SHOWS).flat(),
-    [numCopies],
+    () => Array.from({ length: numCopies }, () => shows).flat(),
+    [numCopies, shows],
   );
 
   const outerRef     = useRef<HTMLDivElement>(null);
@@ -210,10 +214,10 @@ export function AfishaSlider({ onCardClick }: Props) {
       lastX:       e.clientX,
       lastTime:    performance.now(),
       velocity:    0,
-      // idx — глобальный по всем копиям; модуль даёт индекс в PUBLISHED_SHOWS
-      show: idx >= 0 ? PUBLISHED_SHOWS[((idx % total) + total) % total] : null,
+      // idx — глобальный по всем копиям; модуль даёт индекс в shows
+      show: idx >= 0 && total > 0 ? shows[((idx % total) + total) % total] ?? null : null,
     };
-  }, [total]);
+  }, [shows, total]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
@@ -274,6 +278,9 @@ export function AfishaSlider({ onCardClick }: Props) {
     startLoopRef.current();
   }, []);
 
+  // Все спектакли сезона прошли, новых ещё нет: вместо пустой ленты — строка.
+  if (total === 0) return <p className={`${styles.empty} reveal`}>{t.afisha.empty}</p>;
+
   return (
     <div className={`${styles.sliderWrap} reveal`}>
       <div
@@ -288,7 +295,6 @@ export function AfishaSlider({ onCardClick }: Props) {
       >
         <div ref={trackRef} className={styles.track}>
           {cards.map((show, i) => {
-            const cardIndex = (i % total) + 1;
             const month  = t.months[show.month] ?? show.month;
             const title  = lang === 'FR' ? (show.titleFR  ?? show.title)  : show.title;
             const author = lang === 'FR' ? (show.authorFR ?? show.author) : show.author;
@@ -316,10 +322,9 @@ export function AfishaSlider({ onCardClick }: Props) {
                 <div className={styles.overlay} />
 
                 <div className={styles.body}>
+                  {/* Порядковый номер «01 / 08» убран: в углу карточки его
+                      читали как дату. Остался только возрастной ценз. */}
                   <div className={styles.top}>
-                    <span className={styles.counter}>
-                      {String(cardIndex).padStart(2, '0')} / {String(total).padStart(2, '0')}
-                    </span>
                     <span className={styles.age}>{show.age}</span>
                   </div>
 
@@ -328,8 +333,8 @@ export function AfishaSlider({ onCardClick }: Props) {
                     <div className={styles.showAuthor}>{author}</div>
                     {/* Ограниченный режим продаж: карточка остаётся живой,
                         но зритель сразу видит, что купить сейчас нельзя.
-                        Прошедшему спектаклю метка не нужна — его и так не купить. */}
-                    {isShowSalesPaused(show.id) && !isShowPast(show) && (
+                        Прошедших спектаклей в Афише нет — метка всегда о будущем. */}
+                    {isShowSalesPaused(show.id) && (
                       <span className={styles.salesPaused}>{t.sales.pausedStatus}</span>
                     )}
                   </div>

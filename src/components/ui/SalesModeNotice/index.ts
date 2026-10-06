@@ -1,1 +1,0 @@
-export { SalesModeNotice } from './SalesModeNotice';

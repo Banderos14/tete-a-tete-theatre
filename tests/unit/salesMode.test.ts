@@ -9,6 +9,8 @@
 // фейкового Stripe — в реальном (ограниченном) режиме, без подмены модуля.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { MemoryFirestore } from '../helpers/memoryFirestore';
 import { projectSource } from '../helpers/serverSource.js';
 import {
@@ -124,6 +126,7 @@ const { readPublicTicket }      = await import('../../server/booking/publicTicke
 const { default: createHandler } = await import('../../api/create-booking.js');
 const { ApiError }              = await import('../../server/shared/errors.js');
 
+const ROOT = resolve(__dirname, '../..');
 const UID  = 'user-anna';
 const NOW  = new Date('2026-09-20T10:00:00Z');
 const MIN  = 60 * 1000;
@@ -471,15 +474,22 @@ describe('интерфейс: закрытые спектакли видны, н
     expect(FR.marquee).not.toContain('Réservations ouvertes');
   });
 
-  it('пояснение у Афиши — только в ограниченном режиме', () => {
-    const notice = projectSource('src/components/ui/SalesModeNotice/SalesModeNotice.tsx');
-    expect(notice).toContain('if (!isLimitedSalesMode()) return null;');
-    expect(projectSource('src/pages/HomePage/sections/Afisha/Afisha.tsx')).toContain('<SalesModeNotice />');
+  it('общего баннера об ограниченном режиме нет — ни у Афиши, ни у Репертуара', () => {
+    expect(existsSync(resolve(ROOT, 'src/components/ui/SalesModeNotice'))).toBe(false);
+    for (const file of [
+      'src/pages/HomePage/sections/Afisha/Afisha.tsx', 'src/pages/HomePage/sections/Repertoire/Repertoire.tsx',
+      'src/pages/HomePage/HomePage.tsx',
+    ]) {
+      expect(projectSource(file), file).not.toMatch(/SalesModeNotice|noticeTitle|noticeText/);
+    }
+    expect(RU.sales).not.toHaveProperty('noticeTitle');
+    expect(FR.sales).not.toHaveProperty('noticeText');
   });
 });
 
 describe('админка: спектакли и брони на месте, статус продаж честный', () => {
   it('закрытый спектакль остаётся в списке админки с меткой «Продажи приостановлены»', async () => {
+    // NOW = 20 сентября: все закрытые, кроме «Романтики» (17.09), ещё впереди.
     const { renderToStaticMarkup } = await import('react-dom/server');
     const { createElement } = await import('react');
     const { AdminShowCard } = await import('../../src/pages/AdminPage/AdminShowCard');
@@ -488,8 +498,11 @@ describe('админка: спектакли и брони на месте, ст
     const render = (id: string) => renderToStaticMarkup(createElement(AdminShowCard, {
       stats: stats.find(s => s.show.id === id)!, active: false, onToggle: () => {},
     }));
-    for (const id of BLOCKED) expect(render(id), id).toContain('Продажи приостановлены');
+    for (const id of BLOCKED_FUTURE) expect(render(id), id).toContain('Продажи приостановлены');
     for (const id of ALLOWED) expect(render(id), id).not.toContain('Продажи приостановлены');
+    // Прошедший спектакль в админке остаётся, но без метки «приостановлены».
+    expect(render('romantika')).toContain('Романтика');
+    expect(render('romantika')).not.toContain('Продажи приостановлены');
   });
 });
 
@@ -498,8 +511,6 @@ describe('тексты RU / FR', () => {
     expect(RU.sales).toEqual({
       unavailableCta: 'Временно недоступно',
       pausedStatus:   'Бронирование временно приостановлено',
-      noticeTitle:    'Театр временно работает в ограниченном режиме.',
-      noticeText:     'Бронирование доступно только на отдельные спектакли.',
       bookingPaused:  'Бронирование на этот спектакль временно приостановлено.',
       paymentPaused:  'Оплата временно недоступна',
     });
@@ -510,8 +521,6 @@ describe('тексты RU / FR', () => {
     expect(FR.sales).toEqual({
       unavailableCta: 'Temporairement indisponible',
       pausedStatus:   'Réservations temporairement suspendues',
-      noticeTitle:    'Le théâtre fonctionne temporairement en programmation réduite.',
-      noticeText:     'Les réservations restent ouvertes uniquement pour certains spectacles.',
       bookingPaused:  'Les réservations pour ce spectacle sont temporairement suspendues.',
       paymentPaused:  'Paiement temporairement indisponible',
     });

@@ -1,8 +1,10 @@
 // Карточка спектакля над таблицей броней: постер, название и сводка.
 // Отдельный файл без сервисов Firebase — рендерится в юнит-тесте.
 
+import { useState } from 'react';
 import { RU } from '../../i18n';
 import { isShowSalesPaused } from '../../../shared/catalog/salesMode';
+import { SHOWS as CATALOG, showStartUtcMs } from '../../../shared/catalog/shows';
 import { showGlyph, type ShowStats } from './adminStats';
 import styles from './AdminPage.module.scss';
 
@@ -16,6 +18,11 @@ export function AdminShowCard({ stats, active, onToggle }: {
   const { show, bookings, tickets, revenue } = stats;
   const capacity  = 'capacity' in show ? show.capacity : show.totalSeats;
   const dateLabel = 'dateLabel' in show ? show.dateLabel : `${show.day} ${show.month} ${show.year} · ${show.time}`;
+  // Метка режима продаж — только у предстоящих: прошедший спектакль не «приостановлен».
+  const [mountedAtMs] = useState(() => Date.now());
+  const catalogShow = Object.hasOwn(CATALOG, show.id) ? CATALOG[show.id]! : null;
+  const startMs     = catalogShow ? showStartUtcMs(catalogShow) : null;
+  const salesPaused = isShowSalesPaused(show.id) && !(startMs !== null && startMs <= mountedAtMs);
 
   return (
     <button
@@ -49,7 +56,7 @@ export function AdminShowCard({ stats, active, onToggle }: {
             (семейный билет — 3 места), а не число бронирований. */}
         {/* Ограниченный режим продаж: спектакль и его брони на месте,
             но новых продаж нет — тот же признак, что у сайта и сервера. */}
-        {isShowSalesPaused(show.id) && (
+        {salesPaused && (
           <p className={styles.showCardPaused}>{t.admin.salesPaused}</p>
         )}
         <p className={styles.showCardMeta}>

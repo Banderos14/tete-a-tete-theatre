@@ -35,6 +35,7 @@ export const FR: T = {
     titleIt: 'premières',
     meta:    'Septembre — Novembre 2026\nOuverture de la 8e saison',
     book:    'Réserver',
+    empty:   'Les prochains spectacles seront bientôt annoncés.',
   },
   socials: {
     num:     '02 / Live',
@@ -348,8 +349,6 @@ export const FR: T = {
   sales: {
     unavailableCta: 'Temporairement indisponible',
     pausedStatus:   'Réservations temporairement suspendues',
-    noticeTitle:    'Le théâtre fonctionne temporairement en programmation réduite.',
-    noticeText:     'Les réservations restent ouvertes uniquement pour certains spectacles.',
     bookingPaused:  'Les réservations pour ce spectacle sont temporairement suspendues.',
     paymentPaused:  'Paiement temporairement indisponible',
   },
