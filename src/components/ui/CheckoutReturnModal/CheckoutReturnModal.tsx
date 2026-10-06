@@ -19,6 +19,7 @@ import { subscribeToUserBookings, resumeCheckoutViaApi } from '../../../services
 import type { BookingApiError } from '../../../services/bookingService';
 import type { Booking } from '../../../types/booking';
 import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
+import { isShowSalesPaused, BOOKING_TEMPORARILY_UNAVAILABLE } from '../../../../shared/catalog/salesMode';
 import {
   checkoutReturnView, startCheckoutWait, checkoutRedirectUrl, redirectToCheckout,
   holdUntilMs, formatHoldTime,
@@ -69,6 +70,8 @@ export function CheckoutReturnModal({ checkout, onClose, onOpenTickets, onRequir
   }, [user]);
 
   const booking = bookings?.find(b => b.id === checkout.bookingId);
+  // Ограниченный режим продаж: вернуться к оплате нельзя — вместо кнопки пояснение.
+  const paymentPaused = !!booking && isShowSalesPaused(booking.showId);
   const view: View = !user
     ? (authLoading ? 'checking' : 'signin')
     : checkoutReturnView(checkout.kind, booking, { loaded: bookings !== null, timedOut, serverState });
@@ -85,7 +88,10 @@ export function CheckoutReturnModal({ checkout, onClose, onOpenTickets, onRequir
           const res = await resumeCheckoutViaApi(checkout.bookingId, await user.getIdToken());
           setServerState(res.checkoutState);
         } catch (err) {
-          if ((err as BookingApiError)?.reason === 'checkout_expired') setServerState('expired');
+          const reason = (err as BookingApiError)?.reason;
+          if (reason === 'checkout_expired') setServerState('expired');
+          // Продажи приостановлены, а сессия ещё открыта: оплата просто не завершена.
+          if (reason === BOOKING_TEMPORARILY_UNAVAILABLE) setServerState('open');
         }
       },
       onTimeout: () => setTimedOut(true),
@@ -110,9 +116,12 @@ export function CheckoutReturnModal({ checkout, onClose, onOpenTickets, onRequir
       setResumeLoading(false);
     } catch (err) {
       setResumeLoading(false);
-      if ((err as BookingApiError)?.reason === 'checkout_expired') {
+      const reason = (err as BookingApiError)?.reason;
+      if (reason === 'checkout_expired') {
         setServerState('expired');
         setResumeError(t.payment.checkoutExpired);
+      } else if (reason === BOOKING_TEMPORARILY_UNAVAILABLE) {
+        setResumeError(t.sales.paymentPaused);
       } else {
         setResumeError(t.payment.resumeError);
       }
@@ -170,12 +179,15 @@ export function CheckoutReturnModal({ checkout, onClose, onOpenTickets, onRequir
         )}
 
         {resumeError && <p className={styles.error} role="alert">{resumeError}</p>}
+        {view === 'not_completed' && paymentPaused && !resumeError && (
+          <p className={styles.note} role="status">{t.sales.paymentPaused}</p>
+        )}
 
         <div className={styles.actions}>
           {view === 'signin' && (
             <button type="button" className={styles.primaryBtn} onClick={onRequireAuth}>{p.signIn}</button>
           )}
-          {view === 'not_completed' && (
+          {view === 'not_completed' && !paymentPaused && (
             <button
               type="button"
               className={styles.primaryBtn}

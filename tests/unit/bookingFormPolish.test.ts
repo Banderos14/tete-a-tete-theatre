@@ -74,7 +74,7 @@ describe('количество по тарифам: разметка и дост
     expect(step).toContain('aria-label={t.booking.removeTicket(label)}');
     expect(step).toContain('aria-label={t.booking.addTicket(label)}');
     expect(step).toContain('disabled={busy || !canRemove(tt.id)}');
-    expect(step).toContain('disabled={busy || soldOut || !canAdd(tt.id)}');
+    expect(step).toContain('disabled={busy || soldOut || salesPaused || !canAdd(tt.id)}');
     expect(step).toContain('aria-live="polite"');
   });
 

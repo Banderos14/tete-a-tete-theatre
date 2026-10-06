@@ -27,6 +27,7 @@ import {
   sessionExpiresAtMs, sessionState, sessionViewOf, type SessionView,
 } from './onlinePayment.js';
 import { confirmOnlinePayment, expireBookingWithoutSession, expireOnlineBooking } from './onlinePayment.service.js';
+import { isShowSalesPaused, BOOKING_TEMPORARILY_UNAVAILABLE } from '../../shared/catalog/salesMode.js';
 
 export interface CheckoutLink {
   checkoutState:     'open' | 'paid' | 'processing';
@@ -40,6 +41,8 @@ const EMAIL_RE = /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/;
 export const paymentUnavailable = () =>
   new ApiError(502, 'Online payment is temporarily unavailable', 'payment_unavailable');
 const checkoutExpired = () => conflict('Checkout session expired', 'checkout_expired');
+const salesPaused     = () =>
+  conflict('Booking for this show is temporarily unavailable', BOOKING_TEMPORARILY_UNAVAILABLE);
 
 export interface CheckoutSessionInput {
   bookingId:   string;
@@ -100,11 +103,16 @@ async function retrieveSession(sessionId: string): Promise<SessionView> {
   }
 }
 
-/** Ссылка по уже созданной сессии; заодно сверяет бронь с состоянием Stripe. */
-async function linkForSession(sessionId: string): Promise<CheckoutLink> {
+/**
+ * Ссылка по уже созданной сессии; заодно сверяет бронь с состоянием Stripe.
+ * paymentPaused — продажи спектакля приостановлены: сверка (оплачено / истекло)
+ * идёт как обычно, но ссылку на оплату не отдаём.
+ */
+async function linkForSession(sessionId: string, paymentPaused: boolean): Promise<CheckoutLink> {
   const session = await retrieveSession(sessionId);
   switch (sessionState(session)) {
     case 'open':
+      if (paymentPaused) throw salesPaused();
       return { checkoutState: 'open', checkoutUrl: session.url ?? undefined, paymentExpiresAt: session.expiresAtMs };
     case 'paid':
       await confirmOnlinePayment(session);
@@ -134,8 +142,16 @@ function isIdempotencyInProgress(err: unknown): boolean {
 /**
  * Открытая ссылка на оплату онлайн-брони: создаёт сессию, если её ещё нет,
  * иначе возвращает существующую. Повторный вызов безопасен.
+ *
+ * paymentPaused — продажи спектакля приостановлены ограниченным режимом:
+ * новую сессию не создаём и открытую не отдаём (booking_temporarily_unavailable),
+ * а уже оплаченную или истёкшую сверяем со Stripe как раньше.
  */
-export async function openCheckoutForBooking(bookingId: string, nowMs: number = Date.now()): Promise<CheckoutLink> {
+export async function openCheckoutForBooking(
+  bookingId: string,
+  nowMs: number = Date.now(),
+  paymentPaused = false,
+): Promise<CheckoutLink> {
   const data = await readBooking(bookingId);
   if (!data) throw notFound('Booking not found', 'not_found');
   if (data.paymentMethod !== 'online') throw badRequest('Booking is not an online payment', 'not_online');
@@ -143,7 +159,7 @@ export async function openCheckoutForBooking(bookingId: string, nowMs: number = 
   if (data.paymentStatus !== 'awaiting_online' || data.status === 'cancelled') throw checkoutExpired();
 
   if (typeof data.stripeCheckoutSessionId === 'string' && data.stripeCheckoutSessionId) {
-    return linkForSession(data.stripeCheckoutSessionId);
+    return linkForSession(data.stripeCheckoutSessionId, paymentPaused);
   }
 
   // Срок сессии выводится из hold брони, а не из «сейчас»: повтор запроса
@@ -156,6 +172,7 @@ export async function openCheckoutForBooking(bookingId: string, nowMs: number = 
     await expireBookingWithoutSession(bookingId, 'checkout_not_created');
     throw checkoutExpired();
   }
+  if (paymentPaused) throw salesPaused();
 
   const params = buildCheckoutSessionParams({
     bookingId,
@@ -227,7 +244,10 @@ export async function resumeCheckout(uid: string, rawBookingId: unknown): Promis
   if (!isSafeBookingId(bookingId)) throw badRequest('Invalid bookingId');
   const data = await readBooking(bookingId);
   if (!data || data.userId !== uid) throw notFound('Booking not found', 'not_found');
-  return { ok: true, bookingId, ...(await openCheckoutForBooking(bookingId)) };
+  // Ограниченный режим продаж закрывает и «Продолжить оплату»: иначе
+  // неоплаченная бронь стала бы обходом паузы. Сама бронь остаётся как есть.
+  const paymentPaused = isShowSalesPaused(String(data.showId ?? ''));
+  return { ok: true, bookingId, ...(await openCheckoutForBooking(bookingId, Date.now(), paymentPaused)) };
 }
 
 /**

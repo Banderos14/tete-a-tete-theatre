@@ -23,6 +23,17 @@ import { SHOWS as FRONT_SHOWS } from '../../src/data/shows';
 
 const SERVER_TS = '<server-timestamp>';
 
+// Движок брони здесь проверяется в ОБЫЧНОМ режиме продаж (спектакль из
+// теста может быть закрыт ограниченным режимом). Сам ограниченный режим —
+// tests/unit/salesMode.test.ts.
+vi.mock('../../shared/catalog/salesMode.js', async (importOriginal) => {
+  const m = await importOriginal<typeof import('../../shared/catalog/salesMode.js')>();
+  return {
+    ...m,
+    isShowBookingEnabled: (id: string) => m.isShowBookingEnabled(id, 'normal'),
+    isShowSalesPaused:    (id: string) => m.isShowSalesPaused(id, 'normal'),
+  };
+});
 vi.mock('firebase-admin/firestore', () => ({
   FieldValue: { serverTimestamp: () => SERVER_TS },
 }));
@@ -170,12 +181,12 @@ describe('сводка админки после отмены', () => {
 describe('отмена зрителем — POST /api/cancel-booking', () => {
   it('бронь на 3 билета: 47 → 50', async () => {
     booking('b1');
-    expect(await remaining()).toEqual({ capacity: 50, sold: 3, remaining: 47 });
+    expect(await remaining()).toEqual({ capacity: 50, sold: 3, remaining: 47, bookingEnabled: true });
 
     await userCancel('b1');
 
     expect(store.peek('bookings', 'b1')).toMatchObject({ status: 'cancelled', cancelledBy: 'user' });
-    expect(await remaining()).toEqual({ capacity: 50, sold: 0, remaining: 50 });
+    expect(await remaining()).toEqual({ capacity: 50, sold: 0, remaining: 50, bookingEnabled: true });
     expect(countActiveBookings(adminList())).toBe(0);
   });
 
@@ -185,7 +196,7 @@ describe('отмена зрителем — POST /api/cancel-booking', () => {
     await userCancel('b1');
 
     await expect(userCancel('b1')).rejects.toMatchObject({ status: 409, reason: 'already_cancelled' });
-    expect(await remaining()).toEqual({ capacity: 50, sold: 1, remaining: 49 });
+    expect(await remaining()).toEqual({ capacity: 50, sold: 1, remaining: 49, bookingEnabled: true });
   });
 
   it('две параллельные отмены: одна проходит, места освобождаются один раз', async () => {
@@ -196,7 +207,7 @@ describe('отмена зрителем — POST /api/cancel-booking', () => {
 
     expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1);
     expect(results.filter(r => r.status === 'rejected')).toHaveLength(1);
-    expect(await remaining()).toEqual({ capacity: 50, sold: 4, remaining: 46 });
+    expect(await remaining()).toEqual({ capacity: 50, sold: 4, remaining: 46, bookingEnabled: true });
   });
 
   it('отмена одновременно с запросом остатка: ответ — до или после, но не мусор', async () => {
@@ -206,7 +217,7 @@ describe('отмена зрителем — POST /api/cancel-booking', () => {
 
     expect([47, 50]).toContain(during.remaining);
     expect(during.sold + during.remaining).toBe(50);
-    expect(await remaining()).toEqual({ capacity: 50, sold: 0, remaining: 50 });
+    expect(await remaining()).toEqual({ capacity: 50, sold: 0, remaining: 50, bookingEnabled: true });
   });
 
   it('отмена касается showCounters только как точки конфликта — числа там не уменьшаются', async () => {
@@ -241,7 +252,7 @@ describe('отмена администратором', () => {
 
     await adminCancel('b1');
 
-    expect(await remaining()).toEqual({ capacity: 50, sold: 0, remaining: 50 });
+    expect(await remaining()).toEqual({ capacity: 50, sold: 0, remaining: 50, bookingEnabled: true });
     expect(summarizeBookings(adminList())).toEqual({ bookings: 0, tickets: 0, revenue: 90 });
   });
 
@@ -250,7 +261,7 @@ describe('отмена администратором', () => {
     booking('b2', { ticketsCount: 2, seatsCount: 2 });
     await adminCancel('b1');
     await expect(adminCancel('b1')).rejects.toMatchObject({ reason: 'already_cancelled' });
-    expect(await remaining()).toEqual({ capacity: 50, sold: 2, remaining: 48 });
+    expect(await remaining()).toEqual({ capacity: 50, sold: 2, remaining: 48, bookingEnabled: true });
   });
 });
 
@@ -266,7 +277,7 @@ describe('протухание банковского перевода — cron 
 
     expect(res.expired).toBe(1);
     expect(store.peek('bookings', 'b1')).toMatchObject({ status: 'cancelled', paymentStatus: 'expired' });
-    expect(await remaining()).toEqual({ capacity: 50, sold: 0, remaining: 50 });
+    expect(await remaining()).toEqual({ capacity: 50, sold: 0, remaining: 50, bookingEnabled: true });
     expect(summarizeBookings(adminList())).toMatchObject({ bookings: 0, tickets: 0 });
   });
 
@@ -278,7 +289,7 @@ describe('протухание банковского перевода — cron 
     const second = await expireOverdueTransfers();
 
     expect(second.expired).toBe(0);
-    expect(await remaining()).toEqual({ capacity: 50, sold: 5, remaining: 45 });
+    expect(await remaining()).toEqual({ capacity: 50, sold: 5, remaining: 45, bookingEnabled: true });
   });
 
   it('срок ещё не истёк — бронь продолжает держать места', async () => {
@@ -347,7 +358,7 @@ describe('остаток всегда в пределах 0…50', () => {
     ]);
 
     // Отменены b0, b1, b2 и протухли b8, b9: 5 броней × 5 мест.
-    expect(await check()).toEqual({ capacity: 50, sold: 25, remaining: 25 });
+    expect(await check()).toEqual({ capacity: 50, sold: 25, remaining: 25, bookingEnabled: true });
     expect(summarizeBookings(adminList())).toMatchObject({ bookings: 5, tickets: 25 });
   });
 });

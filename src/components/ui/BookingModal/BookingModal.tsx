@@ -11,6 +11,7 @@ import { formatPhoneInput, normalizePhone, isValidPhone, sanitizePhoneTyping } f
 import { useEmailTypoGuard } from '../../../hooks/useEmailTypoGuard';
 import { EmailTypoHint } from '../EmailTypoHint';
 import { MAX_TICKETS_PER_BOOKING } from '../../../../shared/catalog/shows';
+import { isShowSalesPaused, BOOKING_TEMPORARILY_UNAVAILABLE } from '../../../../shared/catalog/salesMode';
 import { loyaltySummary } from '../../../services/loyaltyService';
 import {
   isOnlinePaymentUiEnabled, paymentMethodsFor, defaultPaymentMethod, checkoutRedirectUrl, redirectToCheckout,
@@ -115,6 +116,10 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
   const price = useMemo(() => priceBasket(tariffs, lines, loyaltyAvailable), [tariffs, lines, loyaltyAvailable]);
   const { baseAmount, discountAmount, totalAmount } = price;
   const soldOut = seatsLeft !== null && seatsLeft <= 0;
+  // Ограниченный режим продаж. Обычно форма для такого спектакля не открывается
+  // (кнопки неактивны), но вкладка могла быть открыта до переключения режима —
+  // тогда форма сразу говорит, что продажи закрыты; отказ всё равно даст сервер.
+  const salesPaused = !!show && isShowSalesPaused(show.id);
 
   // Realtime subscription — обновляет loyalty reward без refresh.
   // Запускается только пока модалка открыта (show != null), чистится при закрытии.
@@ -245,6 +250,7 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
     // Двойной Enter успевает пройти раньше, чем React перерисует disabled у кнопки.
     if (submitLoading) return;
     if (redirecting) return;
+    if (salesPaused) { setSubmitError(t.sales.bookingPaused); return; }
     // Клиентская проверка — только для быстрой обратной связи; отказать по-настоящему
     // может лишь сервер, который считает вместимость в транзакции.
     if (seatsLeft !== null && seatsLeft < price.seatsCount) {
@@ -341,6 +347,8 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
         setSubmitError(remaining <= 0 ? t.booking.soldOut : t.booking.notEnoughSeats(remaining));
       } else if (apiErr?.reason === 'show_started') {
         setSubmitError(t.booking.showAlreadyStarted);
+      } else if (apiErr?.reason === BOOKING_TEMPORARILY_UNAVAILABLE) {
+        setSubmitError(t.sales.bookingPaused);
       } else if (payment === 'online') {
         // Сессия не создалась или истекла — сервер уже освободил места.
         // Следующая попытка — новая бронь, а не повтор мёртвой.
@@ -459,6 +467,7 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
             canRemove={(type: TicketTypeId) => canRemoveTicket(lines, type)}
             onQuantityChange={(type: TicketTypeId, q: number) => setBasket(setLineQuantity(lines, type, q))}
             soldOut={soldOut}
+            salesPaused={salesPaused}
             payment={payment}
             phone={phone}
             comment={comment}

@@ -26,8 +26,9 @@ export const RU: T = {
   marquee: [
     'Премьера 17.09', 'Цветаева · Романтика обреченности',
     '02.10 · Чехов · И в шутку и всерьёз', 'Сезон 2026/2027',
-    'Бронирование открыто', 'Nice · Rue Rossini',
+    'Nice · Rue Rossini',
   ],
+  marqueeBookingOpen: 'Бронирование открыто',
   afisha: {
     num:     '01 / Афиша',
     title:   'Ближайшие',
@@ -298,6 +299,7 @@ export const RU: T = {
   admin: {
     title:           'Панель администратора',
     accessDenied:    'Доступ запрещён',
+    salesPaused:     'Продажи приостановлены',
     allShows:        'Все спектакли',
     bookings:        'бронирований',
     totalTickets:    'мест занято',
@@ -342,6 +344,14 @@ export const RU: T = {
     userCreatedAt:   'Дата регистрации',
     noUsers:         'Зрителей пока нет',
     filterByStatus:  'Статус:',
+  },
+  sales: {
+    unavailableCta: 'Временно недоступно',
+    pausedStatus:   'Бронирование временно приостановлено',
+    noticeTitle:    'Театр временно работает в ограниченном режиме.',
+    noticeText:     'Бронирование доступно только на отдельные спектакли.',
+    bookingPaused:  'Бронирование на этот спектакль временно приостановлено.',
+    paymentPaused:  'Оплата временно недоступна',
   },
   showModal: {
     labelDate:     'Дата',

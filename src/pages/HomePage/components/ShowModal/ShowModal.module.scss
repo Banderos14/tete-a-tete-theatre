@@ -536,6 +536,34 @@ $cap-gap:          14px;
   flex-shrink: 0;
 }
 
+// Продажи приостановлены: не .btn — у глобальной кнопки hover-заливка и тень
+// «купить», которые неактивной кнопке не нужны.
+.pausedBtn {
+  border-radius: var(--radius-s);
+  padding: 13px 24px;
+  min-height: 48px;
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--fg-mute);
+  border: 0.5px solid var(--line-strong);
+  cursor: not-allowed;
+
+  @include mixins.small {
+    width: 100%;
+  }
+}
+
+.pausedStatus {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fg-mute);
+}
+
 .seatsLeft {
   font-size: 11px;
   color: #9c938a;

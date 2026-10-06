@@ -4,6 +4,8 @@
 import { useEffect } from 'react';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { getShowPublicUrl } from '../../utils/showUrl';
+import { RU } from '../../i18n';
+import { isShowSalesPaused } from '../../../shared/catalog/salesMode';
 import type { NewsletterPreflight, NewsletterSendResult, QuotaSource } from '../../../shared/contracts/newsletter';
 import type { Newsletter } from './useNewsletter';
 import styles from './AdminPage.module.scss';
@@ -66,7 +68,11 @@ export function NewsletterTab({ newsletter }: { newsletter: Newsletter }) {
           disabled={sending}
         >
           {shows.map(s => (
-            <option key={s.id} value={s.id}>{s.title}</option>
+            // Анонс спектакля с закрытыми продажами отправить можно, но админ
+            // должен видеть, что купить билет по ссылке из письма сейчас нельзя.
+            <option key={s.id} value={s.id}>
+              {isShowSalesPaused(s.id) ? `${s.title} — ${RU.admin.salesPaused.toLowerCase()}` : s.title}
+            </option>
           ))}
         </select>
         <div className={styles.showLinkRow}>

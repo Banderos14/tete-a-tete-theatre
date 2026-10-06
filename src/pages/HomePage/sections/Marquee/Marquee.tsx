@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLang } from '../../../../i18n/LangContext';
+import { isLimitedSalesMode } from '../../../../../shared/catalog/salesMode';
 import styles from './Marquee.module.scss';
 
 export function Marquee() {
   const { t } = useLang();
-  const content = t.marquee.join(' · ') + ' · ';
+  // В ограниченном режиме продаж «Бронирование открыто» вводило бы в заблуждение:
+  // большинство спектаклей сейчас не продаётся.
+  const items   = isLimitedSalesMode() ? t.marquee : [...t.marquee, t.marqueeBookingOpen];
+  const content = items.join(' · ') + ' · ';
 
   const wrapRef    = useRef<HTMLDivElement>(null);
   const groupRef   = useRef<HTMLSpanElement>(null);

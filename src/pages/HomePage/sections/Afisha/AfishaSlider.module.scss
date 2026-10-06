@@ -219,6 +219,28 @@
   text-transform: uppercase;
 }
 
+// Продажи приостановлены (shared/catalog/salesMode.ts). Тихая подпись-штамп
+// поверх постера: читается, но не спорит с названием и не выглядит ошибкой.
+.salesPaused {
+  align-self: flex-start;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  color: rgba(243, 231, 220, 0.88);
+  background: rgba(28, 25, 22, 0.55);
+  border: 0.5px solid rgba(243, 231, 220, 0.28);
+  border-radius: 6px;
+  padding: 4px 8px;
+
+  @include mixins.small {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+}
+
 .bottom {
   display: flex;
   justify-content: space-between;

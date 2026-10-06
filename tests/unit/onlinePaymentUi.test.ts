@@ -229,7 +229,7 @@ describe('кабинет: карточка онлайн-брони', () => {
   const card = projectSource('src/components/ui/ProfileDrawer/BookingCard.tsx');
 
   it('ожидающая оплаты: «Продолжить оплату» через resume_checkout, без QR и без кода', () => {
-    expect(card).toContain('{canResumeCheckout(b) && (');
+    expect(card).toContain('{canResumeCheckout(b) && !paymentPaused && (');
     expect(card).toContain('resumeCheckoutForCurrentUser(b.id)');
     expect(card).toContain('redirectToCheckout(url)');
     expect(card).toContain('{b.ticketCode && !isAwaitingOnline && !onlineMoneyNote && (');

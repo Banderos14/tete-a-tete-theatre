@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLang } from '../../../../i18n/LangContext';
-import { PUBLISHED_SHOWS } from '../../../../data/shows';
+import { PUBLISHED_SHOWS, isShowPast } from '../../../../data/shows';
+import { isShowSalesPaused } from '../../../../../shared/catalog/salesMode';
 import type { Show } from '../../../../types';
 import styles from './AfishaSlider.module.scss';
 
@@ -325,6 +326,12 @@ export function AfishaSlider({ onCardClick }: Props) {
                   <div className={styles.middle}>
                     <div className={styles.showTitle}>{title}</div>
                     <div className={styles.showAuthor}>{author}</div>
+                    {/* Ограниченный режим продаж: карточка остаётся живой,
+                        но зритель сразу видит, что купить сейчас нельзя.
+                        Прошедшему спектаклю метка не нужна — его и так не купить. */}
+                    {isShowSalesPaused(show.id) && !isShowPast(show) && (
+                      <span className={styles.salesPaused}>{t.sales.pausedStatus}</span>
+                    )}
                   </div>
 
                   <div className={styles.bottom}>

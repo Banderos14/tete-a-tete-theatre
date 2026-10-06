@@ -14,6 +14,7 @@ import {
 import { computedIsAttended } from '../../../services/attendanceService';
 import { parseShowStartUtcMs } from '../../../../shared/domain/showTime';
 import { localizedShowTitle } from '../../../../shared/catalog/showTitle';
+import { isShowSalesPaused } from '../../../../shared/catalog/salesMode';
 import { PAYMENT_CONFIG, getPaymentAccount } from '../../../config/payment';
 import { STUB_BARCODE_WIDTHS, parseShowDateParts, getStubVariant, type StubVariant } from '../../../utils/ticketStub';
 import { bookingBreakdown } from '../../../utils/ticketBreakdown';
@@ -62,6 +63,9 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
   // Онлайн-оплата: состояние целиком из брони, которую пишет сервер (webhook).
   const online             = onlineBookingState(b);
   const isAwaitingOnline   = online === 'awaiting';
+  // Ограниченный режим продаж закрывает и «Продолжить оплату» (сервер откажет
+  // так же). Сама бронь остаётся в списке как есть — меняется только кнопка.
+  const paymentPaused      = isShowSalesPaused(b.showId);
   const onlineMoneyNote    = online === 'refund_pending' ? t.payment.refundPending
     : online === 'refunded' ? t.payment.refunded
     : online === 'issue'    ? t.payment.issue
@@ -132,8 +136,9 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
       setResumeLoading(false);
     } catch (err) {
       setResumeLoading(false);
-      setResumeError((err as BookingApiError)?.reason === 'checkout_expired'
-        ? t.payment.checkoutExpired
+      const reason = (err as BookingApiError)?.reason;
+      setResumeError(reason === 'checkout_expired' ? t.payment.checkoutExpired
+        : reason === 'booking_temporarily_unavailable' ? t.sales.paymentPaused
         : t.payment.resumeError);
     }
   }
@@ -283,7 +288,10 @@ export function BookingCard({ booking: b, t, isDismissing = false, onStartDismis
               })()}
             </p>
           )}
-          {canResumeCheckout(b) && (
+          {canResumeCheckout(b) && paymentPaused && (
+            <p className={styles.bookingNoteWait}>{t.sales.paymentPaused}</p>
+          )}
+          {canResumeCheckout(b) && !paymentPaused && (
             <>
               <button
                 type="button"

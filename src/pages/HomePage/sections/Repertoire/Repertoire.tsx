@@ -7,6 +7,7 @@ import { PosterPlaceholder } from '../../components/PosterPlaceholder';
 import { ShowModal } from '../../components/ShowModal';
 import type { RepertoireItem, Show } from '../../../../types';
 import { getShowIdFromLocation } from '../../../../utils/showUrl';
+import { isShowSalesPaused } from '../../../../../shared/catalog/salesMode';
 import styles from './Repertoire.module.scss';
 
 // Постер спектакля: показываем фото если есть, иначе цветной плейсхолдер
@@ -93,7 +94,15 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
             // Прошедший спектакль забронировать нельзя — см. проверку на сервере.
             isShowPast(linkedShow)
               ? <p className={styles.modalDesc}>{t.showModal.showPast}</p>
-              : (
+              // Ограниченный режим продаж — тот же признак, что у Афиши и сервера.
+              : isShowSalesPaused(linkedShow.id) ? (
+                <div className={styles.modalPaused}>
+                  <button type="button" className={styles.modalPausedBtn} disabled aria-describedby="rep-sales-paused">
+                    {t.sales.unavailableCta}
+                  </button>
+                  <span id="rep-sales-paused" className={styles.modalPausedStatus}>{t.sales.pausedStatus}</span>
+                </div>
+              ) : (
                 <button
                   className={styles.modalBuyBtn}
                   onClick={() => { onClose(); onBook(linkedShow); }}
@@ -180,6 +189,7 @@ export function Repertoire({ onBook }: Props) {
             ? (lang === 'FR' ? (linkedShow.priceFR ?? linkedShow.price) : linkedShow.price)
             : null;
           const linkedDate = linkedShow?.date ?? null;
+          const salesPaused = !!linkedShow && isShowSalesPaused(linkedShow.id) && !isShowPast(linkedShow);
           return (
           <button
             key={item.id}
@@ -218,6 +228,9 @@ export function Repertoire({ onBook }: Props) {
             ) : (
               <div className={styles.pastBadge}>{t.repertoire.statusPast}</div>
             )}
+            {salesPaused && (
+              <div className={styles.pausedNote}>{t.sales.pausedStatus}</div>
+            )}
 
             <div className={styles.arrow}>
               {t.repertoire.more} <span className="arrow">→</span>
@@ -237,6 +250,9 @@ export function Repertoire({ onBook }: Props) {
                   <span className={styles.mobilePrice}>{linkedPrice}</span>
                 )}
               </div>
+              {salesPaused && (
+                <div className={styles.mobilePaused}>{t.sales.unavailableCta}</div>
+              )}
             </div>
           </button>
           );

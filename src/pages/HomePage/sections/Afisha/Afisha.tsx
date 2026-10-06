@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useLang } from '../../../../i18n/LangContext';
 import { AfishaSlider } from './AfishaSlider';
 import { ShowModal } from '../../components/ShowModal';
+import { SalesModeNotice } from '../../../../components/ui/SalesModeNotice';
 import type { Show } from '../../../../types';
 import styles from './Afisha.module.scss';
 
@@ -24,6 +25,10 @@ export function Afisha({ onBook }: Props) {
         <h2>{t.afisha.title} <span className="it">{t.afisha.titleIt}</span></h2>
         <div className="meta">{metaLine1}<br />{metaLine2}</div>
       </div>
+
+      {/* Ограниченный режим продаж: спокойное пояснение, почему часть
+          спектаклей сейчас нельзя забронировать. В обычном режиме — ничего. */}
+      <SalesModeNotice />
 
       <AfishaSlider onCardClick={handleCardClick} />
       <ShowModal show={activeShow} onClose={handleClose} onBook={onBook} />

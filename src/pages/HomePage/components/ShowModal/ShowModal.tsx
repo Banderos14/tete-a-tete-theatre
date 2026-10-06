@@ -5,6 +5,7 @@ import { useLang } from '../../../../i18n/LangContext';
 import type { Show, ShowPhoto } from '../../../../types';
 import { fetchShowAvailability } from '../../../../services/availabilityService';
 import { isShowPast } from '../../../../data/shows';
+import { isShowSalesPaused } from '../../../../../shared/catalog/salesMode';
 import styles from './ShowModal.module.scss';
 
 interface Props {
@@ -61,6 +62,8 @@ export function ShowModal({ show, onClose, onBook }: Props) {
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showIsPast = !!show && isShowPast(show, mountedAtMs);
+  // Ограниченный режим продаж: спектакль виден, но купить его сейчас нельзя.
+  const salesPaused = !!show && !showIsPast && isShowSalesPaused(show.id);
 
   const handleClose = useCallback(() => {
     setClosing(true);
@@ -239,15 +242,26 @@ export function ShowModal({ show, onClose, onBook }: Props) {
 
           <div className={styles.bookRow}>
             {/* Прошедший спектакль забронировать нельзя — сервер такой запрос
-                всё равно отклонит, так что кнопка не должна вести в тупик. */}
-            <button
-              className={`btn btn-primary ${styles.bookBtn}`}
-              onClick={() => { handleClose(); onBook(show); }}
-              disabled={showIsPast}
-            >
-              {showIsPast ? t.showModal.showPast : <>{t.showModal.book} →</>}
-            </button>
-            {seatsLeft !== null && seatsLeft > 0 && (
+                всё равно отклонит, так что кнопка не должна вести в тупик.
+                Продажи приостановлены — та же логика: кнопка без действия
+                и без «покупательского» hover, а рядом спокойный статус. */}
+            {salesPaused ? (
+              <>
+                <button type="button" className={styles.pausedBtn} disabled aria-describedby="show-sales-paused">
+                  {t.sales.unavailableCta}
+                </button>
+                <span id="show-sales-paused" className={styles.pausedStatus}>{t.sales.pausedStatus}</span>
+              </>
+            ) : (
+              <button
+                className={`btn btn-primary ${styles.bookBtn}`}
+                onClick={() => { handleClose(); onBook(show); }}
+                disabled={showIsPast}
+              >
+                {showIsPast ? t.showModal.showPast : <>{t.showModal.book} →</>}
+              </button>
+            )}
+            {!salesPaused && seatsLeft !== null && seatsLeft > 0 && (
               <span className={styles.seatsLeft}>
                 {lang === 'FR'
                   ? <>Reste <span className={styles.seatsCount}>{seatsLeft}</span> places</>

@@ -99,6 +99,15 @@
   width: fit-content;
 }
 
+// Продажи приостановлены (shared/catalog/salesMode.ts): спокойная подпись под
+// бейджем, без красного — это информация, а не ошибка.
+.pausedNote {
+  @include mixins.mono(10px, 0.12em);
+  text-transform: uppercase;
+  line-height: 1.4;
+  color: var(--fg-mute);
+}
+
 .poster {
   width: 100%;
   aspect-ratio: 3/4;
@@ -365,6 +374,32 @@
   &:hover { opacity: 0.85; }
 }
 
+.modalPaused {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// Неактивная кнопка: без заливки акцентом и без hover — купить нельзя.
+.modalPausedBtn {
+  @include mixins.mono(11px, 0.18em);
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--fg-mute);
+  border: 0.5px solid var(--line-strong);
+  padding: 12px 20px;
+  border-radius: var(--radius-s);
+  text-align: left;
+  cursor: not-allowed;
+}
+
+.modalPausedStatus {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg-mute);
+}
+
 .mobilePosterAge,
 .mobileInfo {
   display: none;
@@ -392,6 +427,7 @@
     .author,
     .activeBadge,
     .pastBadge,
+    .pausedNote,
     .arrow {
       display: none;
     }
@@ -471,6 +507,16 @@
     // карточки в 167px, а у карточки overflow: hidden — раньше чип срезало
     // по правому краю. Теперь дата и цена при нехватке места встают в два ряда.
     flex-wrap: wrap;
+  }
+
+  .mobilePaused {
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.35;
+    color: var(--fg-mute);
   }
 
   .mobileDate {

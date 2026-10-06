@@ -163,6 +163,24 @@
   letter-spacing: 0.06em;
 }
 
+// «Продажи приостановлены» — штамп в тон $stamp-amber: состояние, не ошибка.
+.showCardPaused {
+  display: inline-block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #cdb27a;
+  border: 1px solid #b08a3e;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+:global([data-theme='light']) .showCardPaused {
+  color: #8a6418;
+}
+
 .tableHeader {
   display: flex;
   align-items: center;

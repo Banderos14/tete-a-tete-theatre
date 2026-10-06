@@ -229,6 +229,8 @@ export interface T {
   admin: {
     title: string;
     accessDenied: string;
+    /** Метка у спектакля, продажи которого закрыты ограниченным режимом. */
+    salesPaused: string;
     allShows: string;
     bookings: string;
     totalTickets: string;
@@ -295,6 +297,8 @@ export interface T {
     scroll: string;
   };
   marquee: string[];
+  /** «Бронирование открыто» — в бегущей строке только в обычном режиме продаж. */
+  marqueeBookingOpen: string;
   afisha: {
     num: string;
     title: string;
@@ -363,6 +367,21 @@ export interface T {
   footer: {
     copyright: string;
     backTop: string;
+  };
+  // Ограниченный режим продаж (shared/catalog/salesMode.ts): спектакль виден,
+  // но новые брони и оплаты временно не принимаются.
+  sales: {
+    /** Текст неактивной кнопки бронирования. */
+    unavailableCta: string;
+    /** Статус спектакля рядом с кнопкой и на карточках. */
+    pausedStatus: string;
+    /** Спокойное пояснение у Афиши. */
+    noticeTitle: string;
+    noticeText: string;
+    /** Сервер отказал: booking_temporarily_unavailable. */
+    bookingPaused: string;
+    /** Вместо «Продолжить оплату» у брони на такой спектакль. */
+    paymentPaused: string;
   };
   showModal: {
     labelDate: string;

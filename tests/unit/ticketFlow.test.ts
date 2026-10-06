@@ -12,6 +12,17 @@ import { MemoryFirestore } from '../helpers/memoryFirestore';
 const SERVER_TS = '<server-timestamp>';
 let store = new MemoryFirestore();
 
+// Движок брони здесь проверяется в ОБЫЧНОМ режиме продаж (спектакль из
+// теста может быть закрыт ограниченным режимом). Сам ограниченный режим —
+// tests/unit/salesMode.test.ts.
+vi.mock('../../shared/catalog/salesMode.js', async (importOriginal) => {
+  const m = await importOriginal<typeof import('../../shared/catalog/salesMode.js')>();
+  return {
+    ...m,
+    isShowBookingEnabled: (id: string) => m.isShowBookingEnabled(id, 'normal'),
+    isShowSalesPaused:    (id: string) => m.isShowSalesPaused(id, 'normal'),
+  };
+});
 vi.mock('firebase-admin/firestore', () => {
   // Метод на прототипе: in-memory Firestore клонирует документ и сохраняет
   // { seconds } — так же, как сервер его потом и читает.

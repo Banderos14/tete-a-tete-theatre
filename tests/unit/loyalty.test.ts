@@ -11,6 +11,17 @@ import { parseShowStartUtcMs } from '../../shared/domain/showTime.js';
 import { SHOWS } from '../../shared/catalog/shows.js';
 
 let store = new MemoryFirestore();
+// Движок брони здесь проверяется в ОБЫЧНОМ режиме продаж (спектакль из
+// теста может быть закрыт ограниченным режимом). Сам ограниченный режим —
+// tests/unit/salesMode.test.ts.
+vi.mock('../../shared/catalog/salesMode.js', async (importOriginal) => {
+  const m = await importOriginal<typeof import('../../shared/catalog/salesMode.js')>();
+  return {
+    ...m,
+    isShowBookingEnabled: (id: string) => m.isShowBookingEnabled(id, 'normal'),
+    isShowSalesPaused:    (id: string) => m.isShowSalesPaused(id, 'normal'),
+  };
+});
 vi.mock('firebase-admin/firestore', () => {
   class FakeTimestamp {
     constructor(readonly seconds: number) {}

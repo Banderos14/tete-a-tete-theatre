@@ -99,6 +99,11 @@ export interface ShowAvailability {
   capacity:  number;
   sold:      number;
   remaining: number;
+  /**
+   * Принимаются ли сейчас брони (режим продаж, shared/catalog/salesMode.ts).
+   * false — спектакль есть и виден, но продажи временно приостановлены.
+   */
+  bookingEnabled: boolean;
 }
 
 export interface ShowAvailabilityResponse {
@@ -113,6 +118,8 @@ export type BookingRefusalReason =
   | 'already_paid'
   | 'already_cancelled'
   | 'already_attended'
+  // Ограниченный режим продаж: спектакль виден, но новые брони и оплаты закрыты.
+  | 'booking_temporarily_unavailable'
   // Онлайн-оплата: приём выключен на сервере, Stripe недоступен, сессия истекла.
   | 'online_payment_unavailable'
   | 'payment_unavailable'

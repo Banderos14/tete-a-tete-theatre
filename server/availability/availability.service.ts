@@ -7,6 +7,7 @@
 
 import { sumOccupiedTickets } from '../../shared/domain/bookingRules.js';
 import { SHOWS, THEATRE_CAPACITY } from '../../shared/catalog/shows.js';
+import { isShowBookingEnabled } from '../../shared/catalog/salesMode.js';
 import type { ShowAvailability } from '../../shared/contracts/booking.js';
 import { bookingsRef } from '../booking/booking.repository.js';
 
@@ -15,7 +16,10 @@ export async function readShowAvailability(): Promise<Record<string, ShowAvailab
 
   const availability: Record<string, ShowAvailability> = {};
   for (const id of showIds) {
-    availability[id] = { capacity: THEATRE_CAPACITY, sold: 0, remaining: THEATRE_CAPACITY };
+    availability[id] = {
+      capacity: THEATRE_CAPACITY, sold: 0, remaining: THEATRE_CAPACITY,
+      bookingEnabled: isShowBookingEnabled(id),
+    };
   }
 
   // Один запрос на все спектакли афиши (их единицы, лимит 'in' — 30 значений).

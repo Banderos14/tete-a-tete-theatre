@@ -26,8 +26,9 @@ export const FR: T = {
   marquee: [
     'Première 17.09', 'Tsvetaïeva · La Romanesque de la Fatalité',
     '02.10 · Tchekhov · Sérieusement ou pas', 'Saison 2026/2027',
-    'Réservations ouvertes', 'Nice · Rue Rossini',
+    'Nice · Rue Rossini',
   ],
+  marqueeBookingOpen: 'Réservations ouvertes',
   afisha: {
     num:     '01 / Affiche',
     title:   'Prochaines',
@@ -303,6 +304,7 @@ export const FR: T = {
   admin: {
     title:           'Panneau d\'administration',
     accessDenied:    'Accès refusé',
+    salesPaused:     'Ventes suspendues',
     allShows:        'Tous les spectacles',
     bookings:        'réservations',
     totalTickets:    'places occupées',
@@ -342,6 +344,14 @@ export const FR: T = {
     userCreatedAt:   'Date d\'inscription',
     noUsers:         'Aucun spectateur pour l\'instant',
     filterByStatus:  'Statut :',
+  },
+  sales: {
+    unavailableCta: 'Temporairement indisponible',
+    pausedStatus:   'Réservations temporairement suspendues',
+    noticeTitle:    'Le théâtre fonctionne temporairement en programmation réduite.',
+    noticeText:     'Les réservations restent ouvertes uniquement pour certains spectacles.',
+    bookingPaused:  'Les réservations pour ce spectacle sont temporairement suspendues.',
+    paymentPaused:  'Paiement temporairement indisponible',
   },
   showModal: {
     labelDate:     'Date',

@@ -2,6 +2,7 @@
 // Отдельный файл без сервисов Firebase — рендерится в юнит-тесте.
 
 import { RU } from '../../i18n';
+import { isShowSalesPaused } from '../../../shared/catalog/salesMode';
 import { showGlyph, type ShowStats } from './adminStats';
 import styles from './AdminPage.module.scss';
 
@@ -46,6 +47,11 @@ export function AdminShowCard({ stats, active, onToggle }: {
         {dateLabel && <p className={styles.showCardDate}>{dateLabel}</p>}
         {/* Места — занятые места активных броней из вместимости зала
             (семейный билет — 3 места), а не число бронирований. */}
+        {/* Ограниченный режим продаж: спектакль и его брони на месте,
+            но новых продаж нет — тот же признак, что у сайта и сервера. */}
+        {isShowSalesPaused(show.id) && (
+          <p className={styles.showCardPaused}>{t.admin.salesPaused}</p>
+        )}
         <p className={styles.showCardMeta}>
           {t.admin.bookingsCount(bookings)} · {tickets}&nbsp;/&nbsp;{capacity} {t.admin.seats} · {revenue}&nbsp;€ {t.admin.totalRevenue}
         </p>

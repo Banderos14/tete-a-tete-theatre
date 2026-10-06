@@ -26,6 +26,7 @@ import { computeLoyalty } from './loyalty.js';
 import { priceBasket, catalogTariffs, type TicketItem } from '../../shared/domain/ticketBasket.js';
 import { ticketTypeLabel } from '../../shared/catalog/ticketTypes.js';
 import { generateTicketCode } from './ticketCode.js';
+import { isShowBookingEnabled, BOOKING_TEMPORARILY_UNAVAILABLE } from '../../shared/catalog/salesMode.js';
 import type { ValidatedBookingRequest } from './booking.validation.js';
 import { isOnlinePaymentEnabled } from '../payments/stripe.client.js';
 import { openCheckoutForBooking } from '../payments/checkout.service.js';
@@ -61,6 +62,13 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const startMs = showStartUtcMs(show);
   if (startMs !== null && startMs <= Date.now()) {
     throw conflict('Show has already started', 'show_started');
+  }
+
+  // Ограниченный режим продаж (shared/catalog/salesMode.ts): спектакль виден
+  // на сайте, но новых броней и оплат на него сейчас нет. Проверка здесь, а не
+  // только в интерфейсе: старая вкладка или прямой вызов API её не обойдут.
+  if (!isShowBookingEnabled(showId)) {
+    throw conflict('Booking for this show is temporarily unavailable', BOOKING_TEMPORARILY_UNAVAILABLE);
   }
 
   // Онлайн-оплату разрешает только сервер: клиентский флаг лишь прячет кнопку.

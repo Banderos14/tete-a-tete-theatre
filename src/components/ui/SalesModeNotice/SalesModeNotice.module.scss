@@ -1,0 +1,45 @@
+@use '../../../styles/mixins';
+
+// Информационное состояние, а не авария: без красного, тонкая рамка,
+// приглушённый текст — в тон разделам лендинга.
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 720px;
+  margin: 0 auto 28px;
+  padding: 14px 18px;
+  border: 0.5px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  background: var(--bg-2);
+
+  @include mixins.mobile {
+    margin: 0 16px 20px;
+  }
+
+  @include mixins.small {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+}
+
+.icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--fg-mute);
+}
+
+.text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--fg-mute);
+
+  @include mixins.small {
+    font-size: 13px;
+  }
+}
+
+.title {
+  color: var(--fg);
+}

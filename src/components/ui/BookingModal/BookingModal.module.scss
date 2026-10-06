@@ -405,6 +405,14 @@
   }
 }
 
+// «Мест нет» / «Бронирование приостановлено» над тарифами — информация, не ошибка.
+.soldOutHint {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #9c938a;
+}
+
 .seatsInline {
   flex-shrink: 0;
   font-family: var(--font-body);
@@ -1520,7 +1528,8 @@
     span { color: var(--fg-mute); }
   }
 
-  .seatsInline {
+  .seatsInline,
+  .soldOutHint {
     color: var(--fg-mute);
   }
 

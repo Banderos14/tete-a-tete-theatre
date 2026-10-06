@@ -49,6 +49,10 @@ interface Props {
       redirecting: string;
       recommended: string;
     };
+    sales: {
+      unavailableCta: string;
+      bookingPaused: string;
+    };
     months: Record<string, string>;
   };
 
@@ -59,6 +63,8 @@ interface Props {
   canAdd: (type: TicketTypeId) => boolean;
   canRemove: (type: TicketTypeId) => boolean;
   soldOut: boolean;
+  /** Продажи спектакля приостановлены ограниченным режимом (shared/catalog/salesMode.ts). */
+  salesPaused?: boolean;
   /** Доступные способы оплаты: онлайн — только при включённом флаге интерфейса. */
   paymentMethods: PaymentMethod[];
   /** Бронь создана, идёт переход на страницу оплаты Stripe. */
@@ -89,7 +95,7 @@ interface Props {
 
 export function BookingFormStep({
   show, lang, t,
-  quantities, ticketsCount, canAdd, canRemove, soldOut,
+  quantities, ticketsCount, canAdd, canRemove, soldOut, salesPaused = false,
   payment, phone, comment, paymentMethods, redirecting = false,
   submitLoading, submitError, phoneError,
   baseAmount, totalAmount, discountAmount, loyaltyAvailable, seatsLeft,
@@ -154,7 +160,9 @@ export function BookingFormStep({
               <span className={styles.seatsInline}>{seatsLeftLabel}</span>
             )}
           </div>
-          {soldOut && <p className={styles.soldOutHint}>{t.booking.soldOut}</p>}
+          {salesPaused
+            ? <p className={styles.soldOutHint}>{t.sales.bookingPaused}</p>
+            : soldOut && <p className={styles.soldOutHint}>{t.booking.soldOut}</p>}
           <div className={styles.ticketTypes}>
             {show.ticketTypes.map(tt => {
               const qty   = quantities[tt.id] ?? 0;
@@ -172,7 +180,7 @@ export function BookingFormStep({
                     <span className={styles.stepperValue} aria-live="polite">{qty}</span>
                     <button type="button" className={styles.stepperBtn} aria-label={t.booking.addTicket(label)}
                       onClick={() => onQuantityChange(tt.id, qty + 1)}
-                      disabled={busy || soldOut || !canAdd(tt.id)}>+</button>
+                      disabled={busy || soldOut || salesPaused || !canAdd(tt.id)}>+</button>
                   </div>
                 </div>
               );
@@ -296,9 +304,9 @@ export function BookingFormStep({
 
         {submitError && <p className={styles.error} role="alert">{submitError}</p>}
 
-        <button type="submit" className={styles.submitBtn} disabled={busy || ticketsCount < 1 || soldOut} aria-busy={busy}>
-          {submitLabel}
-          {!busy && <span className={styles.submitArrow}>→</span>}
+        <button type="submit" className={styles.submitBtn} disabled={busy || ticketsCount < 1 || soldOut || salesPaused} aria-busy={busy}>
+          {salesPaused ? t.sales.unavailableCta : submitLabel}
+          {!busy && !salesPaused && <span className={styles.submitArrow}>→</span>}
         </button>
 
       </div>

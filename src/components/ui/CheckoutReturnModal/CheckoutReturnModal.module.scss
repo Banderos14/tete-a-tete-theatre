@@ -115,6 +115,13 @@
   color: var(--accent-glow);
 }
 
+// Информационная строка (не ошибка): «Оплата временно недоступна».
+.note {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--fg-mute);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
