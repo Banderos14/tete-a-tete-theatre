@@ -23,11 +23,7 @@ export const RU: T = {
     metaYear:    'с 2018',
     scroll:      'Войти в зал',
   },
-  marquee: [
-    'Премьера 17.09', 'Цветаева · Романтика обреченности',
-    '02.10 · Чехов · И в шутку и всерьёз', 'Сезон 2026/2027',
-    'Nice · Rue Rossini',
-  ],
+  marquee: ['Сезон 2026/2027', 'Nice · Rue Rossini'],
   marqueeBookingOpen: 'Бронирование открыто',
   afisha: {
     num:     '01 / Афиша',

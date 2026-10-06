@@ -1,13 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLang } from '../../../../i18n/LangContext';
 import { isLimitedSalesMode } from '../../../../../shared/catalog/salesMode';
+import { marqueeItems } from './marqueeItems';
 import styles from './Marquee.module.scss';
 
 export function Marquee() {
-  const { t } = useLang();
-  // В ограниченном режиме продаж «Бронирование открыто» вводило бы в заблуждение:
-  // большинство спектаклей сейчас не продаётся.
-  const items   = isLimitedSalesMode() ? t.marquee : [...t.marquee, t.marqueeBookingOpen];
+  const { t, lang } = useLang();
+  // Ближайшие спектакли — из каталога (как у Афиши), без дат вручную.
+  // Момент фиксируется при монтировании: Date.now() нельзя дёргать в рендере.
+  const [mountedAtMs] = useState(() => Date.now());
+  const items = marqueeItems({
+    nowMs: mountedAtMs,
+    lang,
+    tail: t.marquee,
+    // В ограниченном режиме продаж «Бронирование открыто» вводило бы в заблуждение.
+    bookingOpen: isLimitedSalesMode() ? null : t.marqueeBookingOpen,
+  });
   const content = items.join(' · ') + ' · ';
 
   const wrapRef    = useRef<HTMLDivElement>(null);

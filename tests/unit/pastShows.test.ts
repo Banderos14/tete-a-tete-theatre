@@ -148,8 +148,9 @@ describe('заготовки сезона', () => {
 describe('интерфейс не предлагает бронировать прошедший спектакль', () => {
   it('ShowModal блокирует кнопку', () => {
     const src = projectSource('src/pages/HomePage/components/ShowModal/ShowModal.tsx');
-    expect(src).toContain('disabled={showIsPast}');
-    expect(src).toContain('t.showModal.showPast');
+    // Прошедший — неактивная кнопка без действия; кнопка покупки (onBook) только в последней ветке.
+    expect(src).toMatch(/showIsPast \? \([\s\S]*?className=\{styles\.pausedBtn\} disabled>\s*\{t\.showModal\.showPast\}/);
+    expect(src.indexOf('onBook(show)')).toBeGreaterThan(src.indexOf('t.showModal.showPast'));
   });
 
   it('Repertoire не показывает кнопку покупки', () => {

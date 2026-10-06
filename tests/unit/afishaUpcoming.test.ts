@@ -134,7 +134,7 @@ describe('прошедший спектакль не выдаётся за «в�
   it('модалка спектакля: сначала «уже прошёл», «временно недоступно» — только для будущих', () => {
     const modal = projectSource('src/pages/HomePage/components/ShowModal/ShowModal.tsx');
     expect(modal).toContain('const salesPaused = !!show && !showIsPast && isShowSalesPaused(show.id);');
-    expect(modal).toContain('{showIsPast ? t.showModal.showPast');
+    expect(modal).toMatch(/\) : showIsPast \? \(\s*\/\/[^\n]*\n[^\n]*\n\s*<button type="button" className=\{styles\.pausedBtn\} disabled>\s*\{t\.showModal\.showPast\}/);
   });
 
   it('Репертуар: у прошедшего — «уже прошёл», без цены и без «временно недоступно»', () => {

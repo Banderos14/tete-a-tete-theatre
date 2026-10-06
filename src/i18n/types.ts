@@ -296,6 +296,10 @@ export interface T {
     metaYear: string;
     scroll: string;
   };
+  /**
+   * Постоянный хвост бегущей строки. Спектакли с датами в неё подставляются
+   * из каталога (Marquee/marqueeItems.ts) — даты сюда не писать.
+   */
   marquee: string[];
   /** «Бронирование открыто» — в бегущей строке только в обычном режиме продаж. */
   marqueeBookingOpen: string;

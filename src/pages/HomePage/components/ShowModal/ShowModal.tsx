@@ -252,13 +252,18 @@ export function ShowModal({ show, onClose, onBook }: Props) {
                 </button>
                 <span id="show-sales-paused" className={styles.pausedStatus}>{t.sales.pausedStatus}</span>
               </>
+            ) : showIsPast ? (
+              // Тот же спокойный вид, что у «Временно недоступно»: красная
+              // кнопка покупки, даже неактивная, выглядела кликабельной.
+              <button type="button" className={styles.pausedBtn} disabled>
+                {t.showModal.showPast}
+              </button>
             ) : (
               <button
                 className={`btn btn-primary ${styles.bookBtn}`}
                 onClick={() => { handleClose(); onBook(show); }}
-                disabled={showIsPast}
               >
-                {showIsPast ? t.showModal.showPast : <>{t.showModal.book} →</>}
+                {t.showModal.book} →
               </button>
             )}
             {!salesPaused && seatsLeft !== null && seatsLeft > 0 && (

@@ -469,7 +469,7 @@ describe('интерфейс: закрытые спектакли видны, н
 
   it('бегущая строка не обещает «Бронирование открыто» в ограниченном режиме', () => {
     const marquee = projectSource('src/pages/HomePage/sections/Marquee/Marquee.tsx');
-    expect(marquee).toContain('isLimitedSalesMode() ? t.marquee : [...t.marquee, t.marqueeBookingOpen]');
+    expect(marquee).toContain('bookingOpen: isLimitedSalesMode() ? null : t.marqueeBookingOpen,');
     expect(RU.marquee).not.toContain('Бронирование открыто');
     expect(FR.marquee).not.toContain('Réservations ouvertes');
   });

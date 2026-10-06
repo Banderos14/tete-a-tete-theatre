@@ -23,11 +23,7 @@ export const FR: T = {
     metaYear:    'depuis 2018',
     scroll:      'Entrer dans la salle',
   },
-  marquee: [
-    'Première 17.09', 'Tsvetaïeva · La Romanesque de la Fatalité',
-    '02.10 · Tchekhov · Sérieusement ou pas', 'Saison 2026/2027',
-    'Nice · Rue Rossini',
-  ],
+  marquee: ['Saison 2026/2027', 'Nice · Rue Rossini'],
   marqueeBookingOpen: 'Réservations ouvertes',
   afisha: {
     num:     '01 / Affiche',
