@@ -325,7 +325,7 @@ export function AfishaSlider({ onCardClick }: Props) {
                   {/* Порядковый номер «01 / 08» убран: в углу карточки его
                       читали как дату. Остался только возрастной ценз. */}
                   <div className={styles.top}>
-                    <span className={styles.age}>{show.age}</span>
+                    {show.age && <span className={styles.age}>{show.age}</span>}
                   </div>
 
                   <div className={styles.middle}>

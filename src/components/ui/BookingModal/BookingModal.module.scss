@@ -649,7 +649,18 @@
   & + & { border-top: 0.5px solid rgba(243, 231, 220, 0.08); }
 
   .ttName,
-  .ttPrice { color: var(--fg-mute); transition: color 0.15s; }
+  .ttHint {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 14px;
+  color: var(--fg-mute);
+
+  @include mixins.small { font-size: 10px; }
+}
+
+.ttPrice { color: var(--fg-mute); transition: color 0.15s; }
 
   @include mixins.small { gap: 8px; }
 }

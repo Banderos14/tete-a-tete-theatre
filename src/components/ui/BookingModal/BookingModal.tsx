@@ -25,6 +25,7 @@ import { ticketBreakdownLabel } from '../../../../shared/catalog/ticketTypes';
 import type { TicketTypeId } from '../../../../shared/catalog/shows';
 import type { Show } from '../../../types';
 import type { Booking, PaymentMethod } from '../../../types/booking';
+import { initialBasketLines } from '../../../utils/bookingDeepLink';
 import { BookingFormStep } from './BookingFormStep';
 import { BookingSuccessStep } from './BookingSuccessStep';
 import { BookingAuthShowPanel } from './BookingAuthShowPanel';
@@ -32,6 +33,12 @@ import styles from './BookingModal.module.scss';
 
 interface Props {
   show: Show | null;
+  /**
+   * Тариф, с которого начинается корзина (ссылка ?show=…&tariff=…): один билет
+   * этого тарифа вместо первого по каталогу. Только выбор по умолчанию —
+   * количество и состав зритель меняет как обычно, цену считает сервер.
+   */
+  initialTicketType?: TicketTypeId;
   onClose: () => void;
   /** Открыть кабинет на «Моих билетах» — там лежит QR для прохода. */
   onOpenTickets?: () => void;
@@ -39,7 +46,7 @@ interface Props {
 
 type Step = 'auth' | 'form' | 'success';
 
-export function BookingModal({ show, onClose, onOpenTickets }: Props) {
+export function BookingModal({ show, initialTicketType, onClose, onOpenTickets }: Props) {
   const { lang, t } = useLang();
   const { user, userProfile, loading: authContextLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, saveProfile } = useAuth();
 
@@ -164,7 +171,8 @@ export function BookingModal({ show, onClose, onOpenTickets }: Props) {
     if (!show) return;
     /* eslint-disable react-hooks/set-state-in-effect */
     setStep(user ? 'form' : 'auth');
-    setBasketState({ showId: show.id, lines: [] }); setPayment(defaultPaymentMethod(onlineEnabled));
+    setBasketState({ showId: show.id, lines: initialBasketLines(show, initialTicketType) });
+    setPayment(defaultPaymentMethod(onlineEnabled));
     setComment(''); setSubmitError(''); setPhoneError(''); setRedirecting(false);
     setAuthEmail(''); setAuthPassword(''); setAuthName(''); setAuthError('');
     /* eslint-enable react-hooks/set-state-in-effect */

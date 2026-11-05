@@ -10,7 +10,7 @@ import { Team }          from './sections/Team';
 import { Contacts }      from './sections/Contacts';
 import { Footer }        from './sections/Footer';
 import type { Lang } from '../../i18n/translations';
-import type { IntroState, Show, Theme } from '../../types';
+import type { IntroState, Show, Theme, TicketTypeId } from '../../types';
 
 export function HomePage({
   theme, lang, introState, introSpeed,
@@ -22,7 +22,8 @@ export function HomePage({
   onLangChange:  (l: Lang)  => void;
   onAuthOpen:    () => void;
   onProfileOpen: () => void;
-  onBook:        (show: Show) => void;
+  /** initialTicketType — тариф из ссылки ?show=…&tariff=… (см. utils/bookingDeepLink). */
+  onBook:        (show: Show, initialTicketType?: TicketTypeId) => void;
 }) {
   return (
     <>

@@ -176,6 +176,21 @@ const SHOW_CONTENT: ShowContent[] = [
     palette: 'var(--ph-3)',
   },
   {
+    // «Дюймовочка» — материалы театр ещё не прислал. Постера нет НАМЕРЕННО:
+    // без image Афиша, модалка, форма брони и админка показывают нейтральную
+    // подложку с названием (палитра сайта), а не чужую фотографию.
+    // ЧТОБЫ ДОБАВИТЬ АФИШУ: положить файл в src/assets/shows/duimovochka.webp,
+    // импортировать его вверху файла и указать `image` здесь и в
+    // REPERTOIRE_CONTENT. Возраст, длительность и описание — заменить тут же.
+    id: 'duimovochka',
+    author: '',
+    age: '',
+    duration: 'Продолжительность уточняется', durationFR: 'Durée à confirmer',
+    desc: 'Описание спектакля появится позже.',
+    descFR: 'La description du spectacle sera publiée prochainement.',
+    palette: 'var(--ph-5)',
+  },
+  {
     id: 'kovcheg',
     author: 'Урлих Хуб · Музыкальный спектакль',
     authorFR: 'Ulrich Hub · Spectacle musical',
@@ -195,6 +210,8 @@ const PRICE_NOTE: Partial<Record<TicketTypeId, { RU: string; FR: string }>> = {
   child:   { RU: 'ребёнок',              FR: 'enfant' },
   adult:   { RU: 'взрослый',             FR: 'adulte' },
   family:  { RU: 'ребёнок + 2 родителя', FR: 'enfant + 2 parents' },
+  constellation: { RU: 'дети «Созвездия»', FR: 'enfants de Constellation' },
+  regular:       { RU: 'взрослые и дети',  FR: 'adultes et enfants' },
 };
 
 export function priceSummary(tickets: ShowInfo['tickets'], lang: 'RU' | 'FR'): string {
@@ -229,6 +246,7 @@ export function buildShow(id: string, info: ShowInfo, content: ShowContent | und
     published:  info.published,
     ticketTypes: (Object.entries(info.tickets) as Array<[TicketTypeId, TicketInfo]>).map(([ticketId, t]) => ({
       id: ticketId, label: t.label, labelFR: t.labelFR, price: t.price, seats: t.seats,
+      ...(t.hint ? { hint: t.hint, hintFR: t.hintFR } : {}),
       // Сколько единиц тарифа помещается в зал (семейный — по 3 места).
       available: Math.floor(THEATRE_CAPACITY / t.seats),
     })),
@@ -340,6 +358,16 @@ const REPERTOIRE_CONTENT: RepertoireContent[] = [
     palette: 'var(--ph-3)',
     description: 'Сказочный мюзикл для детей и взрослых.',
     descriptionFR: 'Une comédie musicale féerique pour les enfants et les adultes.',
+    duration: 'Продолжительность уточняется', durationFR: 'Durée à confirmer',
+  },
+  {
+    // Материалы ждём от театра — см. комментарий в SHOW_CONTENT.
+    id: 'duimovochka', status: 'active',
+    author: '',
+    tag: 'Сказка', age: '',
+    palette: 'var(--ph-5)',
+    description: 'Описание спектакля появится позже.',
+    descriptionFR: 'La description du spectacle sera publiée prochainement.',
     duration: 'Продолжительность уточняется', durationFR: 'Durée à confirmer',
   },
   {

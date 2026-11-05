@@ -4,7 +4,7 @@ import { LangContext } from '../i18n/LangContext';
 import { translations } from '../i18n/translations';
 import type { Lang } from '../i18n/translations';
 import { AuthProvider } from '../context/AuthContext';
-import type { IntroState, Show, Theme } from '../types';
+import type { IntroState, Show, Theme, TicketTypeId } from '../types';
 // Тип берётся из модуля разделов, а НЕ из barrel'а ProfileDrawer: barrel
 // реэкспортирует сам компонент и втянул бы Firebase в синхронный чанк
 // лендинга (см. tests/unit/importGraph.test.ts).
@@ -57,6 +57,8 @@ export default function App() {
   // и кнопке на экране успешного бронирования.
   const [profileSection, setProfileSection] = useState<Section>('personal');
   const [bookingShow, setBookingShow] = useState<Show | null>(null);
+  // Тариф, выбранный ссылкой ?show=…&tariff=…; у обычного открытия — undefined.
+  const [bookingTicketType, setBookingTicketType] = useState<TicketTypeId | undefined>(undefined);
   // Счётчик открытий формы брони — ключ сброса её границы ошибок: каждое
   // открытие начинается с живой модалки, даже если прошлое упало.
   const [bookingSeq,  setBookingSeq]  = useState(0);
@@ -136,7 +138,10 @@ export default function App() {
     setLang(l);
     try { localStorage.setItem('lang', l); } catch { /* приватный режим — не критично */ }
   }, []);
-  const handleBook        = useCallback((show: Show) => { setBookingShow(show); setBookingSeq(n => n + 1); }, []);
+  const handleBook        = useCallback((show: Show, initialTicketType?: TicketTypeId) => {
+    setBookingTicketType(initialTicketType);
+    setBookingShow(show); setBookingSeq(n => n + 1);
+  }, []);
 
   const openProfileAt = useCallback((section: Section) => {
     setProfileSection(section);
@@ -213,6 +218,7 @@ export default function App() {
               <Suspense fallback={null}>
                 <BookingModal
                   show={bookingShow}
+                  initialTicketType={bookingTicketType}
                   onClose={() => setBookingShow(null)}
                   onOpenTickets={() => { setBookingShow(null); openMyTickets(); }}
                 />

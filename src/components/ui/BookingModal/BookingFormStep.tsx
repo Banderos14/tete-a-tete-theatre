@@ -171,7 +171,10 @@ export function BookingFormStep({
                 // Строка тарифа — не «выбор из вариантов»: несколько тарифов
                 // живут в корзине одновременно, главный элемент — количество.
                 <div key={tt.id} className={`${styles.ticketTypeRow} ${qty > 0 ? styles.ticketTypeRowFilled : ''}`}>
-                  <span className={styles.ttName}>{label}</span>
+                  <span className={styles.ttName}>
+                    {label}
+                    {tt.hint && <span className={styles.ttHint}>{lang === 'FR' ? (tt.hintFR ?? tt.hint) : tt.hint}</span>}
+                  </span>
                   <span className={styles.ttPrice}>{tt.price}&nbsp;€</span>
                   <div className={styles.stepper} role="group" aria-label={label}>
                     <button type="button" className={styles.stepperBtn} aria-label={t.booking.removeTicket(label)}

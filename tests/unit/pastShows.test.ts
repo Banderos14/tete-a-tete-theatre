@@ -94,6 +94,10 @@ describe('сайт и сервер: один каталог спектаклей
             "30 € / 20 € (ученики и студенты)",
             "30 € / 20 € (scolaires et étudiants)"
       ],
+      "duimovochka": [
+            "10 € (дети «Созвездия») / 15 € (взрослые и дети)",
+            "10 € (enfants de Constellation) / 15 € (adultes et enfants)"
+      ],
       "kovcheg": [
             "30 € / 20 € (ученики и студенты)",
             "30 € / 20 € (scolaires et étudiants)"

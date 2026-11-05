@@ -6,7 +6,12 @@
 
 import { parseShowStartUtcMs } from '../domain/showTime.js';
 
-export type TicketTypeId = 'standard' | 'student' | 'child' | 'adult' | 'family';
+// constellation / regular — тарифы «Дюймовочки» (дети «Созвездия» и обычный
+// билет для взрослых и детей). Названия у id общие на весь проект
+// (shared/catalog/ticketTypes.ts): по ним письмо, PDF, Stripe, кабинет и
+// админка подписывают состав брони, поэтому у нового смысла — новый id, а не
+// переименованный старый.
+export type TicketTypeId = 'standard' | 'student' | 'child' | 'adult' | 'family' | 'constellation' | 'regular';
 
 export interface TicketInfo {
   label:   string;
@@ -14,6 +19,9 @@ export interface TicketInfo {
   price:   number;
   /** Сколько мест в зале занимает одна единица тарифа. Семейный билет занимает три. */
   seats:   number;
+  /** Короткое пояснение к тарифу в форме брони (необязательно). */
+  hint?:   string;
+  hintFR?: string;
 }
 
 export interface ShowInfo {
@@ -42,7 +50,7 @@ export const THEATRE_CAPACITY = 50;
 // Максимум билетов в одной брони.
 export const MAX_TICKETS_PER_BOOKING = 10;
 
-// Весь сезон целиком. Сейчас все девять показов опубликованы; будущие даты
+// Весь сезон целиком. Опубликованы все показы, кроме заготовки «Летучего корабля»; будущие даты
 // можно сначала завести здесь с published: false, пока нет материалов и цен.
 export const SEASON_CATALOG: Record<string, ShowInfo> = {
   // ── Сентябрь 2026 ──
@@ -128,6 +136,23 @@ export const SEASON_CATALOG: Record<string, ShowInfo> = {
     tickets: {
       standard: { label: 'Обычный', labelFR: 'Plein tarif', price: 30, seats: 1 },
       student:  { label: 'Ученик / студент', labelFR: 'Scolaire / étudiant', price: 20, seats: 1 },
+    },
+  },
+  duimovochka: {
+    // «Poucette» — рабочий перевод, официальное французское название театр
+    // ещё не подтвердил. Афиши, описания, длительности и возраста пока нет —
+    // сайт показывает нейтральную заглушку (src/data/shows.ts).
+    title: '«Дюймовочка»', titleFR: '«Poucette»',
+    day: '22', month: 'Ноя', time: '11:00', year: '2026',
+    published: true,
+    // Ровно два тарифа. «Созвездие» зритель выбирает сам — проверки
+    // принадлежности к организации нет.
+    tickets: {
+      constellation: { label: 'Дети «Созвездия»', labelFR: 'Enfants de Constellation', price: 10, seats: 1 },
+      regular:       {
+        label: 'Обычный билет', labelFR: 'Billet standard', price: 15, seats: 1,
+        hint: 'Для взрослых и детей', hintFR: 'Pour adultes et enfants',
+      },
     },
   },
   kovcheg: {

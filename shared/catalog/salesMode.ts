@@ -30,6 +30,7 @@ export const SALES_MODE: SalesMode = 'limited';
 export const LIMITED_SALES_ALLOWLIST: readonly string[] = [
   'enot',      // «Крошка Енот»
   'shapochka', // «Красная Шапочка»
+  'duimovochka', // «Дюймовочка»
 ];
 
 /**

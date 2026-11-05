@@ -5,8 +5,9 @@ import { PUBLISHED_REPERTOIRE, PUBLISHED_SHOWS, isShowPast } from '../../../../d
 import { useLang } from '../../../../i18n/LangContext';
 import { PosterPlaceholder } from '../../components/PosterPlaceholder';
 import { ShowModal } from '../../components/ShowModal';
-import type { RepertoireItem, Show } from '../../../../types';
+import type { RepertoireItem, Show, TicketTypeId } from '../../../../types';
 import { getShowIdFromLocation } from '../../../../utils/showUrl';
+import { getTariffFromLocation, resolveBookingDeepLink } from '../../../../utils/bookingDeepLink';
 import { isShowSalesPaused } from '../../../../../shared/catalog/salesMode';
 import styles from './Repertoire.module.scss';
 
@@ -75,7 +76,8 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
         <div className={styles.modalInfo}>
           <div className={styles.modalMeta}>
             <span className={styles.modalTag}>{t.showTags[item.tag] ?? item.tag}</span>
-            <span className={styles.modalAge}>{item.age}</span>
+            {/* Возраст неизвестен (материалы ещё не пришли) — пустой штамп не рисуем. */}
+            {item.age && <span className={styles.modalAge}>{item.age}</span>}
           </div>
 
           <h3 className={styles.modalTitle}>{title}</h3>
@@ -121,7 +123,7 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
 }
 
 interface Props {
-  onBook: (show: Show) => void;
+  onBook: (show: Show, initialTicketType?: TicketTypeId) => void;
 }
 
 export function Repertoire({ onBook }: Props) {
@@ -139,6 +141,9 @@ export function Repertoire({ onBook }: Props) {
     const slug = getShowIdFromLocation();
     const linkedItem = slug ? PUBLISHED_REPERTOIRE.find(item => item.id === slug) : null;
     const linkedShow = slug ? PUBLISHED_SHOWS.find(show => show.id === slug) : null;
+    // ?show=…&tariff=… — сразу форма брони с этим тарифом. Тариф чужой,
+    // спектакль прошёл или закрыт для продаж — обычная карточка спектакля.
+    const linkedBooking = resolveBookingDeepLink(linkedShow, getTariffFromLocation());
     if (!slug || !linkedItem) return;
 
     let handled = false;
@@ -152,7 +157,8 @@ export function Repertoire({ onBook }: Props) {
       // Делаем все карточки видимыми через React, чтобы className не терял 'visible'
       setAllForceVisible(true);
       setHighlightedId(slug);
-      if (linkedShow) setDeepLinkShow(linkedShow);
+      if (linkedBooking) onBook(linkedBooking.show, linkedBooking.ticketType);
+      else if (linkedShow) setDeepLinkShow(linkedShow);
       setTimeout(() => setHighlightedId(null), 2000);
 
       // Небольшая задержка через rAF, чтобы React закоммитил visible-стейт перед скроллом
@@ -167,7 +173,7 @@ export function Repertoire({ onBook }: Props) {
       window.clearTimeout(timer);
       window.removeEventListener('theatre:intro-done', doScroll);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- ссылка разбирается один раз при загрузке
 
   return (
     <section className={styles.repertoire} id="repertoire">
@@ -213,16 +219,18 @@ export function Repertoire({ onBook }: Props) {
           >
             <div className={styles.poster}>
               <ShowPoster image={item.image} imagePosition={item.imagePosition} palette={item.palette} title={cardTitle} />
-              <span className={[
-                styles.mobilePosterAge,
-                item.status !== 'active' ? styles.mobilePosterAgePast : '',
-              ].filter(Boolean).join(' ')}>
-                {item.age}
-              </span>
+              {item.age && (
+                <span className={[
+                  styles.mobilePosterAge,
+                  item.status !== 'active' ? styles.mobilePosterAgePast : '',
+                ].filter(Boolean).join(' ')}>
+                  {item.age}
+                </span>
+              )}
             </div>
             <div className={styles.meta}>
               <span>{cardTag}</span>
-              <span>{item.age}</span>
+              {item.age && <span>{item.age}</span>}
             </div>
             <div className={styles.title}>{cardTitle}</div>
             <div className={styles.author}>{cardAuthor}</div>

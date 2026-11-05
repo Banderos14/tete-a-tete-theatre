@@ -38,7 +38,8 @@ describe('повторное открытие формы брони (регре�
     // Сброс при открытии для спектакля — корзина нового спектакля, способ оплаты по умолчанию.
     const reset = modal.slice(modal.indexOf('// Сбрасываем все поля при открытии для нового спектакля'));
     expect(reset.slice(0, reset.indexOf('}, [show?.id]);')))
-      .toContain('setBasketState({ showId: show.id, lines: [] }); setPayment(defaultPaymentMethod(onlineEnabled));');
+      .toContain('setBasketState({ showId: show.id, lines: initialBasketLines(show, initialTicketType) });');
+    expect(reset.slice(0, reset.indexOf('}, [show?.id]);'))).toContain('setPayment(defaultPaymentMethod(onlineEnabled));');
   });
 
   it('граница ошибок сбрасывается при следующем открытии (resetKey)', () => {

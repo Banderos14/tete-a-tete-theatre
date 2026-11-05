@@ -130,8 +130,11 @@ const ROOT = resolve(__dirname, '../..');
 const UID  = 'user-anna';
 const NOW  = new Date('2026-09-20T10:00:00Z');
 const MIN  = 60 * 1000;
-const ALLOWED = ['enot', 'shapochka'];
-// Все опубликованные спектакли, кроме двух разрешённых, — продажи закрыты.
+// Детские спектакли с тарифами «ребёнок / взрослый / семейный».
+const ALLOWED_KIDS = ['enot', 'shapochka'];
+// «Дюймовочка» — свои два тарифа (tests/unit/duimovochka.test.ts).
+const ALLOWED = [...ALLOWED_KIDS, 'duimovochka'];
+// Все опубликованные спектакли, кроме разрешённых, — продажи закрыты.
 const BLOCKED = Object.keys(CATALOG_SHOWS).filter(id => !ALLOWED.includes(id));
 // Из них ещё не прошедшие на NOW — у прошедших раньше срабатывает show_started.
 const BLOCKED_FUTURE = BLOCKED.filter(id => (showStartUtcMs(CATALOG_SHOWS[id]!) ?? 0) > NOW.getTime());
@@ -179,12 +182,13 @@ afterEach(() => {
 // ── Конфигурация ────────────────────────────────────────────────────────────
 
 describe('режим продаж: один источник правды', () => {
-  it('сейчас включён ограниченный режим; разрешены «Крошка Енот» и «Красная Шапочка»', () => {
+  it('сейчас включён ограниченный режим; разрешены «Крошка Енот», «Красная Шапочка» и «Дюймовочка»', () => {
     expect(SALES_MODE).toBe('limited');
     expect(isLimitedSalesMode()).toBe(true);
     expect([...LIMITED_SALES_ALLOWLIST].sort()).toEqual([...ALLOWED].sort());
     expect(SEASON_CATALOG.enot!.title).toBe('«Крошка Енот»');
     expect(SEASON_CATALOG.shapochka!.title).toBe('«Красная Шапочка»');
+    expect(SEASON_CATALOG.duimovochka!.title).toBe('«Дюймовочка»');
   });
 
   it('allowlist — только настоящие опубликованные id каталога', () => {
@@ -278,7 +282,7 @@ describe('сервер: создание брони в ограниченном 
       paymentMethod: 'on_site', phone: '+33 6 12 34 56 78' })).toThrow('Invalid showId');
   });
 
-  it.each(ALLOWED)('«%s»: онлайн-оплата работает как раньше — бронь, одна сессия Stripe, ссылка', async (showId) => {
+  it.each(ALLOWED_KIDS)('«%s»: онлайн-оплата работает как раньше — бронь, одна сессия Stripe, ссылка', async (showId) => {
     const res = await createBooking(request(showId));
     expect(res.checkoutUrl).toMatch(/^https:\/\/checkout\.stripe\.test\//);
     expect(stripe.created).toHaveLength(1);
@@ -289,7 +293,7 @@ describe('сервер: создание брони в ограниченном 
     expect(res.totalAmount).toBe(40);
   });
 
-  it.each(ALLOWED)('«%s»: оплата на месте и смешанная корзина работают как раньше', async (showId) => {
+  it.each(ALLOWED_KIDS)('«%s»: оплата на месте и смешанная корзина работают как раньше', async (showId) => {
     const res = await createBooking(request(showId, {
       paymentMethod: 'on_site', items: [{ ticketType: 'child', quantity: 1 }, { ticketType: 'family', quantity: 1 }],
     }));

@@ -6,6 +6,7 @@ import type { Show, ShowPhoto } from '../../../../types';
 import { fetchShowAvailability } from '../../../../services/availabilityService';
 import { isShowPast } from '../../../../data/shows';
 import { isShowSalesPaused } from '../../../../../shared/catalog/salesMode';
+import { PosterPlaceholder } from '../PosterPlaceholder';
 import styles from './ShowModal.module.scss';
 
 interface Props {
@@ -151,7 +152,9 @@ export function ShowModal({ show, onClose, onBook }: Props) {
                 />
               </div>
             ) : (
-              <div className={styles.mainPhotoPlaceholder} style={{ background: show.palette }} />
+              // Афиши ещё нет: нейтральная подложка с названием — та же, что в
+              // Репертуаре. Чужую фотографию сюда не подставляем.
+              <PosterPlaceholder palette={show.palette} title={title} />
             )}
 
             {hasMultiple && (
@@ -213,7 +216,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
 
         {/* Информация о спектакле */}
         <div className={styles.info} data-scroll-lock-allow="true">
-          <div className={styles.ageStamp}>{show.age}</div>
+          {show.age && <div className={styles.ageStamp}>{show.age}</div>}
 
           <div className={styles.author}>{author}</div>
           <h2 className={styles.title}>{title}</h2>

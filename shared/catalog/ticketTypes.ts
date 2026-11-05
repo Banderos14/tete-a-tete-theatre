@@ -8,6 +8,9 @@ const LABELS: Record<TicketTypeId, { RU: string; FR: string }> = {
   child:    { RU: 'Ребёнок', FR: 'Enfant' },
   adult:    { RU: 'Взрослый', FR: 'Adulte' },
   family:   { RU: 'Ребёнок + 2 родителя', FR: 'Enfant + 2 parents' },
+  // «Дюймовочка»
+  constellation: { RU: 'Дети «Созвездия»', FR: 'Enfants de Constellation' },
+  regular:       { RU: 'Обычный билет', FR: 'Billet standard' },
 };
 
 export function ticketTypeLabel(ticketType: TicketTypeId | string, lang: 'RU' | 'FR'): string {

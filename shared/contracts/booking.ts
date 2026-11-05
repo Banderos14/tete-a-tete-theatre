@@ -4,7 +4,7 @@
 // браузером и /api/*, поэтому импортируются обеими сторонами. Здесь не должно
 // появиться ни одной серверной зависимости.
 
-export type TicketTypeId   = 'standard' | 'student' | 'child' | 'adult' | 'family';
+export type TicketTypeId   = 'standard' | 'student' | 'child' | 'adult' | 'family' | 'constellation' | 'regular';
 export type PaymentMethod  = 'on_site' | 'bank_transfer' | 'online';
 export type UiLanguage     = 'RU' | 'FR';
 

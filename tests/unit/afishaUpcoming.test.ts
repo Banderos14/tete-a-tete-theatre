@@ -98,7 +98,7 @@ describe('ограниченный режим продаж в Афише', () =>
   });
 
   it('спектакли из allowlist бронируются', () => {
-    for (const id of ['enot', 'shapochka']) {
+    for (const id of ['enot', 'shapochka', 'duimovochka']) {
       expect(ids(OCT_6), id).toContain(id);
       expect(isShowBookingEnabled(id), id).toBe(true);
     }
@@ -112,12 +112,12 @@ describe('ограниченный режим продаж в Афише', () =>
 
   it('карточки: статус «приостановлено» только у закрытых будущих, у разрешённых — нет', () => {
     const html = renderAfisha('2026-10-06T12:00:00Z');
-    // Енот + Шапочка открыты, Разговор + Любовь + Ковчег закрыты; прошедших нет.
+    // Енот + Шапочка + Дюймовочка открыты, Разговор + Любовь + Ковчег закрыты; прошедших нет.
     const paused = html.split(RU.sales.pausedStatus).length - 1;
     const cards  = html.split('data-show-idx=').length - 1;
     expect(cards).toBeGreaterThan(0);
-    expect(cards % 5).toBe(0);
-    expect(paused).toBe((cards / 5) * 3);
+    expect(cards % 6).toBe(0);
+    expect(paused).toBe((cards / 6) * 3);
     expect(html).not.toContain('Романтика обреченности');
     expect(html).toContain('Крошка Енот');
     expect(renderAfisha('2026-10-06T12:00:00Z', 'FR')).toContain(FR.sales.pausedStatus);

@@ -16,6 +16,9 @@ export interface TicketType {
   available: number;
   /** Число зрительских мест на одну единицу тарифа. */
   seats: number;
+  /** Короткое пояснение под названием тарифа в форме брони. */
+  hint?: string;
+  hintFR?: string;
 }
 
 export interface Show {
