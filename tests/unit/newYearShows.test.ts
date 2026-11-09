@@ -740,13 +740,18 @@ describe('модалка Репертуара: официальная афиша
     expect(PUBLISHED_REPERTOIRE.find(r => r.id === 'kovcheg')!.imageFit).toBeUndefined();
   });
 
-  it('афиша без обрезки, в своих пропорциях и прилипает к верху (top после inset)', () => {
+  it('афиша без обрезки, в своих пропорциях и по центру окна по вертикали', () => {
     const css = projectSource('src/pages/HomePage/sections/Repertoire/Repertoire.module.scss');
     const block = css.slice(css.indexOf('.modalPosterContain {'), css.indexOf('.modalInfo {'));
     expect(block).toContain('overflow: visible;');
     expect(block).toContain('object-fit: contain;');
     expect(block).toContain('height: auto;');
-    expect(block.indexOf('inset: auto;')).toBeLessThan(block.indexOf('top: 0;'));
+    // По вертикали — по центру видимой части окна: липкая обёртка нулевой высоты.
+    const center = block.slice(block.indexOf('.posterCenter {'), block.indexOf('}', block.indexOf('.posterCenter {')));
+    expect(center).toContain('position: sticky;');
+    expect(center).toContain('top: 50%;');
+    expect(center).toContain('height: 0;');
+    expect(block).toContain('transform: translateY(-50%);');
     const tsx = projectSource('src/pages/HomePage/sections/Repertoire/Repertoire.tsx');
     expect(tsx).toContain("contain={item.imageFit === 'contain'}");
   });

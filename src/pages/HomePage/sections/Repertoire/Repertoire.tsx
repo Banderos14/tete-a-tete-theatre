@@ -26,6 +26,21 @@ function ShowPoster({
 }) {
   const { t } = useLang();
   const [err, setErr] = useState(false);
+  if (image && contain && !err) {
+    // Обёртка нулевой высоты прилипает к середине окна; картинка центрируется
+    // относительно неё — так афиша по центру при любой длине описания.
+    return (
+      <span className={styles.posterCenter}>
+        <img
+          src={image}
+          alt={t.showModal.posterAlt(title)}
+          loading={lazy ? 'lazy' : 'eager'}
+          onError={() => { console.warn('[show image failed]', title, image); setErr(true); }}
+          className={`${styles.posterImgEl} ${styles.posterImgContain}`}
+        />
+      </span>
+    );
+  }
   if (image && !err) {
     return (
       <>
@@ -34,10 +49,10 @@ function ShowPoster({
           alt={t.showModal.posterAlt(title)}
           loading={lazy ? 'lazy' : 'eager'}
           onError={() => { console.warn('[show image failed]', title, image); setErr(true); }}
-          className={`${styles.posterImgEl} ${contain ? styles.posterImgContain : ''}`}
-          style={imagePosition && !contain ? { objectPosition: imagePosition } : undefined}
+          className={styles.posterImgEl}
+          style={imagePosition ? { objectPosition: imagePosition } : undefined}
         />
-        {!contain && <div className={styles.posterImgOverlay} aria-hidden="true" />}
+        <div className={styles.posterImgOverlay} aria-hidden="true" />
       </>
     );
   }
