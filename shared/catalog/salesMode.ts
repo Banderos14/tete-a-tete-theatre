@@ -20,17 +20,24 @@
 // брони, Афиша, Репертуар, кабинет и админка. Контракт —
 // tests/unit/salesMode.test.ts.
 
-import { SHOWS } from './shows.js';
+import { SHOWS, productionIdOf } from './shows.js';
 
 export type SalesMode = 'normal' | 'limited';
 
 export const SALES_MODE: SalesMode = 'limited';
 
-/** Спектакли, которые продаются в режиме 'limited' (id из SEASON_CATALOG). */
+/**
+ * Спектакли, которые продаются в режиме 'limited'. Элемент — id спектакля из
+ * SEASON_CATALOG ИЛИ productionId постановки с несколькими сеансами: 'funtik'
+ * открывает продажу на все сеансы «Фунтика» (каждый сеанс всё равно
+ * проверяется отдельно — опубликован ли он и не начался ли).
+ */
 export const LIMITED_SALES_ALLOWLIST: readonly string[] = [
   'enot',      // «Крошка Енот»
   'shapochka', // «Красная Шапочка»
   'duimovochka', // «Дюймовочка»
+  'funtik',    // «Фунтик: Новогодний переполох» — все шесть сеансов
+  'sladosti',  // «Новый год в стране сладостей» — все три сеанса
 ];
 
 /**
@@ -45,7 +52,7 @@ export function isShowBookingEnabled(
   allowlist: readonly string[] = LIMITED_SALES_ALLOWLIST,
 ): boolean {
   if (!Object.hasOwn(SHOWS, showId)) return false;
-  return mode === 'normal' || allowlist.includes(showId);
+  return mode === 'normal' || allowlist.includes(showId) || allowlist.includes(productionIdOf(showId));
 }
 
 /**

@@ -3,10 +3,12 @@ import { useScrollLock } from '../../../../hooks/useScrollLock';
 import { createPortal } from 'react-dom';
 import { useLang } from '../../../../i18n/LangContext';
 import type { Show, ShowPhoto } from '../../../../types';
-import { fetchShowAvailability } from '../../../../services/availabilityService';
-import { isShowPast } from '../../../../data/shows';
+import { IconInfoCircle } from '@tabler/icons-react';
+import { fetchAllAvailability } from '../../../../services/availabilityService';
+import { isShowPast, upcomingSessions, seasonStartYear } from '../../../../data/shows';
 import { isShowSalesPaused } from '../../../../../shared/catalog/salesMode';
 import { PosterPlaceholder } from '../PosterPlaceholder';
+import { SessionPicker } from '../SessionPicker';
 import styles from './ShowModal.module.scss';
 
 interface Props {
@@ -23,10 +25,12 @@ export function ShowModal({ show, onClose, onBook }: Props) {
   const [activeIdx,    setActiveIdx]    = useState(0);
   const [thumbStart,   setThumbStart]   = useState(0);
   const [descExpanded, setDescExpanded] = useState(false);
-  // null = остаток неизвестен (например, /api недоступен) — тогда ничего не показываем,
-  // вместо того чтобы выводить выдуманное число.
-  const [seatsLeft,    setSeatsLeft]    = useState<number | null>(null);
+  // Остаток мест по id сеанса. null = остаток неизвестен (например, /api
+  // недоступен) — тогда ничего не показываем, вместо выдуманного числа.
+  const [seatsById,    setSeatsById]    = useState<Record<string, number> | null>(null);
   const [mountedAtMs] = useState(() => Date.now());
+  // Выбранный сеанс постановки с несколькими показами (id записи каталога).
+  const [sessionId,    setSessionId]    = useState<string | null>(null);
 
   // Производный стейт: сбрасываем при смене спектакля (render-time setState — паттерн из документации React)
   const [stateShowId, setStateShowId] = useState<string | null>(null);
@@ -36,7 +40,8 @@ export function ShowModal({ show, onClose, onBook }: Props) {
     setActiveIdx(0);
     setThumbStart(0);
     setDescExpanded(false);
-    setSeatsLeft(null);
+    setSeatsById(null);
+    setSessionId(currentId);
     if (currentId !== null) setClosing(false);
   }
 
@@ -53,18 +58,32 @@ export function ShowModal({ show, onClose, onBook }: Props) {
   }, [show]);
 
   // Остаток мест приходит с сервера: клиент не имеет права читать чужие брони.
+  // Один запрос — остаток по каждому сеансу отдельно (места не суммируются).
   useEffect(() => {
     if (!show) return;
     let cancelled = false;
-    void fetchShowAvailability(show.id).then((remaining) => {
-      if (!cancelled) setSeatsLeft(remaining);
+    void fetchAllAvailability().then((all) => {
+      if (!cancelled) setSeatsById(all);
     });
     return () => { cancelled = true; };
   }, [show?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const showIsPast = !!show && isShowPast(show, mountedAtMs);
+  // Предстоящие сеансы постановки. У спектакля с одним показом — он сам (или
+  // ничего, если прошёл): тогда выбора нет и модалка выглядит как раньше.
+  const sessions = useMemo(
+    () => (show ? upcomingSessions(show.productionId, mountedAtMs) : []),
+    [show, mountedAtMs],
+  );
+  const hasSessionChoice = sessions.length > 1;
+  // Сеанс, на который откроется форма брони. Пришли с конкретным сеансом
+  // (ссылка ?show=<сеанс>) — он и выбран; прошедший сеанс заменяется ближайшим.
+  const session: Show | null = !show ? null
+    : hasSessionChoice ? (sessions.find(s => s.id === sessionId) ?? sessions[0]!) : show;
+  const seatsLeft = session && seatsById ? (seatsById[session.id] ?? null) : null;
+
+  const showIsPast = !!session && isShowPast(session, mountedAtMs);
   // Ограниченный режим продаж: спектакль виден, но купить его сейчас нельзя.
-  const salesPaused = !!show && !showIsPast && isShowSalesPaused(show.id);
+  const salesPaused = !!session && !showIsPast && isShowSalesPaused(session.id);
 
   const handleClose = useCallback(() => {
     setClosing(true);
@@ -98,7 +117,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [show, handleClose, goTo, activeIdx]);
 
-  if (!show) return null;
+  if (!show || !session) return null;
 
   const hasMultiple  = allPhotos.length > 1;
   const hasMoreRight = thumbStart + VISIBLE_THUMBS < allPhotos.length;
@@ -110,9 +129,13 @@ export function ShowModal({ show, onClose, onBook }: Props) {
   const author       = lang === 'FR' ? (show.authorFR   ?? show.author)   : show.author;
   const duration     = lang === 'FR' ? (show.durationFR ?? show.duration) : show.duration;
   const price        = lang === 'FR' ? (show.priceFR    ?? show.price)    : show.price;
-  const monthLabel   = t.months[show.month] ?? show.month;
-  const showYear     = Number(show.year);
-  const seasonYears  = Number.isFinite(showYear) ? `${showYear} / ${showYear + 1}` : show.year;
+  const notice       = lang === 'FR' ? (show.noticeFR ?? show.notice) : show.notice;
+  // Официальная афиша без галереи — показываем целиком и на мобиле.
+  const contain      = show.imageFit === 'contain' && !show.photos?.length;
+  const monthLabel   = t.months[session.month] ?? session.month;
+  // Сезон — по началу сезона: январский сеанс 2027 года — это «2026 / 2027».
+  const seasonYear   = seasonStartYear(session);
+  const seasonYears  = seasonYear !== null ? `${seasonYear} / ${seasonYear + 1}` : session.year;
 
   return createPortal(
     <div
@@ -135,18 +158,20 @@ export function ShowModal({ show, onClose, onBook }: Props) {
             {currentPhoto ? (
               <div key={activeIdx} className={styles.mainPhotoWrap}>
                 <div
-                  className={styles.photoBlur}
+                  className={`${styles.photoBlur} ${contain ? styles.photoBlurVisible : ''}`}
                   style={{ backgroundImage: `url(${currentPhoto.src})` }}
                   aria-hidden="true"
                 />
                 <img
-                  className={styles.photoImg}
+                  className={`${styles.photoImg} ${contain ? styles.photoImgContain : ''}`}
                   src={currentPhoto.src}
+                  // Афиша без галереи — содержательная картинка (на ней даты и
+                  // название); фото галереи — оформление, alt у них пустой.
+                  alt={show.photos?.length ? '' : t.showModal.posterAlt(title)}
                   style={{
                     '--photo-mobile-position': currentPhoto.position ?? 'center center',
                     '--photo-mobile-scale': String(currentPhoto.mobileScale ?? 1),
                   } as React.CSSProperties}
-                  alt=""
                   draggable={false}
                   decoding="async"
                 />
@@ -224,8 +249,11 @@ export function ShowModal({ show, onClose, onBook }: Props) {
 
           <div className={styles.metaTable}>
             {([
-              [t.showModal.labelDate,     `${show.day} ${monthLabel} ${show.year}`, false],
-              [t.showModal.labelTime,     show.time,                                false],
+              // Несколько сеансов — дата и время выбираются ниже, списком.
+              ...(hasSessionChoice ? [] : [
+                [t.showModal.labelDate, `${session.day} ${monthLabel} ${session.year}`, false],
+                [t.showModal.labelTime, session.time,                                   false],
+              ]),
               [t.showModal.labelDuration, duration,                                 false],
               [t.showModal.labelPrice,    price,                                    true],
             ] as [string, string, boolean][]).map(([label, value, isPrice]) => (
@@ -235,6 +263,24 @@ export function ShowModal({ show, onClose, onBook }: Props) {
               </div>
             ))}
           </div>
+
+          {hasSessionChoice && (
+            <SessionPicker
+              sessions={sessions}
+              selectedId={session.id}
+              onSelect={setSessionId}
+              seatsLeft={salesPaused ? null : seatsById}
+              lang={lang}
+              t={t}
+            />
+          )}
+
+          {notice && (
+            <p className={styles.notice}>
+              <IconInfoCircle size={16} stroke={1.5} aria-hidden="true" />
+              <span>{notice}</span>
+            </p>
+          )}
 
           <p className={`${styles.desc}${descExpanded ? ` ${styles.descExpanded}` : ''}`}>{desc}</p>
           {desc && desc.length > 200 && (
@@ -264,7 +310,7 @@ export function ShowModal({ show, onClose, onBook }: Props) {
             ) : (
               <button
                 className={`btn btn-primary ${styles.bookBtn}`}
-                onClick={() => { handleClose(); onBook(show); }}
+                onClick={() => { handleClose(); onBook(session); }}
               >
                 {t.showModal.book} →
               </button>

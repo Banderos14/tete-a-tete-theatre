@@ -355,6 +355,19 @@
   line-height: 1.65;
   color: var(--fg-dim);
   padding-top: 8px;
+  // Официальные описания разбиты на абзацы переводами строки.
+  white-space: pre-line;
+}
+
+// Условие посещения («дети до 7 лет — только со взрослым»).
+.modalNotice {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 0.5px solid var(--line-strong);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--fg);
 }
 
 .modalBuyBtn {

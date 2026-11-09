@@ -4,7 +4,10 @@
 // браузером и /api/*, поэтому импортируются обеими сторонами. Здесь не должно
 // появиться ни одной серверной зависимости.
 
-export type TicketTypeId   = 'standard' | 'student' | 'child' | 'adult' | 'family' | 'constellation' | 'regular';
+// Тарифы — один список на проект: он объявлен в каталоге (shared/catalog/shows.ts),
+// здесь только переэкспорт, чтобы два союза не разъезжались.
+import type { TicketTypeId } from '../catalog/shows.js';
+export type { TicketTypeId };
 export type PaymentMethod  = 'on_site' | 'bank_transfer' | 'online';
 export type UiLanguage     = 'RU' | 'FR';
 
@@ -21,6 +24,10 @@ export interface BookingTicketItem {
   unitPrice: number;
   seats:     number;
   subtotal:  number;
+  /** Пакет: взрослые / дети / подарки на одну единицу. */
+  adults?:   number;
+  children?: number;
+  gifts?:    number;
 }
 
 /** Тело POST /api/create-booking. Цену и статусы сервер считает сам. */

@@ -1,0 +1,116 @@
+@use '../../../../styles/mixins';
+
+// Выбор сеанса: выбранный — тёплый фон поля и красная точка-радио (без
+// красной обводки), невыбранный — прозрачный и приглушённый.
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0 4px;
+  flex-shrink: 0;
+}
+
+.label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.labelHint {
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0.5px solid rgba(243, 231, 220, 0.12);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+
+  &:hover { opacity: 0.85; }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-text);
+    outline-offset: 2px;
+  }
+}
+
+.optionActive {
+  background: #26211c;
+  opacity: 1;
+
+  &:hover { opacity: 1; }
+}
+
+.dot {
+  flex: 0 0 13px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid rgba(243, 231, 220, 0.4);
+}
+
+.dotActive {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.date {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  // День недели первым словом — с заглавной не нужен, но и не капсом.
+  &::first-letter { text-transform: uppercase; }
+}
+
+.seats {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: #9c938a;
+  white-space: nowrap;
+}
+
+.seatsOut { color: var(--accent-text); }
+
+@include mixins.small {
+  .option { padding: 8px 10px; gap: 8px; }
+  .date   { font-size: 12.5px; }
+}
+
+:global([data-theme='light']) {
+  .option {
+    border-color: var(--line-strong);
+    color: var(--fg);
+  }
+  .optionActive { background: var(--bg-3); }
+  .dot { border-color: rgba(26, 23, 21, 0.35); }
+  .dotActive { border-color: var(--accent); }
+  .seats { color: var(--fg-mute); }
+}

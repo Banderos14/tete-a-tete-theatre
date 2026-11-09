@@ -70,9 +70,11 @@ describe('Афиша: только предстоящие спектакли', (
   });
 
   it('после последнего спектакля сезона Афиша пуста — и показывает строку, а не пустую ленту', () => {
-    expect(ids(ms('2027-01-01T00:00:00Z'))).toEqual([]);
-    expect(renderAfisha('2027-01-01T00:00:00Z')).toContain(RU.afisha.empty);
-    expect(renderAfisha('2027-01-01T00:00:00Z', 'FR')).toContain(FR.afisha.empty);
+    // Последний сеанс сезона — «Новый год в стране сладостей» 10 января 2027, 11:00.
+    expect(ids(ms('2027-01-10T09:59:00Z'))).toEqual(['sladosti-2027-01-10-1100']);
+    expect(ids(ms('2027-01-10T10:00:00Z'))).toEqual([]);
+    expect(renderAfisha('2027-02-01T00:00:00Z')).toContain(RU.afisha.empty);
+    expect(renderAfisha('2027-02-01T00:00:00Z', 'FR')).toContain(FR.afisha.empty);
   });
 });
 
@@ -112,12 +114,14 @@ describe('ограниченный режим продаж в Афише', () =>
 
   it('карточки: статус «приостановлено» только у закрытых будущих, у разрешённых — нет', () => {
     const html = renderAfisha('2026-10-06T12:00:00Z');
-    // Енот + Шапочка + Дюймовочка открыты, Разговор + Любовь + Ковчег закрыты; прошедших нет.
+    // Енот + Шапочка + Дюймовочка + Фунтик + Страна сладостей открыты (у двух
+    // последних — по одной карточке на постановку), Разговор + Любовь + Ковчег
+    // закрыты; прошедших нет. Итого 8 карточек в наборе, из них 3 «приостановлено».
     const paused = html.split(RU.sales.pausedStatus).length - 1;
     const cards  = html.split('data-show-idx=').length - 1;
     expect(cards).toBeGreaterThan(0);
-    expect(cards % 6).toBe(0);
-    expect(paused).toBe((cards / 6) * 3);
+    expect(cards % 8).toBe(0);
+    expect(paused).toBe((cards / 8) * 3);
     expect(html).not.toContain('Романтика обреченности');
     expect(html).toContain('Крошка Енот');
     expect(renderAfisha('2026-10-06T12:00:00Z', 'FR')).toContain(FR.sales.pausedStatus);
@@ -133,7 +137,8 @@ describe('прошедший спектакль не выдаётся за «в�
 
   it('модалка спектакля: сначала «уже прошёл», «временно недоступно» — только для будущих', () => {
     const modal = projectSource('src/pages/HomePage/components/ShowModal/ShowModal.tsx');
-    expect(modal).toContain('const salesPaused = !!show && !showIsPast && isShowSalesPaused(show.id);');
+    // Признак считается по выбранному сеансу (у постановки с одним показом это сам спектакль).
+    expect(modal).toContain('const salesPaused = !!session && !showIsPast && isShowSalesPaused(session.id);');
     expect(modal).toMatch(/\) : showIsPast \? \(\s*\/\/[^\n]*\n[^\n]*\n\s*<button type="button" className=\{styles\.pausedBtn\} disabled>\s*\{t\.showModal\.showPast\}/);
   });
 

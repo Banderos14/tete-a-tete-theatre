@@ -22,11 +22,17 @@ export async function readShowAvailability(): Promise<Record<string, ShowAvailab
     };
   }
 
-  // Один запрос на все спектакли афиши (их единицы, лимит 'in' — 30 значений).
-  const snap = await bookingsRef().where('showId', 'in', showIds).get();
+  // Запрос 'in' принимает не больше 30 значений, а с отдельными сеансами
+  // новогодних постановок спектаклей в каталоге уже почти два десятка —
+  // поэтому id идут пачками. Каждый сеанс считается отдельно: места разных
+  // показов одной постановки не складываются.
+  const IN_LIMIT = 30;
+  const chunks: string[][] = [];
+  for (let i = 0; i < showIds.length; i += IN_LIMIT) chunks.push(showIds.slice(i, i + IN_LIMIT));
+  const snaps = await Promise.all(chunks.map(ids => bookingsRef().where('showId', 'in', ids).get()));
 
   const byShow: Record<string, Array<{ status: string; paymentStatus: string; ticketsCount?: number; seatsCount?: number }>> = {};
-  snap.docs.forEach((d) => {
+  snaps.flatMap(snap => snap.docs).forEach((d) => {
     const data   = d.data() as Record<string, unknown>;
     const showId = String(data.showId ?? '');
     if (!availability[showId]) return;

@@ -60,7 +60,7 @@ export function AdminShowCard({ stats, active, onToggle }: {
           <p className={styles.showCardPaused}>{t.admin.salesPaused}</p>
         )}
         <p className={styles.showCardMeta}>
-          {t.admin.bookingsCount(bookings)} · {tickets}&nbsp;/&nbsp;{capacity} {t.admin.seats} · {revenue}&nbsp;€ {t.admin.totalRevenue}
+          {t.admin.bookingsCount(bookings)} · {tickets}&nbsp;/&nbsp;{capacity} {t.admin.seats} · {t.admin.seatsFree(Math.max(0, capacity - tickets))} · {revenue}&nbsp;€ {t.admin.totalRevenue}
         </p>
       </div>
     </button>

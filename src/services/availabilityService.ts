@@ -9,12 +9,27 @@
 // чужие брони. Число приходит с сервера, null означает «остаток неизвестен» —
 // тогда индикатор просто не показывается.
 export async function fetchShowAvailability(showId: string): Promise<number | null> {
+  const all = await fetchAllAvailability();
+  const remaining = all?.[showId];
+  return typeof remaining === 'number' ? remaining : null;
+}
+
+/**
+ * Остаток мест по всем сеансам сразу (id сеанса → свободно мест) — для выбора
+ * сеанса постановки с несколькими показами: у каждого сеанса свой остаток.
+ * null — остаток неизвестен.
+ */
+export async function fetchAllAvailability(): Promise<Record<string, number> | null> {
   try {
     const resp = await fetch('/api/show-availability', { headers: { Accept: 'application/json' } });
     if (!resp.ok) return null;
-    const data = await resp.json() as { shows?: Record<string, { remaining?: number }> };
-    const remaining = data.shows?.[showId]?.remaining;
-    return typeof remaining === 'number' ? remaining : null;
+    const data = await resp.json() as { shows?: Record<string, { remaining?: unknown }> };
+    if (!data.shows || typeof data.shows !== 'object') return null;
+    const out: Record<string, number> = {};
+    for (const [id, entry] of Object.entries(data.shows)) {
+      if (typeof entry?.remaining === 'number') out[id] = entry.remaining;
+    }
+    return out;
   } catch {
     // Локальный `npm run dev` не поднимает /api/* — это штатная ситуация.
     return null;

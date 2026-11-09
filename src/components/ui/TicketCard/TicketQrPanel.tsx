@@ -13,6 +13,7 @@ import { useLang } from '../../../i18n/LangContext';
 import type { Booking } from '../../../types/booking';
 import { useTicketPdf } from './useTicketPdf';
 import { bookingBreakdown, isMixedBooking } from '../../../utils/ticketBreakdown';
+import { bookingGiftsCount } from '../../../../shared/domain/ticketBasket';
 import styles from './TicketCard.module.scss';
 
 /** Подпись под QR, если билет ещё не оплачен. */
@@ -103,6 +104,12 @@ export function TicketQrPanel({ booking: b, active }: { booking: Booking; active
             <dt>{isFR ? 'Places' : 'Мест'   }</dt>
             <dd>{b.seatsCount && b.seatsCount > 0 ? b.seatsCount : b.ticketsCount}</dd>
           </div>
+          {bookingGiftsCount(b) > 0 && (
+            <div className={styles.detailRow}>
+              <dt>{isFR ? 'Cadeaux' : 'Подарки'}</dt>
+              <dd>{bookingGiftsCount(b)}</dd>
+            </div>
+          )}
           <div className={styles.detailRow}>
             <dt>{isFR ? 'Billets' : 'Билеты' }</dt>
             <dd>
@@ -111,7 +118,9 @@ export function TicketQrPanel({ booking: b, active }: { booking: Booking; active
                 <> · <span>{b.totalAmount} €</span></>
               )}
               {/* Несколько тарифов — состав отдельной строкой. */}
-              {isMixedBooking(b) && <><br />{bookingBreakdown(b, lang === 'FR' ? 'FR' : 'RU')}</>}
+              {/* Пакет показывается и один: по нему видны категория и состав. */}
+              {(isMixedBooking(b) || bookingGiftsCount(b) > 0 || b.ticketItems?.some(i => typeof i.gifts === 'number'))
+                && <><br />{bookingBreakdown(b, lang === 'FR' ? 'FR' : 'RU')}</>}
             </dd>
           </div>
         </dl>

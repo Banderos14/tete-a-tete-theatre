@@ -17,7 +17,7 @@ import {
   SALES_MODE, LIMITED_SALES_ALLOWLIST, isShowBookingEnabled, isShowSalesPaused, isLimitedSalesMode,
   BOOKING_TEMPORARILY_UNAVAILABLE,
 } from '../../shared/catalog/salesMode';
-import { SEASON_CATALOG, SHOWS as CATALOG_SHOWS, showStartUtcMs } from '../../shared/catalog/shows';
+import { SEASON_CATALOG, SHOWS as CATALOG_SHOWS, showStartUtcMs, productionIdOf } from '../../shared/catalog/shows';
 import { PUBLISHED_SHOWS, PUBLISHED_REPERTOIRE, SHOWS as FRONT_SHOWS } from '../../src/data/shows';
 import { RU } from '../../src/i18n/ru';
 import { FR } from '../../src/i18n/fr';
@@ -133,9 +133,13 @@ const MIN  = 60 * 1000;
 // Детские спектакли с тарифами «ребёнок / взрослый / семейный».
 const ALLOWED_KIDS = ['enot', 'shapochka'];
 // «Дюймовочка» — свои два тарифа (tests/unit/duimovochka.test.ts).
-const ALLOWED = [...ALLOWED_KIDS, 'duimovochka'];
-// Все опубликованные спектакли, кроме разрешённых, — продажи закрыты.
-const BLOCKED = Object.keys(CATALOG_SHOWS).filter(id => !ALLOWED.includes(id));
+// «Фунтик» и «Страна сладостей» — постановки с несколькими сеансами: в
+// allowlist их productionId, он открывает все сеансы (tests/unit/newYearShows.test.ts).
+const ALLOWED = [...ALLOWED_KIDS, 'duimovochka', 'funtik', 'sladosti'];
+// Все опубликованные сеансы, кроме разрешённых постановок, — продажи закрыты.
+const BLOCKED = Object.keys(CATALOG_SHOWS).filter(id => !ALLOWED.includes(productionIdOf(id)));
+// Сеансы разрешённых постановок (у «Фунтика» их шесть, у «Страны сладостей» три).
+const ALLOWED_SHOW_IDS = Object.keys(CATALOG_SHOWS).filter(id => ALLOWED.includes(productionIdOf(id)));
 // Из них ещё не прошедшие на NOW — у прошедших раньше срабатывает show_started.
 const BLOCKED_FUTURE = BLOCKED.filter(id => (showStartUtcMs(CATALOG_SHOWS[id]!) ?? 0) > NOW.getTime());
 
@@ -182,7 +186,7 @@ afterEach(() => {
 // ── Конфигурация ────────────────────────────────────────────────────────────
 
 describe('режим продаж: один источник правды', () => {
-  it('сейчас включён ограниченный режим; разрешены «Крошка Енот», «Красная Шапочка» и «Дюймовочка»', () => {
+  it('сейчас включён ограниченный режим; разрешены «Крошка Енот», «Красная Шапочка», «Дюймовочка», «Фунтик» и «Страна сладостей»', () => {
     expect(SALES_MODE).toBe('limited');
     expect(isLimitedSalesMode()).toBe(true);
     expect([...LIMITED_SALES_ALLOWLIST].sort()).toEqual([...ALLOWED].sort());
@@ -191,11 +195,24 @@ describe('режим продаж: один источник правды', () =
     expect(SEASON_CATALOG.duimovochka!.title).toBe('«Дюймовочка»');
   });
 
-  it('allowlist — только настоящие опубликованные id каталога', () => {
+  it('allowlist — только настоящие опубликованные id каталога или постановки с опубликованными сеансами', () => {
     for (const id of LIMITED_SALES_ALLOWLIST) {
-      expect(Object.hasOwn(SEASON_CATALOG, id)).toBe(true);
-      expect(SEASON_CATALOG[id]!.published).toBe(true);
+      const sessions = Object.entries(SEASON_CATALOG).filter(([sid, s]) => sid === id || s.productionId === id);
+      expect(sessions.length, id).toBeGreaterThan(0);
+      expect(sessions.every(([, s]) => s.published), id).toBe(true);
     }
+  });
+
+  it('allowlist постановки открывает каждый её сеанс, но не чужие спектакли', () => {
+    for (const [id, s] of Object.entries(CATALOG_SHOWS)) {
+      if (s.productionId === 'funtik' || s.productionId === 'sladosti') {
+        expect(isShowBookingEnabled(id), id).toBe(true);
+      }
+    }
+    // Без 'funtik' в списке — ни один сеанс «Фунтика» не продаётся.
+    expect(isShowBookingEnabled('funtik-2026-12-13-1800', 'limited', ['sladosti'])).toBe(false);
+    // Сам productionId — не спектакль: забронировать «funtik» нельзя.
+    expect(isShowBookingEnabled('funtik', 'limited', ['funtik'])).toBe(false);
   });
 
   it('limited: «Крошка Енот» и «Красная Шапочка» бронируются', () => {
@@ -305,7 +322,7 @@ describe('сервер: создание брони в ограниченном 
   it('остаток мест: закрытый спектакль существует, но bookingEnabled: false', async () => {
     const availability = await readShowAvailability();
     for (const id of BLOCKED) expect(availability[id], id).toMatchObject({ capacity: 50, bookingEnabled: false });
-    for (const id of ALLOWED) expect(availability[id], id).toMatchObject({ capacity: 50, bookingEnabled: true });
+    for (const id of ALLOWED_SHOW_IDS) expect(availability[id], id).toMatchObject({ capacity: 50, bookingEnabled: true });
   });
 });
 
@@ -421,12 +438,13 @@ describe('существующие брони закрытых спектакл�
 describe('интерфейс: закрытые спектакли видны, но не продаются', () => {
   it('Афиша показывает все опубликованные спектакли, включая закрытые', () => {
     const ids = PUBLISHED_SHOWS.map(s => s.id);
-    for (const id of [...BLOCKED, ...ALLOWED]) expect(ids, id).toContain(id);
+    for (const id of [...BLOCKED, ...ALLOWED_SHOW_IDS]) expect(ids, id).toContain(id);
   });
 
   it('Репертуар показывает все спектакли, включая закрытые', () => {
+    // Одна карточка на постановку: сеансы «Фунтика» — карточка 'funtik'.
     const ids = PUBLISHED_REPERTOIRE.map(r => r.id);
-    for (const id of [...BLOCKED, ...ALLOWED]) expect(ids, id).toContain(id);
+    for (const id of [...BLOCKED, ...ALLOWED_SHOW_IDS]) expect(ids, id).toContain(productionIdOf(id));
   });
 
   it('Афиша, модалка спектакля и Репертуар берут признак из одного helper', () => {
@@ -503,7 +521,7 @@ describe('админка: спектакли и брони на месте, ст
       stats: stats.find(s => s.show.id === id)!, active: false, onToggle: () => {},
     }));
     for (const id of BLOCKED_FUTURE) expect(render(id), id).toContain('Продажи приостановлены');
-    for (const id of ALLOWED) expect(render(id), id).not.toContain('Продажи приостановлены');
+    for (const id of ALLOWED_SHOW_IDS) expect(render(id), id).not.toContain('Продажи приостановлены');
     // Прошедший спектакль в админке остаётся, но без метки «приостановлены».
     expect(render('romantika')).toContain('Романтика');
     expect(render('romantika')).not.toContain('Продажи приостановлены');

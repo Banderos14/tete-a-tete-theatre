@@ -144,14 +144,25 @@ describe('каталог: одна постановка, одна дата', () 
     expect(THEATRE_CAPACITY).toBe(50);
   });
 
-  it('постера нет — нейтральная подложка, а не чужая афиша', () => {
-    expect(front.image).toBeUndefined();
+  it('официальная афиша театра — одна и та же в Афише, Репертуаре и модалке; заглушки нет', () => {
+    expect(front.image).toMatch(/duimovochka.*\.webp$/);
     expect(front.photos).toBeUndefined();
-    expect(PUBLISHED_REPERTOIRE.find(r => r.id === ID)!.image).toBeUndefined();
-    // Сюжет, возраст и длительность не выдуманы.
+    expect(PUBLISHED_REPERTOIRE.find(r => r.id === ID)!.image).toBe(front.image);
+    // Возраст и длительность театр не указал — не выдуманы.
     expect(front.age).toBe('');
     expect(front.duration).toBe('Продолжительность уточняется');
     expect(front.durationFR).toBe('Durée à confirmer');
+  });
+
+  it('официальное описание: текст театра дословно, по абзацам; FR — перевод', () => {
+    expect(front.desc.startsWith('Детская театральная студия культурно-образовательного центра «Созвездие» приглашает на спектакль «Дюймовочка»!')).toBe(true);
+    expect(front.desc).toContain('научиться верить в себя, найти настоящих друзей и отстоять право быть счастливой.');
+    expect(front.desc.endsWith('Приходите всей семьёй увидеть, как оживает сказка!')).toBe(true);
+    expect(front.desc.split('\n\n')).toHaveLength(5);
+    expect(front.descFR.split('\n\n')).toHaveLength(5);
+    expect(front.descFR).toContain('Poucette');
+    expect(front.descFR).not.toMatch(/[А-Яа-яЁё]/);
+    expect(PUBLISHED_REPERTOIRE.find(r => r.id === ID)!.description).toBe(front.desc);
   });
 });
 
@@ -326,7 +337,7 @@ describe('сайт: Афиша, Репертуар, бегущая строка,
     expect(marqueeShowItems(ms('2026-11-22T10:00:00Z'), 'RU').join()).not.toContain('Дюймовочка');
   });
 
-  it('карточка Афиши: без постера, без пустого штампа возраста, без «приостановлено»', () => {
+  it('карточка Афиши: с афишей, без пустого штампа возраста, без «приостановлено»', () => {
     const html = renderToStaticMarkup(createElement(
       LangContext.Provider, { value: { lang: 'RU', t: RU } },
       createElement(AfishaSlider, { onCardClick: () => {} }),
@@ -334,11 +345,11 @@ describe('сайт: Афиша, Репертуар, бегущая строка,
     const card = html.slice(html.indexOf('aria-label="«Дюймовочка»"'));
     const one  = card.slice(0, card.indexOf('data-show-idx=', 20));
     expect(one).toContain('«Дюймовочка»');
-    expect(one).not.toContain('background-image');
+    expect(one).toContain(`background-image:url(${front.image})`);
     expect(one).not.toContain(RU.sales.pausedStatus);
   });
 
-  it('модалка спектакля без фото — заглушка с названием', () => {
+  it('модалка спектакля: заглушка с названием остаётся только для спектакля без афиши', () => {
     const modal = projectSource('src/pages/HomePage/components/ShowModal/ShowModal.tsx');
     expect(modal).toContain('<PosterPlaceholder palette={show.palette} title={title} />');
     expect(modal).toContain('{show.age && <div className={styles.ageStamp}>{show.age}</div>}');
@@ -352,7 +363,7 @@ describe('сайт: Афиша, Репертуар, бегущая строка,
     expect(html).toContain('«Дюймовочка»');
     expect(html).toContain('22 Ноя 2026 · 11:00');
     expect(html).not.toContain('Продажи приостановлены');
-    expect(html).toContain('0 бронирований · 0\u00a0/\u00a050 мест');
+    expect(html).toContain('0 бронирований · 0\u00a0/\u00a050 мест · свободно 50');
   });
 
   it('i18n: французская подпись цены и названий', () => {

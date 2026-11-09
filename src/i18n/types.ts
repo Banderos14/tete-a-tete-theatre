@@ -167,6 +167,13 @@ export interface T {
     seatsAvailable: (n: number, total: number) => string;
     /** Итог корзины: «4 билета». */
     ticketsTotal: (n: number) => string;
+    /** Пакеты новогодних постановок. */
+    packagesTotal: (n: number) => string;
+    seatsCount: (n: number) => string;
+    giftsCount: (n: number) => string;
+    packagePrice: string;
+    sessionLabel: string;
+    loyaltyNotEligible: string;
     /** Подпись над числом билетов в итоге формы. */
     quantity: string;
     /** Подписи кнопок −/+ у тарифа (для экранного диктора). */
@@ -236,6 +243,10 @@ export interface T {
     totalTickets: string;
     /** «мест» — занятые места из вместимости зала в карточке спектакля. */
     seats: string;
+    /** «свободно 38» — остаток мест сеанса. */
+    seatsFree: (n: number) => string;
+    /** «подарков: 2» — пакеты новогодних постановок. */
+    gifts: (n: number) => string;
     /** «2 бронирования» — число броней с правильным склонением. */
     bookingsCount: (n: number) => string;
     totalRevenue: string;
@@ -311,6 +322,8 @@ export interface T {
     book: string;
     /** Афиша пуста: все спектакли сезона уже прошли. */
     empty: string;
+    /** «+ ещё 5 сеансов» на карточке постановки с несколькими показами. */
+    moreSessions: (n: number) => string;
   };
   socials: {
     num: string;
@@ -393,6 +406,12 @@ export interface T {
     labelPrice: string;
     book: string;
     showPast: string;
+    /** Выбор сеанса постановки с несколькими показами. */
+    labelSessions: string;
+    chooseSession: string;
+    sessionSoldOut: string;
+    sessionSeatsLeft: (n: number) => string;
+    posterAlt: (title: string) => string;
     readMore: string;
     readLess: string;
   };

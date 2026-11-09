@@ -41,6 +41,10 @@ export interface Booking {
   ticketType:          TicketTypeId;
   /** Несколько тарифов в одной брони; читать через bookingTicketLines(). */
   ticketItems?:        BookingTicketItem[];
+  /** Пакеты: всего взрослых, детей и подарков (пишет сервер). */
+  adultsCount?:        number;
+  childrenCount?:      number;
+  giftsCount?:         number;
   priceInfo:           string;
   totalAmount:         number;
   ticketCode:          string;

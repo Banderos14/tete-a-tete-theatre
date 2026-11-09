@@ -1,10 +1,12 @@
-import type { FormEvent, ReactElement } from 'react';
-import { IconBuildingBank, IconCreditCard, IconTransfer } from '@tabler/icons-react';
+import { Fragment, type FormEvent, type ReactElement } from 'react';
+import { IconBuildingBank, IconCreditCard, IconInfoCircle, IconTransfer } from '@tabler/icons-react';
 import type { Show } from '../../../types';
 import type { TicketTypeId } from '../../../../shared/catalog/shows';
 import type { PaymentMethod } from '../../../types/booking';
 import { RECOMMENDED_PAYMENT_METHOD } from '../../../utils/onlinePayment';
 import { MAX_COMMENT_LEN } from '../../../../shared/contracts/limits';
+import { TARIFF_GROUP_LABELS } from '../../../../shared/catalog/ticketTypes';
+import { seasonStartYear } from '../../../data/shows';
 import styles from './BookingModal.module.scss';
 
 interface Props {
@@ -34,6 +36,11 @@ interface Props {
       loyaltyTotal: string;
       seatsAvailable: (n: number, total: number) => string;
       ticketsTotal: (n: number) => string;
+      packagesTotal: (n: number) => string;
+      seatsCount: (n: number) => string;
+      giftsCount: (n: number) => string;
+      packagePrice: string;
+      loyaltyNotEligible: string;
       quantity: string;
       addTicket: (label: string) => string;
       removeTicket: (label: string) => string;
@@ -79,6 +86,12 @@ interface Props {
   totalAmount: number;
   discountAmount: number;
   loyaltyAvailable: boolean;
+  /** У зрителя есть бонус, но на этот сеанс скидка лояльности не действует. */
+  loyaltyNotEligible?: boolean;
+  /** Мест в корзине (пакет «2 взрослых + ребёнок» — три места). */
+  seatsCount?: number;
+  /** Подарков в корзине; null — в корзине нет пакетов. */
+  giftsCount?: number | null;
   // null = остаток мест неизвестен (сервер недоступен) — индикатор не показываем.
   seatsLeft: number | null;
 
@@ -99,10 +112,13 @@ export function BookingFormStep({
   payment, phone, comment, paymentMethods, redirecting = false,
   submitLoading, submitError, phoneError,
   baseAmount, totalAmount, discountAmount, loyaltyAvailable, seatsLeft,
+  loyaltyNotEligible = false, seatsCount = ticketsCount, giftsCount = null,
   onQuantityChange, onPaymentChange, onPhoneChange, onPhoneBlur, onCommentChange,
   onSubmit,
 }: Props) {
   const showTitle  = lang === 'FR' ? (show.titleFR ?? show.title) : show.title;
+  const notice     = lang === 'FR' ? (show.noticeFR ?? show.notice) : show.notice;
+  const hasPackages = show.ticketTypes.some(tt => typeof tt.gifts === 'number');
   const monthLabel = t.months[show.month] ?? show.month;
   const seatsLeftLabel = lang === 'FR'
     ? `Places restantes : ${seatsLeft}`
@@ -120,7 +136,8 @@ export function BookingFormStep({
   const submitLabel = redirecting
     ? t.payment.redirecting
     : submitLoading ? '…' : payment === 'online' ? t.booking.submitOnline : t.booking.submit;
-  const showYearNumber = Number(show.year);
+  // Начало сезона: январский сеанс 2027 года — всё ещё сезон 2026 / 2027.
+  const showYearNumber = seasonStartYear(show) ?? Number.NaN;
   const seasonLabel = Number.isFinite(showYearNumber)
     ? (lang === 'FR'
         ? `SAISON ${showYearNumber} / ${showYearNumber + 1} · THÉÂTRE TÊTE-À-TÊTE · NICE`
@@ -163,17 +180,36 @@ export function BookingFormStep({
           {salesPaused
             ? <p className={styles.soldOutHint}>{t.sales.bookingPaused}</p>
             : soldOut && <p className={styles.soldOutHint}>{t.booking.soldOut}</p>}
+          {notice && (
+            <p className={styles.noticeHint}>
+              <IconInfoCircle size={15} stroke={1.5} aria-hidden="true" />
+              <span>{notice}</span>
+            </p>
+          )}
           <div className={styles.ticketTypes}>
-            {show.ticketTypes.map(tt => {
+            {show.ticketTypes.map((tt, idx) => {
               const qty   = quantities[tt.id] ?? 0;
               const label = lang === 'FR' ? tt.labelFR : tt.label;
+              // Пакет: состав подписывается под названием — «3 места · 1 подарок».
+              const hint  = typeof tt.gifts === 'number'
+                ? `${t.booking.seatsCount(tt.seats)} · ${t.booking.giftsCount(tt.gifts)}`
+                : tt.hint ? (lang === 'FR' ? (tt.hintFR ?? tt.hint) : tt.hint) : null;
+              // Заголовок категории — перед первым пакетом группы.
+              const group = tt.group && tt.group !== show.ticketTypes[idx - 1]?.group ? TARIFF_GROUP_LABELS[tt.group] : null;
               return (
-                // Строка тарифа — не «выбор из вариантов»: несколько тарифов
-                // живут в корзине одновременно, главный элемент — количество.
-                <div key={tt.id} className={`${styles.ticketTypeRow} ${qty > 0 ? styles.ticketTypeRowFilled : ''}`}>
+                <Fragment key={tt.id}>
+                {group && (
+                  <div className={styles.tariffGroup}>
+                    <span className={styles.tariffGroupName}>{lang === 'FR' ? group.FR : group.RU}</span>
+                    <span className={styles.tariffGroupHint}>{lang === 'FR' ? group.hintFR : group.hintRU}</span>
+                  </div>
+                )}
+                {/* Строка тарифа — не «выбор из вариантов»: несколько тарифов
+                    живут в корзине одновременно, главный элемент — количество. */}
+                <div className={`${styles.ticketTypeRow} ${qty > 0 ? styles.ticketTypeRowFilled : ''}`}>
                   <span className={styles.ttName}>
                     {label}
-                    {tt.hint && <span className={styles.ttHint}>{lang === 'FR' ? (tt.hintFR ?? tt.hint) : tt.hint}</span>}
+                    {hint && <span className={styles.ttHint}>{hint}</span>}
                   </span>
                   <span className={styles.ttPrice}>{tt.price}&nbsp;€</span>
                   <div className={styles.stepper} role="group" aria-label={label}>
@@ -186,9 +222,11 @@ export function BookingFormStep({
                       disabled={busy || soldOut || salesPaused || !canAdd(tt.id)}>+</button>
                   </div>
                 </div>
+                </Fragment>
               );
             })}
           </div>
+          {hasPackages && <p className={styles.packageNote}>{t.booking.packagePrice}</p>}
         </div>
 
         {/* Итог корзины */}
@@ -197,7 +235,15 @@ export function BookingFormStep({
           <div className={styles.basketSummary}>
             <div className={styles.summaryCol}>
               <span className={styles.summaryLabel}>{t.booking.quantity}</span>
-              <span className={styles.summaryValue}>{t.booking.ticketsTotal(ticketsCount)}</span>
+              <span className={styles.summaryValue}>
+                {hasPackages ? t.booking.packagesTotal(ticketsCount) : t.booking.ticketsTotal(ticketsCount)}
+              </span>
+              {/* Пакеты: сколько человек пройдёт и сколько подарков выдадут. */}
+              {hasPackages && giftsCount !== null && (
+                <span className={styles.summaryNote}>
+                  {t.booking.seatsCount(seatsCount)} · {t.booking.giftsCount(giftsCount)}
+                </span>
+              )}
             </div>
             <div className={`${styles.summaryCol} ${styles.summaryColEnd}`}>
               <span className={styles.summaryLabel}>{t.booking.total}</span>
@@ -205,6 +251,12 @@ export function BookingFormStep({
             </div>
           </div>
         </div>
+
+        {loyaltyNotEligible && ticketsCount > 0 && (
+          <div className={styles.section}>
+            <p className={styles.packageNote}>{t.booking.loyaltyNotEligible}</p>
+          </div>
+        )}
 
         {/* Loyalty summary */}
           {ticketsCount > 0 && loyaltyAvailable && (

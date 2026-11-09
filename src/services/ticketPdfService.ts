@@ -1,7 +1,7 @@
 import type { Booking } from '../types/booking';
 import { isSfntFontBinary, isPlausibleFontContentType } from '../utils/fontBinary';
 import { localizedShowTitle } from '../../shared/catalog/showTitle';
-import { bookingTicketLines } from '../../shared/domain/ticketBasket';
+import { bookingTicketLines, bookingGiftsCount } from '../../shared/domain/ticketBasket';
 import { ticketTypeLabel } from '../../shared/catalog/ticketTypes';
 import { ticketPageUrl } from './qrService';
 
@@ -48,20 +48,20 @@ function formatDateForPdf(showDate: string): string {
 const LABELS = {
   FR: {
     date: 'DATE', time: 'HEURE', address: 'ADRESSE',
-    guest: 'SPECTATEUR', tickets: 'BILLETS', seats: 'PLACES', amount: 'MONTANT',
+    guest: 'SPECTATEUR', tickets: 'BILLETS', seats: 'PLACES', gifts: 'CADEAUX', amount: 'MONTANT',
     code: 'CODE DE RÉSERVATION',
     footer: "Présentez ce QR code au personnel du théâtre à l'entrée.",
   },
   RU: {
     date: 'ДАТА', time: 'ВРЕМЯ', address: 'АДРЕС',
-    guest: 'ЗРИТЕЛЬ', tickets: 'БИЛЕТЫ', seats: 'МЕСТА', amount: 'СУММА',
+    guest: 'ЗРИТЕЛЬ', tickets: 'БИЛЕТЫ', seats: 'МЕСТА', gifts: 'ПОДАРКИ', amount: 'СУММА',
     code: 'КОД БРОНИ',
     footer: 'Покажите этот QR-код сотруднику театра при входе.',
   },
   // Транслит — используется когда Inter не загрузился и кириллица недоступна.
   RU_LATIN: {
     date: 'DATA', time: 'VREMYA', address: 'ADRES',
-    guest: 'ZRITEL', tickets: 'BILETY', seats: 'MESTA', amount: 'SUMMA',
+    guest: 'ZRITEL', tickets: 'BILETY', seats: 'MESTA', gifts: 'PODARKI', amount: 'SUMMA',
     code: 'KOD BRONI',
     footer: 'Show this QR code to the theatre staff at the entrance.',
   },
@@ -415,13 +415,18 @@ export async function buildTicketPdf(
   ];
   // Несколько тарифов — по строке на тариф под общим числом билетов. Названия
   // тарифов по-русски только с кириллическим шрифтом, иначе — французские (латиница).
+  // Пакет (новогодние постановки) печатается всегда, даже один: без названия
+  // пакета не видно, сколько взрослых и детей проходит и по какой цене.
   const ticketLines = bookingTicketLines(booking);
-  if (ticketLines.length > 1) {
+  const isPackage   = booking.ticketItems?.some(i => typeof i.gifts === 'number') ?? false;
+  if (ticketLines.length > 1 || isPackage) {
     const labelLang = isRU && hasCyrillicFont ? 'RU' : 'FR';
     for (const l of ticketLines) rows.push(['', `${l.quantity} x ${ticketTypeLabel(l.type, labelLang)}`]);
   }
   // Сколько человек проходит по билету (семейный тариф: один билет — три места).
   rows.push([L.seats, String(booking.seatsCount && booking.seatsCount > 0 ? booking.seatsCount : booking.ticketsCount)]);
+  const gifts = bookingGiftsCount(booking);
+  if (gifts > 0) rows.push([L.gifts, String(gifts)]);
   if (booking.totalAmount > 0) rows.push([L.amount, `${booking.totalAmount} EUR`]);
   rows.push([L.code, booking.ticketCode]);
 

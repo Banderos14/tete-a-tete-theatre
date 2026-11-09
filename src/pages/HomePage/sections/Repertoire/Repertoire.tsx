@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useScrollLock } from '../../../../hooks/useScrollLock';
 import { createPortal } from 'react-dom';
-import { PUBLISHED_REPERTOIRE, PUBLISHED_SHOWS, isShowPast } from '../../../../data/shows';
+import {
+  PUBLISHED_REPERTOIRE, PUBLISHED_SHOWS, isShowPast, productionRepresentative, upcomingSessions,
+} from '../../../../data/shows';
+import { productionIdOf } from '../../../../../shared/catalog/shows';
+import { fetchAllAvailability } from '../../../../services/availabilityService';
+import { SessionPicker } from '../../components/SessionPicker';
 import { useLang } from '../../../../i18n/LangContext';
 import { PosterPlaceholder } from '../../components/PosterPlaceholder';
 import { ShowModal } from '../../components/ShowModal';
@@ -17,13 +22,14 @@ function ShowPoster({
 }: {
   image?: string; imagePosition?: string; palette: string; title: string; lazy?: boolean;
 }) {
+  const { t } = useLang();
   const [err, setErr] = useState(false);
   if (image && !err) {
     return (
       <>
         <img
           src={image}
-          alt={title}
+          alt={t.showModal.posterAlt(title)}
           loading={lazy ? 'lazy' : 'eager'}
           onError={() => { console.warn('[show image failed]', title, image); setErr(true); }}
           className={styles.posterImgEl}
@@ -49,9 +55,27 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
   const author   = lang === 'FR' ? (item.authorFR   ?? item.author)   : item.author;
   const duration = lang === 'FR' ? (item.durationFR ?? item.duration) : item.duration;
 
-  const linkedShow = item.status === 'active'
-    ? PUBLISHED_SHOWS.find(s => s.id === item.id) ?? null
-    : null;
+  const notice   = lang === 'FR' ? (item.noticeFR ?? item.notice) : item.notice;
+
+  // Сеанс, которым представлена постановка: ближайший предстоящий (или
+  // последний, если все прошли). У спектакля с одним показом — он сам.
+  const [mountedAtMs] = useState(() => Date.now());
+  const representative = item.status === 'active' ? productionRepresentative(item.id, mountedAtMs) : null;
+  const sessions = item.status === 'active' ? upcomingSessions(item.id, mountedAtMs) : [];
+  const [sessionId, setSessionId] = useState<string | null>(representative?.id ?? null);
+  const [seatsById, setSeatsById] = useState<Record<string, number> | null>(null);
+  const hasSessionChoice = sessions.length > 1;
+  const linkedShow = hasSessionChoice
+    ? (sessions.find(s => s.id === sessionId) ?? sessions[0]!)
+    : representative;
+
+  // Остаток мест — только когда есть выбор сеанса: у каждого он свой.
+  useEffect(() => {
+    if (!hasSessionChoice) return;
+    let cancelled = false;
+    void fetchAllAvailability().then((all) => { if (!cancelled) setSeatsById(all); });
+    return () => { cancelled = true; };
+  }, [hasSessionChoice]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -90,7 +114,20 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
             </div>
           )}
 
+          {notice && <p className={styles.modalNotice}>{notice}</p>}
+
           {desc && <p className={styles.modalDesc}>{desc}</p>}
+
+          {hasSessionChoice && linkedShow && (
+            <SessionPicker
+              sessions={sessions}
+              selectedId={linkedShow.id}
+              onSelect={setSessionId}
+              seatsLeft={isShowSalesPaused(linkedShow.id) ? null : seatsById}
+              lang={lang}
+              t={t}
+            />
+          )}
 
           {linkedShow && (
             // Прошедший спектакль забронировать нельзя — см. проверку на сервере.
@@ -138,9 +175,14 @@ export function Repertoire({ onBook }: Props) {
 
   // Скролл к спектаклю, подсветка и открытие модалки по ?show= в URL/HashRouter.
   useEffect(() => {
-    const slug = getShowIdFromLocation();
+    const rawSlug = getShowIdFromLocation();
+    // Ссылка может вести на постановку (?show=funtik) или на конкретный сеанс
+    // (?show=funtik-2026-12-13-1800): карточка Репертуара одна — постановки.
+    const slug = rawSlug ? productionIdOf(rawSlug) : null;
     const linkedItem = slug ? PUBLISHED_REPERTOIRE.find(item => item.id === slug) : null;
-    const linkedShow = slug ? PUBLISHED_SHOWS.find(show => show.id === slug) : null;
+    const linkedShow = rawSlug
+      ? PUBLISHED_SHOWS.find(show => show.id === rawSlug) ?? (slug ? productionRepresentative(slug) : null)
+      : null;
     // ?show=…&tariff=… — сразу форма брони с этим тарифом. Тариф чужой,
     // спектакль прошёл или закрыт для продаж — обычная карточка спектакля.
     const linkedBooking = resolveBookingDeepLink(linkedShow, getTariffFromLocation());
@@ -188,9 +230,8 @@ export function Repertoire({ onBook }: Props) {
           const cardTitle  = lang === 'FR' ? (item.titleFR  ?? item.title)  : item.title;
           const cardAuthor = lang === 'FR' ? (item.authorFR ?? item.author) : item.author;
           const cardTag    = t.showTags[item.tag] ?? item.tag;
-          const linkedShow = item.status === 'active'
-            ? PUBLISHED_SHOWS.find(s => s.id === item.id) ?? null
-            : null;
+          // Постановка с несколькими сеансами — по ближайшему из них.
+          const linkedShow = item.status === 'active' ? productionRepresentative(item.id) : null;
           // Прошедший показ сезона остаётся в Репертуаре, но без цены: красная
           // плашка выглядела как приглашение купить. «Временно недоступно» —
           // только у будущих: прошедший спектакль не «приостановлен».

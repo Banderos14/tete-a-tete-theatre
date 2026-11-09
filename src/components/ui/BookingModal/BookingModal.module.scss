@@ -413,6 +413,57 @@
   color: #9c938a;
 }
 
+// Условие посещения спектакля (дети до 7 лет — только со взрослым).
+.noticeHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg);
+
+  svg { flex: 0 0 15px; margin-top: 1px; color: #cdb27a; }
+}
+
+// Заголовок категории пакетов: «Для семей ассоциации» / «Стандартные тарифы».
+.tariffGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: 12px 0 4px;
+
+  &:first-child { padding-top: 2px; }
+}
+
+.tariffGroupName {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #cdb27a;
+}
+
+.tariffGroupHint {
+  font-size: 11px;
+  color: var(--fg-mute);
+}
+
+.packageNote {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fg-mute);
+}
+
+.summaryNote {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--fg-mute);
+  white-space: nowrap;
+}
+
 .seatsInline {
   flex-shrink: 0;
   font-family: var(--font-body);
@@ -523,16 +574,16 @@
 .formLayout {
   display: grid;
   grid-template-columns: 310px 34px 1fr;
+  // Прокрутка формы на ВСЕХ ширинах: .modal ограничен высотой экрана и режет
+  // лишнее (overflow: hidden). У «Фунтика» двенадцать пакетов — без прокрутки
+  // итог и кнопка оплаты уходили за нижний край на ноутбуке.
+  max-height: inherit;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 
   @include mixins.mobile { grid-template-columns: 1fr; }
-
-  @include mixins.mobile {
-    max-height: inherit;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
 }
 
 .formLeft {
@@ -1523,6 +1574,9 @@
 }
 
 :global([data-theme='light']) {
+  .noticeHint svg,
+  .tariffGroupName { color: #8a6418; }
+
   // На светлой подложке брендовый красный уже контрастный (6.25:1).
   .modal { --form-red-text: var(--accent); }
 

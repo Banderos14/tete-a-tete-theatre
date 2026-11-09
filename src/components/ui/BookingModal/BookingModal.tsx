@@ -102,7 +102,10 @@ export function BookingModal({ show, initialTicketType, onClose, onOpenTickets }
   // Тарифы спектакля для расчёта корзины — та же формула, что у сервера
   // (shared/domain/ticketBasket.ts). Сервер всё равно пересчитает цену сам.
   const tariffs = useMemo<BasketTariff[]>(
-    () => (show?.ticketTypes ?? []).map(tt => ({ id: tt.id, price: tt.price, seats: tt.seats ?? 1, available: tt.available })),
+    () => (show?.ticketTypes ?? []).map(tt => ({
+      id: tt.id, price: tt.price, seats: tt.seats ?? 1, available: tt.available,
+      ...(typeof tt.gifts === 'number' ? { adults: tt.adults, children: tt.children, gifts: tt.gifts } : {}),
+    })),
     [show],
   );
   const lines = useMemo<BasketLine[]>(
@@ -115,10 +118,14 @@ export function BookingModal({ show, initialTicketType, onClose, onOpenTickets }
   // авторитетную проверку вместимости делает сервер.
   const limits = useMemo(() => ({ maxTickets: MAX_TICKETS_PER_BOOKING, seatsLeft }), [seatsLeft]);
 
-  const loyaltyAvailable = useMemo(
+  const loyaltyEarned = useMemo(
     () => loyaltySummary(userBookings).available,
     [userBookings],
   );
+  // Скидка лояльности на этот сеанс не действует (пакеты новогодних постановок):
+  // не применяем, а честно пишем, что бонус сохранится. То же правило у сервера.
+  const loyaltyEligible  = show?.loyaltyEligible !== false;
+  const loyaltyAvailable = loyaltyEarned && loyaltyEligible;
   // Скидка — на ОДИН билет брони (самый дорогой в корзине), как у сервера.
   const price = useMemo(() => priceBasket(tariffs, lines, loyaltyAvailable), [tariffs, lines, loyaltyAvailable]);
   const { baseAmount, discountAmount, totalAmount } = price;
@@ -487,6 +494,9 @@ export function BookingModal({ show, initialTicketType, onClose, onOpenTickets }
             totalAmount={totalAmount}
             discountAmount={discountAmount}
             loyaltyAvailable={loyaltyAvailable}
+            loyaltyNotEligible={loyaltyEarned && !loyaltyEligible}
+            seatsCount={price.seatsCount}
+            giftsCount={price.composition?.gifts ?? null}
             seatsLeft={seatsLeft}
             onPaymentChange={setPayment}
             onPhoneChange={v => { setPhone(sanitizePhoneTyping(v)); setPhoneError(''); }}

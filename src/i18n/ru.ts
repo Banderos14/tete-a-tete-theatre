@@ -29,9 +29,15 @@ export const RU: T = {
     num:     '01 / Афиша',
     title:   'Ближайшие',
     titleIt: 'премьеры',
-    meta:    'Сентябрь — Ноябрь 2026\nОткрытие 8 сезона',
+    meta:    'Сентябрь 2026 — Январь 2027\nВосьмой сезон',
     book:    'Забронировать',
     empty:   'Новые спектакли скоро появятся в афише.',
+    moreSessions: (n) => {
+      const m10 = n % 10, m100 = n % 100;
+      const word = m10 === 1 && m100 !== 11 ? 'сеанс'
+        : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'сеанса' : 'сеансов';
+      return `+ ещё ${n} ${word}`;
+    },
   },
   socials: {
     num:     '02 / Live',
@@ -231,6 +237,28 @@ export const RU: T = {
     loyaltyDiscount:'Скидка лояльности −50% (1 билет)',
     loyaltyTotal:  'К оплате',
     seatsAvailable: (n, total) => `Свободно мест: ${n} из ${total}`,
+    packagesTotal: (n) => {
+      const m10 = n % 10, m100 = n % 100;
+      const word = m10 === 1 && m100 !== 11 ? 'пакет'
+        : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'пакета' : 'пакетов';
+      return `${n} ${word}`;
+    },
+    seatsCount: (n) => {
+      const m10 = n % 10, m100 = n % 100;
+      const word = m10 === 1 && m100 !== 11 ? 'место'
+        : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'места' : 'мест';
+      return `${n} ${word}`;
+    },
+    giftsCount: (n) => {
+      if (n === 0) return 'без подарка';
+      const m10 = n % 10, m100 = n % 100;
+      const word = m10 === 1 && m100 !== 11 ? 'подарок'
+        : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'подарка' : 'подарков';
+      return `${n} ${word}`;
+    },
+    packagePrice: 'Цена указана за весь пакет',
+    sessionLabel: 'Сеанс',
+    loyaltyNotEligible: 'Скидка программы лояльности на этот спектакль не распространяется — ваш бонус сохранится для другого спектакля.',
     ticketsTotal: (n) => {
       const m10 = n % 10, m100 = n % 100;
       const word = m10 === 1 && m100 !== 11 ? 'билет'
@@ -301,6 +329,8 @@ export const RU: T = {
     bookings:        'бронирований',
     totalTickets:    'мест занято',
     seats:           'мест',
+    seatsFree:       (n) => `свободно ${n}`,
+    gifts:           (n) => `подарков: ${n}`,
     bookingsCount: (n) => {
       const m10 = n % 10, m100 = n % 100;
       const word = m10 === 1 && m100 !== 11 ? 'бронирование'
@@ -354,6 +384,11 @@ export const RU: T = {
     labelDuration: 'Длительность',
     labelPrice:    'Стоимость',
     showPast: 'Спектакль уже прошёл',
+    labelSessions: 'Сеансы',
+    chooseSession: 'Выберите дату и время',
+    sessionSoldOut: 'Мест нет',
+    sessionSeatsLeft: (n) => `Осталось ${n}`,
+    posterAlt: (title) => `Афиша спектакля ${title}`,
     book:          'Купить билет',
     readMore:      'Читать дальше',
     readLess:      'Свернуть',

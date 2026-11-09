@@ -1,5 +1,5 @@
 import type { MonthKey, ShowTagKey } from '../i18n/types';
-import type { TicketTypeId } from '../../shared/catalog/shows';
+import type { TicketTypeId, TariffGroupId } from '../../shared/catalog/shows';
 
 export type ShowPhoto = {
   src: string;
@@ -19,10 +19,19 @@ export interface TicketType {
   /** Короткое пояснение под названием тарифа в форме брони. */
   hint?: string;
   hintFR?: string;
+  /** Пакет: состав на одну единицу; цена — за весь пакет. */
+  adults?: number;
+  children?: number;
+  gifts?: number;
+  /** Категория пакета — заголовок группы в форме брони. */
+  group?: TariffGroupId;
 }
 
 export interface Show {
+  /** id сеанса в каталоге (performanceId) — по нему бронь, остаток мест и QR. */
   id: string;
+  /** Постановка: у сеансов «Фунтика» общая, у спектакля с одним показом = id. */
+  productionId: string;
   title: string;
   titleFR?: string;
   author: string;
@@ -41,9 +50,14 @@ export interface Show {
   durationFR?: string;
   desc: string;
   descFR: string;
+  /** Важное условие посещения (показывается в модалке и форме брони). */
+  notice?: string;
+  noticeFR?: string;
   palette: string;
   image?: string;
   imagePosition?: string;
+  /** 'contain' — афиша с важным текстом: в модалке и на мобиле показывается целиком, без обрезки. */
+  imageFit?: 'contain';
   photos?: Array<string | ShowPhoto>;
   ticketTypes: TicketType[];
   totalSeats: number;
@@ -51,6 +65,8 @@ export interface Show {
   // признака публикации. false — заготовка: не видна на сайте, не продаётся,
   // не выводится как активная в админке и сканере; старые брони по ней читаются.
   published?: boolean;
+  /** Копия SEASON_CATALOG[id].loyaltyEligible: false — скидка лояльности на сеанс не действует. */
+  loyaltyEligible?: boolean;
 }
 
 
@@ -69,6 +85,8 @@ export interface RepertoireItem {
   imagePosition?: string;
   description?: string;
   descriptionFR?: string;
+  notice?: string;
+  noticeFR?: string;
   duration?: string;
   durationFR?: string;
   // Тот же смысл, что и у Show.published: карточка без постера временно

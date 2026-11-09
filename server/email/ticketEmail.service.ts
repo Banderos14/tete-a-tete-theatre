@@ -73,6 +73,7 @@ function toTicketBooking(d: Record<string, unknown>): TicketEmailBooking {
     seatsCount:        typeof d.seatsCount === 'number' ? d.seatsCount : undefined,
     ticketType:        str(d.ticketType),
     ticketItems:       Array.isArray(d.ticketItems) ? d.ticketItems : undefined,
+    giftsCount:        typeof d.giftsCount === 'number' ? d.giftsCount : undefined,
     totalAmount:       num(d.totalAmount),
     originalAmount:    typeof d.originalAmount === 'number' ? d.originalAmount : undefined,
     loyaltyDiscountApplied: d.loyaltyDiscountApplied === true,

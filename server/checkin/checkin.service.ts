@@ -7,8 +7,8 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { badRequest, notFound, conflict } from '../shared/errors.js';
 import { SHOWS } from '../../shared/catalog/shows.js';
-import { ticketBreakdownLabel } from '../../shared/catalog/ticketTypes.js';
-import { bookingTicketLines } from '../../shared/domain/ticketBasket.js';
+import { ticketBreakdownLabel, ticketTypeLabel } from '../../shared/catalog/ticketTypes.js';
+import { bookingTicketLines, bookingGiftsCount } from '../../shared/domain/ticketBasket.js';
 import { isBookingForShow, isKnownShow } from '../../shared/domain/performance.js';
 import type { CheckinAction, CheckinBooking, CheckinRefusalReason } from '../../shared/contracts/checkin.js';
 import { db, findByTicketCode } from '../booking/booking.repository.js';
@@ -32,7 +32,10 @@ function ticketTypeLabelOf(data: Record<string, unknown>): string {
   if (lines.length > 1) return ticketBreakdownLabel(lines, 'RU');
   const show = typeof data.showId === 'string' ? SHOWS[data.showId] : undefined;
   const type = typeof data.ticketType === 'string' ? data.ticketType : '';
-  return (show?.tickets as Record<string, { label: string } | undefined> | undefined)?.[type]?.label ?? '';
+  const catalogLabel = (show?.tickets as Record<string, { label: string } | undefined> | undefined)?.[type]?.label ?? '';
+  // Общая подпись тарифа: у пакета — с категорией («Семьи ассоциации: …»),
+  // у обычных тарифов она совпадает с каталожной.
+  return catalogLabel ? ticketTypeLabel(type, 'RU') : '';
 }
 
 /**
@@ -81,6 +84,7 @@ export function snapshotOf(id: string, ticketCode: string, data: Record<string, 
     paymentStatus: String(data.paymentStatus ?? ''),
     paymentMethod: String(data.paymentMethod ?? ''),
     ticketTypeLabel: ticketTypeLabelOf(data),
+    giftsCount:      bookingGiftsCount(data),
     wrongShow:       showId !== null && !isBookingForShow(data, showId),
     attendedAtMs:    timestampToMs(data.attendedAt) ?? null,
   };

@@ -8,6 +8,7 @@
 import { isBookingForShow } from '../../shared/domain/performance.js';
 import { describe, it, expect } from 'vitest';
 import {
+  productionIdOf,
   SHOWS, DRAFT_SHOWS, SEASON_CATALOG, THEATRE_CAPACITY, showDateString, showStartUtcMs,
 } from '../../shared/catalog/shows.js';
 import { hasShowStarted, parseShowStartUtcMs } from '../../shared/domain/showTime.js';
@@ -171,14 +172,17 @@ describe('deep-link /#/?show=<id> открывает опубликованны�
   });
 
   it('у каждого опубликованного спектакля есть карточка репертуара — иначе ссылка ни во что не упрётся', () => {
+    // Сеанс постановки с несколькими показами ведёт на карточку постановки.
     const repertoireIds = PUBLISHED_REPERTOIRE.map(r => r.id);
-    for (const id of Object.keys(SHOWS)) expect(repertoireIds).toContain(id);
+    for (const id of Object.keys(SHOWS)) expect(repertoireIds).toContain(productionIdOf(id));
   });
 
   it('deep-link открывает модалку спектакля только для того, что лежит в SHOWS', () => {
     const repertoire = projectSource('src/pages/HomePage/sections/Repertoire/Repertoire.tsx');
     expect(repertoire).toContain('getShowIdFromLocation()');
-    expect(repertoire).toContain('SHOWS.find(show => show.id === slug)');
+    // ?show= может быть и сеансом (funtik-2026-12-13-1800), и постановкой (funtik).
+    expect(repertoire).toContain('PUBLISHED_SHOWS.find(show => show.id === rawSlug)');
+    expect(repertoire).toContain('productionIdOf(rawSlug)');
   });
 });
 
@@ -194,9 +198,21 @@ describe('сезон целиком: осенняя афиша 2026', () => {
     ['letuchiy',  '21', 'Ноя', '19:00'],
     ['duimovochka', '22', 'Ноя', '11:00'],
     ['kovcheg',   '28', 'Ноя', '19:00'],
+    // Новогодние постановки: каждый сеанс — отдельная запись каталога.
+    ['funtik-2026-12-12-1800',   '12', 'Дек', '18:00'],
+    ['sladosti-2026-12-13-1100', '13', 'Дек', '11:00'],
+    ['funtik-2026-12-13-1500',   '13', 'Дек', '15:00'],
+    ['funtik-2026-12-13-1800',   '13', 'Дек', '18:00'],
+    ['funtik-2026-12-19-1800',   '19', 'Дек', '18:00'],
+    ['sladosti-2026-12-20-1100', '20', 'Дек', '11:00'],
+    ['funtik-2026-12-20-1500',   '20', 'Дек', '15:00'],
+    ['funtik-2026-12-20-1800',   '20', 'Дек', '18:00'],
+    ['sladosti-2027-01-10-1100', '10', 'Янв', '11:00'],
   ];
+  // Единственный сеанс сезона в 2027 году.
+  const yearOf = (id: string) => (id === 'sladosti-2027-01-10-1100' ? '2027' : '2026');
 
-  it('в каталоге ровно десять спектаклей афиши', () => {
+  it('в каталоге ровно десять спектаклей с одним показом и девять новогодних сеансов', () => {
     expect(Object.keys(SEASON_CATALOG)).toHaveLength(EXPECTED.length);
   });
 
@@ -205,7 +221,7 @@ describe('сезон целиком: осенняя афиша 2026', () => {
       const show = SEASON_CATALOG[id];
       expect(show, `спектакль ${id} потерян`).toBeDefined();
       expect(`${show!.day} ${show!.month} ${show!.time}`, id).toBe(`${day} ${month} ${time}`);
-      expect(show!.year, id).toBe('2026');
+      expect(show!.year, id).toBe(yearOf(id));
     }
   });
 
@@ -215,7 +231,7 @@ describe('сезон целиком: осенняя афиша 2026', () => {
     }
   });
 
-  it('опубликованы девять спектаклей; «Летучий корабль» — заготовка (постера ещё нет)', () => {
+  it('опубликовано всё, кроме «Летучего корабля» — заготовка (постера ещё нет)', () => {
     expect(Object.keys(SHOWS).sort()).toEqual(EXPECTED.map(([id]) => id).filter(id => id !== 'letuchiy').sort());
     expect(Object.keys(DRAFT_SHOWS)).toEqual(['letuchiy']);
   });

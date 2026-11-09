@@ -45,8 +45,18 @@ describe('бегущая строка', () => {
   });
 
   it('после сезона — только постоянный хвост', () => {
-    expect(marqueeItems({ nowMs: ms('2027-01-01T00:00:00Z'), lang: 'RU', tail: RU.marquee, bookingOpen: null }))
+    // Последний сеанс сезона — 10 января 2027 («Страна сладостей»).
+    expect(marqueeItems({ nowMs: ms('2027-02-01T00:00:00Z'), lang: 'RU', tail: RU.marquee, bookingOpen: null }))
       .toEqual(['Сезон 2026/2027', 'Nice · Rue Rossini']);
+  });
+
+  it('постановка с несколькими сеансами — один пункт с ближайшим сеансом; 2026 → 2027', () => {
+    const dec14 = marqueeShowItems(ms('2026-12-14T09:00:00Z'), 'RU');
+    // «Фунтик» один раз, на ближайшую дату (19.12), хотя впереди у него три сеанса.
+    expect(dec14.filter(i => i.includes('Фунтик'))).toEqual(['19.12 · «Фунтик: Новогодний переполох»']);
+    expect(dec14.filter(i => i.includes('сладостей'))).toEqual(['20.12 · «Новый год в стране сладостей»']);
+    // После 20 декабря остаётся только январский сеанс — 10.01 (2027 год).
+    expect(marqueeShowItems(ms('2026-12-21T09:00:00Z'), 'FR')).toEqual(['10.01 · «Le Nouvel An au pays des douceurs»']);
   });
 
   it('в i18n нет дат и названий спектаклей — только хвост', () => {

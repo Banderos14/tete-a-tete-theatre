@@ -25,6 +25,17 @@ export interface BasketTariff {
   seats: number;
   /** Сколько единиц тарифа можно взять (ограничение формы). */
   available?: number;
+  /** Состав пакета на одну единицу тарифа (у обычных тарифов полей нет). */
+  adults?:   number;
+  children?: number;
+  gifts?:    number;
+}
+
+/** Состав пакета на одну единицу — пишется в строку брони вместе с ценой. */
+export interface PackageComposition {
+  adults:   number;
+  children: number;
+  gifts:    number;
 }
 
 export interface BasketLine {
@@ -39,6 +50,10 @@ export interface TicketItem {
   unitPrice: number;
   seats:     number;
   subtotal:  number;
+  /** Пакет: взрослые, дети и подарки на ОДНУ единицу (у обычных тарифов нет). */
+  adults?:   number;
+  children?: number;
+  gifts?:    number;
 }
 
 export interface BasketPrice {
@@ -50,7 +65,15 @@ export interface BasketPrice {
   /** Тариф билета, на который пришлась скидка лояльности; null — скидки нет. */
   discountTicketType: TicketTypeId | null;
   totalAmount:    number;
+  /**
+   * Пакеты: всего взрослых, детей и подарков в брони. null — в корзине нет
+   * пакетов (обычные билеты состава не описывают).
+   */
+  composition:    PackageComposition | null;
 }
+
+const isPackage = (t: { adults?: number; children?: number; gifts?: number }) =>
+  typeof t.adults === 'number' && typeof t.children === 'number' && typeof t.gifts === 'number';
 
 /**
  * Цена корзины. Порядок строк — порядок тарифов в каталоге, строки с нулём
@@ -70,7 +93,12 @@ export function priceBasket(
   const items: TicketItem[] = [];
   for (const t of tariffs) {
     const q = qty.get(t.id) ?? 0;
-    if (q > 0) items.push({ type: t.id, quantity: q, unitPrice: t.price, seats: t.seats, subtotal: t.price * q });
+    if (q > 0) {
+      items.push({
+        type: t.id, quantity: q, unitPrice: t.price, seats: t.seats, subtotal: t.price * q,
+        ...(isPackage(t) ? { adults: t.adults, children: t.children, gifts: t.gifts } : {}),
+      });
+    }
   }
 
   const ticketsCount = items.reduce((s, i) => s + i.quantity, 0);
@@ -83,20 +111,35 @@ export function priceBasket(
     : null;
   const discountAmount = target ? loyaltyDiscountForTicket(target.unitPrice) : 0;
 
+  const packages = items.filter(isPackage);
+  const composition = packages.length
+    ? {
+        adults:   packages.reduce((s, i) => s + i.adults! * i.quantity, 0),
+        children: packages.reduce((s, i) => s + i.children! * i.quantity, 0),
+        gifts:    packages.reduce((s, i) => s + i.gifts! * i.quantity, 0),
+      }
+    : null;
+
   return {
     items, ticketsCount, seatsCount, baseAmount, discountAmount,
     discountTicketType: target?.type ?? null,
     totalAmount: baseAmount - discountAmount,
+    composition,
   };
 }
 
 /** Тарифы каталога спектакля в виде списка — для priceBasket на сервере. */
+type CatalogTariff = { price: number; seats: number; adults?: number; children?: number; gifts?: number };
+
 export function catalogTariffs(
-  tickets: Partial<Record<TicketTypeId, { price: number; seats: number }>>,
+  tickets: Partial<Record<TicketTypeId, CatalogTariff>>,
 ): BasketTariff[] {
-  return (Object.entries(tickets) as Array<[TicketTypeId, { price: number; seats: number } | undefined]>)
-    .filter((e): e is [TicketTypeId, { price: number; seats: number }] => !!e[1])
-    .map(([id, t]) => ({ id, price: t.price, seats: t.seats }));
+  return (Object.entries(tickets) as Array<[TicketTypeId, CatalogTariff | undefined]>)
+    .filter((e): e is [TicketTypeId, CatalogTariff] => !!e[1])
+    .map(([id, t]) => ({
+      id, price: t.price, seats: t.seats,
+      ...(isPackage(t) ? { adults: t.adults, children: t.children, gifts: t.gifts } : {}),
+    }));
 }
 
 // ── Ограничения формы ───────────────────────────────────────────────────────
@@ -216,4 +259,17 @@ export function bookingTicketLines(b: {
 /** В брони больше одного тарифа. */
 export function isMixedBooking(b: Parameters<typeof bookingTicketLines>[0]): boolean {
   return bookingTicketLines(b).length > 1;
+}
+
+/**
+ * Сколько подарков выдать по брони. Сервер пишет giftsCount при создании;
+ * если поля нет — сумма по строкам ticketItems; у обычных броней — 0.
+ */
+export function bookingGiftsCount(b: { giftsCount?: unknown; ticketItems?: unknown }): number {
+  if (typeof b.giftsCount === 'number' && b.giftsCount >= 0) return b.giftsCount;
+  if (!Array.isArray(b.ticketItems)) return 0;
+  return b.ticketItems.reduce((sum: number, i: unknown) => {
+    const item = (i ?? {}) as { gifts?: unknown; quantity?: unknown };
+    return typeof item.gifts === 'number' && typeof item.quantity === 'number' ? sum + item.gifts * item.quantity : sum;
+  }, 0);
 }

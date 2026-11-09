@@ -103,6 +103,12 @@ describe('сайт и сервер: один каталог спектаклей
             "30 € / 20 € (scolaires et étudiants)"
       ]
     };
+    // Пакеты новогодних постановок: цена за пакет — «от» минимальной; полный
+    // список с составом пакетов — в форме брони.
+    for (const show of FRONT_SHOWS) {
+      if (show.productionId === 'funtik') expected[show.id] = ['от 35 €', 'dès 35 €'];
+      if (show.productionId === 'sladosti') expected[show.id] = ['от 50 €', 'dès 50 €'];
+    }
     for (const show of FRONT_SHOWS) {
       expect([show.price, show.priceFR], show.id).toEqual(expected[show.id]);
     }
@@ -140,7 +146,7 @@ describe('заготовки сезона', () => {
     }
     // Афиша — предстоящие из PUBLISHED_SHOWS (src/data/shows.ts → afishaShows).
     expect(projectSource('src/pages/HomePage/sections/Afisha/AfishaSlider.tsx')).toContain('afishaShows(');
-    expect(projectSource('src/data/shows.ts')).toContain('return PUBLISHED_SHOWS.filter(show => isShowUpcoming(show, nowMs));');
+    expect(projectSource('src/data/shows.ts')).toMatch(/return PUBLISHED_SHOWS\s*\.filter\(show => isShowUpcoming\(show, nowMs\)\)/);
     expect(projectSource('src/pages/HomePage/sections/Repertoire/Repertoire.tsx')).toContain('PUBLISHED_REPERTOIRE');
   });
 
@@ -154,7 +160,8 @@ describe('интерфейс не предлагает бронировать п
     const src = projectSource('src/pages/HomePage/components/ShowModal/ShowModal.tsx');
     // Прошедший — неактивная кнопка без действия; кнопка покупки (onBook) только в последней ветке.
     expect(src).toMatch(/showIsPast \? \([\s\S]*?className=\{styles\.pausedBtn\} disabled>\s*\{t\.showModal\.showPast\}/);
-    expect(src.indexOf('onBook(show)')).toBeGreaterThan(src.indexOf('t.showModal.showPast'));
+    // Форма брони открывается для выбранного сеанса.
+    expect(src.indexOf('onBook(session)')).toBeGreaterThan(src.indexOf('t.showModal.showPast'));
   });
 
   it('Repertoire не показывает кнопку покупки', () => {

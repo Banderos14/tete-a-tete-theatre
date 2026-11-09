@@ -176,6 +176,22 @@
   }
 }
 
+// Афиша с важным текстом (название, даты, адрес): на мобиле тоже целиком —
+// без обрезки cover; пустые поля заполняет размытая подложка.
+.photoImgContain {
+  @include mixins.mobile {
+    object-fit: contain;
+    transform: none;
+  }
+}
+
+.photoBlurVisible {
+  @include mixins.mobile {
+    display: block;
+    opacity: 0.35;
+  }
+}
+
 .mainPhotoPlaceholder {
   position: absolute;
   inset: 0;
@@ -483,6 +499,8 @@ $cap-gap:          14px;
   max-height: calc(9em + #{$cap-bleed-top + $cap-bleed-bottom});
   overflow-wrap: anywhere;
   flex-shrink: 0;
+  // Официальные описания разбиты на абзацы переводами строки.
+  white-space: pre-line;
 
   &::first-letter {
     font-family: var(--font-display);
@@ -494,6 +512,25 @@ $cap-gap:          14px;
     margin-top: 5px;
     color: var(--fg);
   }
+}
+
+// Условие посещения («дети до 7 лет — только со взрослым»): спокойная
+// строка с иконкой, без тревожного красного.
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 2px;
+  padding: 9px 12px;
+  border: 0.5px solid rgba(243, 231, 220, 0.14);
+  border-radius: 10px;
+  background: rgba(243, 231, 220, 0.04);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fg);
+  flex-shrink: 0;
+
+  svg { flex: 0 0 16px; margin-top: 1px; color: #cdb27a; }
 }
 
 .descExpanded {
@@ -605,6 +642,13 @@ $cap-gap:          14px;
 }
 
 :global([data-theme='light']) {
+  .notice {
+    border-color: var(--line-strong);
+    background: rgba(26, 23, 21, 0.03);
+
+    svg { color: #8a6418; }
+  }
+
   .panel {
     box-shadow: 0 24px 80px rgba(40, 20, 10, 0.18);
     border-color: rgba(90, 60, 45, 0.18);

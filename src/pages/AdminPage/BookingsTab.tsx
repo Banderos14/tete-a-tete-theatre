@@ -14,6 +14,7 @@ import {
 import { onlineBookingState } from '../../utils/onlinePayment';
 import type { ConfirmAction, FilterShowId, FilterStatus } from './adminTypes';
 import { bookingTicketLines } from '../../utils/ticketBreakdown';
+import { bookingGiftsCount } from '../../../shared/domain/ticketBasket';
 import { ticketTypeLabel } from '../../utils/ticketType';
 import { summarizeBookings, summarizeByShow, adminShowList } from './adminStats';
 import { filterBookings } from '../../utils/bookingSearch';
@@ -352,14 +353,25 @@ function EmailLink({ b }: { b: Booking }) {
 
 function TicketsBlock({ b }: { b: Booking }) {
   const lines = bookingTicketLines(b);
+  const gifts = bookingGiftsCount(b);
+  // Пакет показывается бейджем всегда: по нему видно категорию и состав.
+  const isPackage = b.ticketItems?.some(i => typeof i.gifts === 'number') ?? false;
   return (
     <div className={styles.stack}>
       <strong className={styles.cellStrong}>
         {b.ticketsCount}
         {b.seatsCount && b.seatsCount !== b.ticketsCount && <> / {b.seatsCount} мест</>}
       </strong>
+      {/* Пакеты: взрослые, дети и подарки к выдаче на входе. */}
+      {isPackage && (
+        <span className={styles.cellMuted}>
+          {typeof b.adultsCount === 'number' && typeof b.childrenCount === 'number'
+            ? `взр. ${b.adultsCount} · дет. ${b.childrenCount} · ` : ''}
+          {t.admin.gifts(gifts)}
+        </span>
+      )}
       {/* Тариф; несколько тарифов в брони — по бейджу на тариф с количеством. */}
-      {lines.length > 1
+      {lines.length > 1 || isPackage
         ? lines.map(l => (
             <span key={l.type} className={styles.badge}>{l.quantity} × {ticketTypeLabel(l.type, 'RU')}</span>
           ))

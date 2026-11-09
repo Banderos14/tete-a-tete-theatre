@@ -11,7 +11,7 @@
 
 import { localizedShowTitle } from '../catalog/showTitle.js';
 import { ticketTypeLabel } from '../catalog/ticketTypes.js';
-import { bookingTicketLines } from '../domain/ticketBasket.js';
+import { bookingTicketLines, bookingGiftsCount } from '../domain/ticketBasket.js';
 import { getPaymentAccount, normalizeIban } from '../config/payment.js';
 import { myTicketsUrl, publicTicketUrl } from '../domain/ticketCode.js';
 import {
@@ -37,6 +37,8 @@ export interface TicketEmailBooking {
   ticketType:        string;
   /** Состав брони по тарифам; у старых броней нет — тогда ticketType × ticketsCount. */
   ticketItems?:      unknown;
+  /** Подарков к выдаче (пакеты новогодних постановок). */
+  giftsCount?:       number;
   totalAmount:       number;
   originalAmount?:   number;
   loyaltyDiscountApplied?: boolean;
@@ -118,6 +120,7 @@ function copy(lang: 'RU' | 'FR', kind: TicketEmailKind, pay: PayState, amount: n
       time:    ru ? 'Время' : 'Heure',
       place:   ru ? 'Адрес' : 'Adresse',
       seats:   ru ? 'Мест' : 'Places',
+      gifts:   ru ? 'Подарков' : 'Cadeaux',
       tickets: ru ? 'Билеты' : 'Billets',
       amount:  ru ? 'Сумма' : 'Montant',
       initial: ru ? 'Без скидки' : 'Montant initial',
@@ -188,6 +191,8 @@ export function buildTicketEmail(
     [c.rows.time,    escapeEmailHtml(b.showTime)],
     [c.rows.place,   `<a href="${THEATRE_MAPS}" style="color:#222;">${THEATRE_ADDRESS}</a>`],
     [c.rows.seats,   String(seats)],
+    // Пакеты с подарками: сколько подарков выдать на входе.
+    ...(bookingGiftsCount(b) > 0 ? [[c.rows.gifts, String(bookingGiftsCount(b))] as [string, string]] : []),
     // Несколько тарифов — по строке на тариф; у брони одного тарифа — как раньше.
     [c.rows.tickets, lines.map(l => `${l.quantity} × ${escapeEmailHtml(ticketTypeLabel(l.type, lang))}`).join('<br>')],
     ...amountRows,
@@ -244,6 +249,7 @@ export function buildTicketEmail(
     `${c.rows.show}: ${title}`,
     `${c.rows.date}: ${date} · ${b.showTime}`,
     `${c.rows.seats}: ${seats}`,
+    ...(bookingGiftsCount(b) > 0 ? [`${c.rows.gifts}: ${bookingGiftsCount(b)}`] : []),
     `${c.rows.tickets}: ${lines.map(l => `${l.quantity} × ${ticketTypeLabel(l.type, lang)}`).join(', ')}`,
     `${c.rows.amount}: ${b.totalAmount} €`,
     `${c.rows.payment}: ${strip(c.payValue)}`,

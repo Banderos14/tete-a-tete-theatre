@@ -128,6 +128,7 @@ describe('карточка спектакля в админке', () => {
     const stats = summarizeByShow(list, [bk({ ticketsCount: 2, seatsCount: 2, totalAmount: 60 })]).find(s => s.show.id === 'shutka')!;
     const html  = renderToStaticMarkup(createElement(AdminShowCard, { stats, active: false, onToggle: () => {} }));
     expect(html).toContain('02 Окт 2026 · 20:00');
-    expect(html.replace(/\u00a0/g, ' ')).toContain('1 бронирование · 2 / 50 мест · 60 € оплачено');
+    // Остаток мест сеанса — явно, рядом с занятыми.
+    expect(html.replace(/\u00a0/g, ' ')).toContain('1 бронирование · 2 / 50 мест · свободно 48 · 60 € оплачено');
   });
 });

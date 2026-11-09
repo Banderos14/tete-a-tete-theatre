@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLang } from '../../../../i18n/LangContext';
-import { afishaShows } from '../../../../data/shows';
+import { afishaShows, upcomingSessions } from '../../../../data/shows';
 import { isShowSalesPaused } from '../../../../../shared/catalog/salesMode';
 import type { Show } from '../../../../types';
 import styles from './AfishaSlider.module.scss';
@@ -11,6 +11,8 @@ const _schedulePreload = typeof requestIdleCallback === 'function'
   : (fn: () => void) => setTimeout(fn, 200);
 
 _schedulePreload(() => {
+  // Вне браузера (юнит-тесты рендерят Афишу в Node) предзагружать нечего.
+  if (typeof Image === 'undefined') return;
   afishaShows().forEach(s => {
     if (s.image) {
       const img = new Image();
@@ -47,6 +49,11 @@ export function AfishaSlider({ onCardClick }: Props) {
   // фиксируется при монтировании: Date.now() нельзя дёргать прямо в рендере.
   const [mountedAtMs] = useState(() => Date.now());
   const shows = useMemo(() => afishaShows(mountedAtMs), [mountedAtMs]);
+  // Сколько ещё предстоящих сеансов у постановки, кроме показанного на карточке.
+  const moreSessions = useMemo(
+    () => new Map(shows.map(s => [s.id, upcomingSessions(s.productionId, mountedAtMs).length - 1])),
+    [shows, mountedAtMs],
+  );
   const total = shows.length;
 
   // Число копий растёт при первом измерении если viewport шире одного набора
@@ -336,6 +343,11 @@ export function AfishaSlider({ onCardClick }: Props) {
                         Прошедших спектаклей в Афише нет — метка всегда о будущем. */}
                     {isShowSalesPaused(show.id) && (
                       <span className={styles.salesPaused}>{t.sales.pausedStatus}</span>
+                    )}
+                    {/* Постановка с несколькими показами: одна карточка, на ней
+                        ближайший сеанс; остальные даты — в модалке. */}
+                    {(moreSessions.get(show.id) ?? 0) > 0 && (
+                      <span className={styles.moreSessions}>{t.afisha.moreSessions(moreSessions.get(show.id)!)}</span>
                     )}
                   </div>
 

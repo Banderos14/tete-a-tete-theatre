@@ -102,7 +102,12 @@ describe('один постер на спектакль во всех экран
   });
 
   it('у разных спектаклей разные постеры — чужое фото не подставляется', () => {
-    const images = SHOWS.map(s => s.image).filter(Boolean);
+    // Сеансы одной постановки («Фунтик» × 6) делят одну афишу; у разных
+    // постановок — разные.
+    const byProduction = new Map<string, Set<string>>();
+    for (const s of SHOWS) if (s.image) (byProduction.get(s.productionId) ?? byProduction.set(s.productionId, new Set()).get(s.productionId)!).add(s.image);
+    for (const [id, set] of byProduction) expect(set.size, id).toBe(1);
+    const images = [...byProduction.values()].map(set => [...set][0]);
     expect(new Set(images).size).toBe(images.length);
   });
 

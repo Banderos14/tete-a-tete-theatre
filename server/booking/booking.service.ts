@@ -15,7 +15,7 @@ import { ApiError, conflict } from '../shared/errors.js';
 import { normalizeIdempotencyKey } from '../shared/idempotency.js';
 import { checkCapacity } from '../../shared/domain/bookingRules.js';
 import {
-  THEATRE_CAPACITY, showDateString, showStartUtcMs,
+  THEATRE_CAPACITY, showDateString, showStartUtcMs, isLoyaltyEligibleShow,
 } from '../../shared/catalog/shows.js';
 import type { CreateBookingResponse } from '../../shared/contracts/booking.js';
 import {
@@ -137,7 +137,13 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     // Лояльность — только по реальным броням, прочитанным в этой транзакции
     // (shared/domain/loyalty.ts). Цена корзины — только из каталога
     // (shared/domain/ticketBasket.ts): скидка 50 % на ОДИН билет брони.
-    const { loyaltyAvailable, attendedCount } = computeLoyalty(userBookings);
+    //
+    // У сеансов с loyaltyEligible: false (пакеты «Фунтика» и «Страны
+    // сладостей») скидка не применяется и бонус НЕ тратится: бронь не
+    // получает loyaltyDiscountApplied, поэтому скидка остаётся доступной.
+    const loyalty = computeLoyalty(userBookings);
+    const loyaltyAvailable = loyalty.loyaltyAvailable && isLoyaltyEligibleShow(show);
+    const { attendedCount } = loyalty;
     const basket = priceBasket(tariffs, lines, loyaltyAvailable);
     const { seatsCount, ticketsCount, baseAmount, discountAmount, totalAmount } = basket;
 
@@ -199,8 +205,14 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       seatsCount,
       // Первый тариф корзины — для старого кода, читающего одно поле.
       ticketType:   basket.items[0]!.type,
-      // Состав брони: цены — из каталога, записаны на момент брони.
+      // Состав брони: цены — из каталога, записаны на момент брони. У пакетов
+      // в строке ещё и взрослые / дети / подарки на единицу.
       ticketItems:  basket.items,
+      ...(basket.composition ? {
+        adultsCount:   basket.composition.adults,
+        childrenCount: basket.composition.children,
+        giftsCount:    basket.composition.gifts,
+      } : {}),
       priceInfo,
       totalAmount,
       ticketCode,

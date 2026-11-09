@@ -261,6 +261,21 @@
   line-height: 1;
 }
 
+.moreSessions {
+  align-self: flex-start;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  color: #f3e7dc;
+  background: rgba(28, 25, 22, 0.55);
+  border: 0.5px solid rgba(243, 231, 220, 0.28);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
 .monthYear {
   display: flex;
   flex-direction: column;

@@ -173,6 +173,7 @@ export function TicketResultCard({
       {whoAndWhat}
       <CardRow label="Сеанс" value={`${b.showDate} · ${b.showTime}`} />
       {b.ticketTypeLabel && <CardRow label="Тариф" value={b.ticketTypeLabel} />}
+      {(b.giftsCount ?? 0) > 0 && <CardRow label="Подарки" value={String(b.giftsCount)} />}
       {ticketCodeRow}
     </>
   );
