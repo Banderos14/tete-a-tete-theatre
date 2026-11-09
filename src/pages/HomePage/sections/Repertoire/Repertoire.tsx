@@ -18,9 +18,11 @@ import styles from './Repertoire.module.scss';
 
 // Постер спектакля: показываем фото если есть, иначе цветной плейсхолдер
 function ShowPoster({
-  image, imagePosition, palette, title, lazy = true,
+  image, imagePosition, palette, title, lazy = true, contain = false,
 }: {
   image?: string; imagePosition?: string; palette: string; title: string; lazy?: boolean;
+  /** Афиша целиком (модалка, официальная афиша с датами): без обрезки и затемнения. */
+  contain?: boolean;
 }) {
   const { t } = useLang();
   const [err, setErr] = useState(false);
@@ -32,10 +34,10 @@ function ShowPoster({
           alt={t.showModal.posterAlt(title)}
           loading={lazy ? 'lazy' : 'eager'}
           onError={() => { console.warn('[show image failed]', title, image); setErr(true); }}
-          className={styles.posterImgEl}
-          style={imagePosition ? { objectPosition: imagePosition } : undefined}
+          className={`${styles.posterImgEl} ${contain ? styles.posterImgContain : ''}`}
+          style={imagePosition && !contain ? { objectPosition: imagePosition } : undefined}
         />
-        <div className={styles.posterImgOverlay} aria-hidden="true" />
+        {!contain && <div className={styles.posterImgOverlay} aria-hidden="true" />}
       </>
     );
   }
@@ -90,11 +92,12 @@ function RepertoireModal({ item, onClose, onBook }: ModalProps) {
       className={styles.modalBackdrop}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className={styles.modalPanel} role="dialog" aria-modal="true">
+      <div className={`${styles.modalPanel} ${item.imageFit === 'contain' && item.image ? styles.modalPanelPoster : ''}`} role="dialog" aria-modal="true">
         <button className={styles.modalClose} onClick={onClose} aria-label={lang === 'FR' ? 'Fermer' : 'Закрыть'}>✕</button>
 
-        <div className={styles.modalPoster}>
-          <ShowPoster image={item.image} imagePosition={item.imagePosition} palette={item.palette} title={title} lazy={false} />
+        <div className={`${styles.modalPoster} ${item.imageFit === 'contain' && item.image ? styles.modalPosterContain : ''}`}>
+          <ShowPoster image={item.image} imagePosition={item.imagePosition} palette={item.palette} title={title} lazy={false}
+            contain={item.imageFit === 'contain'} />
         </div>
 
         <div className={styles.modalInfo}>

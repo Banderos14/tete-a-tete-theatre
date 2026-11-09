@@ -85,6 +85,8 @@ export interface RepertoireItem {
   imagePosition?: string;
   description?: string;
   descriptionFR?: string;
+  /** 'contain' — официальная афиша с текстом: в модалке Репертуара целиком, без обрезки. */
+  imageFit?: 'contain';
   notice?: string;
   noticeFR?: string;
   duration?: string;

@@ -251,6 +251,17 @@
   &::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
 }
 
+// Модалка с официальной афишей: колонка шире, чтобы афиша с датами читалась.
+.modalPanelPoster {
+  max-width: 660px;
+  grid-template-columns: 250px 1fr;
+
+  @include mixins.mobile {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+  }
+}
+
 .modalClose {
   position: absolute;
   top: 12px;
@@ -285,6 +296,39 @@
   @include mixins.mobile {
     min-height: 160px;
     border-radius: 6px 6px 0 0;
+  }
+}
+
+// Официальная афиша (название, даты, адрес) — целиком, в своих пропорциях.
+// Колонка тянется на всю высоту текста, поэтому cover обрезал афишу; здесь
+// картинка прилипает к верху колонки и остаётся видна при прокрутке модалки.
+.modalPosterContain {
+  background: #0d0b09;
+  // overflow: hidden у .modalPoster отключал sticky — афиша уезжала вверх.
+  overflow: visible;
+
+  .posterImgEl.posterImgContain {
+    position: sticky;
+    inset: auto;
+    top: 0; // после inset: иначе inset: auto сбрасывает top и sticky не работает
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    filter: none;
+    transform: none;
+  }
+
+  @include mixins.mobile {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0;
+
+    .posterImgEl.posterImgContain {
+      position: relative;
+      width: auto;
+      max-width: 100%;
+      height: min(56vh, 420px);
+    }
   }
 }
 

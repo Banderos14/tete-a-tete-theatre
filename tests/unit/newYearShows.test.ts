@@ -732,6 +732,26 @@ describe('свёрнутое описание в модалке не режет 
   });
 });
 
+describe('модалка Репертуара: официальная афиша целиком', () => {
+  it('у трёх постановок imageFit: contain; у прочих — прежняя обрезка', () => {
+    for (const id of ['funtik', 'sladosti', 'duimovochka']) {
+      expect(PUBLISHED_REPERTOIRE.find(r => r.id === id)!.imageFit, id).toBe('contain');
+    }
+    expect(PUBLISHED_REPERTOIRE.find(r => r.id === 'kovcheg')!.imageFit).toBeUndefined();
+  });
+
+  it('афиша без обрезки, в своих пропорциях и прилипает к верху (top после inset)', () => {
+    const css = projectSource('src/pages/HomePage/sections/Repertoire/Repertoire.module.scss');
+    const block = css.slice(css.indexOf('.modalPosterContain {'), css.indexOf('.modalInfo {'));
+    expect(block).toContain('overflow: visible;');
+    expect(block).toContain('object-fit: contain;');
+    expect(block).toContain('height: auto;');
+    expect(block.indexOf('inset: auto;')).toBeLessThan(block.indexOf('top: 0;'));
+    const tsx = projectSource('src/pages/HomePage/sections/Repertoire/Repertoire.tsx');
+    expect(tsx).toContain("contain={item.imageFit === 'contain'}");
+  });
+});
+
 describe('Дюймовочка не изменилась', () => {
   it('10 € + 15 € = 25 €, лояльность действует, ссылки по тарифу прежние', () => {
     const p = priceBasket(catalogTariffs(CATALOG_SHOWS.duimovochka!.tickets), [
