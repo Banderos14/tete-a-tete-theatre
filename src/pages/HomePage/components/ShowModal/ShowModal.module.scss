@@ -486,17 +486,22 @@ $cap-bleed-top:    6px;
 $cap-bleed-side:   6px;
 $cap-bleed-bottom: 10px;
 $cap-gap:          14px;
+$desc-line-height: 1.78;
+$desc-lines:       5;
 
 .desc {
   font-size: 13px;
-  line-height: 1.78;
+  line-height: $desc-line-height;
   color: var(--fg-dim);
-  padding: $cap-bleed-top $cap-bleed-side $cap-bleed-bottom;
-  margin: (-$cap-bleed-top) (-$cap-bleed-side) (-$cap-bleed-bottom);
+  // Снизу вылета нет: в свёрнутом виде он показывал полстроки следующего
+  // абзаца, а отрицательный margin заводил под текст «Читать дальше».
+  padding: $cap-bleed-top $cap-bleed-side 0;
+  margin: (-$cap-bleed-top) (-$cap-bleed-side) 0;
   overflow: hidden;
-  // box-sizing: border-box — поэтому к девяти строкам добавляем паддинги,
-  // иначе запас съел бы высоту видимого текста.
-  max-height: calc(9em + #{$cap-bleed-top + $cap-bleed-bottom});
+  // Свёрнутое описание — ровно $desc-lines ЦЕЛЫХ строк (border-box: плюс
+  // верхний вылет). Раньше было 9em + оба вылета ≈ 5,5 строки, и последняя
+  // видимая строка резалась пополам по высоте.
+  max-height: calc(#{$desc-line-height * $desc-lines}em + #{$cap-bleed-top});
   overflow-wrap: anywhere;
   flex-shrink: 0;
   // Официальные описания разбиты на абзацы переводами строки.
@@ -535,6 +540,9 @@ $cap-gap:          14px;
 
 .descExpanded {
   max-height: none;
+  // Развёрнутому — снова нижний вылет для хвостов буквицы.
+  padding-bottom: $cap-bleed-bottom;
+  margin-bottom: (-$cap-bleed-bottom);
 }
 
 .readMoreBtn {
@@ -547,7 +555,7 @@ $cap-gap:          14px;
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
-  margin-top: -4px;
+  margin-top: 6px;
   transition: color 0.2s;
 
   &:hover { color: var(--fg-dim); }

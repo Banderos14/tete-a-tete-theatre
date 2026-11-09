@@ -719,6 +719,19 @@ describe('форма брони пакетов', () => {
   });
 });
 
+describe('свёрнутое описание в модалке не режет строку пополам', () => {
+  it('высота — целое число строк, без нижнего вылета; «Читать дальше» не наезжает на текст', () => {
+    const css = projectSource('src/pages/HomePage/components/ShowModal/ShowModal.module.scss');
+    expect(css).toContain('$desc-lines:       5;');
+    expect(css).toContain('line-height: $desc-line-height;');
+    expect(css).toContain('max-height: calc(#{$desc-line-height * $desc-lines}em + #{$cap-bleed-top});');
+    expect(css).toContain('padding: $cap-bleed-top $cap-bleed-side 0;');
+    expect(css).not.toContain('max-height: calc(9em');
+    const btn = css.slice(css.indexOf('.readMoreBtn {'), css.indexOf('}', css.indexOf('.readMoreBtn {')));
+    expect(btn).not.toMatch(/margin-top:\s*-/);
+  });
+});
+
 describe('Дюймовочка не изменилась', () => {
   it('10 € + 15 € = 25 €, лояльность действует, ссылки по тарифу прежние', () => {
     const p = priceBasket(catalogTariffs(CATALOG_SHOWS.duimovochka!.tickets), [
