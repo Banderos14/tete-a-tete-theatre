@@ -3,9 +3,8 @@
 // Прошедший спектакль исчезает из Афиши сам — по дате и времени каталога
 // (настенное время Europe/Paris, та же функция, что у сервера), — но остаётся
 // в каталоге, в Репертуаре и в админке. Будущий спектакль, продажи которого
-// закрыты ограниченным режимом (shared/catalog/salesMode.ts), в Афише остаётся
-// с неактивной покупкой. «Спектакль прошёл» и «временно недоступно» — разные
-// состояния.
+// закрыты ограниченным режимом (shared/catalog/salesMode.ts), в Афишу НЕ
+// попадает (решение театра, ноябрь 2026): в Афише только то, что можно купить.
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createElement } from 'react';
@@ -39,7 +38,7 @@ afterEach(() => { vi.useRealTimers(); });
 
 describe('Афиша: только предстоящие спектакли', () => {
   it('будущий спектакль есть в Афише', () => {
-    expect(ids(OCT_6)).toEqual(expect.arrayContaining(['razgovor', 'enot', 'lubov', 'shapochka', 'kovcheg']));
+    expect(ids(OCT_6)).toEqual(expect.arrayContaining(['enot', 'shapochka', 'duimovochka']));
   });
 
   it('прошедший спектакль в Афише не показывается', () => {
@@ -50,9 +49,9 @@ describe('Афиша: только предстоящие спектакли', (
     // «Крошка Енот»: 18 Окт 2026, 10:00 Europe/Paris = 08:00 UTC (летнее время).
     expect(ids(ms('2026-10-18T07:59:00Z'))).toContain('enot');
     expect(ids(ms('2026-10-18T08:00:00Z'))).not.toContain('enot');
-    // «У ковчега в восемь»: 28 Ноя 2026, 19:00 Europe/Paris = 18:00 UTC (зимнее время).
-    expect(ids(ms('2026-11-28T17:59:00Z'))).toContain('kovcheg');
-    expect(ids(ms('2026-11-28T18:00:00Z'))).not.toContain('kovcheg');
+    // «Дюймовочка»: 22 Ноя 2026, 11:00 Europe/Paris = 10:00 UTC (зимнее время).
+    expect(ids(ms('2026-11-22T09:59:00Z'))).toContain('duimovochka');
+    expect(ids(ms('2026-11-22T10:00:00Z'))).not.toContain('duimovochka');
   });
 
   it('isShowUpcoming — ровно противоположность isShowPast', () => {
@@ -92,10 +91,12 @@ describe('Репертуар: прошедшие постановки остаю
 });
 
 describe('ограниченный режим продаж в Афише', () => {
-  it('будущий закрытый спектакль есть в Афише, но бронирование выключено', () => {
+  it('будущий закрытый спектакль в Афишу не попадает; в каталоге и Репертуаре он есть', () => {
     for (const id of ['razgovor', 'lubov', 'kovcheg']) {
-      expect(ids(OCT_6), id).toContain(id);
+      expect(ids(OCT_6), id).not.toContain(id);
       expect(isShowBookingEnabled(id), id).toBe(false);
+      expect(PUBLISHED_SHOWS.some(s => s.id === id), id).toBe(true);
+      expect(PUBLISHED_REPERTOIRE.some(r => r.id === id), id).toBe(true);
     }
   });
 
@@ -112,19 +113,18 @@ describe('ограниченный режим продаж в Афише', () =>
     expect(service).toContain('BOOKING_TEMPORARILY_UNAVAILABLE');
   });
 
-  it('карточки: статус «приостановлено» только у закрытых будущих, у разрешённых — нет', () => {
+  it('карточки: метки «приостановлено» в Афише нет — закрытых спектаклей там нет', () => {
     const html = renderAfisha('2026-10-06T12:00:00Z');
-    // Енот + Шапочка + Дюймовочка + Фунтик + Страна сладостей открыты (у двух
-    // последних — по одной карточке на постановку), Разговор + Любовь + Ковчег
-    // закрыты; прошедших нет. Итого 8 карточек в наборе, из них 3 «приостановлено».
-    const paused = html.split(RU.sales.pausedStatus).length - 1;
+    // Енот + Шапочка + Дюймовочка + Фунтик + Страна сладостей (по одной
+    // карточке на постановку). Разговор, Любовь, Ковчег — закрыты, их нет.
     const cards  = html.split('data-show-idx=').length - 1;
     expect(cards).toBeGreaterThan(0);
-    expect(cards % 8).toBe(0);
-    expect(paused).toBe((cards / 8) * 3);
+    expect(cards % 5).toBe(0);
+    expect(html).not.toContain(RU.sales.pausedStatus);
+    expect(html).not.toContain('Счастливая любовь');
     expect(html).not.toContain('Романтика обреченности');
     expect(html).toContain('Крошка Енот');
-    expect(renderAfisha('2026-10-06T12:00:00Z', 'FR')).toContain(FR.sales.pausedStatus);
+    expect(renderAfisha('2026-10-06T12:00:00Z', 'FR')).not.toContain(FR.sales.pausedStatus);
   });
 });
 

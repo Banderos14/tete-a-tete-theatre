@@ -6,6 +6,7 @@
 import type { Show } from '../types';
 import { buildNewShowEmail } from './email';
 import { getShowPublicUrl } from '../utils/showUrl';
+import { upcomingSessions } from '../data/shows';
 import {
   NEWSLETTER_LANGS, NEWSLETTER_NAME_TOKEN,
   type NewsletterDraft, type NewsletterLang, type NewsletterPreflight,
@@ -59,9 +60,11 @@ export function buildNewsletterDraft(show: Show, lang: NewsletterLang): Newslett
     showTitle:   isFR ? (show.titleFR ?? show.title) : show.title,
     showDate:    `${show.day} ${show.month} ${show.year}`,
     showTime:    show.time,
+    // Несколько сеансов — в письме все предстоящие; ссылка одна, на постановку.
+    sessions:    upcomingSessions(show.productionId).map(s => ({ showDate: `${s.day} ${s.month} ${s.year}`, showTime: s.time })),
     price:       isFR ? (show.priceFR ?? show.price) : show.price,
     description: isFR ? (show.descFR ?? show.desc) : show.desc,
-    showUrl:     getShowPublicUrl(show.id),
+    showUrl:     getShowPublicUrl(show.productionId),
     lang,
   });
 }
@@ -70,7 +73,8 @@ export function buildNewsletterRequest(show: Show): NewsletterSendRequest {
   const drafts = Object.fromEntries(
     NEWSLETTER_LANGS.map(lang => [lang, buildNewsletterDraft(show, lang)]),
   ) as Record<NewsletterLang, NewsletterDraft>;
-  return { showId: show.id, drafts };
+  // Анонс — на постановку целиком (у спектакля с одним показом это его id).
+  return { showId: show.productionId, drafts };
 }
 
 export function sendNewsletterViaApi(idToken: string, show: Show): Promise<NewsletterSendResult> {

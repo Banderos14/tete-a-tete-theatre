@@ -7,6 +7,8 @@ export interface NewShowEmailData {
   showTitle:   string;
   showDate:    string;
   showTime:    string;
+  /** Все предстоящие сеансы постановки; больше одного — в письме список вместо одной даты. */
+  sessions?:   Array<{ showDate: string; showTime: string }>;
   price?:      string;
   description?: string;
   showUrl:     string;

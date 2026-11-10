@@ -148,10 +148,11 @@ describe('каталог: одна постановка, одна дата', () 
     expect(front.image).toMatch(/duimovochka.*\.webp$/);
     expect(front.photos).toBeUndefined();
     expect(PUBLISHED_REPERTOIRE.find(r => r.id === ID)!.image).toBe(front.image);
-    // Возраст и длительность театр не указал — не выдуманы.
+    // Возраст театр не указал — не выдуман; длительность — 1 час (театр, ноябрь 2026).
     expect(front.age).toBe('');
-    expect(front.duration).toBe('Продолжительность уточняется');
-    expect(front.durationFR).toBe('Durée à confirmer');
+    expect(front.duration).toBe('1 час');
+    expect(front.durationFR).toBe('1 h');
+    expect(PUBLISHED_REPERTOIRE.find(r => r.id === ID)!.duration).toBe('1 час');
   });
 
   it('официальное описание: текст театра дословно, по абзацам; FR — перевод', () => {

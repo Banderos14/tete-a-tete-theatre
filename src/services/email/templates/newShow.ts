@@ -7,6 +7,12 @@ import type { NewShowEmailData } from '../types';
 export function buildNewShowEmail(data: NewShowEmailData): { subject: string; html: string; text: string } {
   const isRU    = data.lang === 'RU';
   const dateStr = localeDate(data.showDate, data.lang);
+  // Постановка с несколькими сеансами: все даты списком, ссылка — одна.
+  const sessions = (data.sessions ?? []).map(s => `${localeDate(s.showDate, data.lang)} · ${s.showTime}`);
+  const multi    = sessions.length > 1;
+  const dateRow: [string, string] = multi
+    ? [isRU ? 'Сеансы' : 'Séances', sessions.map(escapeEmailHtml).join('<br>')]
+    : [isRU ? 'Дата' : 'Date', `${dateStr} · ${data.showTime}`];
 
   const subject = isRU
     ? `Новый спектакль в театре ТЕТ-А-ТЕТ: ${data.showTitle}`
@@ -17,11 +23,11 @@ export function buildNewShowEmail(data: NewShowEmailData): { subject: string; ht
 
   const rows: [string, string][] = isRU ? [
     ['Спектакль', data.showTitle],
-    ['Дата',      `${dateStr} · ${data.showTime}`],
+    dateRow,
     ...(data.price ? [['Билеты', data.price] as [string, string]] : []),
   ] : [
     ['Spectacle', data.showTitle],
-    ['Date',      `${dateStr} · ${data.showTime}`],
+    dateRow,
     ...(data.price ? [['Billets', data.price] as [string, string]] : []),
   ];
 
@@ -56,7 +62,9 @@ export function buildNewShowEmail(data: NewShowEmailData): { subject: string; ht
     intro,
     '',
     isRU ? `Спектакль: ${data.showTitle}` : `Spectacle : ${data.showTitle}`,
-    isRU ? `Дата: ${dateStr} · ${data.showTime}` : `Date : ${dateStr} · ${data.showTime}`,
+    ...(multi
+      ? [isRU ? 'Сеансы:' : 'Séances :', ...sessions.map(s => `— ${s}`)]
+      : [isRU ? `Дата: ${dateStr} · ${data.showTime}` : `Date : ${dateStr} · ${data.showTime}`]),
     ...(data.price ? [isRU ? `Билеты: ${data.price}` : `Billets : ${data.price}`] : []),
     '',
     data.showUrl,

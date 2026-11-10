@@ -88,7 +88,10 @@ function validateDraft(raw: unknown, showId: string, lang: string): NewsletterDr
 
 export function validateNewsletterRequest(body: Record<string, unknown>): NewsletterSendRequest {
   const showId = typeof body.showId === 'string' ? body.showId.trim() : '';
-  if (!showId || !Object.hasOwn(SHOWS, showId)) throw badRequest('Invalid showId');
+  // showId — спектакль каталога или постановка с несколькими сеансами
+  // (productionId: письмо ведёт на её страницу, сеанс выбирает зритель).
+  const isProduction = Object.values(SHOWS).some(s => s.productionId === showId);
+  if (!showId || (!Object.hasOwn(SHOWS, showId) && !isProduction)) throw badRequest('Invalid showId');
 
   const drafts = (body.drafts ?? {}) as Record<string, unknown>;
   return {

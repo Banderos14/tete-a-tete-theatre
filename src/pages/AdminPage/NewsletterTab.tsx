@@ -70,7 +70,8 @@ export function NewsletterTab({ newsletter }: { newsletter: Newsletter }) {
           {shows.map(s => (
             // Анонс спектакля с закрытыми продажами отправить можно, но админ
             // должен видеть, что купить билет по ссылке из письма сейчас нельзя.
-            <option key={s.id} value={s.id}>
+            // Одна позиция на постановку: значение — productionId.
+            <option key={s.productionId} value={s.productionId}>
               {isShowSalesPaused(s.id) ? `${s.title} — ${RU.admin.salesPaused.toLowerCase()}` : s.title}
             </option>
           ))}

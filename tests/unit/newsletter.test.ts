@@ -2,8 +2,9 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
 import type { Show } from '../../src/types';
-import { PUBLISHED_SHOWS, SHOWS, publishedOnly } from '../../src/data/shows';
-import { NEWSLETTER_SHOWS } from '../../src/pages/AdminPage/useNewsletter';
+import { PUBLISHED_SHOWS, SHOWS, publishedOnly, afishaShows } from '../../src/data/shows';
+import { newsletterShows } from '../../src/pages/AdminPage/useNewsletter';
+import { isShowSalesPaused } from '../../shared/catalog/salesMode';
 import { buildNewsletterRequest } from '../../src/services/newsletterService';
 import { projectSource, screenSource } from '../helpers/serverSource.js';
 import {
@@ -20,16 +21,39 @@ import { ApiError } from '../../server/shared/errors.js';
 
 // ── Спектакли в рассылке ────────────────────────────────────────────────────
 
-describe('рассылка анонсирует ровно опубликованные спектакли', () => {
-  it('dropdown рассылки === опубликованные спектакли публичного каталога', () => {
-    expect(NEWSLETTER_SHOWS.map(s => s.id)).toEqual(PUBLISHED_SHOWS.map(s => s.id));
-    expect(NEWSLETTER_SHOWS).toBe(PUBLISHED_SHOWS);
+describe('рассылка анонсирует ровно то, что в Афише', () => {
+  const NOV_9 = new Date('2026-11-09T10:00:00Z').getTime();
+
+  it('dropdown рассылки === Афиша: по одной позиции на постановку, только открытые для продаж', () => {
+    expect(newsletterShows(NOV_9).map(s => s.id)).toEqual(afishaShows(NOV_9).map(s => s.id));
+    expect(newsletterShows(NOV_9).map(s => s.productionId))
+      .toEqual(['shapochka', 'duimovochka', 'funtik', 'sladosti']);
+    for (const s of newsletterShows(NOV_9)) expect(isShowSalesPaused(s.id), s.id).toBe(false);
   });
 
-  it('скрытые спектакли каталога в рассылку не попадают', () => {
-    const hidden = SHOWS.filter(s => s.published === false).map(s => s.id);
-    const ids    = NEWSLETTER_SHOWS.map(s => s.id);
-    for (const id of hidden) expect(ids).not.toContain(id);
+  it('скрытые, закрытые и прошедшие спектакли в рассылку не попадают', () => {
+    const ids = newsletterShows(NOV_9).map(s => s.productionId);
+    for (const id of [...SHOWS.filter(s => s.published === false).map(s => s.id), 'lubov', 'kovcheg', 'razgovor', 'nulin', 'romantika']) {
+      expect(ids, id).not.toContain(id);
+    }
+  });
+
+  it('«Фунтик»: одна ссылка на постановку, в письме — все сеансы, сервер принимает', () => {
+    const funtik = newsletterShows(NOV_9).find(s => s.productionId === 'funtik')!;
+    const req = buildNewsletterRequest(funtik);
+    expect(req.showId).toBe('funtik');
+    for (const lang of ['RU', 'FR'] as const) {
+      expect(req.drafts[lang].html).toContain('/#/?show=funtik');
+      expect(req.drafts[lang].html).not.toContain('/#/?show=funtik-');
+      expect(req.drafts[lang].text).toContain('/#/?show=funtik');
+    }
+    expect(req.drafts.RU.html).toContain('Сеансы');
+    expect(req.drafts.RU.text).toContain('— 13 Дек 2026 · 15:00');
+    expect(req.drafts.RU.text).toContain('— 20 Дек 2026 · 18:00');
+    expect(req.drafts.FR.html).toContain('Séances');
+    expect(() => validateNewsletterRequest(req as unknown as Record<string, unknown>)).not.toThrow();
+    // Сеанс в качестве showId по-прежнему принимается, неизвестная постановка — нет.
+    expect(() => validateNewsletterRequest({ ...req, showId: 'nope' })).toThrowError(/Invalid showId/);
   });
 
   const base = SHOWS[0]!;
@@ -49,7 +73,7 @@ describe('рассылка анонсирует ровно опубликова�
   it('вкладка и хук рассылки не читают полный каталог SHOWS', () => {
     const src = projectSource('src/pages/AdminPage/NewsletterTab.tsx') + projectSource('src/pages/AdminPage/useNewsletter.ts');
     expect(src).not.toMatch(/import\s*\{[^}]*\bSHOWS\b[^}]*\}\s*from/);
-    expect(src).toContain('PUBLISHED_SHOWS');
+    expect(src).toContain('afishaShows');
   });
 
   it('ссылка в письме ведёт на /#/?show=<showId>', () => {

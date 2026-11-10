@@ -510,13 +510,17 @@ describe('интерфейс: закрытые спектакли видны, н
 });
 
 describe('админка: спектакли и брони на месте, статус продаж честный', () => {
-  it('закрытый спектакль остаётся в списке админки с меткой «Продажи приостановлены»', async () => {
+  it('закрытый спектакль с бронями остаётся в админке с меткой «Продажи приостановлены»; без броней — карточки нет', async () => {
     // NOW = 20 сентября: все закрытые, кроме «Романтики» (17.09), ещё впереди.
     const { renderToStaticMarkup } = await import('react-dom/server');
     const { createElement } = await import('react');
     const { AdminShowCard } = await import('../../src/pages/AdminPage/AdminShowCard');
     const { adminShowList, summarizeByShow } = await import('../../src/pages/AdminPage/adminStats');
-    const stats = summarizeByShow(adminShowList(FRONT_SHOWS, []), []);
+    // По одной действующей брони на каждый спектакль — карточки есть у всех.
+    const bookings = Object.keys(CATALOG_SHOWS).map(id => ({
+      id: `b-${id}`, showId: id, status: 'confirmed', paymentStatus: 'paid', ticketsCount: 1, seatsCount: 1, totalAmount: 10,
+    })) as never[];
+    const stats = summarizeByShow(adminShowList(FRONT_SHOWS, bookings), bookings);
     const render = (id: string) => renderToStaticMarkup(createElement(AdminShowCard, {
       stats: stats.find(s => s.show.id === id)!, active: false, onToggle: () => {},
     }));
@@ -525,6 +529,9 @@ describe('админка: спектакли и брони на месте, ст
     // Прошедший спектакль в админке остаётся, но без метки «приостановлены».
     expect(render('romantika')).toContain('Романтика');
     expect(render('romantika')).not.toContain('Продажи приостановлены');
+    // Без броней закрытый спектакль пустой карточки не получает.
+    const empty = adminShowList(FRONT_SHOWS, []).map(s => s.id);
+    for (const id of BLOCKED) expect(empty, id).not.toContain(id);
   });
 });
 

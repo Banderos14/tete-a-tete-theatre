@@ -7,7 +7,9 @@
 // Раньше сюда шёл весь список, и отменённая бронь на 3 билета продолжала
 // показываться как «1 бронирование · 3 билета», хотя места уже были свободны.
 
-import { countActiveBookings, sumOccupiedTickets } from '../../../shared/domain/bookingRules';
+import { countActiveBookings, sumOccupiedTickets, occupiesCapacity } from '../../../shared/domain/bookingRules';
+import { isShowSalesPaused } from '../../../shared/catalog/salesMode';
+import { parseShowStartUtcMs } from '../../../shared/domain/showTime';
 import { THEATRE_CAPACITY } from '../../../shared/catalog/shows';
 import { centsToEuros } from '../../../shared/domain/money';
 import type { Booking } from '../../types/booking';
@@ -100,34 +102,34 @@ export function showGlyph(title: string): string {
 /**
  * Спектакли для карточек админки.
  *
- * Та же публикация, что на сайте: опубликованные спектакли каталога (в его
- * порядке) — всегда, даже без броней. Неопубликованная заготовка появляется,
- * только если по ней есть брони, а спектакль, которого в каталоге уже нет, —
- * из снимка старой брони (showTitle, дата). Раньше сюда шёл весь каталог
- * вместе с заготовками: «Летучий корабль» висел пустой карточкой, хотя на
- * сайте его не было, а брони удалённых спектаклей не попадали ни в одну карточку.
+ * Карточка есть у спектакля, который (а) сейчас продаётся — опубликован, ещё
+ * не начался и не закрыт ограниченным режимом продаж, — или (б) у которого
+ * есть ДЕЙСТВУЮЩИЕ брони (не отменённые и не протухшие): по ним считается
+ * касса и идёт проход. Прошедший или закрытый спектакль без броней карточку
+ * не занимает (ноябрь 2026: «Разговор», «Счастливая любовь», «Ковчег» висели
+ * пустыми). Спектакль, которого в каталоге уже нет («Граф Нулин»), карточки
+ * не получает вовсе — его брони остаются в общей таблице и в поиске.
+ * Неопубликованная заготовка видна, только если по ней есть действующие брони.
  */
-export function adminShowList(catalog: readonly Show[], bookings: readonly Booking[]): AdminShow[] {
+export function adminShowList(
+  catalog: readonly Show[], bookings: readonly Booking[], nowMs: number = Date.now(),
+): AdminShow[] {
   const fromShow = (s: Show): AdminShow => ({
     id: s.id, title: s.title, image: s.image, palette: s.palette,
     capacity: s.totalSeats || THEATRE_CAPACITY,
     dateLabel: `${s.day} ${s.month} ${s.year} · ${s.time}`,
   });
-  const withBookings = new Set(bookings.map(b => b.showId).filter(Boolean));
-  const list = catalog
-    .filter(s => s.published !== false || withBookings.has(s.id))
+  const withActiveBookings = new Set(
+    bookings.filter(b => occupiesCapacity(toSnapshot(b))).map(b => b.showId).filter(Boolean),
+  );
+  const onSale = (s: Show) => {
+    if (s.published === false || isShowSalesPaused(s.id)) return false;
+    const start = parseShowStartUtcMs(`${s.day} ${s.month} ${s.year}`, s.time);
+    return start === null || start > nowMs;
+  };
+  return catalog
+    .filter(s => onSale(s) || withActiveBookings.has(s.id))
     .map(fromShow);
-
-  const known = new Set(catalog.map(s => s.id));
-  const orphans = new Map<string, AdminShow>();
-  for (const b of bookings) {
-    if (!b.showId || known.has(b.showId) || orphans.has(b.showId)) continue;
-    orphans.set(b.showId, {
-      id: b.showId, title: b.showTitle || b.showId, palette: 'var(--ph-1)',
-      capacity: THEATRE_CAPACITY, dateLabel: [b.showDate, b.showTime].filter(Boolean).join(' · '),
-    });
-  }
-  return [...list, ...orphans.values()];
 }
 
 /** Сводка по каждому спектаклю, в порядке списка. Брони связываются по showId. */

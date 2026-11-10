@@ -1,7 +1,8 @@
 // Один каталог спектаклей для сайта, админки и сканера; касса админки.
 
 import { describe, it, expect } from 'vitest';
-import { SHOWS as FRONT_SHOWS, PUBLISHED_SHOWS } from '../../src/data/shows';
+import { SHOWS as FRONT_SHOWS, PUBLISHED_SHOWS, isShowPast } from '../../src/data/shows';
+import { isShowSalesPaused } from '../../shared/catalog/salesMode';
 import { SHOWS, DRAFT_SHOWS, SEASON_CATALOG } from '../../shared/catalog/shows';
 import { adminShowList, summarizeByShow, summarizeBookings, netPaidAmount, refundedAmount } from '../../src/pages/AdminPage/adminStats';
 import { checkinShowOptions } from '../../src/pages/TicketCheckPage/checkinShows';
@@ -31,8 +32,24 @@ describe('«Летучий корабль»: заготовка в катало�
 });
 
 describe('админка: спектакли — те же, что на сайте', () => {
-  it('без броней — ровно опубликованные спектакли сайта, в порядке каталога', () => {
-    expect(adminShowList(FRONT_SHOWS, []).map(s => s.id)).toEqual(PUBLISHED_SHOWS.map(s => s.id));
+  // Фиксированный момент: 9 ноября 2026.
+  const NOV_9 = new Date('2026-11-09T10:00:00Z').getTime();
+
+  it('без броней — только то, что сейчас продаётся (опубликовано, впереди, не закрыто), в порядке каталога', () => {
+    const onSale = PUBLISHED_SHOWS.filter(s => !isShowSalesPaused(s.id) && !isShowPast(s, NOV_9)).map(s => s.id);
+    expect(adminShowList(FRONT_SHOWS, [], NOV_9).map(s => s.id)).toEqual(onSale);
+    // Закрытые и прошедшие без броней пустой карточки не получают.
+    for (const id of ['razgovor', 'lubov', 'kovcheg', 'romantika']) {
+      expect(adminShowList(FRONT_SHOWS, [], NOV_9).map(s => s.id), id).not.toContain(id);
+    }
+  });
+
+  it('прошедший или закрытый спектакль с действующими бронями — карточка есть; с отменёнными — нет', () => {
+    const ids = (b: Booking) => adminShowList(FRONT_SHOWS, [b], NOV_9).map(s => s.id);
+    expect(ids(bk({ showId: 'shutka' }))).toContain('shutka');
+    expect(ids(bk({ showId: 'kovcheg', status: 'confirmed' }))).toContain('kovcheg');
+    expect(ids(bk({ showId: 'shutka', status: 'cancelled' }))).not.toContain('shutka');
+    expect(ids(bk({ showId: 'razgovor', paymentStatus: 'expired' }))).not.toContain('razgovor');
   });
 
   it('заготовка с бронями (старые данные) появляется — брони не теряются', () => {
@@ -40,18 +57,15 @@ describe('админка: спектакли — те же, что на сайт
     expect(list.map(s => s.id)).toContain('letuchiy');
   });
 
-  it('спектакль, удалённый из каталога, восстанавливается по снимку брони', () => {
+  it('спектакль вне каталога («Граф Нулин») карточки не получает — его брони остаются в таблице', () => {
     const old = bk({ showId: 'nulin', showTitle: '«Граф Нулин»', showDate: '29 Май 2026', showTime: '19:00', ticketsCount: 2, seatsCount: 2, totalAmount: 40 });
-    const list  = adminShowList(FRONT_SHOWS, [old]);
-    const nulin = list.find(s => s.id === 'nulin')!;
-    expect(nulin).toMatchObject({ title: '«Граф Нулин»', dateLabel: '29 Май 2026 · 19:00', capacity: 50 });
-    expect(nulin.image).toBeUndefined();
-    const stats = summarizeByShow(list, [old]).find(s => s.show.id === 'nulin')!;
-    expect(stats).toMatchObject({ bookings: 1, tickets: 2, revenue: 40 });
+    expect(adminShowList(FRONT_SHOWS, [old], NOV_9).map(s => s.id)).not.toContain('nulin');
+    // Общая сводка («Все») бронь учитывает.
+    expect(summarizeBookings([old])).toMatchObject({ bookings: 1, tickets: 2, revenue: 40 });
   });
 
   it('у карточки — постер сайта, дата показа и вместимость зала', () => {
-    const shutka = adminShowList(FRONT_SHOWS, []).find(s => s.id === 'shutka')!;
+    const shutka = adminShowList(FRONT_SHOWS, [bk({ showId: 'shutka' })], NOV_9).find(s => s.id === 'shutka')!;
     expect(shutka.image).toBe(FRONT_SHOWS.find(s => s.id === 'shutka')!.image);
     expect(shutka.dateLabel).toBe('02 Окт 2026 · 20:00');
     expect(shutka.capacity).toBe(50);
@@ -124,8 +138,9 @@ describe('карточка спектакля в админке', () => {
     const { renderToStaticMarkup } = await import('react-dom/server');
     const { createElement } = await import('react');
     const { AdminShowCard } = await import('../../src/pages/AdminPage/AdminShowCard');
-    const list  = adminShowList(FRONT_SHOWS, []);
-    const stats = summarizeByShow(list, [bk({ ticketsCount: 2, seatsCount: 2, totalAmount: 60 })]).find(s => s.show.id === 'shutka')!;
+    const booking = bk({ ticketsCount: 2, seatsCount: 2, totalAmount: 60 });
+    const list  = adminShowList(FRONT_SHOWS, [booking]);
+    const stats = summarizeByShow(list, [booking]).find(s => s.show.id === 'shutka')!;
     const html  = renderToStaticMarkup(createElement(AdminShowCard, { stats, active: false, onToggle: () => {} }));
     expect(html).toContain('02 Окт 2026 · 20:00');
     // Остаток мест сеанса — явно, рядом с занятыми.

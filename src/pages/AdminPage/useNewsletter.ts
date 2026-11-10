@@ -7,7 +7,7 @@
 
 import { useCallback, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { PUBLISHED_SHOWS } from '../../data/shows';
+import { afishaShows } from '../../data/shows';
 import type { Show } from '../../types';
 import { getShowPublicUrl } from '../../utils/showUrl';
 import {
@@ -19,11 +19,16 @@ import type { NewsletterPreflight, NewsletterSendResult } from '../../../shared/
 const COPIED_HINT_MS = 1800;
 
 /**
- * Спектакли, доступные для анонса: ровно те, что опубликованы на сайте.
- * Отдельного списка нет — опубликованный спектакль появляется здесь сам,
- * скрытый пропадает вместе с карточкой в Афише.
+ * Что можно анонсировать: ровно то, что сейчас в Афише — опубликованное,
+ * ещё не прошедшее и открытое для продаж, по ОДНОЙ позиции на постановку.
+ * У «Фунтика» шесть сеансов, но в списке он один: письмо ведёт на страницу
+ * постановки (/#/?show=funtik), и зритель сам выбирает сеанс. Отдельного
+ * списка нет — та же функция, что у Афиши (src/data/shows.ts → afishaShows).
+ * Элемент — ближайший сеанс; ключ позиции — его productionId.
  */
-export const NEWSLETTER_SHOWS: readonly Show[] = PUBLISHED_SHOWS;
+export function newsletterShows(nowMs: number = Date.now()): readonly Show[] {
+  return afishaShows(nowMs);
+}
 
 export interface Newsletter {
   shows: readonly Show[];
@@ -47,7 +52,10 @@ export interface Newsletter {
 }
 
 export function useNewsletter(user: User | null): Newsletter {
-  const [showId,           setShowId]           = useState<string>(NEWSLETTER_SHOWS[0]?.id ?? '');
+  // Список фиксируется при открытии вкладки — так же, как у Афиши.
+  const [shows]                                 = useState<readonly Show[]>(() => newsletterShows());
+  // showId здесь — постановка (productionId): ссылка и анонс — на неё целиком.
+  const [showId,           setShowId]           = useState<string>(() => shows[0]?.productionId ?? '');
   const [preflight,        setPreflight]        = useState<NewsletterPreflight | null>(null);
   const [preflightLoading, setPreflightLoading] = useState(false);
   const [preflightError,   setPreflightError]   = useState<string | null>(null);
@@ -57,7 +65,7 @@ export function useNewsletter(user: User | null): Newsletter {
   const [sendError,        setSendError]        = useState<string | null>(null);
   const [copiedLink,       setCopiedLink]       = useState(false);
 
-  const selectedShow = NEWSLETTER_SHOWS.find(s => s.id === showId) ?? null;
+  const selectedShow = shows.find(s => s.productionId === showId) ?? null;
 
   const refreshPreflight = useCallback(async (): Promise<NewsletterPreflight | null> => {
     if (!user) return null;
@@ -80,7 +88,7 @@ export function useNewsletter(user: User | null): Newsletter {
 
   async function copyShowLink() {
     if (!selectedShow) return;
-    await navigator.clipboard.writeText(getShowPublicUrl(selectedShow.id));
+    await navigator.clipboard.writeText(getShowPublicUrl(selectedShow.productionId));
     setCopiedLink(true);
     window.setTimeout(() => setCopiedLink(false), COPIED_HINT_MS);
   }
@@ -119,7 +127,7 @@ export function useNewsletter(user: User | null): Newsletter {
   }
 
   return {
-    shows: NEWSLETTER_SHOWS,
+    shows,
     showId,
     selectedShow,
     selectShow: (id) => { setShowId(id); setResult(null); setSendError(null); },

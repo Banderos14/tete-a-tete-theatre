@@ -3,6 +3,7 @@ import { parseShowStartUtcMs, MONTH_RU } from '../../shared/domain/showTime';
 import {
   SEASON_CATALOG, THEATRE_CAPACITY, productionIdOf, type ShowInfo, type TicketInfo, type TicketTypeId,
 } from '../../shared/catalog/shows';
+import { isShowSalesPaused } from '../../shared/catalog/salesMode';
 
 // Постеры спектаклей — ЕДИНСТВЕННОЕ место, где файл связывается со спектаклем.
 // SHOWS и REPERTOIRE ниже ссылаются на эти же константы, а Афиша, Репертуар,
@@ -248,7 +249,7 @@ const SHOW_CONTENT: ShowContent[] = [
     id: 'duimovochka',
     author: DUIMOVOCHKA_AUTHOR, authorFR: DUIMOVOCHKA_AUTHORFR,
     age: '',
-    duration: 'Продолжительность уточняется', durationFR: 'Durée à confirmer',
+    duration: '1 час', durationFR: '1 h',
     desc: DUIMOVOCHKA_DESC, descFR: DUIMOVOCHKA_DESCFR,
     palette: 'var(--ph-5)',
     image: duimovochkaPoster,
@@ -386,7 +387,7 @@ const REPERTOIRE_CONTENT: RepertoireContent[] = [
     duration: '1 час (без антракта)', durationFR: '1 h (sans entracte)',
   },
   {
-    id: 'shutka', status: 'active',
+    id: 'shutka', status: 'past',
     author: 'А. П. Чехов',
     authorFR: 'A. P. Tchekhov',
     tag: 'Комедия', age: '10+',
@@ -397,7 +398,7 @@ const REPERTOIRE_CONTENT: RepertoireContent[] = [
     duration: '1 час 10 минут (с антрактом)', durationFR: '1 h 10 (avec entracte)',
   },
   {
-    id: 'lubov', status: 'active',
+    id: 'lubov', status: 'past',
     author: 'А. Аверченко и Н. Тэффи',
     authorFR: 'A. Averchenko et N. Teffi',
     tag: 'Комедия', age: '12+',
@@ -408,7 +409,7 @@ const REPERTOIRE_CONTENT: RepertoireContent[] = [
     duration: '1 час 30 минут (с антрактом)', durationFR: '1 h 30 (avec entracte)',
   },
   {
-    id: 'korablik', status: 'active',
+    id: 'korablik', status: 'past',
     author: 'Интерактивный детский спектакль',
     authorFR: 'Spectacle interactif pour enfants',
     tag: 'Сказка', age: '1+',
@@ -419,7 +420,7 @@ const REPERTOIRE_CONTENT: RepertoireContent[] = [
     duration: '45 минут', durationFR: '45 min',
   },
   {
-    id: 'razgovor', status: 'active',
+    id: 'razgovor', status: 'past',
     author: 'Р. Белецкий',
     authorFR: 'R. Beletski',
     tag: 'Драма', age: '12+',
@@ -430,7 +431,7 @@ const REPERTOIRE_CONTENT: RepertoireContent[] = [
     duration: '1 час 10 минут (без антракта)', durationFR: '1 h 10 (sans entracte)',
   },
   {
-    id: 'enot', status: 'active',
+    id: 'enot', status: 'past',
     author: 'Театр «Маленькая белая рыбка» · Канны',
     authorFR: 'Théâtre «Le Petit Poisson blanc» · Cannes',
     tag: 'Сказка', age: '3+',
@@ -469,10 +470,10 @@ const REPERTOIRE_CONTENT: RepertoireContent[] = [
     image: duimovochkaPoster,
     imageFit: 'contain',
     description: DUIMOVOCHKA_DESC, descriptionFR: DUIMOVOCHKA_DESCFR,
-    duration: 'Продолжительность уточняется', durationFR: 'Durée à confirmer',
+    duration: '1 час', durationFR: '1 h',
   },
   {
-    id: 'kovcheg', status: 'active',
+    id: 'kovcheg', status: 'past',
     author: 'Урлих Хуб',
     authorFR: 'Ulrich Hub',
     tag: 'Мюзикл', age: '6+',
@@ -539,7 +540,11 @@ export function buildRepertoireItem(item: RepertoireContent): RepertoireItem {
     : { ...item, title: item.title ?? item.id };
 }
 
-export const REPERTOIRE: RepertoireItem[] = REPERTOIRE_CONTENT.map(buildRepertoireItem);
+// Сначала идущие постановки, потом прошедшие (порядок внутри групп — как в
+// REPERTOIRE_CONTENT): прошедший спектакль не должен стоять между афишными.
+export const REPERTOIRE: RepertoireItem[] = REPERTOIRE_CONTENT
+  .map(buildRepertoireItem)
+  .sort((a, b) => Number(a.status === 'past') - Number(b.status === 'past'));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Что показывать публично
@@ -612,6 +617,10 @@ export function afishaShows(nowMs: number = Date.now()): Show[] {
   const seen = new Set<string>();
   return PUBLISHED_SHOWS
     .filter(show => isShowUpcoming(show, nowMs))
+    // Закрытые ограниченным режимом продаж в Афишу не попадают (решение
+    // театра, ноябрь 2026): в Афише только то, что можно купить. Сами
+    // спектакли остаются в каталоге, Репертуаре, админке и у броней.
+    .filter(show => !isShowSalesPaused(show.id))
     .sort((a, b) => startMsOf(a) - startMsOf(b))
     .filter((show) => {
       if (seen.has(show.productionId)) return false;
