@@ -23,7 +23,7 @@ import lubovPoster     from '../assets/shows/lubov.webp';
 import shapochkaPoster from '../assets/shows/shapochka.webp';
 import kovchegPoster   from '../assets/shows/kovcheg8.webp';
 import nulinPoster     from '../assets/shows/nulin.webp';
-// Официальные афиши театра (ноябрь 2026): оригинальные JPG → WebP без обрезки,
+// Официальные афиши театра (ноябрь 2026; «Фунтик» — новая афиша от 10.11): оригинальные JPG → WebP без обрезки,
 // в исходном разрешении — весь текст афиши (название, даты, адрес) сохранён.
 import duimovochkaPoster from '../assets/shows/duimovochka.webp';
 import funtikPoster      from '../assets/shows/funtik.webp';
