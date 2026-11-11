@@ -373,3 +373,34 @@ describe('поштучная рассылка в обход квоты нево�
     expect(screenSource('src/pages/AdminPage')).not.toContain('recipient.email');
   });
 });
+
+// ── QR для печатной афиши ───────────────────────────────────────────────────
+
+describe('рассылка: QR-код постановки для афиши', () => {
+  it('QR кодирует ту же ссылку, что поле и письмо (getShowPublicUrl от постановки)', () => {
+    const hook = projectSource('src/pages/AdminPage/useNewsletter.ts');
+    expect(hook).toContain('copyPosterQr(getShowPublicUrl(showId), posterQrFileName(showId))');
+    expect(hook).toContain('downloadPosterQr(getShowPublicUrl(showId), posterQrFileName(showId))');
+    expect(hook).toContain('posterQrDataUrl(getShowPublicUrl(showId))');
+  });
+
+  it('крупный PNG с запасом коррекции; без поддержки буфера — скачивание файла', async () => {
+    const src = projectSource('src/services/posterQr.ts');
+    expect(src).toContain('export const POSTER_QR_SIZE = 1600;');
+    expect(src).toContain("errorCorrectionLevel: 'Q'");
+    expect(src).toContain("new ClipboardItem({ 'image/png': posterQrBlob(url) })");
+    expect(src).toContain('await downloadPosterQr(url, fileName);');
+    const { posterQrFileName, posterQrDataUrl } = await import('../../src/services/posterQr');
+    expect(posterQrFileName('funtik')).toBe('qr-funtik.png');
+    expect(posterQrFileName('sladosti')).toBe('qr-sladosti.png');
+    expect(await posterQrDataUrl('https://www.theatre-teteatete.fr/#/?show=funtik')).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it('во вкладке рядом с «Копировать ссылку» — «Копировать QR-код», превью и «Скачать PNG»', () => {
+    const tab = projectSource('src/pages/AdminPage/NewsletterTab.tsx');
+    expect(tab).toContain("idle:       'Копировать QR-код'");
+    expect(tab).toContain('onClick={copyShowQr}');
+    expect(tab).toContain('onClick={downloadShowQr}');
+    expect(tab.indexOf('Копировать ссылку')).toBeLessThan(tab.indexOf('onClick={copyShowQr}'));
+  });
+});

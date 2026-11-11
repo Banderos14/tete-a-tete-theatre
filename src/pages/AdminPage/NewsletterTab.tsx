@@ -8,7 +8,15 @@ import { RU } from '../../i18n';
 import { isShowSalesPaused } from '../../../shared/catalog/salesMode';
 import type { NewsletterPreflight, NewsletterSendResult, QuotaSource } from '../../../shared/contracts/newsletter';
 import type { Newsletter } from './useNewsletter';
+import { POSTER_QR_SIZE } from '../../services/posterQr';
 import styles from './AdminPage.module.scss';
+
+const QR_STATUS_LABEL: Record<Newsletter['qrStatus'], string> = {
+  idle:       'Копировать QR-код',
+  copied:     'QR скопирован',
+  downloaded: 'QR скачан',
+  error:      'Не удалось',
+};
 
 const QUOTA_SOURCE_LABEL: Record<QuotaSource, string> = {
   'resend-header': 'счётчик дневной квоты Resend',
@@ -39,7 +47,7 @@ export function NewsletterTab({ newsletter }: { newsletter: Newsletter }) {
   const {
     shows, showId, selectedShow, selectShow, preflight, preflightLoading, preflightError,
     refreshPreflight, confirmOpen, requestSend, cancelSend, confirmSend,
-    sending, result, sendError, copiedLink, copyShowLink,
+    sending, result, sendError, copiedLink, copyShowLink, qrPreview, qrStatus, copyShowQr, downloadShowQr,
   } = newsletter;
 
   // Получатели не зависят от спектакля: проверяем при открытии вкладки,
@@ -91,7 +99,26 @@ export function NewsletterTab({ newsletter }: { newsletter: Newsletter }) {
           >
             {copiedLink ? 'Скопировано' : 'Копировать ссылку'}
           </button>
+          <button
+            className={styles.copyLinkBtn}
+            onClick={copyShowQr}
+            type="button"
+            disabled={!showId}
+          >
+            {QR_STATUS_LABEL[qrStatus]}
+          </button>
         </div>
+        {/* QR для печатной афиши: внутри — ссылка из поля выше. */}
+        {qrPreview && (
+          <div className={styles.qrRow}>
+            <img className={styles.qrPreview} src={qrPreview} alt={`QR-код: ${showId ? getShowPublicUrl(showId) : ''}`} width={112} height={112} />
+            <div className={styles.qrNote}>
+              <p>QR ведёт на ту же ссылку, что и рассылка: зритель откроет спектакль и сам выберет сеанс.</p>
+              <p>PNG {POSTER_QR_SIZE}×{POSTER_QR_SIZE} — для печати на афише.</p>
+              <button className={styles.qrDownloadBtn} type="button" onClick={downloadShowQr}>Скачать PNG</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={styles.quotaBox} aria-live="polite">

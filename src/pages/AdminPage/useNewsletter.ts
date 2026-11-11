@@ -5,11 +5,12 @@
 // Получателей и квоту считает сервер и перед первым письмом проверяет их
 // повторно, поэтому цифры здесь — подсказка администратору, а не разрешение.
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { afishaShows } from '../../data/shows';
 import type { Show } from '../../types';
 import { getShowPublicUrl } from '../../utils/showUrl';
+import { copyPosterQr, downloadPosterQr, posterQrDataUrl, posterQrFileName } from '../../services/posterQr';
 import {
   NewsletterApiError, fetchNewsletterPreflight, sendNewsletterViaApi,
 } from '../../services/newsletterService';
@@ -49,6 +50,11 @@ export interface Newsletter {
   clearResult: () => void;
   copiedLink: boolean;
   copyShowLink: () => Promise<void>;
+  /** QR той же ссылки — для печатной афиши. */
+  qrPreview: string | null;
+  qrStatus: 'idle' | 'copied' | 'downloaded' | 'error';
+  copyShowQr: () => Promise<void>;
+  downloadShowQr: () => Promise<void>;
 }
 
 export function useNewsletter(user: User | null): Newsletter {
@@ -64,6 +70,19 @@ export function useNewsletter(user: User | null): Newsletter {
   const [result,           setResult]           = useState<NewsletterSendResult | null>(null);
   const [sendError,        setSendError]        = useState<string | null>(null);
   const [copiedLink,       setCopiedLink]       = useState(false);
+  const [qrPreview,        setQrPreview]        = useState<string | null>(null);
+  const [qrStatus,         setQrStatus]         = useState<Newsletter['qrStatus']>('idle');
+
+  // Превью QR выбранной постановки — та же ссылка, что в поле и в письме.
+  useEffect(() => {
+    if (!showId) return;
+    let cancelled = false;
+    void posterQrDataUrl(getShowPublicUrl(showId)).then(
+      (url) => { if (!cancelled) setQrPreview(url); },
+      () => { if (!cancelled) setQrPreview(null); },
+    );
+    return () => { cancelled = true; };
+  }, [showId]);
 
   const selectedShow = shows.find(s => s.productionId === showId) ?? null;
 
@@ -91,6 +110,30 @@ export function useNewsletter(user: User | null): Newsletter {
     await navigator.clipboard.writeText(getShowPublicUrl(selectedShow.productionId));
     setCopiedLink(true);
     window.setTimeout(() => setCopiedLink(false), COPIED_HINT_MS);
+  }
+
+  function flashQrStatus(status: Newsletter['qrStatus']) {
+    setQrStatus(status);
+    window.setTimeout(() => setQrStatus('idle'), COPIED_HINT_MS);
+  }
+
+  async function copyShowQr() {
+    if (!showId) return;
+    try {
+      flashQrStatus(await copyPosterQr(getShowPublicUrl(showId), posterQrFileName(showId)));
+    } catch {
+      flashQrStatus('error');
+    }
+  }
+
+  async function downloadShowQr() {
+    if (!showId) return;
+    try {
+      await downloadPosterQr(getShowPublicUrl(showId), posterQrFileName(showId));
+      flashQrStatus('downloaded');
+    } catch {
+      flashQrStatus('error');
+    }
   }
 
   async function requestSend() {
@@ -145,5 +188,9 @@ export function useNewsletter(user: User | null): Newsletter {
     clearResult: () => { setResult(null); setSendError(null); },
     copiedLink,
     copyShowLink,
+    qrPreview,
+    qrStatus,
+    copyShowQr,
+    downloadShowQr,
   };
 }
