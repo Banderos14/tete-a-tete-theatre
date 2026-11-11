@@ -386,7 +386,7 @@ describe('рассылка: QR-код постановки для афиши', (
 
   it('крупный PNG с запасом коррекции; без поддержки буфера — скачивание файла', async () => {
     const src = projectSource('src/services/posterQr.ts');
-    expect(src).toContain('export const POSTER_QR_SIZE = 1600;');
+    expect(src).toContain('export const POSTER_QR_SIZE = 1000;');
     expect(src).toContain("errorCorrectionLevel: 'Q'");
     expect(src).toContain("new ClipboardItem({ 'image/png': posterQrBlob(url) })");
     expect(src).toContain('await downloadPosterQr(url, fileName);');

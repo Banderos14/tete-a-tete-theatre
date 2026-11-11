@@ -113,8 +113,8 @@ export function NewsletterTab({ newsletter }: { newsletter: Newsletter }) {
           <div className={styles.qrRow}>
             <img className={styles.qrPreview} src={qrPreview} alt={`QR-код: ${showId ? getShowPublicUrl(showId) : ''}`} width={112} height={112} />
             <div className={styles.qrNote}>
-              <p>QR ведёт на ту же ссылку, что и рассылка: зритель откроет спектакль и сам выберет сеанс.</p>
-              <p>PNG {POSTER_QR_SIZE}×{POSTER_QR_SIZE} — для печати на афише.</p>
+              <p>QR ведёт на ту же ссылку, что и рассылка.</p>
+              <p>PNG {POSTER_QR_SIZE}×{POSTER_QR_SIZE} — чётко печатается до 8 см, для афиши A4 с запасом.</p>
               <button className={styles.qrDownloadBtn} type="button" onClick={downloadShowQr}>Скачать PNG</button>
             </div>
           </div>
